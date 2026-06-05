@@ -5,20 +5,20 @@
 - Prepare one Linux server with Docker and Docker Compose.
 - Open ports `80` and `443`.
 - Point the domain DNS A record to the server IP.
-- Put HTTPS in front of the `web` service with a reverse proxy or cloud load balancer.
+- Use `docker-compose.https.yml` for automatic HTTPS with Caddy.
 
 ## Environment
 
 Create `.env.production` from `.env.production.example`, or generate one with strong random secrets:
 
 ```bash
-scripts/init-prod-env.sh https://your-domain
+scripts/init-prod-env.sh https://your-domain your-domain
 ```
 
 On Windows:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\init-prod-env.ps1 -Domain https://your-domain
+powershell -ExecutionPolicy Bypass -File scripts\init-prod-env.ps1 -Domain https://your-domain -AppDomain your-domain
 ```
 
 Use strong random values for:
@@ -33,8 +33,22 @@ Set:
 
 ## Run
 
+HTTP only:
+
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
+```
+
+HTTPS with Caddy:
+
+```bash
+scripts/deploy-prod-https.sh
+```
+
+On Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\deploy-prod-https.ps1
 ```
 
 ## Verify
