@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 *.bak
+.env.production
 .tools
 debug-*.png
 debug-*.jpg

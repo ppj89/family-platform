@@ -1,0 +1,19 @@
+{
+  "name": "Family Platform",
+  "short_name": "Family",
+  "description": "가족 캘린더, 가계부, 여행, 육아, 일기를 함께 관리하는 앱",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#eef3f8",
+  "theme_color": "#2f80ed",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/fp-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
