@@ -9,7 +9,17 @@
 
 ## Environment
 
-Create `.env.production` from `.env.production.example`.
+Create `.env.production` from `.env.production.example`, or generate one with strong random secrets:
+
+```bash
+scripts/init-prod-env.sh https://your-domain
+```
+
+On Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\init-prod-env.ps1 -Domain https://your-domain
+```
 
 Use strong random values for:
 
