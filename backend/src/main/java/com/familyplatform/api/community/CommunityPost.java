@@ -7,7 +7,6 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -26,7 +25,7 @@ public class CommunityPost {
   private String authorName;
   private String title;
 
-  @Lob
+  @Column(columnDefinition = "text")
   private String body;
 
   private Instant createdAt = Instant.now();

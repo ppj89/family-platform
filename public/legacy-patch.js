@@ -1603,6 +1603,8 @@
     selectedPostId: null,
     composing: false,
     editingPostId: null,
+    loadingTabs: {},
+    loadedTabs: {},
     notice: [
       {
         id: 'notice-1',
@@ -1774,6 +1776,103 @@
 
   function communityItems(tab) {
     return communityState[tab] || communityState.notice
+  }
+
+  function formatCommunityInstant(value) {
+    if (!value) return { date: '', time: '' }
+    var date = new Date(value)
+    if (Number.isNaN(date.getTime())) return { date: String(value).slice(0, 10), time: '' }
+    return {
+      date: formatDisplayDate(date),
+      time: String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0')
+    }
+  }
+
+  function communityFileFromUrl(url) {
+    var name = String(url || '').split('/').pop() || '\uCCA8\uBD80\uD30C\uC77C'
+    return { name: name, size: '', url: url, contentType: '' }
+  }
+
+  function communityMediaUrls(files) {
+    return (files || []).map(function (file) { return file.url || '' }).filter(Boolean)
+  }
+
+  function normalizeCommunityComment(item) {
+    var when = formatCommunityInstant(item.createdAt || item.updatedAt)
+    return {
+      id: String(item.id),
+      serverId: item.id,
+      author: item.authorName || '\uC0AC\uC6A9\uC790',
+      time: (when.date && when.time) ? (when.date + ' ' + when.time) : communityNowText(),
+      text: item.body || ''
+    }
+  }
+
+  function normalizeCommunityPost(item, detailComments) {
+    var when = formatCommunityInstant(item.createdAt || item.updatedAt)
+    return {
+      id: String(item.id),
+      serverId: item.id,
+      title: item.title || '',
+      body: item.body || '',
+      author: item.authorName || '\uC0AC\uC6A9\uC790',
+      date: when.date,
+      time: when.time,
+      files: (item.mediaUrls || []).map(communityFileFromUrl),
+      comments: (detailComments || []).map(normalizeCommunityComment)
+    }
+  }
+
+  function replaceCommunityPost(tab, post) {
+    var list = communityItems(tab)
+    var index = list.findIndex(function (item) { return item.id === post.id || item.serverId === post.serverId })
+    if (index >= 0) list[index] = post
+    else list.unshift(post)
+  }
+
+  function loadCommunityList(tab, force) {
+    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    if (!force && communityState.loadedTabs[tab]) return Promise.resolve(communityItems(tab))
+    if (communityState.loadingTabs[tab]) return communityState.loadingTabs[tab]
+    var path = '/community/posts?boardType=' + encodeURIComponent(tab)
+    communityState.loadingTabs[tab] = apiRequest(path).then(function (items) {
+      communityState[tab] = (Array.isArray(items) ? items : []).map(function (item) {
+        return normalizeCommunityPost(item, [])
+      })
+      communityState.loadedTabs[tab] = true
+      return communityState[tab]
+    }).catch(function () {
+      return communityItems(tab)
+    }).finally(function () {
+      delete communityState.loadingTabs[tab]
+    })
+    return communityState.loadingTabs[tab]
+  }
+
+  function loadCommunityDetail(tab, postId) {
+    var post = findCommunityPost(tab, postId)
+    if (!post || !post.serverId) return Promise.resolve(post)
+    return apiRequest('/community/posts/' + encodeURIComponent(post.serverId)).then(function (detail) {
+      var next = normalizeCommunityPost(detail.post || {}, detail.comments || [])
+      replaceCommunityPost(tab, next)
+      return next
+    }).catch(function () {
+      return post
+    })
+  }
+
+  function communityPostPayload(tab, title, body, files) {
+    return getCurrentFamilyId().catch(function () {
+      return null
+    }).then(function (familyId) {
+      return {
+        boardType: tab,
+        familyId: tab === 'inquiry' ? familyId : null,
+        title: title,
+        body: body,
+        mediaUrls: communityMediaUrls(files)
+      }
+    })
   }
 
   function communityNowText() {
@@ -1956,6 +2055,12 @@
     root.dataset.communityReady = communityState.activeTab
 
     var tab = communityState.activeTab
+    var needsServerLoad = !communityState.loadedTabs[tab] && !communityState.loadingTabs[tab]
+    if (needsServerLoad) loadCommunityList(tab, false).then(function () {
+      if (document.documentElement.dataset.patchPage === 'community' && communityState.activeTab === tab) {
+        renderCommunityPage(true)
+      }
+    })
     var admin = isAdminRole()
     var bodyHtml = renderCommunityBoard(tab, admin)
     root.innerHTML = [
@@ -2205,11 +2310,15 @@
       if (button.dataset.wired) return
       button.dataset.wired = 'true'
       button.addEventListener('click', function () {
+        var tab = communityState.activeTab || 'free'
         communityState.view = 'detail'
         communityState.selectedPostId = button.dataset.communityOpenPost
         communityState.composing = false
         communityState.editingPostId = null
         renderCommunityPage(true)
+        loadCommunityDetail(tab, communityState.selectedPostId).then(function () {
+          if (communityState.view === 'detail') renderCommunityPage(true)
+        })
       })
     })
 
@@ -2239,14 +2348,24 @@
       button.addEventListener('click', function () {
         showPatchConfirm('\uAE00\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
           var tab = communityState.activeTab || 'free'
-          communityState[tab] = communityItems(tab).filter(function (post) {
-            return post.id !== button.dataset.communityDeletePost
+          var post = findCommunityPost(tab, button.dataset.communityDeletePost)
+          var removeLocal = function () {
+            communityState[tab] = communityItems(tab).filter(function (item) {
+              return item.id !== button.dataset.communityDeletePost
+            })
+            communityState.view = 'list'
+            communityState.selectedPostId = null
+            communityState.editingPostId = null
+            showPatchToast('\uAE00\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
+            renderCommunityPage(true)
+          }
+          if (!post || !post.serverId) {
+            removeLocal()
+            return
+          }
+          apiRequest('/community/posts/' + encodeURIComponent(post.serverId), { method: 'DELETE' }).then(removeLocal).catch(function () {
+            showPatchToast('\uAE00 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
           })
-          communityState.view = 'list'
-          communityState.selectedPostId = null
-          communityState.editingPostId = null
-          showPatchToast('\uAE00\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
-          renderCommunityPage(true)
         })
       })
     })
@@ -2307,32 +2426,43 @@
           if (editId) {
             var targetPost = findCommunityPost(tab, editId)
             if (!targetPost) return
-            targetPost.title = title
-            targetPost.body = body
-            if (uploadedFiles.length) targetPost.files = uploadedFiles
-            communityState.editingPostId = null
-            showPatchToast('\uAE00\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
-            renderCommunityPage(true)
-            return
+            var nextFiles = uploadedFiles.length ? uploadedFiles : (targetPost.files || [])
+            return communityPostPayload(tab, title, body, nextFiles).then(function (payload) {
+              if (!targetPost.serverId) {
+                targetPost.title = title
+                targetPost.body = body
+                targetPost.files = nextFiles
+                return targetPost
+              }
+              return apiRequest('/community/posts/' + encodeURIComponent(targetPost.serverId), {
+                method: 'PUT',
+                body: JSON.stringify(payload)
+              }).then(function (saved) {
+                return normalizeCommunityPost(saved, targetPost.comments || [])
+              })
+            }).then(function (savedPost) {
+              replaceCommunityPost(tab, savedPost)
+              communityState.editingPostId = null
+              showPatchToast('\uAE00\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
+              renderCommunityPage(true)
+            })
           }
-          var nowText = communityNowText()
-          var dateParts = nowText.split(' ')
-          communityItems(tab).unshift({
-            id: tab + '-' + Date.now(),
-            title: title,
-            body: body,
-            author: tab === 'free' ? '\uB098' : '\uAD00\uB9AC\uC790',
-            date: dateParts[0],
-            time: dateParts[1] || '',
-            files: uploadedFiles,
-            comments: []
+          return communityPostPayload(tab, title, body, uploadedFiles).then(function (payload) {
+            return apiRequest('/community/posts', {
+              method: 'POST',
+              body: JSON.stringify(payload)
+            }).then(function (saved) {
+              return normalizeCommunityPost(saved, [])
+            })
+          }).then(function (newPost) {
+            communityItems(tab).unshift(newPost)
+            communityState.composing = false
+            showPatchToast('\uAC8C\uC2DC\uAE00\uC744 \uB4F1\uB85D\uD588\uC2B5\uB2C8\uB2E4.')
+            renderCommunityPage(true)
           })
-          communityState.composing = false
-          showPatchToast('\uAC8C\uC2DC\uAE00\uC744 \uB4F1\uB85D\uD588\uC2B5\uB2C8\uB2E4.')
-          renderCommunityPage(true)
         }).catch(function (error) {
           if (String(error && error.message || '').indexOf('INVALID_MEDIA') < 0) {
-            showPatchToast('\uCCA8\uBD80\uD30C\uC77C \uC5C5\uB85C\uB4DC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+            showPatchToast('\uAC8C\uC2DC\uAE00 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
           }
         }).finally(function () {
           setCommunityFormBusy(form, false)
@@ -2355,10 +2485,23 @@
           showPatchToast('\uB313\uAE00\uC740 \uBE44\uC6CC\uB458 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
           return
         }
-        comment.text = next.trim()
-        comment.time = communityNowText()
-        showPatchToast('\uB313\uAE00\uC744 \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.')
-        renderCommunityPage(true)
+        var applyComment = function (saved) {
+          var nextComment = saved ? normalizeCommunityComment(saved) : null
+          comment.text = nextComment ? nextComment.text : next.trim()
+          comment.time = nextComment ? nextComment.time : communityNowText()
+          showPatchToast('\uB313\uAE00\uC744 \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.')
+          renderCommunityPage(true)
+        }
+        if (!comment.serverId) {
+          applyComment(null)
+          return
+        }
+        apiRequest('/community/comments/' + encodeURIComponent(comment.serverId), {
+          method: 'PUT',
+          body: JSON.stringify({ body: next.trim() })
+        }).then(applyComment).catch(function () {
+          showPatchToast('\uB313\uAE00 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+        })
       })
     })
 
@@ -2369,11 +2512,23 @@
         showPatchConfirm('\uB313\uAE00\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
           var post = findCommunityPost(communityState.activeTab || 'free', communityState.selectedPostId)
           if (!post) return
-          post.comments = (post.comments || []).filter(function (item) {
-            return item.id !== button.dataset.deleteComment
+          var comment = (post.comments || []).find(function (item) {
+            return item.id === button.dataset.deleteComment
           })
-          showPatchToast('\uB313\uAE00\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
-          renderCommunityPage(true)
+          var removeComment = function () {
+            post.comments = (post.comments || []).filter(function (item) {
+              return item.id !== button.dataset.deleteComment
+            })
+            showPatchToast('\uB313\uAE00\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
+            renderCommunityPage(true)
+          }
+          if (!comment || !comment.serverId) {
+            removeComment()
+            return
+          }
+          apiRequest('/community/comments/' + encodeURIComponent(comment.serverId), { method: 'DELETE' }).then(removeComment).catch(function () {
+            showPatchToast('\uB313\uAE00 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+          })
         })
       })
     })
@@ -2394,10 +2549,24 @@
           return item.id === form.dataset.commentPost
         })
         if (!post) return
-        post.comments = post.comments || []
-        post.comments.push({ id: 'comment-' + Date.now(), author: '\uB098', time: communityNowText(), text: text })
-        showPatchToast('\uB313\uAE00\uC744 \uB4F1\uB85D\uD588\uC2B5\uB2C8\uB2E4.')
-        renderCommunityPage(true)
+        var addComment = function (comment) {
+          post.comments = post.comments || []
+          post.comments.push(comment)
+          showPatchToast('\uB313\uAE00\uC744 \uB4F1\uB85D\uD588\uC2B5\uB2C8\uB2E4.')
+          renderCommunityPage(true)
+        }
+        if (!post.serverId) {
+          addComment({ id: 'comment-' + Date.now(), author: '\uB098', time: communityNowText(), text: text })
+          return
+        }
+        apiRequest('/community/posts/' + encodeURIComponent(post.serverId) + '/comments', {
+          method: 'POST',
+          body: JSON.stringify({ body: text })
+        }).then(function (saved) {
+          addComment(normalizeCommunityComment(saved))
+        }).catch(function () {
+          showPatchToast('\uB313\uAE00 \uB4F1\uB85D\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+        })
       })
     })
   }
