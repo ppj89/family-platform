@@ -34,7 +34,25 @@ curl http://localhost/health
 curl http://localhost/api/health
 ```
 
+## Database
+
+Flyway runs on API startup.
+
+- Existing databases are baselined at migration version `1`.
+- Empty databases are created from `backend/src/main/resources/db/migration/V1__initial_schema.sql`.
+
+Create a PostgreSQL backup before every production deploy:
+
+```bash
+scripts/backup-db.sh
+```
+
+On Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\backup-db.ps1
+```
+
 ## Mobile App Path
 
 The current app is prepared as a PWA. For store distribution, wrap the built web app with Capacitor after the web domain and API URL are finalized.
-

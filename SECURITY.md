@@ -12,6 +12,8 @@ This project is prepared for production hardening, but final deployment must use
 - Five failed password attempts lock the account for five minutes.
 - CORS allow-list through environment variables.
 - Family-scoped access services for protected data.
+- Flyway schema migrations with production JPA validation.
+- PostgreSQL backup and restore scripts for Docker deployments.
 
 ## Before Public Launch
 
@@ -19,6 +21,4 @@ This project is prepared for production hardening, but final deployment must use
 - Replace all default secrets.
 - Keep `.env.production` out of Git.
 - Run dependency checks and penetration testing.
-- Add database migration tooling before schema changes become frequent.
-- Configure backups for PostgreSQL.
-
+- Schedule automatic PostgreSQL backups and restore drills.

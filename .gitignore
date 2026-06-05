@@ -18,6 +18,7 @@ debug-*.png
 debug-*.jpg
 backend/target
 backend/.data
+backups
 
 # Editor directories and files
 .vscode/*
