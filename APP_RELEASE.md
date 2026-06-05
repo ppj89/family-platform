@@ -1,6 +1,6 @@
 # App Release Prep
 
-The web app is prepared as a PWA and the Android wrapper is prepared with Capacitor.
+The web app is prepared as a PWA, and Android/iOS wrappers are prepared with Capacitor.
 
 ## Debug APK
 
@@ -45,3 +45,28 @@ android/app/build/outputs/bundle/release/app-release.aab
 ```
 
 Keep the keystore and `.env.android-signing` private. Losing the upload key can block future app updates.
+
+## iOS
+
+Windows can generate and sync the Capacitor iOS project files, but App Store builds require macOS with Xcode.
+
+Sync the iOS app project:
+
+```powershell
+.\scripts\npm-tools.cmd run cap:ios
+```
+
+On a Mac, open the Xcode project:
+
+```bash
+npm run cap:open:ios
+```
+
+Then configure these in Xcode:
+
+- Apple Developer Team
+- Bundle identifier: `com.familyplatform.app`
+- Signing certificate and provisioning profile
+- App icon, launch screen, privacy strings, and App Store metadata
+
+For App Store or TestFlight distribution, enroll in the Apple Developer Program and upload through Xcode Organizer or Transporter.
