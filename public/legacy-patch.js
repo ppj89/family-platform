@@ -1051,11 +1051,127 @@
     })
   }
 
+  function replaceButtonWithBadge(button, className) {
+    if (!button || button.dataset.passiveBadgeReady) return
+    var badge = document.createElement('span')
+    badge.className = className || 'passive-header-chip'
+    badge.textContent = getCleanText(button)
+    badge.dataset.passiveBadgeReady = 'true'
+    button.replaceWith(badge)
+  }
+
+  function ensureUiCleanupStyles() {
+    if (document.getElementById('family-platform-ui-cleanup-style')) return
+    var style = document.createElement('style')
+    style.id = 'family-platform-ui-cleanup-style'
+    style.textContent = [
+      '.passive-header-chip{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 14px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:13px;font-weight:700;white-space:nowrap}',
+      '.family-group-panel{display:grid;gap:18px}',
+      '.family-group-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
+      '.family-group-summary article,.family-group-list article{background:#f8fafc;border:1px solid #e5eaf2;border-radius:18px;padding:18px}',
+      '.family-group-summary span,.family-group-list span{display:block;color:#7b8794;font-size:13px;font-weight:700}',
+      '.family-group-summary strong,.family-group-list strong{display:block;margin-top:8px;color:#171f2e;font-size:18px}',
+      '.family-group-summary small{display:block;margin-top:7px;color:#7b8794;font-weight:700}',
+      '.family-group-list{display:grid;gap:10px}',
+      '.family-group-list article{display:flex;align-items:center;justify-content:space-between;gap:14px}',
+      '.family-group-list b{display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:999px;background:#eaf3ff;color:#2f7ee6;font-size:13px}',
+      '@media(max-width:760px){.family-group-summary{grid-template-columns:1fr}.family-group-list article{align-items:flex-start;flex-direction:column}.passive-header-chip{min-height:30px;padding:0 11px;font-size:12px}}'
+    ].join('\n')
+    document.head.appendChild(style)
+  }
+
+  function cleanupPassiveButtons() {
+    ensureUiCleanupStyles()
+    document.querySelectorAll('.topbar .primary-action, .top-actions .primary-action, .hero-actions .primary-action').forEach(function (button) {
+      if (getCleanText(button) === '\uC0C8 \uAE30\uB85D') button.remove()
+    })
+
+    document.querySelectorAll('.panel-header button, .server-domain-panel header button').forEach(function (button) {
+      var text = getCleanText(button)
+      if (!text) return
+      if (text === '\uC11C\uBC84 \uC870\uD68C' || /^\d+\uAC1C$/.test(text) || /^\d+\uAC74$/.test(text) || /^\d{1,2}\uC6D4\s+\d{1,2}\uC77C/.test(text)) {
+        replaceButtonWithBadge(button, 'passive-header-chip')
+      }
+    })
+  }
+
+  function isFamilyGroupNavItem(nav) {
+    return nav && getCleanText(nav).indexOf('\uAC00\uC871\uADF8\uB8F9') >= 0
+  }
+
+  function clearFamilyGroupPage() {
+    if (document.documentElement.dataset.patchPage !== 'family-group') return
+    delete document.documentElement.dataset.patchPage
+    var content = document.querySelector('.content-grid')
+    if (content) content.classList.remove('community-source-hidden')
+    var root = document.querySelector('.patch-family-group-root')
+    if (root) root.remove()
+    document.querySelectorAll('.nav-item.active').forEach(function (item) {
+      if (isFamilyGroupNavItem(item)) item.classList.remove('active')
+    })
+  }
+
+  function openFamilyGroupPage() {
+    pausePatchObserver()
+    if (document.documentElement.dataset.patchPage === 'community') {
+      delete document.documentElement.dataset.patchPage
+      var communityRoot = document.querySelector('.patch-community-root')
+      if (communityRoot) communityRoot.remove()
+    }
+    document.documentElement.dataset.patchPage = 'family-group'
+    document.querySelectorAll('.nav-item.active').forEach(function (item) {
+      item.classList.remove('active')
+    })
+    var nav = Array.from(document.querySelectorAll('.nav-item')).find(isFamilyGroupNavItem)
+    if (nav) nav.classList.add('active')
+
+    var eyebrow = document.querySelector('.topbar .eyebrow')
+    var title = document.querySelector('.topbar h1')
+    if (eyebrow) eyebrow.textContent = '\uAC00\uC871\uADF8\uB8F9 \u00B7 \uCD08\uB300 \u00B7 \uAD8C\uD55C'
+    if (title) title.textContent = '\uAC00\uC871\uADF8\uB8F9'
+
+    var workspace = document.querySelector('.workspace')
+    var content = document.querySelector('.content-grid')
+    if (!workspace) return
+    if (content) content.classList.add('community-source-hidden')
+
+    var root = document.querySelector('.patch-family-group-root')
+    if (!root) {
+      root = document.createElement('div')
+      root.className = 'patch-family-group-root community-grid'
+      workspace.appendChild(root)
+    }
+    root.innerHTML = [
+      '<section class="panel wide family-group-panel">',
+      '<div class="community-hero family-group-hero">',
+      '<div><span>Family Group</span><h2>\uAC00\uC871\uBCC4 \uAD8C\uD55C\uACFC \uCD08\uB300\uB97C \uAD00\uB9AC\uD569\uB2C8\uB2E4</h2><p>\uCD1D\uAD04\uAD00\uB9AC\uC790\uB294 \uC804\uCCB4 \uD655\uC778, \uAC00\uC871\uAD00\uB9AC\uC790\uB294 \uAD6C\uC131\uC6D0 \uCD08\uB300\uC640 CRUD \uAD8C\uD55C\uC744 \uAD00\uB9AC\uD558\uB294 \uD654\uBA74\uC785\uB2C8\uB2E4.</p></div>',
+      '<strong>\uC6B4\uC601 \uC900\uBE44<br><b>\uAD8C\uD55C \uC5F0\uACB0</b></strong>',
+      '</div>',
+      '<div class="family-group-summary">',
+      '<article><span>\uD604\uC7AC \uAC00\uC871</span><strong>\uAE30\uBCF8 \uAC00\uC871</strong><small>\uAC00\uC871 ID 1</small></article>',
+      '<article><span>\uB0B4 \uC5ED\uD560</span><strong>\uAC00\uC871\uAD00\uB9AC\uC790</strong><small>\uC77D\uAE30/\uC791\uC131/\uC218\uC815/\uC0AD\uC81C</small></article>',
+      '<article><span>\uB2E4\uC74C \uC791\uC5C5</span><strong>\uCD08\uB300\uCF54\uB4DC</strong><small>\uAD8C\uD55C \uBCC4 \uC811\uADFC \uC5F0\uACB0</small></article>',
+      '</div>',
+      '<div class="family-group-list">',
+      '<article><div><strong>\uCD1D\uAD04\uAD00\uB9AC\uC790</strong><span>admin@family.test</span></div><b>\uC804\uCCB4 \uD655\uC778</b></article>',
+      '<article><div><strong>\uC5C4\uB9C8</strong><span>\uC77D\uAE30/\uC791\uC131/\uC218\uC815</span></div><b>\uAC00\uC871\uAD00\uB9AC\uC790</b></article>',
+      '<article><div><strong>\uC544\uBE60</strong><span>\uC77D\uAE30/\uC791\uC131</span></div><b>\uAD6C\uC131\uC6D0</b></article>',
+      '</div>',
+      '</section>'
+    ].join('')
+    resumePatchObserver()
+  }
+
   function refreshCalendarPatch() {
     if (document.documentElement.dataset.patchPage === 'community') {
       ensureCommunityMenu()
       wireCommunityPage()
       enhanceMediaUploadLimits()
+      cleanupPassiveButtons()
+      return
+    }
+    if (document.documentElement.dataset.patchPage === 'family-group') {
+      cleanupPassiveButtons()
       return
     }
     ensureCalendarJumpControl()
@@ -1080,6 +1196,7 @@
     enhanceBabyEditMediaHelper()
     enhanceBabyProfileEdit()
     enhanceMediaUploadLimits()
+    cleanupPassiveButtons()
   }
 
   function safeRefreshCalendarPatch() {
@@ -1727,7 +1844,7 @@
 
   document.addEventListener('click', function (event) {
     var nav = event.target && event.target.closest && event.target.closest('.nav-item')
-    if (!nav || isCommunityNavItem(nav)) return
+    if (!nav || isCommunityNavItem(nav) || isFamilyGroupNavItem(nav)) return
     if (document.documentElement.dataset.patchPage === 'community') {
       delete document.documentElement.dataset.patchPage
       var content = document.querySelector('.content-grid')
@@ -1743,6 +1860,7 @@
       })
       resumePatchObserver()
     }
+    clearFamilyGroupPage()
   }, true)
 
   document.addEventListener('click', function (event) {
@@ -1751,7 +1869,17 @@
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    clearFamilyGroupPage()
     queueOpenCommunityPage(true)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var nav = event.target && event.target.closest && event.target.closest('.nav-item')
+    if (!isFamilyGroupNavItem(nav)) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    openFamilyGroupPage()
   }, true)
 
   function openCommunityPage(force) {
