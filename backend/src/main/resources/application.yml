@@ -35,6 +35,10 @@ app:
   media:
     max-files-per-post: ${APP_MEDIA_MAX_FILES_PER_POST:6}
     max-reference-length: ${APP_MEDIA_MAX_REFERENCE_LENGTH:2048}
+    max-image-size: ${APP_MEDIA_MAX_IMAGE_SIZE:8MB}
+    max-video-size: ${APP_MEDIA_MAX_VIDEO_SIZE:30MB}
+    storage-path: ${APP_MEDIA_STORAGE_PATH:uploads}
+    public-url-prefix: ${APP_MEDIA_PUBLIC_URL_PREFIX:/api/media/files}
 
 management:
   endpoints:

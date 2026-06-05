@@ -29,7 +29,7 @@ public class SecurityConfig {
             .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'"))
             .frameOptions(frame -> frame.sameOrigin()))
         .authorizeHttpRequests(auth -> auth
-            .requestMatchers("/api/health", "/actuator/health", "/api/auth/**").permitAll()
+            .requestMatchers("/api/health", "/actuator/health", "/api/auth/**", "/api/media/files/**").permitAll()
             .requestMatchers("/h2-console/**").permitAll()
             .anyRequest().authenticated())
         .addFilterBefore(bearerTokenFilter, UsernamePasswordAuthenticationFilter.class)

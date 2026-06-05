@@ -7,6 +7,7 @@ dist-ssr
 backend/.data
 backend/target
 backend-local.log
+uploads
 *.log
 debug-*.png
 debug-*.jpg
