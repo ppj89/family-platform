@@ -1945,7 +1945,7 @@
     })
   }
 
-  function uploadCommunityFile(file, familyId) {
+  function uploadMediaFile(file, familyId) {
     var token = localStorage.getItem(API_AUTH_TOKEN_KEY || AUTH_TOKEN_STORAGE_KEY)
     if (!token) return Promise.reject(new Error('LOGIN_REQUIRED'))
 
@@ -1974,7 +1974,7 @@
     })
   }
 
-  function uploadCommunityFiles(input) {
+  function uploadMediaFiles(input) {
     if (!input || !input.files || !input.files.length) return Promise.resolve([])
     if (!validateMediaFiles(input)) return Promise.reject(new Error('INVALID_MEDIA'))
     var files = Array.from(input.files)
@@ -1982,9 +1982,13 @@
       return null
     }).then(function (familyId) {
       return Promise.all(files.map(function (file) {
-        return uploadCommunityFile(file, familyId)
+        return uploadMediaFile(file, familyId)
       }))
     })
+  }
+
+  function uploadCommunityFiles(input) {
+    return uploadMediaFiles(input)
   }
 
   function setCommunityFormBusy(form, busy) {
@@ -3598,23 +3602,42 @@
       var location = getFieldValue(form, '[data-field="travel-location"]')
       if (!title || !location) return
 
-      queueApiSync({
-        type: 'createTravelRecord',
-        payload: {
-          sortOrder: parseAmountValue(getFieldValue(form, 'input[inputmode="numeric"]')) || null,
-          title: title,
-          category: getCustomSelectValue('비용 구분') || '기타',
-          amount: parseAmountValue(getFieldValue(form, '[data-field="travel-amount"]')),
-          note: getFieldValue(form, 'textarea'),
-          location: location,
-          latitude: 0,
-          longitude: 0,
-          recordDate: getDatePickerValue(form, '날짜'),
-          recordTime: getFieldValue(form, '[data-field="travel-record-time"]') || null,
-          mediaUrls: []
+      var fileInput = form.querySelector('input[type="file"]')
+      var submit = form.querySelector('button[type="submit"], .submit-action')
+      if (submit && fileInput && fileInput.files && fileInput.files.length) {
+        submit.disabled = true
+        if (!submit.dataset.originalText) submit.dataset.originalText = submit.textContent
+        submit.textContent = '\uC5C5\uB85C\uB4DC \uC911'
+      }
+
+      uploadMediaFiles(fileInput).then(function (files) {
+        queueApiSync({
+          type: 'createTravelRecord',
+          payload: {
+            sortOrder: parseAmountValue(getFieldValue(form, 'input[inputmode="numeric"]')) || null,
+            title: title,
+            category: getCustomSelectValue('비용 구분') || '기타',
+            amount: parseAmountValue(getFieldValue(form, '[data-field="travel-amount"]')),
+            note: getFieldValue(form, 'textarea'),
+            location: location,
+            latitude: 0,
+            longitude: 0,
+            recordDate: getDatePickerValue(form, '날짜'),
+            recordTime: getFieldValue(form, '[data-field="travel-record-time"]') || null,
+            mediaUrls: communityMediaUrls(files)
+          }
+        })
+        flushApiQueue()
+      }).catch(function (error) {
+        if (String(error && error.message || '').indexOf('INVALID_MEDIA') < 0) {
+          showPatchToast('\uCCA8\uBD80\uD30C\uC77C \uC5C5\uB85C\uB4DC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+        }
+      }).finally(function () {
+        if (submit) {
+          submit.disabled = false
+          if (submit.dataset.originalText) submit.textContent = submit.dataset.originalText
         }
       })
-      flushApiQueue()
     }, 450)
   }
 
