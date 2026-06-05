@@ -1,0 +1,785 @@
+.fc-page {
+  display: grid;
+  gap: 16px;
+  width: min(1220px, 100%);
+}
+
+.fc-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 190px;
+  gap: 14px;
+  align-items: center;
+  border-radius: 18px;
+  padding: 18px 20px;
+  background: linear-gradient(135deg, #f8fbff 0%, #eef7ff 62%, #fff7fa 100%);
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+}
+
+.fc-hero span,
+.fc-page label span,
+.fc-form-head button,
+.fc-list-card header span {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fc-hero h2 {
+  margin: 5px 0;
+  color: #191f28;
+  font-size: 22px;
+  line-height: 1.28;
+}
+
+.fc-hero p {
+  margin: 0;
+  color: #6b7684;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.fc-today-card {
+  display: grid;
+  gap: 5px;
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 12px 30px rgba(49, 130, 246, 0.12), inset 0 0 0 1px #e5e8eb;
+}
+
+.fc-today-card svg {
+  color: #3182f6;
+}
+
+.fc-today-card strong {
+  color: #191f28;
+  font-size: 15px;
+}
+
+.fc-today-card small {
+  color: #6b7684;
+  font-size: 12px;
+}
+
+.fc-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  gap: 16px;
+  align-items: start;
+}
+
+.fc-main-card,
+.fc-form-card,
+.fc-list-card {
+  border-radius: 20px;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+}
+
+.fc-main-card {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  overflow: hidden;
+}
+
+.fc-toolbar,
+.fc-nav,
+.fc-tabs {
+  display: flex;
+  align-items: center;
+}
+
+.fc-toolbar {
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fc-nav {
+  gap: 8px;
+}
+
+.fc-nav > button:not(.fc-current) {
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 0;
+  border-radius: 13px;
+  background: #f2f4f6;
+  color: #4e5968;
+  cursor: pointer;
+}
+
+.fc-current {
+  display: grid;
+  gap: 2px;
+  min-width: 190px;
+  border: 0;
+  border-radius: 14px;
+  padding: 9px 13px;
+  background: #f7f8fa;
+  color: #191f28;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fc-current strong {
+  font-size: 15px;
+}
+
+.fc-current span {
+  color: #8b95a1;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.fc-tabs {
+  gap: 4px;
+  border-radius: 999px;
+  padding: 4px;
+  background: #f2f4f6;
+}
+
+.fc-tabs button {
+  min-width: 50px;
+  height: 34px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #6b7684;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fc-tabs button.active {
+  background: #ffffff;
+  color: #3182f6;
+  box-shadow: 0 8px 18px rgba(49, 130, 246, 0.13);
+}
+
+.fc-month {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.fc-weekday {
+  padding: 0 6px 3px;
+  color: #8b95a1;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.fc-day {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-height: 96px;
+  min-width: 0;
+  border: 0;
+  border-radius: 15px;
+  padding: 9px;
+  background: #ffffff;
+  color: #191f28;
+  text-align: left;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+  cursor: pointer;
+}
+
+.fc-day:hover,
+.fc-day.selected {
+  box-shadow: inset 0 0 0 2px #3182f6, 0 12px 28px rgba(49, 130, 246, 0.12);
+}
+
+.fc-day.muted {
+  background: #f7f8fa;
+  color: #b0b8c1;
+}
+
+.fc-day.holiday > strong {
+  color: #f04452;
+}
+
+.fc-day.saturday > strong {
+  color: #3182f6;
+}
+
+.fc-day strong {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.fc-day em {
+  overflow: hidden;
+  color: #f04452;
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc-day small {
+  color: #8b95a1;
+  font-size: 10px;
+}
+
+.fc-day-schedules {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.fc-day-schedules span {
+  overflow: hidden;
+  border-radius: 999px;
+  padding: 4px 7px;
+  background: #edf4ff;
+  color: #3182f6;
+  font-size: 11px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc-lists {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.fc-lists.stacked .fc-list-card:first-child .fc-list {
+  max-height: 210px;
+}
+
+.fc-lists.stacked .fc-list-card:last-child .fc-list {
+  max-height: 360px;
+}
+
+.fc-list-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  background: #f7f8fa;
+}
+
+.fc-list-card header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fc-list-card h3,
+.fc-form-head h3 {
+  margin: 0;
+  color: #191f28;
+  font-size: 16px;
+}
+
+.fc-list {
+  display: grid;
+  gap: 8px;
+  max-height: 290px;
+  overflow: auto;
+}
+
+.fc-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  border-radius: 14px;
+  padding: 9px;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+}
+
+.fc-row-main {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fc-row-main b {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border-radius: 14px;
+  background: #e8f3ff;
+  color: #3182f6;
+}
+
+.fc-row-main span {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.fc-row-main strong {
+  overflow: hidden;
+  color: #191f28;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc-row-main small {
+  overflow: hidden;
+  color: #6b7684;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fc-row > div {
+  display: flex;
+  gap: 5px;
+}
+
+.fc-row > div button {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: #f2f4f6;
+  color: #4e5968;
+  cursor: pointer;
+}
+
+.fc-row > div button:last-child {
+  background: #fff1f2;
+  color: #f04452;
+}
+
+.fc-empty {
+  margin: 0;
+  border-radius: 14px;
+  padding: 18px;
+  background: #ffffff;
+  color: #8b95a1;
+  text-align: center;
+}
+
+.fc-form-card {
+  display: grid;
+  gap: 13px;
+  padding: 18px;
+  position: sticky;
+  top: 18px;
+}
+
+.fc-form-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fc-form-head button {
+  border: 0;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: #fff1f2;
+  color: #f04452;
+  cursor: pointer;
+}
+
+.fc-page label {
+  display: grid;
+  gap: 7px;
+}
+
+.fc-page input,
+.fc-page select,
+.fc-page textarea {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: #ffffff;
+  color: #191f28;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px #dce1e7, 0 1px 0 rgba(25, 31, 40, 0.02);
+  outline: none;
+  transition: box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.fc-page input:focus,
+.fc-page select:focus,
+.fc-page textarea:focus {
+  background: #ffffff;
+  box-shadow: inset 0 0 0 2px #3182f6, 0 12px 24px rgba(49, 130, 246, 0.1);
+}
+
+.fc-page select {
+  padding-right: 36px;
+  cursor: pointer;
+}
+
+.fc-page input[type='date'],
+.fc-page input[type='time'] {
+  color-scheme: light;
+}
+
+.fc-page textarea {
+  min-height: 112px;
+  resize: vertical;
+}
+
+.fc-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fc-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 46px;
+  border: 0;
+  border-radius: 14px;
+  background: #3182f6;
+  color: #ffffff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fc-week-agenda,
+.fc-day-agenda,
+.fc-year {
+  display: grid;
+  gap: 9px;
+}
+
+.fc-week-agenda {
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  overflow-x: auto;
+  padding-bottom: 3px;
+}
+
+.fc-day-agenda {
+  grid-template-columns: 1fr;
+}
+
+.fc-agenda-day,
+.fc-year-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-height: 150px;
+  border-radius: 15px;
+  padding: 13px;
+  background: #ffffff;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+}
+
+.fc-agenda-day strong,
+.fc-year-card strong {
+  color: #191f28;
+  font-size: 14px;
+}
+
+.fc-agenda-day small,
+.fc-year-card small,
+.fc-agenda-day em {
+  color: #8b95a1;
+  font-size: 11px;
+  font-style: normal;
+}
+
+.fc-agenda-day button,
+.fc-year-card button {
+  border: 0;
+  border-radius: 999px;
+  padding: 7px 9px;
+  background: #edf4ff;
+  color: #3182f6;
+  font-weight: 800;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fc-year {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.fc-year-card {
+  min-height: 128px;
+}
+
+.fc-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30000;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(25, 31, 40, 0.32);
+  backdrop-filter: blur(4px);
+}
+
+.fc-modal {
+  position: relative;
+  display: grid;
+  gap: 15px;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  border-radius: 22px;
+  padding: 24px;
+  background: #ffffff;
+  box-shadow: 0 24px 80px rgba(25, 31, 40, 0.22);
+}
+
+.fc-modal-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border: 0;
+  border-radius: 12px;
+  background: #f2f4f6;
+  cursor: pointer;
+}
+
+.fc-modal > span {
+  color: #3182f6;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.fc-modal h2 {
+  margin: 0;
+  color: #191f28;
+  font-size: 25px;
+}
+
+.fc-modal-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.fc-modal-meta div,
+.fc-modal > p {
+  display: grid;
+  gap: 6px;
+  border-radius: 15px;
+  padding: 13px;
+  background: #f7f8fa;
+}
+
+.fc-modal-meta small {
+  color: #8b95a1;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.fc-modal-meta strong {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #191f28;
+  font-size: 14px;
+}
+
+.fc-modal-meta em,
+.fc-modal > p {
+  margin: 0;
+  color: #6b7684;
+  font-size: 12px;
+  font-style: normal;
+  line-height: 1.55;
+}
+
+.fc-modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.fc-modal-actions button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 13px;
+  background: #edf4ff;
+  color: #3182f6;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fc-modal-actions button:last-child {
+  background: #f04452;
+  color: #ffffff;
+}
+
+.app-dialog {
+  position: relative;
+  display: grid;
+  gap: 12px;
+  width: min(430px, 100%);
+  border-radius: 22px;
+  padding: 26px;
+  background: #ffffff;
+  box-shadow: 0 24px 80px rgba(25, 31, 40, 0.22);
+}
+
+.app-dialog > svg {
+  color: #3182f6;
+}
+
+.app-dialog h2 {
+  margin: 0;
+  color: #191f28;
+  font-size: 22px;
+}
+
+.app-dialog p {
+  margin: 0;
+  color: #6b7684;
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.app-dialog-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.app-dialog-actions button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 13px;
+  background: #f2f4f6;
+  color: #4e5968;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.app-dialog-actions button:last-child {
+  background: #3182f6;
+  color: #ffffff;
+}
+
+.app-dialog-actions button.danger {
+  background: #f04452;
+  color: #ffffff;
+}
+
+@media (max-width: 980px) {
+  .fc-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .fc-form-card {
+    position: static;
+  }
+
+  .fc-lists {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .fc-page {
+    gap: 12px;
+  }
+
+  .fc-hero {
+    grid-template-columns: 1fr;
+    border-radius: 16px;
+    padding: 16px;
+  }
+
+  .fc-hero h2 {
+    font-size: 20px;
+  }
+
+  .fc-toolbar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .fc-nav {
+    justify-content: space-between;
+  }
+
+  .fc-current {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .fc-tabs {
+    width: 100%;
+  }
+
+  .fc-tabs button {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .fc-main-card {
+    padding: 12px;
+  }
+
+  .fc-month {
+    gap: 5px;
+    overflow-x: auto;
+  }
+
+  .fc-day {
+    min-width: 84px;
+    min-height: 88px;
+    border-radius: 13px;
+    padding: 8px;
+  }
+
+  .fc-weekday {
+    min-width: 84px;
+  }
+
+  .fc-form-grid,
+  .fc-modal-meta,
+  .fc-year {
+    grid-template-columns: 1fr;
+  }
+
+  .fc-row {
+    grid-template-columns: 1fr;
+  }
+
+  .fc-row > div {
+    justify-content: stretch;
+  }
+
+  .fc-row > div button {
+    flex: 1;
+    width: auto;
+  }
+
+  .fc-week-agenda {
+    grid-template-columns: repeat(7, minmax(132px, 1fr));
+  }
+}
