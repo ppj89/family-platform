@@ -13,6 +13,9 @@ dist-ssr
 *.local
 *.bak
 .env.production
+.env.android-signing
+*.jks
+*.keystore
 .tools
 debug-*.png
 debug-*.jpg
