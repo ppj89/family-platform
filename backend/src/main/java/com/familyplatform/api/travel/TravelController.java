@@ -2,6 +2,7 @@ package com.familyplatform.api.travel;
 
 import com.familyplatform.api.travel.dto.TravelRecordRequest;
 import com.familyplatform.api.travel.dto.TripRequest;
+import com.familyplatform.api.media.MediaPolicy;
 import com.familyplatform.api.security.FamilyAccessService;
 import com.familyplatform.api.security.FamilyPermission;
 import jakarta.transaction.Transactional;
@@ -27,11 +28,14 @@ public class TravelController {
   private final TripRepository trips;
   private final TravelRecordRepository records;
   private final FamilyAccessService access;
+  private final MediaPolicy mediaPolicy;
 
-  public TravelController(TripRepository trips, TravelRecordRepository records, FamilyAccessService access) {
+  public TravelController(TripRepository trips, TravelRecordRepository records, FamilyAccessService access,
+      MediaPolicy mediaPolicy) {
     this.trips = trips;
     this.records = records;
     this.access = access;
+    this.mediaPolicy = mediaPolicy;
   }
 
   @GetMapping("/trips")
@@ -120,7 +124,7 @@ public class TravelController {
     record.setLongitude(request.longitude());
     record.setRecordDate(request.recordDate());
     record.setRecordTime(request.recordTime());
-    record.setMediaUrls(request.mediaUrls());
+    record.setMediaUrls(mediaPolicy.validateReferences(request.mediaUrls()));
   }
 
   private Trip ensureTrip(Long tripId) {

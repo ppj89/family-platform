@@ -4,6 +4,10 @@ server:
 spring:
   application:
     name: family-platform-api
+  servlet:
+    multipart:
+      max-file-size: ${APP_MEDIA_MAX_FILE_SIZE:30MB}
+      max-request-size: ${APP_MEDIA_MAX_REQUEST_SIZE:40MB}
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/family_platform}
     username: ${SPRING_DATASOURCE_USERNAME:family_app}
@@ -28,6 +32,9 @@ app:
   security:
     token-secret: ${APP_SECURITY_TOKEN_SECRET:change-this-dev-secret-before-production}
     token-validity-seconds: ${APP_SECURITY_TOKEN_VALIDITY_SECONDS:86400}
+  media:
+    max-files-per-post: ${APP_MEDIA_MAX_FILES_PER_POST:6}
+    max-reference-length: ${APP_MEDIA_MAX_REFERENCE_LENGTH:2048}
 
 management:
   endpoints:

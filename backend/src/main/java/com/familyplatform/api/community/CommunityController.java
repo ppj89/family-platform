@@ -3,6 +3,7 @@ package com.familyplatform.api.community;
 import com.familyplatform.api.community.dto.CommunityCommentRequest;
 import com.familyplatform.api.community.dto.CommunityPostDetail;
 import com.familyplatform.api.community.dto.CommunityPostRequest;
+import com.familyplatform.api.media.MediaPolicy;
 import com.familyplatform.api.security.AuthenticatedUser;
 import com.familyplatform.api.security.FamilyAccessService;
 import com.familyplatform.api.user.AppUserRepository;
@@ -34,13 +35,15 @@ public class CommunityController {
   private final CommunityCommentRepository comments;
   private final FamilyAccessService access;
   private final AppUserRepository users;
+  private final MediaPolicy mediaPolicy;
 
   public CommunityController(CommunityPostRepository posts, CommunityCommentRepository comments,
-      FamilyAccessService access, AppUserRepository users) {
+      FamilyAccessService access, AppUserRepository users, MediaPolicy mediaPolicy) {
     this.posts = posts;
     this.comments = comments;
     this.access = access;
     this.users = users;
+    this.mediaPolicy = mediaPolicy;
   }
 
   @GetMapping("/posts")
@@ -141,7 +144,7 @@ public class CommunityController {
   private void applyPost(CommunityPost post, CommunityPostRequest request) {
     post.setTitle(request.title().trim());
     post.setBody(request.body());
-    post.setMediaUrls(request.mediaUrls());
+    post.setMediaUrls(mediaPolicy.validateReferences(request.mediaUrls()));
   }
 
   private void applyComment(CommunityComment comment, CommunityCommentRequest request) {

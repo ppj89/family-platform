@@ -30,6 +30,15 @@ Set:
 
 - `APP_CORS_ALLOWED_ORIGINS=https://your-domain`
 - `VITE_API_BASE_URL=/api`
+- `APP_MEDIA_MAX_FILE_SIZE=30MB`
+- `APP_MEDIA_MAX_REQUEST_SIZE=40MB`
+- `APP_MEDIA_MAX_FILES_PER_POST=6`
+
+The default media policy is intentionally conservative for low-cost operation:
+
+- Images: up to 8 MB in the web UI
+- Videos: up to 30 MB in the web UI
+- Attachments: up to 6 files and 40 MB per request
 
 ## Run
 

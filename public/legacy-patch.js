@@ -6,6 +6,10 @@
   var AUTH_USER_STORAGE_KEY = 'family-platform-user'
   var AUTH_FAMILY_STORAGE_KEY = 'family-platform-current-family-id'
   var AUTH_TRIP_STORAGE_KEY = 'family-platform-api-default-trip-id'
+  var MEDIA_MAX_FILES = 6
+  var MEDIA_MAX_IMAGE_BYTES = 8 * 1024 * 1024
+  var MEDIA_MAX_VIDEO_BYTES = 30 * 1024 * 1024
+  var MEDIA_MAX_TOTAL_BYTES = 40 * 1024 * 1024
 
   function parseDate(value) {
     if (!value) return null
@@ -1051,6 +1055,7 @@
     if (document.documentElement.dataset.patchPage === 'community') {
       ensureCommunityMenu()
       wireCommunityPage()
+      enhanceMediaUploadLimits()
       return
     }
     ensureCalendarJumpControl()
@@ -1074,6 +1079,7 @@
     enhanceBabyRecordMedia()
     enhanceBabyEditMediaHelper()
     enhanceBabyProfileEdit()
+    enhanceMediaUploadLimits()
   }
 
   function safeRefreshCalendarPatch() {
@@ -1775,6 +1781,57 @@
     return formatDisplayDate(now) + ' ' + String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
   }
 
+  function formatMediaBytes(bytes) {
+    if (!bytes) return '0MB'
+    return (bytes / 1024 / 1024).toFixed(bytes >= 10 * 1024 * 1024 ? 0 : 1) + 'MB'
+  }
+
+  function mediaLimitText() {
+    return '\uC0AC\uC9C4 ' + formatMediaBytes(MEDIA_MAX_IMAGE_BYTES) + ', \uC601\uC0C1 ' + formatMediaBytes(MEDIA_MAX_VIDEO_BYTES) +
+      ', \uCD5C\uB300 ' + MEDIA_MAX_FILES + '\uAC1C, \uD569\uACC4 ' + formatMediaBytes(MEDIA_MAX_TOTAL_BYTES) + '\uAE4C\uC9C0'
+  }
+
+  function validateMediaFiles(input) {
+    if (!input || !input.files || !input.files.length) return true
+    var files = Array.from(input.files)
+    var total = files.reduce(function (sum, file) { return sum + (file.size || 0) }, 0)
+    var invalid = files.find(function (file) {
+      if ((file.type || '').indexOf('video/') === 0) return file.size > MEDIA_MAX_VIDEO_BYTES
+      return file.size > MEDIA_MAX_IMAGE_BYTES
+    })
+    if (files.length > MEDIA_MAX_FILES) {
+      input.value = ''
+      showPatchToast('\uCCA8\uBD80\uD30C\uC77C\uC740 \uD55C \uBC88\uC5D0 ' + MEDIA_MAX_FILES + '\uAC1C\uAE4C\uC9C0\uB9CC \uAC00\uB2A5\uD569\uB2C8\uB2E4.')
+      return false
+    }
+    if (invalid) {
+      input.value = ''
+      showPatchToast('\uD30C\uC77C \uC6A9\uB7C9\uC774 \uD07D\uB2C8\uB2E4. ' + mediaLimitText() + '\uB85C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.')
+      return false
+    }
+    if (total > MEDIA_MAX_TOTAL_BYTES) {
+      input.value = ''
+      showPatchToast('\uCCA8\uBD80 \uD569\uACC4 \uC6A9\uB7C9\uC774 \uD07D\uB2C8\uB2E4. \uD569\uACC4 ' + formatMediaBytes(MEDIA_MAX_TOTAL_BYTES) + '\uAE4C\uC9C0\uB9CC \uAC00\uB2A5\uD569\uB2C8\uB2E4.')
+      return false
+    }
+    return true
+  }
+
+  function enhanceMediaUploadLimits() {
+    document.querySelectorAll('input[type="file"]').forEach(function (input) {
+      if (input.dataset.mediaLimitReady) return
+      input.dataset.mediaLimitReady = 'true'
+      input.addEventListener('change', function () {
+        validateMediaFiles(input)
+      }, true)
+    })
+    document.querySelectorAll('.community-file-field small, .media-edit-helper').forEach(function (hint) {
+      if (hint.dataset.mediaPolicyHint) return
+      hint.dataset.mediaPolicyHint = 'true'
+      hint.title = mediaLimitText()
+    })
+  }
+
   function findCommunityPost(tab, id) {
     return communityItems(tab).find(function (item) {
       return item.id === id
@@ -1783,6 +1840,7 @@
 
   function getCommunityFileNames(input) {
     if (!input || !input.files || !input.files.length) return []
+    if (!validateMediaFiles(input)) return []
     return Array.from(input.files).map(function (file) {
       var mb = file.size ? Math.max(file.size / 1024 / 1024, 0.01).toFixed(1) + 'MB' : ''
       return { name: file.name, size: mb }
@@ -1911,7 +1969,7 @@
       '<div class="community-composer-title"><strong>' + (editing ? '\uAE00 \uC218\uC815' : '\uC0C8 \uAE00 \uC791\uC131') + '</strong><span>\uC0AC\uC9C4 \uCCA8\uBD80 \uAC00\uB2A5</span></div>',
       '<input name="title" value="' + escapeHtml(post ? post.title : '') + '" placeholder="\uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694" />',
       '<textarea name="body" rows="5" placeholder="\uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694">' + escapeHtml(post ? post.body : '') + '</textarea>',
-      '<label class="community-file-field"><span>\uC0AC\uC9C4 \uCCA8\uBD80</span><input name="files" type="file" accept="image/*" multiple /><small>' + ((post && post.files && post.files.length) ? post.files.map(function (file) { return escapeHtml(file.name) }).join(', ') : '\uC120\uD0DD\uB41C \uD30C\uC77C \uC5C6\uC74C') + '</small></label>',
+      '<label class="community-file-field"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCCA8\uBD80</span><input name="files" type="file" accept="image/*,video/*" multiple /><small>' + ((post && post.files && post.files.length) ? post.files.map(function (file) { return escapeHtml(file.name) }).join(', ') : mediaLimitText()) + '</small></label>',
       '<div class="community-editor-actions"><button type="button" class="cancel-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
       '</form>'
     ].join('')
@@ -2013,7 +2071,7 @@
       '<div class="community-composer-title"><strong>' + (editing ? '\uAE00 \uC218\uC815' : '\uC0C8 \uAE00 \uC791\uC131') + '</strong><span>\uC0AC\uC9C4 \uCCA8\uBD80 \uAC00\uB2A5</span></div>',
       '<input name="title" value="' + escapeHtml(post ? post.title : '') + '" placeholder="\uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694" />',
       '<textarea name="body" rows="5" placeholder="\uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694">' + escapeHtml(post ? post.body : '') + '</textarea>',
-      '<label class="community-file-field"><span>\uC0AC\uC9C4 \uCCA8\uBD80</span><b>\uD30C\uC77C \uC120\uD0DD</b><input name="files" type="file" accept="image/*" multiple /><small>' + ((post && post.files && post.files.length) ? post.files.map(function (file) { return escapeHtml(file.name) }).join(', ') : '\uC120\uD0DD\uB41C \uD30C\uC77C \uC5C6\uC74C') + '</small></label>',
+      '<label class="community-file-field"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCCA8\uBD80</span><b>\uD30C\uC77C \uC120\uD0DD</b><input name="files" type="file" accept="image/*,video/*" multiple /><small>' + ((post && post.files && post.files.length) ? post.files.map(function (file) { return escapeHtml(file.name) }).join(', ') : mediaLimitText()) + '</small></label>',
       '<div class="community-editor-actions"><button type="button" class="cancel-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
       '</form>'
     ].join('')

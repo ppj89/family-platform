@@ -2,6 +2,7 @@ package com.familyplatform.api.baby;
 
 import com.familyplatform.api.baby.dto.BabyProfileRequest;
 import com.familyplatform.api.baby.dto.BabyRecordRequest;
+import com.familyplatform.api.media.MediaPolicy;
 import com.familyplatform.api.security.FamilyAccessService;
 import com.familyplatform.api.security.FamilyPermission;
 import jakarta.transaction.Transactional;
@@ -27,11 +28,14 @@ public class BabyController {
   private final BabyProfileRepository babies;
   private final BabyRecordRepository records;
   private final FamilyAccessService access;
+  private final MediaPolicy mediaPolicy;
 
-  public BabyController(BabyProfileRepository babies, BabyRecordRepository records, FamilyAccessService access) {
+  public BabyController(BabyProfileRepository babies, BabyRecordRepository records, FamilyAccessService access,
+      MediaPolicy mediaPolicy) {
     this.babies = babies;
     this.records = records;
     this.access = access;
+    this.mediaPolicy = mediaPolicy;
   }
 
   @GetMapping("/babies")
@@ -117,7 +121,7 @@ public class BabyController {
     baby.setGender(request.gender());
     baby.setBirthDate(request.birthDate());
     baby.setMemo(request.memo());
-    baby.setPhotoUrl(request.photoUrl());
+    baby.setPhotoUrl(mediaPolicy.validateReference(request.photoUrl()));
     baby.setLatestHeightCm(request.latestHeightCm());
     baby.setLatestWeightKg(request.latestWeightKg());
   }
@@ -130,7 +134,7 @@ public class BabyController {
     record.setHeightCm(request.heightCm());
     record.setWeightKg(request.weightKg());
     record.setMemo(request.memo());
-    record.setMediaUrls(request.mediaUrls());
+    record.setMediaUrls(mediaPolicy.validateReferences(request.mediaUrls()));
   }
 
   private void syncLatestGrowth(Long babyId, BabyRecordRequest request) {

@@ -1,6 +1,7 @@
 package com.familyplatform.api.diary;
 
 import com.familyplatform.api.diary.dto.FamilyDiaryRequest;
+import com.familyplatform.api.media.MediaPolicy;
 import com.familyplatform.api.security.FamilyAccessService;
 import com.familyplatform.api.security.FamilyPermission;
 import jakarta.validation.Valid;
@@ -24,10 +25,12 @@ import org.springframework.web.server.ResponseStatusException;
 public class FamilyDiaryController {
   private final FamilyDiaryRepository diaries;
   private final FamilyAccessService access;
+  private final MediaPolicy mediaPolicy;
 
-  public FamilyDiaryController(FamilyDiaryRepository diaries, FamilyAccessService access) {
+  public FamilyDiaryController(FamilyDiaryRepository diaries, FamilyAccessService access, MediaPolicy mediaPolicy) {
     this.diaries = diaries;
     this.access = access;
+    this.mediaPolicy = mediaPolicy;
   }
 
   @GetMapping
@@ -72,7 +75,7 @@ public class FamilyDiaryController {
     diary.setMood(request.mood());
     diary.setMinTemperature(request.minTemperature());
     diary.setMaxTemperature(request.maxTemperature());
-    diary.setMediaUrls(request.mediaUrls());
+    diary.setMediaUrls(mediaPolicy.validateReferences(request.mediaUrls()));
   }
 
   private ResponseStatusException notFound(String message) {

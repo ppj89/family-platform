@@ -1,6 +1,7 @@
 package com.familyplatform.api.baby;
 
 import jakarta.persistence.Entity;
+import jakarta.persistence.Column;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -21,6 +22,7 @@ public class BabyProfile {
   private String gender;
   private LocalDate birthDate;
   private String memo;
+  @Column(length = 2048)
   private String photoUrl;
   private BigDecimal latestHeightCm;
   private BigDecimal latestWeightKg;

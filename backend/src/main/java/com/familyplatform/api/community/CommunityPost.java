@@ -1,6 +1,7 @@
 package com.familyplatform.api.community;
 
 import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -32,6 +33,7 @@ public class CommunityPost {
   private Instant updatedAt = Instant.now();
 
   @ElementCollection(fetch = FetchType.EAGER)
+  @Column(name = "media_urls", length = 2048)
   private List<String> mediaUrls = new ArrayList<>();
 
   protected CommunityPost() {

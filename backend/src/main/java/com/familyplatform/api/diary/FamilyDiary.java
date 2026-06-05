@@ -1,6 +1,7 @@
 package com.familyplatform.api.diary;
 
 import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -30,6 +31,7 @@ public class FamilyDiary {
   private Instant createdAt = Instant.now();
 
   @ElementCollection(fetch = FetchType.EAGER)
+  @Column(name = "media_urls", length = 2048)
   private List<String> mediaUrls = new ArrayList<>();
 
   protected FamilyDiary() {
