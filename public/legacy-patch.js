@@ -1842,9 +1842,62 @@
     if (!input || !input.files || !input.files.length) return []
     if (!validateMediaFiles(input)) return []
     return Array.from(input.files).map(function (file) {
-      var mb = file.size ? Math.max(file.size / 1024 / 1024, 0.01).toFixed(1) + 'MB' : ''
-      return { name: file.name, size: mb }
+      return { name: file.name, size: formatMediaBytes(file.size || 0), contentType: file.type || '' }
     })
+  }
+
+  function uploadCommunityFile(file, familyId) {
+    var token = localStorage.getItem(API_AUTH_TOKEN_KEY || AUTH_TOKEN_STORAGE_KEY)
+    if (!token) return Promise.reject(new Error('LOGIN_REQUIRED'))
+
+    var formData = new FormData()
+    formData.append('file', file)
+    if (familyId) formData.append('familyId', String(familyId))
+
+    return fetch(API_BASE_URL + '/media', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      body: formData
+    }).then(function (response) {
+      if (!response.ok) {
+        return response.text().then(function (message) {
+          throw new Error(message || ('API ' + response.status))
+        })
+      }
+      return response.json()
+    }).then(function (item) {
+      return {
+        name: item.originalFileName || file.name,
+        size: formatMediaBytes(item.size || file.size || 0),
+        url: item.url || '',
+        contentType: item.contentType || file.type || ''
+      }
+    })
+  }
+
+  function uploadCommunityFiles(input) {
+    if (!input || !input.files || !input.files.length) return Promise.resolve([])
+    if (!validateMediaFiles(input)) return Promise.reject(new Error('INVALID_MEDIA'))
+    var files = Array.from(input.files)
+    return getCurrentFamilyId().catch(function () {
+      return null
+    }).then(function (familyId) {
+      return Promise.all(files.map(function (file) {
+        return uploadCommunityFile(file, familyId)
+      }))
+    })
+  }
+
+  function setCommunityFormBusy(form, busy) {
+    if (!form) return
+    form.querySelectorAll('button, input, textarea').forEach(function (field) {
+      field.disabled = !!busy
+    })
+    var submit = form.querySelector('button[type="submit"]')
+    if (submit) {
+      if (!submit.dataset.originalText) submit.dataset.originalText = submit.textContent
+      submit.textContent = busy ? '\uC5C5\uB85C\uB4DC \uC911' : submit.dataset.originalText
+    }
   }
 
   function showPatchConfirm(message, onConfirm) {
@@ -2038,7 +2091,17 @@
 
   function renderCommunityThumb(post) {
     var hasFile = post.files && post.files.length
-    return '<span class="community-list-thumb ' + (hasFile ? 'has-file' : '') + '">' + (hasFile ? '\uC0AC\uC9C4' : '') + '</span>'
+    var first = hasFile ? post.files[0] : null
+    var isVideo = first && String(first.contentType || first.name || '').toLowerCase().indexOf('video') >= 0
+    return '<span class="community-list-thumb ' + (hasFile ? 'has-file' : '') + '">' + (hasFile ? (isVideo ? '\uC601\uC0C1' : '\uC0AC\uC9C4') : '') + '</span>'
+  }
+
+  function renderCommunityFiles(files) {
+    if (!files || !files.length) return ''
+    return '<div class="community-files">' + files.map(function (file) {
+      var url = file.url || '#'
+      return '<a href="' + escapeHtml(url) + '" download="' + escapeHtml(file.name) + '" data-community-download="' + escapeHtml(file.name) + '"><span>' + escapeHtml(file.name) + '</span><small>' + escapeHtml(file.size || '') + ' · \uB2E4\uC6B4\uB85C\uB4DC</small></a>'
+    }).join('') + '</div>'
   }
 
   function renderCommunityBoard(tab, admin) {
@@ -2202,8 +2265,10 @@
       if (link.dataset.wired) return
       link.dataset.wired = 'true'
       link.addEventListener('click', function (event) {
+        var href = link.getAttribute('href') || ''
+        if (href && href !== '#') return
         event.preventDefault()
-        showPatchToast('\uCCA8\uBD80\uD30C\uC77C \uB2E4\uC6B4\uB85C\uB4DC\uB294 \uBC31\uC5D4\uB4DC \uC5F0\uACB0 \uD6C4 \uC800\uC7A5\uC18C\uC5D0\uC11C \uC81C\uACF5\uD569\uB2C8\uB2E4.')
+        showPatchToast('\uCCA8\uBD80\uD30C\uC77C\uC744 \uBA3C\uC800 \uC5C5\uB85C\uB4DC\uD574\uC8FC\uC138\uC694.')
       })
     })
 
@@ -2237,33 +2302,41 @@
           return
         }
         var editId = form.dataset.editPost
-        if (editId) {
-          var targetPost = findCommunityPost(tab, editId)
-          if (!targetPost) return
-          targetPost.title = title
-          targetPost.body = body
-          var editFiles = getCommunityFileNames(form.elements.files)
-          if (editFiles.length) targetPost.files = editFiles
-          communityState.editingPostId = null
-          showPatchToast('\uAE00\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
+        setCommunityFormBusy(form, true)
+        uploadCommunityFiles(form.elements.files).then(function (uploadedFiles) {
+          if (editId) {
+            var targetPost = findCommunityPost(tab, editId)
+            if (!targetPost) return
+            targetPost.title = title
+            targetPost.body = body
+            if (uploadedFiles.length) targetPost.files = uploadedFiles
+            communityState.editingPostId = null
+            showPatchToast('\uAE00\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
+            renderCommunityPage(true)
+            return
+          }
+          var nowText = communityNowText()
+          var dateParts = nowText.split(' ')
+          communityItems(tab).unshift({
+            id: tab + '-' + Date.now(),
+            title: title,
+            body: body,
+            author: tab === 'free' ? '\uB098' : '\uAD00\uB9AC\uC790',
+            date: dateParts[0],
+            time: dateParts[1] || '',
+            files: uploadedFiles,
+            comments: []
+          })
+          communityState.composing = false
+          showPatchToast('\uAC8C\uC2DC\uAE00\uC744 \uB4F1\uB85D\uD588\uC2B5\uB2C8\uB2E4.')
           renderCommunityPage(true)
-          return
-        }
-        var nowText = communityNowText()
-        var dateParts = nowText.split(' ')
-        communityItems(tab).unshift({
-          id: tab + '-' + Date.now(),
-          title: title,
-          body: body,
-          author: tab === 'free' ? '\uB098' : '\uAD00\uB9AC\uC790',
-          date: dateParts[0],
-          time: dateParts[1] || '',
-          files: getCommunityFileNames(form.elements.files),
-          comments: []
+        }).catch(function (error) {
+          if (String(error && error.message || '').indexOf('INVALID_MEDIA') < 0) {
+            showPatchToast('\uCCA8\uBD80\uD30C\uC77C \uC5C5\uB85C\uB4DC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+          }
+        }).finally(function () {
+          setCommunityFormBusy(form, false)
         })
-        communityState.composing = false
-        showPatchToast('\uAC8C\uC2DC\uAE00\uC744 \uB4F1\uB85D\uD588\uC2B5\uB2C8\uB2E4.')
-        renderCommunityPage(true)
       })
     })
 
