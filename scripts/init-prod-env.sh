@@ -2,7 +2,8 @@
 set -eu
 
 DOMAIN="${1:-https://family.example.com}"
-WEB_PORT="${2:-80}"
+APP_DOMAIN="${2:-family.example.com}"
+WEB_PORT="${3:-80}"
 
 if [ -f .env.production ]; then
   echo ".env.production already exists. Move or delete it before generating a new one." >&2
@@ -27,6 +28,7 @@ APP_SECURITY_TOKEN_VALIDITY_SECONDS=86400
 
 VITE_API_BASE_URL=/api
 WEB_PORT=$WEB_PORT
+APP_DOMAIN=$APP_DOMAIN
 EOF
 
 echo ".env.production created."

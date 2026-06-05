@@ -1,5 +1,6 @@
 param(
   [string]$Domain = "https://family.example.com",
+  [string]$AppDomain = "family.example.com",
   [string]$WebPort = "80"
 )
 
@@ -34,6 +35,7 @@ APP_SECURITY_TOKEN_VALIDITY_SECONDS=86400
 
 VITE_API_BASE_URL=/api
 WEB_PORT=$WebPort
+APP_DOMAIN=$AppDomain
 "@ | Set-Content -Path ".env.production" -Encoding UTF8
 
 Write-Host ".env.production created."

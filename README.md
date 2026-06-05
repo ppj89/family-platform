@@ -63,15 +63,21 @@ powershell -ExecutionPolicy Bypass -File scripts\build-android-debug.ps1
 3. Deploy with Docker Compose.
 
 ```bash
-scripts/init-prod-env.sh https://your-domain
+scripts/init-prod-env.sh https://your-domain your-domain
 docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
 ```
 
 Windows:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File scripts\init-prod-env.ps1 -Domain https://your-domain
+powershell -ExecutionPolicy Bypass -File scripts\init-prod-env.ps1 -Domain https://your-domain -AppDomain your-domain
 powershell -ExecutionPolicy Bypass -File scripts\deploy-prod.ps1
+```
+
+HTTPS deployment:
+
+```bash
+scripts/deploy-prod-https.sh
 ```
 
 ## Security Notes
