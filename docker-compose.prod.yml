@@ -51,7 +51,8 @@ services:
     container_name: family-platform-web
     restart: unless-stopped
     depends_on:
-      - api
+      api:
+        condition: service_healthy
     ports:
       - "${WEB_PORT:-80}:80"
 

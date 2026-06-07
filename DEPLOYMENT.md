@@ -69,6 +69,7 @@ powershell -ExecutionPolicy Bypass -File scripts\deploy-prod-https.ps1
 ```bash
 curl http://localhost/health
 curl http://localhost/api/health
+docker compose -f docker-compose.prod.yml --env-file .env.production ps
 ```
 
 ## Database
