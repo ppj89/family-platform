@@ -5,7 +5,7 @@
 ## Stack
 
 - Frontend: React, Vite, TypeScript
-- Backend: Java 25, Spring Boot, Spring Security, JPA
+- Backend: Go 1.26, net/http, pgx
 - Database: PostgreSQL 18
 - Runtime: Docker Compose
 - Mobile wrapper: Capacitor Android
@@ -47,7 +47,7 @@ npm run build
 Backend:
 
 ```powershell
-cmd /c "set JAVA_HOME=%CD%\.tools\jdk-25\jdk-25.0.3+9&& set PATH=%CD%\.tools\jdk-25\jdk-25.0.3+9\bin;%CD%\.tools\maven\apache-maven-3.9.16\bin;%PATH%&& mvn -f backend\pom.xml test"
+docker run --rm -v "${PWD}\backend-go:/src" -w /src golang:1.26.4-alpine sh -lc "/usr/local/go/bin/go test ./..."
 ```
 
 Android debug APK:
@@ -87,5 +87,5 @@ scripts/deploy-prod-https.sh
 - A second login first returns a duplicate-login response; confirmed force login invalidates the previous token.
 - Five failed password attempts lock the account for five minutes.
 - Family data APIs are scoped by family membership and permissions.
-- Flyway manages production database schema changes.
+- The Go API creates required PostgreSQL tables and indexes on startup.
 - PostgreSQL backup and restore scripts are included under `scripts/`.

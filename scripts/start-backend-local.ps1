@@ -1,2 +1,8 @@
-. "$PSScriptRoot\dev-env.ps1"
-mvn -f "$PSScriptRoot\..\backend\pom.xml" spring-boot:run "-Dspring-boot.run.profiles=local"
+$root = Resolve-Path "$PSScriptRoot\.."
+Push-Location $root
+try {
+  docker compose up --build -d db api
+  docker compose ps api
+} finally {
+  Pop-Location
+}

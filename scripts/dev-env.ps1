@@ -5,4 +5,3 @@ $env:Path = "$env:JAVA_HOME\bin;$env:MAVEN_HOME\bin;$env:Path"
 
 Write-Host "JAVA_HOME=$env:JAVA_HOME"
 java -version
-mvn -version
