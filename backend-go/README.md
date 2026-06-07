@@ -1,8 +1,8 @@
 # Family Platform Go API
 
-Spring Boot API를 Go로 전환하기 위한 신규 백엔드입니다.
+Family Platform 운영용 Go 백엔드입니다.
 
-현재 전환 범위:
+현재 전환된 API:
 
 - `/api/health`
 - `/api/auth/register`
@@ -19,6 +19,15 @@ Spring Boot API를 Go로 전환하기 위한 신규 백엔드입니다.
 - `/api/trips`
 - `/api/trips/{tripId}/records`
 - `/api/travel-records/{recordId}`
+- `/api/babies`
+- `/api/babies/{babyId}/records`
+- `/api/baby-records/{recordId}`
+- `/api/diaries`
+- `/api/community/posts`
+- `/api/community/comments/{commentId}`
+- `/api/media`
+- `/api/media/files/{fileName}`
+- `/api/notifications`
 
 보안 기본값:
 
@@ -41,8 +50,7 @@ $env:DATABASE_URL='postgres://family_app:family_app_password@localhost:5432/fami
 
 ## 다음 전환 순서
 
-1. 육아/일기 API
-2. 커뮤니티/댓글/첨부 API
-3. 파일 업로드 API
-4. 알림 API
-5. Spring Boot 제거 및 Docker Compose API 이미지 교체
+1. Go API 통합 테스트 보강
+2. 기존 Spring Boot 백엔드 제거 여부 결정
+3. 실제 서버 배포와 도메인/HTTPS 연결
+4. SSO OAuth/OIDC Provider 연동

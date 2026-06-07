@@ -10,9 +10,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"log/slog"
+	"mime"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +36,12 @@ type config struct {
 	allowedOrigins       []string
 	tokenSecret          []byte
 	tokenValiditySeconds int64
+	mediaStoragePath     string
+	mediaPublicPrefix    string
+	maxFilesPerPost      int
+	maxReferenceLength   int
+	maxImageBytes        int64
+	maxVideoBytes        int64
 }
 
 type app struct {
@@ -77,6 +86,10 @@ func main() {
 	}
 
 	api := &app{cfg: cfg, db: db, log: logger}
+	if err := os.MkdirAll(cfg.mediaStoragePath, 0750); err != nil {
+		logger.Error("media storage setup failed", "error", err)
+		os.Exit(1)
+	}
 	if err := api.ensureSchema(ctx); err != nil {
 		logger.Error("database schema failed", "error", err)
 		os.Exit(1)
@@ -118,6 +131,12 @@ func loadConfig() (config, error) {
 		allowedOrigins:       splitCSV(getenv("APP_CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")),
 		tokenSecret:          []byte(secret),
 		tokenValiditySeconds: validity,
+		mediaStoragePath:     getenv("APP_MEDIA_STORAGE_PATH", "uploads"),
+		mediaPublicPrefix:    strings.TrimRight(getenv("APP_MEDIA_PUBLIC_URL_PREFIX", "/api/media/files"), "/"),
+		maxFilesPerPost:      envInt("APP_MEDIA_MAX_FILES_PER_POST", 6),
+		maxReferenceLength:   envInt("APP_MEDIA_MAX_REFERENCE_LENGTH", 2048),
+		maxImageBytes:        parseSize(getenv("APP_MEDIA_MAX_IMAGE_SIZE", "8MB"), 8*1024*1024),
+		maxVideoBytes:        parseSize(getenv("APP_MEDIA_MAX_VIDEO_SIZE", "30MB"), 30*1024*1024),
 	}, nil
 }
 
@@ -158,6 +177,32 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("POST /api/trips/{tripId}/records", a.requireAuth(a.createTravelRecord))
 	mux.HandleFunc("PUT /api/travel-records/{recordId}", a.requireAuth(a.updateTravelRecord))
 	mux.HandleFunc("DELETE /api/travel-records/{recordId}", a.requireAuth(a.deleteTravelRecord))
+	mux.HandleFunc("GET /api/babies", a.requireAuth(a.listBabies))
+	mux.HandleFunc("POST /api/babies", a.requireAuth(a.createBaby))
+	mux.HandleFunc("PUT /api/babies/{babyId}", a.requireAuth(a.updateBaby))
+	mux.HandleFunc("DELETE /api/babies/{babyId}", a.requireAuth(a.deleteBaby))
+	mux.HandleFunc("GET /api/babies/{babyId}/records", a.requireAuth(a.listBabyRecords))
+	mux.HandleFunc("POST /api/babies/{babyId}/records", a.requireAuth(a.createBabyRecord))
+	mux.HandleFunc("PUT /api/baby-records/{recordId}", a.requireAuth(a.updateBabyRecord))
+	mux.HandleFunc("DELETE /api/baby-records/{recordId}", a.requireAuth(a.deleteBabyRecord))
+	mux.HandleFunc("GET /api/diaries", a.requireAuth(a.listDiaries))
+	mux.HandleFunc("POST /api/diaries", a.requireAuth(a.createDiary))
+	mux.HandleFunc("PUT /api/diaries/{diaryId}", a.requireAuth(a.updateDiary))
+	mux.HandleFunc("DELETE /api/diaries/{diaryId}", a.requireAuth(a.deleteDiary))
+	mux.HandleFunc("GET /api/community/posts", a.requireAuth(a.listCommunityPosts))
+	mux.HandleFunc("POST /api/community/posts", a.requireAuth(a.createCommunityPost))
+	mux.HandleFunc("GET /api/community/posts/{postId}", a.requireAuth(a.getCommunityPost))
+	mux.HandleFunc("PUT /api/community/posts/{postId}", a.requireAuth(a.updateCommunityPost))
+	mux.HandleFunc("DELETE /api/community/posts/{postId}", a.requireAuth(a.deleteCommunityPost))
+	mux.HandleFunc("POST /api/community/posts/{postId}/comments", a.requireAuth(a.createCommunityComment))
+	mux.HandleFunc("PUT /api/community/comments/{commentId}", a.requireAuth(a.updateCommunityComment))
+	mux.HandleFunc("DELETE /api/community/comments/{commentId}", a.requireAuth(a.deleteCommunityComment))
+	mux.HandleFunc("POST /api/media", a.requireAuth(a.uploadMedia))
+	mux.HandleFunc("GET /api/media/files/{fileName}", a.downloadMedia)
+	mux.HandleFunc("GET /api/notifications", a.requireAuth(a.listNotifications))
+	mux.HandleFunc("POST /api/notifications/schedule-reminders", a.requireAuth(a.createScheduleReminders))
+	mux.HandleFunc("PATCH /api/notifications/{notificationId}/read", a.requireAuth(a.markNotificationRead))
+	mux.HandleFunc("PATCH /api/notifications/read-all", a.requireAuth(a.markAllNotificationsRead))
 	return a.securityHeaders(a.cors(mux))
 }
 
@@ -1040,6 +1085,696 @@ func (a *app) deleteTravelRecord(w http.ResponseWriter, r *http.Request, user au
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type babyProfileItem struct {
+	ID             int64    `json:"id"`
+	FamilyID       int64    `json:"familyId"`
+	Name           string   `json:"name"`
+	Gender         *string  `json:"gender,omitempty"`
+	BirthDate      string   `json:"birthDate"`
+	Memo           *string  `json:"memo,omitempty"`
+	PhotoURL       *string  `json:"photoUrl,omitempty"`
+	LatestHeightCm *float64 `json:"latestHeightCm,omitempty"`
+	LatestWeightKg *float64 `json:"latestWeightKg,omitempty"`
+	CreatedAt      string   `json:"createdAt"`
+}
+
+type babyRecordItem struct {
+	ID         int64    `json:"id"`
+	BabyID     int64    `json:"babyId"`
+	RecordType string   `json:"recordType"`
+	RecordDate string   `json:"recordDate"`
+	RecordTime *string  `json:"recordTime,omitempty"`
+	AmountMl   *int     `json:"amountMl,omitempty"`
+	HeightCm   *float64 `json:"heightCm,omitempty"`
+	WeightKg   *float64 `json:"weightKg,omitempty"`
+	Memo       *string  `json:"memo,omitempty"`
+	MediaURLs  []string `json:"mediaUrls"`
+	CreatedAt  string   `json:"createdAt"`
+}
+
+func (a *app) listBabies(w http.ResponseWriter, r *http.Request, user authUser) {
+	familyID := queryInt64(r, "familyId", 1)
+	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+		return
+	}
+	rows, err := a.db.Query(r.Context(), `
+		select id, family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at
+		from baby_profiles where family_id = $1 order by created_at desc
+	`, familyID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	defer rows.Close()
+	items, ok := scanBabies(w, rows)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (a *app) createBaby(w http.ResponseWriter, r *http.Request, user authUser) {
+	familyID := queryInt64(r, "familyId", 1)
+	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
+		return
+	}
+	req, ok := readBabyPayload(w, r)
+	if !ok {
+		return
+	}
+	item, ok := a.saveBaby(w, r, 0, familyID, req)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusCreated, item)
+}
+
+func (a *app) updateBaby(w http.ResponseWriter, r *http.Request, user authUser) {
+	babyID, ok := pathID(w, r, "babyId")
+	if !ok {
+		return
+	}
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1", babyID)
+	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+		return
+	}
+	req, ok := readBabyPayload(w, r)
+	if !ok {
+		return
+	}
+	item, ok := a.saveBaby(w, r, babyID, familyID, req)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (a *app) deleteBaby(w http.ResponseWriter, r *http.Request, user authUser) {
+	babyID, ok := pathID(w, r, "babyId")
+	if !ok {
+		return
+	}
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1", babyID)
+	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+		return
+	}
+	_, _ = a.db.Exec(r.Context(), "delete from baby_record_media_urls where baby_record_id in (select id from baby_records where baby_id = $1)", babyID)
+	_, _ = a.db.Exec(r.Context(), "delete from baby_records where baby_id = $1", babyID)
+	_, _ = a.db.Exec(r.Context(), "delete from baby_profiles where id = $1", babyID)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *app) listBabyRecords(w http.ResponseWriter, r *http.Request, user authUser) {
+	babyID, ok := pathID(w, r, "babyId")
+	if !ok {
+		return
+	}
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1", babyID)
+	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+		return
+	}
+	start, end := r.URL.Query().Get("startDate"), r.URL.Query().Get("endDate")
+	query := `
+		select id, baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at
+		from baby_records where baby_id = $1
+	`
+	args := []any{babyID}
+	if validDate(start) && validDate(end) {
+		query += " and record_date between $2 and $3"
+		args = append(args, start, end)
+	}
+	query += " order by record_date desc, created_at desc"
+	rows, err := a.db.Query(r.Context(), query, args...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	defer rows.Close()
+	items, ok := a.scanBabyRecords(w, r.Context(), rows)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (a *app) createBabyRecord(w http.ResponseWriter, r *http.Request, user authUser) {
+	babyID, ok := pathID(w, r, "babyId")
+	if !ok {
+		return
+	}
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1", babyID)
+	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
+		return
+	}
+	req, ok := readBabyRecordPayload(w, r)
+	if !ok {
+		return
+	}
+	item, ok := a.saveBabyRecord(w, r, 0, babyID, req)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusCreated, item)
+}
+
+func (a *app) updateBabyRecord(w http.ResponseWriter, r *http.Request, user authUser) {
+	recordID, ok := pathID(w, r, "recordId")
+	if !ok {
+		return
+	}
+	var babyID, familyID int64
+	err := a.db.QueryRow(r.Context(), `select r.baby_id, b.family_id from baby_records r join baby_profiles b on b.id = r.baby_id where r.id = $1`, recordID).Scan(&babyID, &familyID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "baby record not found")
+		return
+	}
+	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+		return
+	}
+	req, ok := readBabyRecordPayload(w, r)
+	if !ok {
+		return
+	}
+	item, ok := a.saveBabyRecord(w, r, recordID, babyID, req)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (a *app) deleteBabyRecord(w http.ResponseWriter, r *http.Request, user authUser) {
+	recordID, ok := pathID(w, r, "recordId")
+	if !ok {
+		return
+	}
+	var familyID int64
+	err := a.db.QueryRow(r.Context(), `select b.family_id from baby_records r join baby_profiles b on b.id = r.baby_id where r.id = $1`, recordID).Scan(&familyID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "baby record not found")
+		return
+	}
+	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+		return
+	}
+	_, _ = a.db.Exec(r.Context(), "delete from baby_record_media_urls where baby_record_id = $1", recordID)
+	_, _ = a.db.Exec(r.Context(), "delete from baby_records where id = $1", recordID)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type diaryItem struct {
+	ID             int64    `json:"id"`
+	FamilyID       int64    `json:"familyId"`
+	Title          string   `json:"title"`
+	Body           string   `json:"body"`
+	DiaryDate      string   `json:"diaryDate"`
+	Weather        *string  `json:"weather,omitempty"`
+	Mood           *string  `json:"mood,omitempty"`
+	MinTemperature *int     `json:"minTemperature,omitempty"`
+	MaxTemperature *int     `json:"maxTemperature,omitempty"`
+	MediaURLs      []string `json:"mediaUrls"`
+	CreatedAt      string   `json:"createdAt"`
+}
+
+func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser) {
+	familyID, start, end, ok := familyDateRange(w, r)
+	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+		return
+	}
+	rows, err := a.db.Query(r.Context(), `
+		select id, family_id, title, body, diary_date, weather, mood, min_temperature, max_temperature, created_at
+		from family_diaries where family_id = $1 and diary_date between $2 and $3
+		order by diary_date desc, created_at desc
+	`, familyID, start, end)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	defer rows.Close()
+	items, ok := a.scanDiaries(w, r.Context(), rows)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (a *app) createDiary(w http.ResponseWriter, r *http.Request, user authUser) {
+	familyID := queryInt64(r, "familyId", 1)
+	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
+		return
+	}
+	req, ok := readDiaryPayload(w, r)
+	if !ok {
+		return
+	}
+	item, ok := a.saveDiary(w, r, 0, familyID, req)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusCreated, item)
+}
+
+func (a *app) updateDiary(w http.ResponseWriter, r *http.Request, user authUser) {
+	diaryID, ok := pathID(w, r, "diaryId")
+	if !ok {
+		return
+	}
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_diaries where id = $1", diaryID)
+	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+		return
+	}
+	req, ok := readDiaryPayload(w, r)
+	if !ok {
+		return
+	}
+	item, ok := a.saveDiary(w, r, diaryID, familyID, req)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (a *app) deleteDiary(w http.ResponseWriter, r *http.Request, user authUser) {
+	diaryID, ok := pathID(w, r, "diaryId")
+	if !ok {
+		return
+	}
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_diaries where id = $1", diaryID)
+	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+		return
+	}
+	_, _ = a.db.Exec(r.Context(), "delete from family_diary_media_urls where family_diary_id = $1", diaryID)
+	_, _ = a.db.Exec(r.Context(), "delete from family_diaries where id = $1", diaryID)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+type communityPostItem struct {
+	ID         int64    `json:"id"`
+	BoardType  string   `json:"boardType"`
+	FamilyID   *int64   `json:"familyId,omitempty"`
+	AuthorID   *int64   `json:"authorId,omitempty"`
+	AuthorName string   `json:"authorName"`
+	Title      string   `json:"title"`
+	Body       string   `json:"body"`
+	MediaURLs  []string `json:"mediaUrls"`
+	CreatedAt  string   `json:"createdAt"`
+	UpdatedAt  string   `json:"updatedAt"`
+}
+
+type communityCommentItem struct {
+	ID         int64  `json:"id"`
+	PostID     int64  `json:"postId"`
+	AuthorID   *int64 `json:"authorId,omitempty"`
+	AuthorName string `json:"authorName"`
+	Body       string `json:"body"`
+	CreatedAt  string `json:"createdAt"`
+	UpdatedAt  string `json:"updatedAt"`
+}
+
+func (a *app) listCommunityPosts(w http.ResponseWriter, r *http.Request, user authUser) {
+	board, ok := normalizeBoard(w, r.URL.Query().Get("boardType"))
+	if !ok || !a.requireBoardRead(w, user, board) {
+		return
+	}
+	familyID := queryInt64(r, "familyId", 0)
+	query := `select id, board_type, family_id, author_id, author_name, title, body::text, created_at, updated_at from community_posts where board_type = $1`
+	args := []any{board}
+	if familyID > 0 && board != "free" && board != "notice" {
+		if !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+			return
+		}
+		query += " and family_id = $2"
+		args = append(args, familyID)
+	}
+	query += " order by created_at desc"
+	rows, err := a.db.Query(r.Context(), query, args...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	defer rows.Close()
+	items, ok := a.scanCommunityPosts(w, r.Context(), rows)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (a *app) getCommunityPost(w http.ResponseWriter, r *http.Request, user authUser) {
+	postID, ok := pathID(w, r, "postId")
+	if !ok {
+		return
+	}
+	post, ok := a.communityPostByID(w, r.Context(), postID)
+	if !ok || !a.requirePostRead(w, r.Context(), user, post) {
+		return
+	}
+	comments, ok := a.communityComments(w, r.Context(), postID)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"post": post, "comments": comments})
+}
+
+func (a *app) createCommunityPost(w http.ResponseWriter, r *http.Request, user authUser) {
+	req, ok := readCommunityPostPayload(w, r)
+	if !ok || !a.requireBoardWrite(w, user, req.BoardType) {
+		return
+	}
+	if req.FamilyID != nil && !a.requireFamilyPermission(w, r.Context(), user, *req.FamilyID, "create") {
+		return
+	}
+	item, ok := a.saveCommunityPost(w, r, 0, user, req)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusCreated, item)
+}
+
+func (a *app) updateCommunityPost(w http.ResponseWriter, r *http.Request, user authUser) {
+	postID, ok := pathID(w, r, "postId")
+	if !ok {
+		return
+	}
+	old, ok := a.communityPostByID(w, r.Context(), postID)
+	if !ok || !a.requirePostWrite(w, user, old) {
+		return
+	}
+	req, ok := readCommunityPostPayload(w, r)
+	if !ok || !a.requireBoardWrite(w, user, req.BoardType) {
+		return
+	}
+	if req.FamilyID != nil && !a.requireFamilyPermission(w, r.Context(), user, *req.FamilyID, "update") {
+		return
+	}
+	item, ok := a.saveCommunityPost(w, r, postID, user, req)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (a *app) deleteCommunityPost(w http.ResponseWriter, r *http.Request, user authUser) {
+	postID, ok := pathID(w, r, "postId")
+	if !ok {
+		return
+	}
+	post, ok := a.communityPostByID(w, r.Context(), postID)
+	if !ok || !a.requirePostWrite(w, user, post) {
+		return
+	}
+	_, _ = a.db.Exec(r.Context(), "delete from community_comments where post_id = $1", postID)
+	_, _ = a.db.Exec(r.Context(), "delete from community_post_media_urls where community_post_id = $1", postID)
+	_, _ = a.db.Exec(r.Context(), "delete from community_posts where id = $1", postID)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *app) createCommunityComment(w http.ResponseWriter, r *http.Request, user authUser) {
+	postID, ok := pathID(w, r, "postId")
+	if !ok {
+		return
+	}
+	post, ok := a.communityPostByID(w, r.Context(), postID)
+	if !ok || !a.requirePostRead(w, r.Context(), user, post) {
+		return
+	}
+	if (post.BoardType == "notice" || post.BoardType == "inquiry") && !user.PlatformAdmin {
+		writeError(w, http.StatusForbidden, "platform admin permission required")
+		return
+	}
+	var req struct {
+		Body string `json:"body"`
+	}
+	if !readJSON(w, r, &req) || strings.TrimSpace(req.Body) == "" {
+		writeError(w, http.StatusBadRequest, "body is required")
+		return
+	}
+	var item communityCommentItem
+	var authorID int64 = user.ID
+	var createdAt, updatedAt time.Time
+	err := a.db.QueryRow(r.Context(), `
+		insert into community_comments (post_id, author_id, author_name, body, created_at, updated_at)
+		values ($1,$2,$3,$4,now(),now())
+		returning id, post_id, author_id, author_name, body::text, created_at, updated_at
+	`, postID, user.ID, a.displayName(r.Context(), user), req.Body).
+		Scan(&item.ID, &item.PostID, &authorID, &item.AuthorName, &item.Body, &createdAt, &updatedAt)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "comment save failed")
+		return
+	}
+	item.AuthorID = &authorID
+	item.CreatedAt = formatTime(createdAt)
+	item.UpdatedAt = formatTime(updatedAt)
+	writeJSON(w, http.StatusCreated, item)
+}
+
+func (a *app) updateCommunityComment(w http.ResponseWriter, r *http.Request, user authUser) {
+	commentID, ok := pathID(w, r, "commentId")
+	if !ok {
+		return
+	}
+	comment, ok := a.commentOwner(w, r.Context(), commentID)
+	if !ok || (!user.PlatformAdmin && (comment.AuthorID == nil || *comment.AuthorID != user.ID)) {
+		writeError(w, http.StatusForbidden, "only the author can change this content")
+		return
+	}
+	var req struct {
+		Body string `json:"body"`
+	}
+	if !readJSON(w, r, &req) || strings.TrimSpace(req.Body) == "" {
+		writeError(w, http.StatusBadRequest, "body is required")
+		return
+	}
+	var item communityCommentItem
+	var authorID sql.NullInt64
+	var createdAt, updatedAt time.Time
+	err := a.db.QueryRow(r.Context(), `
+		update community_comments set body=$1, updated_at=now() where id=$2
+		returning id, post_id, author_id, author_name, body::text, created_at, updated_at
+	`, req.Body, commentID).Scan(&item.ID, &item.PostID, &authorID, &item.AuthorName, &item.Body, &createdAt, &updatedAt)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "comment save failed")
+		return
+	}
+	item.AuthorID = nullInt64(authorID)
+	item.CreatedAt = formatTime(createdAt)
+	item.UpdatedAt = formatTime(updatedAt)
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (a *app) deleteCommunityComment(w http.ResponseWriter, r *http.Request, user authUser) {
+	commentID, ok := pathID(w, r, "commentId")
+	if !ok {
+		return
+	}
+	comment, ok := a.commentOwner(w, r.Context(), commentID)
+	if !ok || (!user.PlatformAdmin && (comment.AuthorID == nil || *comment.AuthorID != user.ID)) {
+		writeError(w, http.StatusForbidden, "only the author can change this content")
+		return
+	}
+	_, _ = a.db.Exec(r.Context(), "delete from community_comments where id = $1", commentID)
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *app) uploadMedia(w http.ResponseWriter, r *http.Request, user authUser) {
+	familyID := queryInt64(r, "familyId", 0)
+	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
+		return
+	}
+	if err := r.ParseMultipartForm(a.cfg.maxVideoBytes + 1024*1024); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid multipart form")
+		return
+	}
+	file, header, err := r.FormFile("file")
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "file is required")
+		return
+	}
+	defer file.Close()
+	contentType := header.Header.Get("Content-Type")
+	if contentType == "" {
+		contentType = "application/octet-stream"
+	}
+	limit := int64(0)
+	lowerType := strings.ToLower(contentType)
+	if strings.HasPrefix(lowerType, "image/") {
+		limit = a.cfg.maxImageBytes
+	} else if strings.HasPrefix(lowerType, "video/") {
+		limit = a.cfg.maxVideoBytes
+	} else {
+		writeError(w, http.StatusUnsupportedMediaType, "only image and video files are allowed")
+		return
+	}
+	if header.Size > limit {
+		writeError(w, http.StatusRequestEntityTooLarge, "file is too large")
+		return
+	}
+	storedName := newSessionID() + safeExtension(header.Filename)
+	target := filepath.Join(a.cfg.mediaStoragePath, storedName)
+	out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0640)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "file create failed")
+		return
+	}
+	defer out.Close()
+	written, err := io.Copy(out, io.LimitReader(file, limit+1))
+	if err != nil || written > limit {
+		_ = os.Remove(target)
+		writeError(w, http.StatusRequestEntityTooLarge, "file is too large")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"url":              a.cfg.mediaPublicPrefix + "/" + storedName,
+		"storedFileName":   storedName,
+		"originalFileName": header.Filename,
+		"contentType":      contentType,
+		"size":             written,
+	})
+}
+
+func (a *app) downloadMedia(w http.ResponseWriter, r *http.Request) {
+	fileName := filepath.Base(r.PathValue("fileName"))
+	if fileName == "." || fileName == string(filepath.Separator) {
+		writeError(w, http.StatusBadRequest, "invalid file name")
+		return
+	}
+	path := filepath.Join(a.cfg.mediaStoragePath, fileName)
+	file, err := os.Open(path)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "file not found")
+		return
+	}
+	defer file.Close()
+	if contentType := mime.TypeByExtension(filepath.Ext(fileName)); contentType != "" {
+		w.Header().Set("Content-Type", contentType)
+	}
+	w.Header().Set("Content-Disposition", "inline; filename=\""+strings.ReplaceAll(fileName, "\"", "")+"\"")
+	_, _ = io.Copy(w, file)
+}
+
+type notificationItem struct {
+	ID         int64   `json:"id"`
+	UserID     int64   `json:"userId"`
+	FamilyID   int64   `json:"familyId"`
+	ScheduleID *int64  `json:"scheduleId,omitempty"`
+	Type       string  `json:"type"`
+	Title      string  `json:"title"`
+	Body       string  `json:"body"`
+	TargetDate string  `json:"targetDate"`
+	ReadAt     *string `json:"readAt,omitempty"`
+	CreatedAt  string  `json:"createdAt"`
+}
+
+func (a *app) listNotifications(w http.ResponseWriter, r *http.Request, user authUser) {
+	unreadOnly := r.URL.Query().Get("unreadOnly") != "false"
+	query := `select id, user_id, family_id, schedule_id, type, title, body, target_date, read_at, created_at from app_notifications where user_id = $1`
+	if unreadOnly {
+		query += " and read_at is null"
+	}
+	query += " order by created_at desc"
+	rows, err := a.db.Query(r.Context(), query, user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	defer rows.Close()
+	items, ok := scanNotifications(w, rows)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (a *app) createScheduleReminders(w http.ResponseWriter, r *http.Request, user authUser) {
+	targetDate := r.URL.Query().Get("date")
+	if targetDate == "" {
+		targetDate = time.Now().Format("2006-01-02")
+	}
+	if !validDate(targetDate) {
+		writeError(w, http.StatusBadRequest, "date is invalid")
+		return
+	}
+	familyIDs := []int64{}
+	rows, err := a.db.Query(r.Context(), `
+		select distinct family_id from family_members where user_id = $1 and can_read = true
+		union
+		select id from family_groups where $2 = true
+	`, user.ID, user.PlatformAdmin)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	for rows.Next() {
+		var id int64
+		if rows.Scan(&id) == nil {
+			familyIDs = append(familyIDs, id)
+		}
+	}
+	rows.Close()
+	created := 0
+	for _, familyID := range familyIDs {
+		schedules, err := a.db.Query(r.Context(), `
+			select id, title, coalesce(schedule_time::text, ''), coalesce(category, '일정')
+			from family_schedules where family_id = $1 and schedule_date = $2
+		`, familyID, targetDate)
+		if err != nil {
+			continue
+		}
+		for schedules.Next() {
+			var scheduleID int64
+			var title, scheduleTime, category string
+			if schedules.Scan(&scheduleID, &title, &scheduleTime, &category) != nil {
+				continue
+			}
+			memberRows, err := a.db.Query(r.Context(), "select user_id from family_members where family_id = $1 and can_read = true", familyID)
+			if err != nil {
+				continue
+			}
+			for memberRows.Next() {
+				var userID int64
+				if memberRows.Scan(&userID) != nil {
+					continue
+				}
+				bodyTime := scheduleTime
+				if bodyTime == "" {
+					bodyTime = "시간 미정"
+				}
+				tag, err := a.db.Exec(r.Context(), `
+					insert into app_notifications (user_id, family_id, schedule_id, type, title, body, target_date, created_at)
+					values ($1,$2,$3,'SCHEDULE_REMINDER','등록된 일정이 있습니다.', $4, $5, now())
+					on conflict (user_id, schedule_id, type, target_date) do nothing
+				`, userID, familyID, scheduleID, bodyTime+" "+title+" · "+category, targetDate)
+				if err == nil {
+					created += int(tag.RowsAffected())
+				}
+			}
+			memberRows.Close()
+		}
+		schedules.Close()
+	}
+	writeJSON(w, http.StatusOK, map[string]int{"created": created})
+}
+
+func (a *app) markNotificationRead(w http.ResponseWriter, r *http.Request, user authUser) {
+	id, ok := pathID(w, r, "notificationId")
+	if !ok {
+		return
+	}
+	row := a.db.QueryRow(r.Context(), `
+		update app_notifications set read_at = now() where id = $1 and user_id = $2
+		returning id, user_id, family_id, schedule_id, type, title, body, target_date, read_at, created_at
+	`, id, user.ID)
+	item, ok := scanNotificationRow(w, row)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (a *app) markAllNotificationsRead(w http.ResponseWriter, r *http.Request, user authUser) {
+	_, _ = a.db.Exec(r.Context(), "update app_notifications set read_at = now() where user_id = $1 and read_at is null", user.ID)
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func (a *app) requireAuth(next func(http.ResponseWriter, *http.Request, authUser)) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		header := r.Header.Get("Authorization")
@@ -1235,12 +1970,99 @@ create table if not exists common_codes (
   name varchar(255),
   sort_order integer
 );
+create table if not exists baby_profiles (
+  id bigint generated by default as identity primary key,
+  birth_date date,
+  created_at timestamp with time zone,
+  family_id bigint,
+  gender varchar(255),
+  latest_height_cm numeric(38,2),
+  latest_weight_kg numeric(38,2),
+  memo varchar(255),
+  name varchar(255),
+  photo_url varchar(2048)
+);
+create table if not exists baby_records (
+  id bigint generated by default as identity primary key,
+  amount_ml integer,
+  baby_id bigint,
+  created_at timestamp with time zone,
+  height_cm numeric(38,2),
+  memo varchar(255),
+  record_date date,
+  record_time varchar(255),
+  record_type varchar(255),
+  weight_kg numeric(38,2)
+);
+create table if not exists baby_record_media_urls (
+  baby_record_id bigint not null,
+  media_urls varchar(2048)
+);
+create table if not exists family_diaries (
+  id bigint generated by default as identity primary key,
+  body text,
+  created_at timestamp with time zone,
+  diary_date date,
+  family_id bigint,
+  max_temperature integer,
+  min_temperature integer,
+  mood varchar(255),
+  title varchar(255),
+  weather varchar(255)
+);
+create table if not exists family_diary_media_urls (
+  family_diary_id bigint not null,
+  media_urls varchar(2048)
+);
+create table if not exists community_posts (
+  id bigint generated by default as identity primary key,
+  author_id bigint,
+  author_name varchar(255),
+  board_type varchar(255),
+  body text,
+  created_at timestamp with time zone,
+  family_id bigint,
+  title varchar(255),
+  updated_at timestamp with time zone
+);
+create table if not exists community_post_media_urls (
+  community_post_id bigint not null,
+  media_urls varchar(2048)
+);
+create table if not exists community_comments (
+  id bigint generated by default as identity primary key,
+  author_id bigint,
+  author_name varchar(255),
+  body text,
+  created_at timestamp with time zone,
+  post_id bigint,
+  updated_at timestamp with time zone
+);
+create table if not exists app_notifications (
+  id bigint generated by default as identity primary key,
+  body varchar(255),
+  created_at timestamp with time zone,
+  family_id bigint,
+  read_at timestamp with time zone,
+  schedule_id bigint,
+  target_date date,
+  title varchar(255),
+  type varchar(255),
+  user_id bigint,
+  constraint uk_app_notifications_schedule_user unique (user_id, schedule_id, type, target_date)
+);
 create index if not exists idx_family_schedules_family_date on family_schedules (family_id, schedule_date);
 create index if not exists idx_ledger_entries_family_date on ledger_entries (family_id, transaction_date);
 create index if not exists idx_trips_family on trips (family_id);
 create index if not exists idx_travel_records_trip_order on travel_records (trip_id, sort_order);
 create index if not exists idx_common_code_groups_family_menu on common_code_groups (family_id, menu_key);
 create index if not exists idx_common_codes_group_order on common_codes (group_id, sort_order);
+create index if not exists idx_baby_profiles_family on baby_profiles (family_id);
+create index if not exists idx_baby_records_baby_date on baby_records (baby_id, record_date);
+create index if not exists idx_family_diaries_family_date on family_diaries (family_id, diary_date);
+create index if not exists idx_community_posts_board_created on community_posts (board_type, created_at);
+create index if not exists idx_community_comments_post_created on community_comments (post_id, created_at);
+create index if not exists idx_app_notifications_user_created on app_notifications (user_id, created_at);
 `)
 	return err
 }
@@ -1900,4 +2722,632 @@ func nullInt(value sql.NullInt32) *int {
 	}
 	intValue := int(value.Int32)
 	return &intValue
+}
+
+func nullInt64(value sql.NullInt64) *int64 {
+	if !value.Valid {
+		return nil
+	}
+	return &value.Int64
+}
+
+func nullFloat(value sql.NullFloat64) *float64 {
+	if !value.Valid {
+		return nil
+	}
+	return &value.Float64
+}
+
+func envInt(key string, fallback int) int {
+	value, err := strconv.Atoi(getenv(key, ""))
+	if err != nil || value <= 0 {
+		return fallback
+	}
+	return value
+}
+
+func parseSize(value string, fallback int64) int64 {
+	value = strings.ToUpper(strings.TrimSpace(value))
+	multiplier := int64(1)
+	for suffix, unit := range map[string]int64{"KB": 1024, "MB": 1024 * 1024, "GB": 1024 * 1024 * 1024} {
+		if strings.HasSuffix(value, suffix) {
+			multiplier = unit
+			value = strings.TrimSuffix(value, suffix)
+			break
+		}
+	}
+	parsed, err := strconv.ParseInt(strings.TrimSpace(value), 10, 64)
+	if err != nil || parsed <= 0 {
+		return fallback
+	}
+	return parsed * multiplier
+}
+
+func safeExtension(name string) string {
+	ext := strings.ToLower(filepath.Ext(filepath.Base(name)))
+	if len(ext) > 12 {
+		return ""
+	}
+	for _, ch := range ext {
+		if !(ch == '.' || ch >= 'a' && ch <= 'z' || ch >= '0' && ch <= '9') {
+			return ""
+		}
+	}
+	return ext
+}
+
+func (a *app) validateMediaReferences(w http.ResponseWriter, mediaURLs []string) ([]string, bool) {
+	if len(mediaURLs) > a.cfg.maxFilesPerPost {
+		writeError(w, http.StatusRequestEntityTooLarge, "too many media files")
+		return nil, false
+	}
+	out := []string{}
+	for _, item := range mediaURLs {
+		item = strings.TrimSpace(item)
+		if item == "" {
+			continue
+		}
+		if len(item) > a.cfg.maxReferenceLength {
+			writeError(w, http.StatusRequestEntityTooLarge, "media reference is too large")
+			return nil, false
+		}
+		out = append(out, item)
+	}
+	return out, true
+}
+
+type babyPayload struct {
+	Name           string   `json:"name"`
+	Gender         *string  `json:"gender"`
+	BirthDate      string   `json:"birthDate"`
+	Memo           *string  `json:"memo"`
+	PhotoURL       *string  `json:"photoUrl"`
+	LatestHeightCm *float64 `json:"latestHeightCm"`
+	LatestWeightKg *float64 `json:"latestWeightKg"`
+}
+
+func readBabyPayload(w http.ResponseWriter, r *http.Request) (babyPayload, bool) {
+	var req babyPayload
+	if !readJSON(w, r, &req) {
+		return req, false
+	}
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" || !validDate(req.BirthDate) {
+		writeError(w, http.StatusBadRequest, "name and birthDate are required")
+		return req, false
+	}
+	return req, true
+}
+
+func (a *app) saveBaby(w http.ResponseWriter, r *http.Request, id int64, familyID int64, req babyPayload) (babyProfileItem, bool) {
+	var item babyProfileItem
+	var gender, memo, photo sql.NullString
+	var height, weight sql.NullFloat64
+	var birthDate, createdAt time.Time
+	var err error
+	if id == 0 {
+		err = a.db.QueryRow(r.Context(), `
+			insert into baby_profiles (family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,now())
+			returning id, family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at
+		`, familyID, req.Name, req.Gender, req.BirthDate, req.Memo, req.PhotoURL, req.LatestHeightCm, req.LatestWeightKg).
+			Scan(&item.ID, &item.FamilyID, &item.Name, &gender, &birthDate, &memo, &photo, &height, &weight, &createdAt)
+	} else {
+		err = a.db.QueryRow(r.Context(), `
+			update baby_profiles set name=$1, gender=$2, birth_date=$3, memo=$4, photo_url=$5, latest_height_cm=$6, latest_weight_kg=$7
+			where id=$8 and family_id=$9
+			returning id, family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at
+		`, req.Name, req.Gender, req.BirthDate, req.Memo, req.PhotoURL, req.LatestHeightCm, req.LatestWeightKg, id, familyID).
+			Scan(&item.ID, &item.FamilyID, &item.Name, &gender, &birthDate, &memo, &photo, &height, &weight, &createdAt)
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "baby save failed")
+		return item, false
+	}
+	item.Gender = nullString(gender)
+	item.BirthDate = formatDate(birthDate)
+	item.Memo = nullString(memo)
+	item.PhotoURL = nullString(photo)
+	item.LatestHeightCm = nullFloat(height)
+	item.LatestWeightKg = nullFloat(weight)
+	item.CreatedAt = formatTime(createdAt)
+	return item, true
+}
+
+func scanBabies(w http.ResponseWriter, rows pgx.Rows) ([]babyProfileItem, bool) {
+	items := []babyProfileItem{}
+	for rows.Next() {
+		var item babyProfileItem
+		var gender, memo, photo sql.NullString
+		var height, weight sql.NullFloat64
+		var birthDate, createdAt time.Time
+		if err := rows.Scan(&item.ID, &item.FamilyID, &item.Name, &gender, &birthDate, &memo, &photo, &height, &weight, &createdAt); err != nil {
+			writeError(w, http.StatusInternalServerError, "database scan failed")
+			return nil, false
+		}
+		item.Gender = nullString(gender)
+		item.BirthDate = formatDate(birthDate)
+		item.Memo = nullString(memo)
+		item.PhotoURL = nullString(photo)
+		item.LatestHeightCm = nullFloat(height)
+		item.LatestWeightKg = nullFloat(weight)
+		item.CreatedAt = formatTime(createdAt)
+		items = append(items, item)
+	}
+	return items, true
+}
+
+type babyRecordPayload struct {
+	RecordType string   `json:"recordType"`
+	RecordDate string   `json:"recordDate"`
+	RecordTime *string  `json:"recordTime"`
+	AmountMl   *int     `json:"amountMl"`
+	HeightCm   *float64 `json:"heightCm"`
+	WeightKg   *float64 `json:"weightKg"`
+	Memo       *string  `json:"memo"`
+	MediaURLs  []string `json:"mediaUrls"`
+}
+
+func readBabyRecordPayload(w http.ResponseWriter, r *http.Request) (babyRecordPayload, bool) {
+	var req babyRecordPayload
+	if !readJSON(w, r, &req) {
+		return req, false
+	}
+	req.RecordType = strings.TrimSpace(req.RecordType)
+	if req.RecordType == "" || !validDate(req.RecordDate) {
+		writeError(w, http.StatusBadRequest, "recordType and recordDate are required")
+		return req, false
+	}
+	return req, true
+}
+
+func (a *app) saveBabyRecord(w http.ResponseWriter, r *http.Request, id int64, babyID int64, req babyRecordPayload) (babyRecordItem, bool) {
+	mediaURLs, ok := a.validateMediaReferences(w, req.MediaURLs)
+	if !ok {
+		return babyRecordItem{}, false
+	}
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database transaction failed")
+		return babyRecordItem{}, false
+	}
+	defer tx.Rollback(r.Context())
+	var item babyRecordItem
+	var recordTime, memo sql.NullString
+	var amount sql.NullInt32
+	var height, weight sql.NullFloat64
+	var recordDate, createdAt time.Time
+	if id == 0 {
+		err = tx.QueryRow(r.Context(), `
+			insert into baby_records (baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,now())
+			returning id, baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at
+		`, babyID, req.RecordType, req.RecordDate, req.RecordTime, req.AmountMl, req.HeightCm, req.WeightKg, req.Memo).
+			Scan(&item.ID, &item.BabyID, &item.RecordType, &recordDate, &recordTime, &amount, &height, &weight, &memo, &createdAt)
+	} else {
+		err = tx.QueryRow(r.Context(), `
+			update baby_records set record_type=$1, record_date=$2, record_time=$3, amount_ml=$4, height_cm=$5, weight_kg=$6, memo=$7
+			where id=$8 and baby_id=$9
+			returning id, baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at
+		`, req.RecordType, req.RecordDate, req.RecordTime, req.AmountMl, req.HeightCm, req.WeightKg, req.Memo, id, babyID).
+			Scan(&item.ID, &item.BabyID, &item.RecordType, &recordDate, &recordTime, &amount, &height, &weight, &memo, &createdAt)
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "baby record save failed")
+		return item, false
+	}
+	_, _ = tx.Exec(r.Context(), "delete from baby_record_media_urls where baby_record_id = $1", item.ID)
+	for _, mediaURL := range mediaURLs {
+		if _, err := tx.Exec(r.Context(), "insert into baby_record_media_urls (baby_record_id, media_urls) values ($1,$2)", item.ID, mediaURL); err != nil {
+			writeError(w, http.StatusInternalServerError, "media save failed")
+			return item, false
+		}
+	}
+	if req.HeightCm != nil || req.WeightKg != nil {
+		_, _ = tx.Exec(r.Context(), "update baby_profiles set latest_height_cm = coalesce($1, latest_height_cm), latest_weight_kg = coalesce($2, latest_weight_kg) where id = $3", req.HeightCm, req.WeightKg, babyID)
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "database commit failed")
+		return item, false
+	}
+	item.RecordDate = formatDate(recordDate)
+	item.RecordTime = nullString(recordTime)
+	item.AmountMl = nullInt(amount)
+	item.HeightCm = nullFloat(height)
+	item.WeightKg = nullFloat(weight)
+	item.Memo = nullString(memo)
+	item.MediaURLs = mediaURLs
+	item.CreatedAt = formatTime(createdAt)
+	return item, true
+}
+
+func (a *app) scanBabyRecords(w http.ResponseWriter, ctx context.Context, rows pgx.Rows) ([]babyRecordItem, bool) {
+	items := []babyRecordItem{}
+	for rows.Next() {
+		var item babyRecordItem
+		var recordTime, memo sql.NullString
+		var amount sql.NullInt32
+		var height, weight sql.NullFloat64
+		var recordDate, createdAt time.Time
+		if err := rows.Scan(&item.ID, &item.BabyID, &item.RecordType, &recordDate, &recordTime, &amount, &height, &weight, &memo, &createdAt); err != nil {
+			writeError(w, http.StatusInternalServerError, "database scan failed")
+			return nil, false
+		}
+		item.RecordDate = formatDate(recordDate)
+		item.RecordTime = nullString(recordTime)
+		item.AmountMl = nullInt(amount)
+		item.HeightCm = nullFloat(height)
+		item.WeightKg = nullFloat(weight)
+		item.Memo = nullString(memo)
+		item.MediaURLs = a.mediaURLs(ctx, "baby_record_media_urls", "baby_record_id", item.ID)
+		item.CreatedAt = formatTime(createdAt)
+		items = append(items, item)
+	}
+	return items, true
+}
+
+type diaryPayload struct {
+	Title          string   `json:"title"`
+	Body           string   `json:"body"`
+	DiaryDate      string   `json:"diaryDate"`
+	Weather        *string  `json:"weather"`
+	Mood           *string  `json:"mood"`
+	MinTemperature *int     `json:"minTemperature"`
+	MaxTemperature *int     `json:"maxTemperature"`
+	MediaURLs      []string `json:"mediaUrls"`
+}
+
+func readDiaryPayload(w http.ResponseWriter, r *http.Request) (diaryPayload, bool) {
+	var req diaryPayload
+	if !readJSON(w, r, &req) {
+		return req, false
+	}
+	req.Title = strings.TrimSpace(req.Title)
+	if req.Title == "" || !validDate(req.DiaryDate) {
+		writeError(w, http.StatusBadRequest, "title and diaryDate are required")
+		return req, false
+	}
+	return req, true
+}
+
+func (a *app) saveDiary(w http.ResponseWriter, r *http.Request, id int64, familyID int64, req diaryPayload) (diaryItem, bool) {
+	mediaURLs, ok := a.validateMediaReferences(w, req.MediaURLs)
+	if !ok {
+		return diaryItem{}, false
+	}
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database transaction failed")
+		return diaryItem{}, false
+	}
+	defer tx.Rollback(r.Context())
+	var item diaryItem
+	var weather, mood sql.NullString
+	var minTemp, maxTemp sql.NullInt32
+	var diaryDate, createdAt time.Time
+	if id == 0 {
+		err = tx.QueryRow(r.Context(), `
+			insert into family_diaries (family_id, title, body, diary_date, weather, mood, min_temperature, max_temperature, created_at)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,now())
+			returning id, family_id, title, body::text, diary_date, weather, mood, min_temperature, max_temperature, created_at
+		`, familyID, req.Title, req.Body, req.DiaryDate, req.Weather, req.Mood, req.MinTemperature, req.MaxTemperature).
+			Scan(&item.ID, &item.FamilyID, &item.Title, &item.Body, &diaryDate, &weather, &mood, &minTemp, &maxTemp, &createdAt)
+	} else {
+		err = tx.QueryRow(r.Context(), `
+			update family_diaries set title=$1, body=$2, diary_date=$3, weather=$4, mood=$5, min_temperature=$6, max_temperature=$7
+			where id=$8 and family_id=$9
+			returning id, family_id, title, body::text, diary_date, weather, mood, min_temperature, max_temperature, created_at
+		`, req.Title, req.Body, req.DiaryDate, req.Weather, req.Mood, req.MinTemperature, req.MaxTemperature, id, familyID).
+			Scan(&item.ID, &item.FamilyID, &item.Title, &item.Body, &diaryDate, &weather, &mood, &minTemp, &maxTemp, &createdAt)
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "diary save failed")
+		return item, false
+	}
+	_, _ = tx.Exec(r.Context(), "delete from family_diary_media_urls where family_diary_id = $1", item.ID)
+	for _, mediaURL := range mediaURLs {
+		if _, err := tx.Exec(r.Context(), "insert into family_diary_media_urls (family_diary_id, media_urls) values ($1,$2)", item.ID, mediaURL); err != nil {
+			writeError(w, http.StatusInternalServerError, "media save failed")
+			return item, false
+		}
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "database commit failed")
+		return item, false
+	}
+	item.DiaryDate = formatDate(diaryDate)
+	item.Weather = nullString(weather)
+	item.Mood = nullString(mood)
+	item.MinTemperature = nullInt(minTemp)
+	item.MaxTemperature = nullInt(maxTemp)
+	item.MediaURLs = mediaURLs
+	item.CreatedAt = formatTime(createdAt)
+	return item, true
+}
+
+func (a *app) scanDiaries(w http.ResponseWriter, ctx context.Context, rows pgx.Rows) ([]diaryItem, bool) {
+	items := []diaryItem{}
+	for rows.Next() {
+		var item diaryItem
+		var weather, mood sql.NullString
+		var minTemp, maxTemp sql.NullInt32
+		var diaryDate, createdAt time.Time
+		if err := rows.Scan(&item.ID, &item.FamilyID, &item.Title, &item.Body, &diaryDate, &weather, &mood, &minTemp, &maxTemp, &createdAt); err != nil {
+			writeError(w, http.StatusInternalServerError, "database scan failed")
+			return nil, false
+		}
+		item.DiaryDate = formatDate(diaryDate)
+		item.Weather = nullString(weather)
+		item.Mood = nullString(mood)
+		item.MinTemperature = nullInt(minTemp)
+		item.MaxTemperature = nullInt(maxTemp)
+		item.MediaURLs = a.mediaURLs(ctx, "family_diary_media_urls", "family_diary_id", item.ID)
+		item.CreatedAt = formatTime(createdAt)
+		items = append(items, item)
+	}
+	return items, true
+}
+
+type communityPostPayload struct {
+	BoardType string   `json:"boardType"`
+	FamilyID  *int64   `json:"familyId"`
+	Title     string   `json:"title"`
+	Body      string   `json:"body"`
+	MediaURLs []string `json:"mediaUrls"`
+}
+
+func normalizeBoard(w http.ResponseWriter, board string) (string, bool) {
+	board = strings.ToLower(strings.TrimSpace(board))
+	if board != "notice" && board != "free" && board != "inquiry" {
+		writeError(w, http.StatusBadRequest, "unsupported board type")
+		return "", false
+	}
+	return board, true
+}
+
+func readCommunityPostPayload(w http.ResponseWriter, r *http.Request) (communityPostPayload, bool) {
+	var req communityPostPayload
+	if !readJSON(w, r, &req) {
+		return req, false
+	}
+	var ok bool
+	req.BoardType, ok = normalizeBoard(w, req.BoardType)
+	if !ok {
+		return req, false
+	}
+	req.Title = strings.TrimSpace(req.Title)
+	if req.Title == "" {
+		writeError(w, http.StatusBadRequest, "title is required")
+		return req, false
+	}
+	if req.BoardType == "notice" || req.BoardType == "free" {
+		req.FamilyID = nil
+	}
+	return req, true
+}
+
+func (a *app) requireBoardRead(w http.ResponseWriter, user authUser, board string) bool {
+	if board == "inquiry" && !user.PlatformAdmin {
+		writeError(w, http.StatusForbidden, "platform admin permission required")
+		return false
+	}
+	return true
+}
+
+func (a *app) requireBoardWrite(w http.ResponseWriter, user authUser, board string) bool {
+	if (board == "notice" || board == "inquiry") && !user.PlatformAdmin {
+		writeError(w, http.StatusForbidden, "platform admin permission required")
+		return false
+	}
+	return true
+}
+
+func (a *app) requirePostRead(w http.ResponseWriter, ctx context.Context, user authUser, post communityPostItem) bool {
+	if post.BoardType == "inquiry" && !user.PlatformAdmin {
+		writeError(w, http.StatusForbidden, "platform admin permission required")
+		return false
+	}
+	if post.FamilyID != nil {
+		return a.requireFamilyPermission(w, ctx, user, *post.FamilyID, "read")
+	}
+	return true
+}
+
+func (a *app) requirePostWrite(w http.ResponseWriter, user authUser, post communityPostItem) bool {
+	if user.PlatformAdmin {
+		return true
+	}
+	if post.BoardType == "notice" || post.BoardType == "inquiry" || post.AuthorID == nil || *post.AuthorID != user.ID {
+		writeError(w, http.StatusForbidden, "only the author can change this content")
+		return false
+	}
+	return true
+}
+
+func (a *app) saveCommunityPost(w http.ResponseWriter, r *http.Request, id int64, user authUser, req communityPostPayload) (communityPostItem, bool) {
+	mediaURLs, ok := a.validateMediaReferences(w, req.MediaURLs)
+	if !ok {
+		return communityPostItem{}, false
+	}
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database transaction failed")
+		return communityPostItem{}, false
+	}
+	defer tx.Rollback(r.Context())
+	var item communityPostItem
+	var familyID, authorID sql.NullInt64
+	var createdAt, updatedAt time.Time
+	if id == 0 {
+		err = tx.QueryRow(r.Context(), `
+			insert into community_posts (board_type, family_id, author_id, author_name, title, body, created_at, updated_at)
+			values ($1,$2,$3,$4,$5,$6,now(),now())
+			returning id, board_type, family_id, author_id, author_name, title, body::text, created_at, updated_at
+		`, req.BoardType, req.FamilyID, user.ID, a.displayName(r.Context(), user), req.Title, req.Body).
+			Scan(&item.ID, &item.BoardType, &familyID, &authorID, &item.AuthorName, &item.Title, &item.Body, &createdAt, &updatedAt)
+	} else {
+		err = tx.QueryRow(r.Context(), `
+			update community_posts set board_type=$1, family_id=$2, title=$3, body=$4, updated_at=now()
+			where id=$5
+			returning id, board_type, family_id, author_id, author_name, title, body::text, created_at, updated_at
+		`, req.BoardType, req.FamilyID, req.Title, req.Body, id).
+			Scan(&item.ID, &item.BoardType, &familyID, &authorID, &item.AuthorName, &item.Title, &item.Body, &createdAt, &updatedAt)
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "post save failed")
+		return item, false
+	}
+	_, _ = tx.Exec(r.Context(), "delete from community_post_media_urls where community_post_id = $1", item.ID)
+	for _, mediaURL := range mediaURLs {
+		if _, err := tx.Exec(r.Context(), "insert into community_post_media_urls (community_post_id, media_urls) values ($1,$2)", item.ID, mediaURL); err != nil {
+			writeError(w, http.StatusInternalServerError, "media save failed")
+			return item, false
+		}
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "database commit failed")
+		return item, false
+	}
+	item.FamilyID = nullInt64(familyID)
+	item.AuthorID = nullInt64(authorID)
+	item.MediaURLs = mediaURLs
+	item.CreatedAt = formatTime(createdAt)
+	item.UpdatedAt = formatTime(updatedAt)
+	return item, true
+}
+
+func (a *app) scanCommunityPosts(w http.ResponseWriter, ctx context.Context, rows pgx.Rows) ([]communityPostItem, bool) {
+	items := []communityPostItem{}
+	for rows.Next() {
+		var item communityPostItem
+		var familyID, authorID sql.NullInt64
+		var createdAt, updatedAt time.Time
+		if err := rows.Scan(&item.ID, &item.BoardType, &familyID, &authorID, &item.AuthorName, &item.Title, &item.Body, &createdAt, &updatedAt); err != nil {
+			writeError(w, http.StatusInternalServerError, "database scan failed")
+			return nil, false
+		}
+		item.FamilyID = nullInt64(familyID)
+		item.AuthorID = nullInt64(authorID)
+		item.MediaURLs = a.mediaURLs(ctx, "community_post_media_urls", "community_post_id", item.ID)
+		item.CreatedAt = formatTime(createdAt)
+		item.UpdatedAt = formatTime(updatedAt)
+		items = append(items, item)
+	}
+	return items, true
+}
+
+func (a *app) communityPostByID(w http.ResponseWriter, ctx context.Context, postID int64) (communityPostItem, bool) {
+	rows, err := a.db.Query(ctx, `select id, board_type, family_id, author_id, author_name, title, body::text, created_at, updated_at from community_posts where id = $1`, postID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return communityPostItem{}, false
+	}
+	defer rows.Close()
+	items, ok := a.scanCommunityPosts(w, ctx, rows)
+	if !ok || len(items) == 0 {
+		writeError(w, http.StatusNotFound, "post not found")
+		return communityPostItem{}, false
+	}
+	return items[0], true
+}
+
+func (a *app) communityComments(w http.ResponseWriter, ctx context.Context, postID int64) ([]communityCommentItem, bool) {
+	rows, err := a.db.Query(ctx, `
+		select id, post_id, author_id, author_name, body::text, created_at, updated_at
+		from community_comments where post_id = $1 order by created_at asc
+	`, postID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return nil, false
+	}
+	defer rows.Close()
+	items := []communityCommentItem{}
+	for rows.Next() {
+		var item communityCommentItem
+		var authorID sql.NullInt64
+		var createdAt, updatedAt time.Time
+		if err := rows.Scan(&item.ID, &item.PostID, &authorID, &item.AuthorName, &item.Body, &createdAt, &updatedAt); err != nil {
+			writeError(w, http.StatusInternalServerError, "database scan failed")
+			return nil, false
+		}
+		item.AuthorID = nullInt64(authorID)
+		item.CreatedAt = formatTime(createdAt)
+		item.UpdatedAt = formatTime(updatedAt)
+		items = append(items, item)
+	}
+	return items, true
+}
+
+func (a *app) commentOwner(w http.ResponseWriter, ctx context.Context, commentID int64) (communityCommentItem, bool) {
+	rows, err := a.db.Query(ctx, `select id, post_id, author_id, author_name, body::text, created_at, updated_at from community_comments where id = $1`, commentID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return communityCommentItem{}, false
+	}
+	defer rows.Close()
+	items := []communityCommentItem{}
+	for rows.Next() {
+		var item communityCommentItem
+		var authorID sql.NullInt64
+		var createdAt, updatedAt time.Time
+		if rows.Scan(&item.ID, &item.PostID, &authorID, &item.AuthorName, &item.Body, &createdAt, &updatedAt) == nil {
+			item.AuthorID = nullInt64(authorID)
+			item.CreatedAt = formatTime(createdAt)
+			item.UpdatedAt = formatTime(updatedAt)
+			items = append(items, item)
+		}
+	}
+	if len(items) == 0 {
+		writeError(w, http.StatusNotFound, "comment not found")
+		return communityCommentItem{}, false
+	}
+	return items[0], true
+}
+
+func (a *app) displayName(ctx context.Context, user authUser) string {
+	var nickname sql.NullString
+	if a.db.QueryRow(ctx, "select nickname from app_users where id = $1", user.ID).Scan(&nickname) == nil && nickname.Valid && strings.TrimSpace(nickname.String) != "" {
+		return nickname.String
+	}
+	return user.Email
+}
+
+func scanNotifications(w http.ResponseWriter, rows pgx.Rows) ([]notificationItem, bool) {
+	items := []notificationItem{}
+	for rows.Next() {
+		item, ok := scanNotificationValues(w, rows)
+		if !ok {
+			return nil, false
+		}
+		items = append(items, item)
+	}
+	return items, true
+}
+
+type scanner interface {
+	Scan(dest ...any) error
+}
+
+func scanNotificationRow(w http.ResponseWriter, row scanner) (notificationItem, bool) {
+	return scanNotificationValues(w, row)
+}
+
+func scanNotificationValues(w http.ResponseWriter, row scanner) (notificationItem, bool) {
+	var item notificationItem
+	var scheduleID sql.NullInt64
+	var targetDate time.Time
+	var readAt sql.NullTime
+	var createdAt time.Time
+	if err := row.Scan(&item.ID, &item.UserID, &item.FamilyID, &scheduleID, &item.Type, &item.Title, &item.Body, &targetDate, &readAt, &createdAt); err != nil {
+		writeError(w, http.StatusNotFound, "notification not found")
+		return item, false
+	}
+	item.ScheduleID = nullInt64(scheduleID)
+	item.TargetDate = formatDate(targetDate)
+	if readAt.Valid {
+		value := formatTime(readAt.Time)
+		item.ReadAt = &value
+	}
+	item.CreatedAt = formatTime(createdAt)
+	return item, true
 }

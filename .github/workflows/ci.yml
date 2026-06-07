@@ -33,15 +33,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
         with:
-          distribution: temurin
-          java-version: 25
-          cache: maven
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.sum
 
       - name: Test
-        run: mvn -f backend/pom.xml test
+        working-directory: backend-go
+        run: go test ./...
 
   docker:
     name: Docker production config
@@ -54,7 +54,7 @@ jobs:
         run: docker compose -f docker-compose.prod.yml --env-file .env.production.example config --quiet
 
       - name: Build backend image
-        run: docker build -f backend/Dockerfile backend
+        run: docker build -f backend-go/Dockerfile backend-go
 
       - name: Build web image
         run: docker build -f Dockerfile .

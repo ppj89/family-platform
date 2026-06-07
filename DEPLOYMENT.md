@@ -30,9 +30,9 @@ Set:
 
 - `APP_CORS_ALLOWED_ORIGINS=https://your-domain`
 - `VITE_API_BASE_URL=/api`
-- `APP_MEDIA_MAX_FILE_SIZE=30MB`
-- `APP_MEDIA_MAX_REQUEST_SIZE=40MB`
 - `APP_MEDIA_MAX_FILES_PER_POST=6`
+- `APP_MEDIA_MAX_IMAGE_SIZE=8MB`
+- `APP_MEDIA_MAX_VIDEO_SIZE=30MB`
 
 The default media policy is intentionally conservative for low-cost operation:
 
@@ -51,14 +51,6 @@ HTTP only:
 ```bash
 docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
 ```
-
-Go API preview:
-
-```bash
-docker compose -f docker-compose.go.yml --env-file .env.production up --build -d
-```
-
-The Go API is the target backend for the lightweight production path. Use this preview compose file while API endpoints are migrated from Spring Boot.
 
 HTTPS with Caddy:
 
@@ -82,10 +74,11 @@ docker compose -f docker-compose.prod.yml --env-file .env.production ps
 
 ## Database
 
-Flyway runs on API startup.
+The production API runs on Go. On startup it creates the required tables and indexes when they do not already exist.
 
-- Existing databases are baselined at migration version `1`.
-- Empty databases are created from `backend/src/main/resources/db/migration/V1__initial_schema.sql`.
+- Existing PostgreSQL data is reused.
+- Back up the database before every deploy.
+- Keep the old Spring Boot backend folder only as a temporary migration reference until production testing is complete.
 
 Create a PostgreSQL backup before every production deploy:
 

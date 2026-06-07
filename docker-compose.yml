@@ -18,18 +18,26 @@ services:
 
   api:
     build:
-      context: ./backend
+      context: ./backend-go
     container_name: family-platform-api
     depends_on:
       db:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/family_platform
-      SPRING_DATASOURCE_USERNAME: family_app
-      SPRING_DATASOURCE_PASSWORD: family_app_password
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: family_platform
+      POSTGRES_USER: family_app
+      POSTGRES_PASSWORD: family_app_password
       APP_CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
       APP_SECURITY_TOKEN_SECRET: local-docker-dev-secret-change-before-production-20260605
+      APP_SECURITY_TOKEN_VALIDITY_SECONDS: 86400
+      APP_MEDIA_MAX_FILES_PER_POST: 6
+      APP_MEDIA_MAX_REFERENCE_LENGTH: 2048
+      APP_MEDIA_MAX_IMAGE_SIZE: 8MB
+      APP_MEDIA_MAX_VIDEO_SIZE: 30MB
       APP_MEDIA_STORAGE_PATH: /app/uploads
+      APP_MEDIA_PUBLIC_URL_PREFIX: /api/media/files
     ports:
       - "8080:8080"
     volumes:
