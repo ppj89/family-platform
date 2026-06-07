@@ -86,10 +86,30 @@ jobs:
         run: docker compose -f docker-compose.prod.yml --env-file .env.production.example config --quiet
 
       - name: Build backend image
-        run: docker build -f backend-go/Dockerfile backend-go
+        run: |
+          for attempt in 1 2 3; do
+            if docker build -f backend-go/Dockerfile backend-go; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Docker build failed. Retrying in 15 seconds..."
+              sleep 15
+            fi
+          done
+          exit 1
 
       - name: Build web image
-        run: docker build -f Dockerfile .
+        run: |
+          for attempt in 1 2 3; do
+            if docker build -f Dockerfile .; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Docker build failed. Retrying in 15 seconds..."
+              sleep 15
+            fi
+          done
+          exit 1
 
   production-smoke:
     name: Production stack smoke
