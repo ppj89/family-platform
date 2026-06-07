@@ -1089,9 +1089,52 @@
     document.querySelectorAll('.panel-header button, .server-domain-panel header button').forEach(function (button) {
       var text = getCleanText(button)
       if (!text) return
-      if (text === '\uC11C\uBC84 \uC870\uD68C' || /^\d+\uAC1C$/.test(text) || /^\d+\uAC74$/.test(text) || /^\d{1,2}\uC6D4\s+\d{1,2}\uC77C/.test(text)) {
+      if (text === '\uC11C\uBC84 \uC870\uD68C' || /^\d+\uAC1C$/.test(text) || /^\d+\uAC74$/.test(text) || /^\d+\uACF3$/.test(text) || /^\d{1,2}\uC6D4\s+\d{1,2}\uC77C/.test(text)) {
         replaceButtonWithBadge(button, 'passive-header-chip')
       }
+    })
+  }
+
+  function cleanupCalendarChrome() {
+    var titleButton = document.querySelector('.family-calendar-panel .calendar-title-button')
+    if (titleButton) {
+      titleButton.setAttribute('aria-label', '\uB0A0\uC9DC \uC774\uB3D9')
+      titleButton.querySelectorAll('span').forEach(function (span) {
+        if (getCleanText(span).indexOf('\uC624\uB298') >= 0) span.remove()
+      })
+    }
+
+    var iconButtons = Array.from(document.querySelectorAll('.top-actions .icon-button, .summary-actions .icon-button'))
+    iconButtons.forEach(function (button, index) {
+      if (button.getAttribute('aria-label')) return
+      var label = index === 0 ? '\uD14C\uB9C8 \uBCC0\uACBD' : '\uCE98\uB9B0\uB354'
+      button.setAttribute('aria-label', label)
+      button.setAttribute('title', label)
+    })
+  }
+
+  function cleanupStaleServerPanels() {
+    if (window.__serverPanelCleanupScheduled) return
+    window.__serverPanelCleanupScheduled = true
+    window.setTimeout(function () {
+      window.__serverPanelCleanupScheduled = false
+      runStaleServerPanelCleanup()
+    }, 350)
+  }
+
+  function runStaleServerPanelCleanup() {
+    var title = getCleanText(document.querySelector('.topbar h1'))
+    var stalePanels = [
+      { selector: '.server-ledger-list', title: '\uAC00\uACC4\uBD80' },
+      { selector: '.server-travel-list', title: '\uC5EC\uD589' },
+      { selector: '.server-diary-list', title: '\uC77C\uAE30' },
+      { selector: '.server-baby-list', title: '\uC721\uC544' }
+    ]
+    stalePanels.forEach(function (item) {
+      if (title === item.title) return
+      document.querySelectorAll(item.selector).forEach(function (panel) {
+        panel.remove()
+      })
     })
   }
 
@@ -1198,9 +1241,11 @@
       cleanupPassiveButtons()
       return
     }
+    cleanupStaleServerPanels()
     ensureCalendarJumpControl()
     ensureCommunityMenu()
     wireCalendarInteractions()
+    cleanupCalendarChrome()
     ensureYearModeTabs()
     wireScheduleDetailRows()
     normalizeLunarLabels()
@@ -3421,6 +3466,7 @@
   }
 
   function renderLedgerServerEntries(force) {
+    if (getCleanText(document.querySelector('.topbar h1')) !== '\uAC00\uACC4\uBD80') return
     ensureServerLedgerPanel()
     var panel = document.querySelector('.server-ledger-list')
     var list = panel && panel.querySelector('.server-data-list')
@@ -3512,6 +3558,7 @@
   }
 
   function renderTravelServerEntries(force) {
+    if (getCleanText(document.querySelector('.topbar h1')) !== '\uC5EC\uD589') return
     ensureServerTravelPanel()
     var panel = document.querySelector('.server-travel-list')
     var list = panel && panel.querySelector('.server-data-list')
@@ -3555,6 +3602,7 @@
   }
 
   function renderDiaryServerEntries(force) {
+    if (getCleanText(document.querySelector('.topbar h1')) !== '\uC77C\uAE30') return
     ensureServerDiaryPanel()
     var panel = document.querySelector('.server-diary-list')
     var list = panel && panel.querySelector('.server-data-list')
@@ -3593,6 +3641,7 @@
   }
 
   function renderBabyServerEntries(force) {
+    if (getCleanText(document.querySelector('.topbar h1')) !== '\uC721\uC544') return
     ensureServerBabyPanel()
     var panel = document.querySelector('.server-baby-list')
     var list = panel && panel.querySelector('.server-data-list')
