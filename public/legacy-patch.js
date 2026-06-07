@@ -1111,6 +1111,30 @@
     })
   }
 
+  function clearCommunityPatchPage() {
+    if (document.documentElement.dataset.patchPage !== 'community') return
+    delete document.documentElement.dataset.patchPage
+    var content = document.querySelector('.content-grid')
+    if (content) {
+      content.classList.remove('community-grid')
+      content.classList.remove('community-source-hidden')
+      delete content.dataset.communityReady
+    }
+    var root = document.querySelector('.patch-community-root')
+    if (root) root.remove()
+    document.querySelectorAll('.community-nav-item.active').forEach(function (item) {
+      item.classList.remove('active')
+    })
+    resumePatchObserver()
+  }
+
+  function clearCustomPatchPageAfterReact(wasCommunity, wasFamilyGroup) {
+    window.setTimeout(function () {
+      if (wasCommunity) clearCommunityPatchPage()
+      if (wasFamilyGroup) clearFamilyGroupPage()
+    }, 0)
+  }
+
   function openFamilyGroupPage() {
     pausePatchObserver()
     if (document.documentElement.dataset.patchPage === 'community') {
@@ -1849,22 +1873,9 @@
   document.addEventListener('click', function (event) {
     var nav = event.target && event.target.closest && event.target.closest('.nav-item')
     if (!nav || isCommunityNavItem(nav) || isFamilyGroupNavItem(nav)) return
-    if (document.documentElement.dataset.patchPage === 'community') {
-      delete document.documentElement.dataset.patchPage
-      var content = document.querySelector('.content-grid')
-      if (content) {
-        content.classList.remove('community-grid')
-        content.classList.remove('community-source-hidden')
-        delete content.dataset.communityReady
-      }
-      var root = document.querySelector('.patch-community-root')
-      if (root) root.remove()
-      document.querySelectorAll('.community-nav-item.active').forEach(function (item) {
-        item.classList.remove('active')
-      })
-      resumePatchObserver()
-    }
-    clearFamilyGroupPage()
+    var wasCommunity = document.documentElement.dataset.patchPage === 'community'
+    var wasFamilyGroup = document.documentElement.dataset.patchPage === 'family-group'
+    if (wasCommunity || wasFamilyGroup) clearCustomPatchPageAfterReact(wasCommunity, wasFamilyGroup)
   }, true)
 
   document.addEventListener('click', function (event) {
