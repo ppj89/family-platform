@@ -5,6 +5,7 @@ REPO_URL="${REPO_URL:-https://github.com/ppj89/family-platform.git}"
 APP_DIR="${APP_DIR:-/opt/family-platform}"
 APP_USER="${APP_USER:-$USER}"
 OPEN_FIREWALL="${OPEN_FIREWALL:-true}"
+RUN_HARDENING="${RUN_HARDENING:-true}"
 
 if ! command -v sudo >/dev/null 2>&1; then
   echo "sudo is required for server bootstrap." >&2
@@ -53,6 +54,11 @@ else
 fi
 
 echo "[6/6] Bootstrap completed"
+if [ "$RUN_HARDENING" = "true" ]; then
+  echo "Running server hardening"
+  "$APP_DIR/scripts/harden-ubuntu.sh"
+fi
+
 echo "Next:"
 echo "  cd $APP_DIR"
 echo "  scripts/init-prod-env.sh https://your-domain your-domain"

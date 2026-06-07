@@ -17,6 +17,19 @@ REPO_URL=https://github.com/ppj89/family-platform.git APP_DIR=/opt/family-platfo
 
 If Docker group permission is not active immediately, log out and back in, then continue from `/opt/family-platform`.
 
+The bootstrap script runs basic Ubuntu hardening by default:
+
+- 2 GB swap file for small VPS instances
+- UFW with OpenSSH, 80, and 443 allowed
+- unattended security updates
+- Docker JSON log rotation
+
+To skip it:
+
+```bash
+RUN_HARDENING=false ./bootstrap-ubuntu.sh
+```
+
 ## Environment
 
 Create `.env.production` from `.env.production.example`, or generate one with strong random secrets:

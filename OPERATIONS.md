@@ -103,3 +103,20 @@ du -sh backups
 ```
 
 If disk usage grows quickly, move uploaded media to external object storage before public growth.
+
+## Server Hardening
+
+The initial Ubuntu bootstrap runs hardening by default. To run it again:
+
+```bash
+cd /opt/family-platform
+sudo scripts/harden-ubuntu.sh
+```
+
+Useful options:
+
+```bash
+sudo SWAP_SIZE=4G scripts/harden-ubuntu.sh
+sudo ENABLE_UFW=false scripts/harden-ubuntu.sh
+sudo DOCKER_LOG_MAX_SIZE=20m DOCKER_LOG_MAX_FILE=5 scripts/harden-ubuntu.sh
+```

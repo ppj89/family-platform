@@ -17,6 +17,7 @@ This project is prepared for production hardening, but final deployment must use
 - Family-scoped access services for protected data.
 - PostgreSQL backup and restore scripts for Docker deployments.
 - Production update script with backup, deploy, and health checks.
+- Ubuntu hardening script for firewall, swap, Docker log rotation, and unattended security updates.
 
 ## Before Public Launch
 
