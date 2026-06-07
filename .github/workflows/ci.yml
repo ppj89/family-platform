@@ -43,6 +43,22 @@ jobs:
       - name: Test
         run: mvn -f backend/pom.xml test
 
+  docker:
+    name: Docker production config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate production compose
+        run: docker compose -f docker-compose.prod.yml --env-file .env.production.example config --quiet
+
+      - name: Build backend image
+        run: docker build -f backend/Dockerfile backend
+
+      - name: Build web image
+        run: docker build -f Dockerfile .
+
   android:
     name: Android debug build
     runs-on: ubuntu-latest
