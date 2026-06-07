@@ -52,6 +52,14 @@ HTTP only:
 docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
 ```
 
+Go API preview:
+
+```bash
+docker compose -f docker-compose.go.yml --env-file .env.production up --build -d
+```
+
+The Go API is the target backend for the lightweight production path. Use this preview compose file while API endpoints are migrated from Spring Boot.
+
 HTTPS with Caddy:
 
 ```bash

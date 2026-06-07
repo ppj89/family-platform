@@ -11,6 +11,7 @@ export type AuthResponse = {
 export type LoginPayload = {
   email: string
   password: string
+  forceLogin?: boolean
 }
 
 export type RegisterPayload = LoginPayload & {
