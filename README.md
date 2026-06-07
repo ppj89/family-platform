@@ -1,6 +1,6 @@
 # Family Platform
 
-가족 단위로 캘린더, 가계부, 여행 기록, 육아 기록, 일기, 커뮤니티를 관리하는 운영 준비형 웹/앱 프로젝트입니다.
+Family Platform is a production-ready family workspace for shared calendars, household ledgers, travel records, baby care logs, diaries, family groups, and community posts.
 
 ## Stack
 
@@ -12,6 +12,8 @@
 - Mobile wrapper: Capacitor Android/iOS
 
 ## Local Run
+
+Install frontend dependencies and start Vite:
 
 ```bash
 npm install
@@ -25,10 +27,10 @@ This project requires Node `22.12.0` or newer. On this Windows workspace, use th
 .\scripts\npm-tools.cmd run dev
 ```
 
-Run API and DB:
+Run the local API and database:
 
 ```bash
-docker compose up --build -d
+docker compose up --build -d db api
 ```
 
 Default API URL:
@@ -48,6 +50,7 @@ npm run build
 Backend:
 
 ```bash
+cd backend-go
 go test ./...
 ```
 
@@ -63,6 +66,12 @@ Full API integration test:
 docker run --rm -v "${PWD}:/workspace" -w /workspace -e API_BASE_URL=http://host.docker.internal:8080/api python:3.13-alpine sh -lc "apk add --no-cache curl >/dev/null && sh scripts/test-go-api.sh"
 ```
 
+Full production stack smoke test:
+
+```bash
+WEB_PORT=18080 WEB_BASE_URL=http://127.0.0.1:18080 scripts/test-prod-stack.sh
+```
+
 Android debug APK:
 
 ```powershell
@@ -74,17 +83,26 @@ powershell -ExecutionPolicy Bypass -File scripts\build-android-debug.ps1
 1. Prepare a Linux server with Docker.
 2. Generate `.env.production`.
 3. Review `APP_CORS_ALLOWED_ORIGINS`, `APP_DOMAIN`, `WEB_PORT`, and secrets.
-4. Deploy with Docker Compose.
+4. Deploy with Docker Compose and Caddy HTTPS.
+5. Install automatic backups.
+
+First deployment:
 
 ```bash
 scripts/init-prod-env.sh https://your-domain your-domain
-scripts/deploy-prod.sh
+scripts/deploy-prod-https.sh
 ```
 
-HTTPS deployment:
+Normal production updates:
 
 ```bash
-scripts/deploy-prod-https.sh
+scripts/update-prod-https.sh
+```
+
+Automatic daily backups:
+
+```bash
+sudo APP_DIR=/opt/family-platform scripts/install-backup-cron.sh
 ```
 
 Server setup details are in [DEPLOYMENT.md](./DEPLOYMENT.md).
@@ -97,4 +115,5 @@ Server setup details are in [DEPLOYMENT.md](./DEPLOYMENT.md).
 - Five failed password attempts lock the account for five minutes.
 - Family data APIs are scoped by family membership and member permissions.
 - Media upload accepts only image/video content types and enforces size limits.
-- PostgreSQL backup and restore scripts are included under `scripts/`.
+- Caddy, Nginx, and the API apply baseline security headers.
+- PostgreSQL and uploads backup/restore scripts are included under `scripts/`.

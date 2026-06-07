@@ -96,6 +96,18 @@ curl http://localhost/api/health
 docker compose -f docker-compose.prod.yml --env-file .env.production ps
 ```
 
+Or run the production check helper:
+
+```bash
+scripts/check-prod.sh
+```
+
+On Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\check-prod.ps1
+```
+
 For a staging server only, you can run the full API integration test:
 
 ```bash
