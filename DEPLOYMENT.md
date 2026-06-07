@@ -83,12 +83,28 @@ Create a PostgreSQL backup before every production deploy:
 
 ```bash
 scripts/backup-db.sh
+scripts/backup-uploads.sh
 ```
 
 On Windows:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts\backup-db.ps1
+powershell -ExecutionPolicy Bypass -File scripts\backup-uploads.ps1
+```
+
+Restore commands:
+
+```bash
+scripts/restore-db.sh backups/family_platform-YYYYMMDD-HHMMSS.dump
+scripts/restore-uploads.sh backups/uploads-YYYYMMDD-HHMMSS.tar.gz
+```
+
+On Windows:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts\restore-db.ps1 -BackupPath backups\family_platform-YYYYMMDD-HHMMSS.dump
+powershell -ExecutionPolicy Bypass -File scripts\restore-uploads.ps1 -BackupPath backups\uploads-YYYYMMDD-HHMMSS.tar.gz
 ```
 
 ## Mobile App Path
