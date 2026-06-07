@@ -6,10 +6,11 @@ services:
       POSTGRES_DB: family_platform
       POSTGRES_USER: family_app
       POSTGRES_PASSWORD: family_app_password
+      PGDATA: /var/lib/postgresql/data/pgdata
     ports:
       - "5432:5432"
     volumes:
-      - family_platform_db:/var/lib/postgresql
+      - family_platform_db:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U family_app -d family_platform"]
       interval: 10s
