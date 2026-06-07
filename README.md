@@ -105,7 +105,7 @@ Automatic daily backups:
 sudo APP_DIR=/opt/family-platform scripts/install-backup-cron.sh
 ```
 
-Server setup details are in [DEPLOYMENT.md](./DEPLOYMENT.md).
+Server setup details are in [DEPLOYMENT.md](./DEPLOYMENT.md). Production operation commands are in [OPERATIONS.md](./OPERATIONS.md).
 
 ## Security Notes
 

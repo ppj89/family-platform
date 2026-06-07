@@ -1,0 +1,82 @@
+# Operations Runbook
+
+This runbook is for the production Linux server after the first deployment.
+
+## Daily Check
+
+```bash
+cd /opt/family-platform
+scripts/check-prod.sh
+```
+
+Expected result:
+
+- `web: ok`
+- `api: ok`
+- Docker services show as running or healthy.
+
+## Normal Deploy
+
+```bash
+cd /opt/family-platform
+scripts/update-prod-https.sh
+```
+
+The update script backs up the database and uploads volume when they exist, pulls the latest Git commit, redeploys the HTTPS stack, and verifies health endpoints.
+
+## Rollback
+
+Use rollback when a new deployment is unhealthy or a critical feature breaks.
+
+```bash
+cd /opt/family-platform
+scripts/rollback-prod-https.sh HEAD~1
+```
+
+You can also roll back to a specific commit:
+
+```bash
+scripts/rollback-prod-https.sh 5f86e57
+```
+
+The rollback script creates backups before switching code and redeploying.
+
+## Backups
+
+Manual backup:
+
+```bash
+scripts/backup-db.sh
+scripts/backup-uploads.sh
+```
+
+Install automatic daily backups:
+
+```bash
+sudo APP_DIR=/opt/family-platform scripts/install-backup-cron.sh
+```
+
+Restore:
+
+```bash
+scripts/restore-db.sh backups/family_platform-YYYYMMDD-HHMMSS.dump
+scripts/restore-uploads.sh backups/uploads-YYYYMMDD-HHMMSS.tar.gz
+```
+
+## Logs
+
+```bash
+docker compose -f docker-compose.prod.yml -f docker-compose.https.yml --env-file .env.production logs --tail=100 api
+docker compose -f docker-compose.prod.yml -f docker-compose.https.yml --env-file .env.production logs --tail=100 web
+docker compose -f docker-compose.prod.yml -f docker-compose.https.yml --env-file .env.production logs --tail=100 caddy
+```
+
+## Disk Usage
+
+```bash
+df -h
+docker system df
+du -sh backups
+```
+
+If disk usage grows quickly, move uploaded media to external object storage before public growth.
