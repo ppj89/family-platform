@@ -105,6 +105,12 @@ Automatic daily backups:
 sudo APP_DIR=/opt/family-platform scripts/install-backup-cron.sh
 ```
 
+Health and disk monitor:
+
+```bash
+sudo APP_DIR=/opt/family-platform scripts/install-monitor-cron.sh
+```
+
 Server setup details are in [DEPLOYMENT.md](./DEPLOYMENT.md). Production operation commands are in [OPERATIONS.md](./OPERATIONS.md).
 
 ## Security Notes

@@ -15,6 +15,29 @@ Expected result:
 - `api: ok`
 - Docker services show as running or healthy.
 
+## Monitoring
+
+Run a one-time monitor check:
+
+```bash
+cd /opt/family-platform
+scripts/monitor-prod.sh
+```
+
+Install a 5-minute health and disk monitor:
+
+```bash
+sudo APP_DIR=/opt/family-platform scripts/install-monitor-cron.sh
+```
+
+Optional alert webhook:
+
+```bash
+sudo APP_DIR=/opt/family-platform ALERT_WEBHOOK_URL="https://example.com/webhook" scripts/install-monitor-cron.sh
+```
+
+Monitor logs are written to `logs/monitor.log`.
+
 ## Normal Deploy
 
 ```bash
