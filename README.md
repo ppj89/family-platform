@@ -1,6 +1,6 @@
 # Family Platform
 
-가족 단위로 캘린더, 가계부, 여행 기록, 육아 기록, 일기, 커뮤니티를 함께 관리하는 운영 준비형 웹/앱 프로젝트입니다.
+가족 단위로 캘린더, 가계부, 여행 기록, 육아 기록, 일기, 커뮤니티를 관리하는 운영 준비형 웹/앱 프로젝트입니다.
 
 ## Stack
 
@@ -8,7 +8,8 @@
 - Backend: Go 1.26, net/http, pgx
 - Database: PostgreSQL 18
 - Runtime: Docker Compose
-- Mobile wrapper: Capacitor Android
+- Web proxy: Nginx, optional Caddy HTTPS
+- Mobile wrapper: Capacitor Android/iOS
 
 ## Local Run
 
@@ -46,8 +47,20 @@ npm run build
 
 Backend:
 
+```bash
+go test ./...
+```
+
+Local Docker-based Go test from Windows:
+
 ```powershell
 docker run --rm -v "${PWD}\backend-go:/src" -w /src golang:1.26.4-alpine sh -lc "/usr/local/go/bin/go test ./..."
+```
+
+Full API integration test:
+
+```powershell
+docker run --rm -v "${PWD}:/workspace" -w /workspace -e API_BASE_URL=http://host.docker.internal:8080/api python:3.13-alpine sh -lc "apk add --no-cache curl >/dev/null && sh scripts/test-go-api.sh"
 ```
 
 Android debug APK:
@@ -58,20 +71,14 @@ powershell -ExecutionPolicy Bypass -File scripts\build-android-debug.ps1
 
 ## Production Prep
 
-1. Generate `.env.production`.
-2. Review `APP_CORS_ALLOWED_ORIGINS`, `WEB_PORT`, and secrets.
-3. Deploy with Docker Compose.
+1. Prepare a Linux server with Docker.
+2. Generate `.env.production`.
+3. Review `APP_CORS_ALLOWED_ORIGINS`, `APP_DOMAIN`, `WEB_PORT`, and secrets.
+4. Deploy with Docker Compose.
 
 ```bash
 scripts/init-prod-env.sh https://your-domain your-domain
-docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
-```
-
-Windows:
-
-```powershell
-powershell -ExecutionPolicy Bypass -File scripts\init-prod-env.ps1 -Domain https://your-domain -AppDomain your-domain
-powershell -ExecutionPolicy Bypass -File scripts\deploy-prod.ps1
+scripts/deploy-prod.sh
 ```
 
 HTTPS deployment:
@@ -80,12 +87,14 @@ HTTPS deployment:
 scripts/deploy-prod-https.sh
 ```
 
+Server setup details are in [DEPLOYMENT.md](./DEPLOYMENT.md).
+
 ## Security Notes
 
-- Passwords are stored with BCrypt.
+- Passwords are stored with bcrypt.
 - Access tokens are signed and include a server-side active session id.
-- A second login first returns a duplicate-login response; confirmed force login invalidates the previous token.
+- Duplicate login can be force-confirmed to invalidate the previous token.
 - Five failed password attempts lock the account for five minutes.
-- Family data APIs are scoped by family membership and permissions.
-- The Go API creates required PostgreSQL tables and indexes on startup.
+- Family data APIs are scoped by family membership and member permissions.
+- Media upload accepts only image/video content types and enforces size limits.
 - PostgreSQL backup and restore scripts are included under `scripts/`.

@@ -7,6 +7,16 @@
 - Point the domain DNS A record to the server IP.
 - Use `docker-compose.https.yml` for automatic HTTPS with Caddy.
 
+For a new Ubuntu server, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ppj89/family-platform/main/scripts/bootstrap-ubuntu.sh -o bootstrap-ubuntu.sh
+chmod +x bootstrap-ubuntu.sh
+REPO_URL=https://github.com/ppj89/family-platform.git APP_DIR=/opt/family-platform ./bootstrap-ubuntu.sh
+```
+
+If Docker group permission is not active immediately, log out and back in, then continue from `/opt/family-platform`.
+
 ## Environment
 
 Create `.env.production` from `.env.production.example`, or generate one with strong random secrets:
@@ -71,6 +81,14 @@ curl http://localhost/health
 curl http://localhost/api/health
 docker compose -f docker-compose.prod.yml --env-file .env.production ps
 ```
+
+For a staging server only, you can run the full API integration test:
+
+```bash
+API_BASE_URL=http://localhost/api sh scripts/test-go-api.sh
+```
+
+This creates and removes test data. Do not run it against production data without a fresh backup.
 
 ## Database
 
