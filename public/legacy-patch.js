@@ -1193,6 +1193,8 @@
     refreshServerDataViews()
     hideBabyEmptySelectionPanel()
     enhanceBabyRecordMedia()
+    cleanupBabyDetailButtons()
+    ensureBabyApiRecordForm()
     enhanceBabyEditMediaHelper()
     enhanceBabyProfileEdit()
     enhanceMediaUploadLimits()
@@ -1482,10 +1484,12 @@
         var detail = document.querySelector('.baby-detail')
         var backButton = detail && detail.querySelector('.back-button')
         if (!backButton) {
-          header.querySelectorAll('.baby-header-back-button').forEach(function (button) {
-            button.remove()
-          })
-          if (actionButton && getCleanText(actionButton) === '\uBAA9\uB85D') actionButton.remove()
+          if (!detail) {
+            header.querySelectorAll('.baby-header-back-button').forEach(function (button) {
+              button.remove()
+            })
+            if (actionButton && getCleanText(actionButton) === '\uBAA9\uB85D') actionButton.remove()
+          }
           return
         }
         if (backButton && !header.querySelector('.baby-header-back-button')) {
@@ -2855,6 +2859,127 @@
     })
   }
 
+  function cleanupBabyDetailButtons() {
+    var detail = document.querySelector('.baby-detail')
+    if (!detail) return
+
+    var headerBack = document.querySelector('.panel-header .baby-header-back-button')
+    var inlineBack = detail.querySelector('.back-button')
+    if (headerBack && inlineBack) {
+      inlineBack.remove()
+    }
+
+    var mainHeader = Array.from(document.querySelectorAll('.panel-header')).find(function (header) {
+      return getCleanText(header.querySelector('h2')) === '\uC721\uC544 \uAE30\uB85D'
+    })
+    if (mainHeader && !mainHeader.querySelector('.baby-header-back-button')) {
+      var backButton = document.createElement('button')
+      backButton.type = 'button'
+      backButton.className = 'baby-header-back-button'
+      backButton.textContent = '\uBAA9\uB85D'
+      backButton.addEventListener('click', function () {
+        var nav = findNavButton('\uC721\uC544') || findNavButtonContains('\uC721\uC544')
+        if (nav) nav.click()
+      })
+      mainHeader.appendChild(backButton)
+    }
+
+    document.querySelectorAll('.growth-panel.insight-card .panel-header button, .pattern-panel.insight-card .panel-header button').forEach(function (button) {
+      if (button.dataset.passiveInsightReady) return
+      var badge = document.createElement('span')
+      badge.className = 'passive-header-chip baby-insight-chip'
+      badge.textContent = getCleanText(button) || '\uC0C1\uC138'
+      badge.dataset.passiveInsightReady = 'true'
+      button.replaceWith(badge)
+    })
+  }
+
+  function getVisibleBabyProfile() {
+    var band = document.querySelector('.baby-profile-band')
+    if (!band) return null
+    var name = getCleanText(band.querySelector('strong')) || '\uC544\uC774'
+    var meta = getCleanText(band.querySelector('span'))
+    var memo = getCleanText(band.querySelector('p'))
+    var metric = getCleanText(band.querySelector('small'))
+    var metaParts = meta.split('\u00B7').map(function (item) { return item.trim() }).filter(Boolean)
+    var birthDate = metaParts.find(function (item) { return /^\d{4}-\d{2}-\d{2}$/.test(item) }) || todayText()
+    var gender = metaParts[0] || null
+    var heightMatch = metric.match(/(\d+(?:\.\d+)?)\s*cm/i)
+    var weightMatch = metric.match(/(\d+(?:\.\d+)?)\s*kg/i)
+    return {
+      name: name,
+      gender: gender,
+      birthDate: birthDate,
+      memo: memo,
+      latestHeightCm: heightMatch ? Number(heightMatch[1]) : null,
+      latestWeightKg: weightMatch ? Number(weightMatch[1]) : null
+    }
+  }
+
+  function ensureApiBabyForDetail() {
+    var profile = getVisibleBabyProfile()
+    if (!profile) return Promise.reject(new Error('BABY_PROFILE_REQUIRED'))
+    return fetchBabies().then(function (babies) {
+      var found = babies.find(function (baby) {
+        return String(baby.name || '').trim() === profile.name
+      })
+      if (found && found.id) return found.id
+      return getCurrentFamilyId().then(function (familyId) {
+        return postJson('/babies?familyId=' + encodeURIComponent(familyId), profile)
+      }).then(function (baby) {
+        return baby.id
+      })
+    })
+  }
+
+  function optionalDecimal(value) {
+    var text = String(value || '').replace(/[^\d.-]/g, '')
+    return text ? Number(text) : null
+  }
+
+  function setBabyApiRecordBusy(form, busy) {
+    if (!form) return
+    form.querySelectorAll('button, input, textarea, select').forEach(function (field) {
+      field.disabled = !!busy
+    })
+    var submit = form.querySelector('button[type="submit"]')
+    if (submit) {
+      if (!submit.dataset.originalText) submit.dataset.originalText = submit.textContent
+      submit.textContent = busy ? '\uC800\uC7A5 \uC911' : submit.dataset.originalText
+    }
+  }
+
+  function ensureBabyApiRecordForm() {
+    var detail = document.querySelector('.baby-detail')
+    if (!detail || detail.querySelector('.baby-api-record-card')) return
+
+    var anchor = detail.querySelector('.record-filter-bar') || detail.querySelector('.baby-record-list') || detail.lastElementChild
+    var card = document.createElement('section')
+    card.className = 'baby-api-record-card'
+    card.innerHTML = [
+      '<header><div><span>\uC721\uC544 \uAE30\uB85D</span><strong>\uC0C8 \uAE30\uB85D \uCD94\uAC00</strong></div><small>DB\uC5D0 \uBC14\uB85C \uC800\uC7A5\uB429\uB2C8\uB2E4.</small></header>',
+      '<form class="baby-api-record-form">',
+      '<div class="baby-api-form-grid">',
+      '<label><span>\uAE30\uB85D\uC885\uB958</span><select name="recordType" required><option value="\uC218\uC720">\uC218\uC720</option><option value="\uB300\uBCC0">\uB300\uBCC0</option><option value="\uC18C\uBCC0">\uC18C\uBCC0</option><option value="\uC218\uBA74">\uC218\uBA74</option><option value="\uC131\uC7A5">\uC131\uC7A5</option><option value="\uBCD1\uC6D0">\uBCD1\uC6D0</option><option value="\uBA54\uBAA8">\uBA54\uBAA8</option></select></label>',
+      '<label><span>\uB0A0\uC9DC</span><input name="recordDate" type="date" required value="' + todayText() + '" /></label>',
+      '<label><span>\uC2DC\uAC04</span><input name="recordTime" type="time" value="' + String(new Date().getHours()).padStart(2, '0') + ':' + String(new Date().getMinutes()).padStart(2, '0') + '" /></label>',
+      '<label><span>\uC218\uC720\uB7C9(ml)</span><input name="amountMl" type="text" inputmode="numeric" placeholder="예: 120" /></label>',
+      '<label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" placeholder="예: 89.5" /></label>',
+      '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" placeholder="예: 12.8" /></label>',
+      '</div>',
+      '<label class="baby-api-memo"><span>\uBA54\uBAA8</span><textarea name="memo" rows="3" placeholder="\uAE30\uB85D\uD560 \uB0B4\uC6A9\uC744 \uC801\uC5B4\uC8FC\uC138\uC694."></textarea></label>',
+      '<label class="community-file-field baby-api-file-field"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCCA8\uBD80</span><b>\uD30C\uC77C \uC120\uD0DD</b><input name="files" type="file" accept="image/*,video/*" multiple /><small>' + mediaLimitText() + '</small></label>',
+      '<div class="baby-api-record-actions"><button type="button" class="cancel-button" data-baby-api-clear>\uCD08\uAE30\uD654</button><button type="submit" class="save-button">\uC800\uC7A5</button></div>',
+      '</form>'
+    ].join('')
+
+    if (anchor && anchor.parentElement) {
+      anchor.parentElement.insertBefore(card, anchor)
+    } else {
+      detail.appendChild(card)
+    }
+  }
+
   function enhanceBabyEditMediaHelper() {
     document.querySelectorAll('.baby-record-row .edit-button').forEach(function (button) {
       if (button.dataset.mediaEditReady) return
@@ -3822,6 +3947,67 @@
     }, 450)
   }
 
+  function resetBabyApiRecordForm(form) {
+    if (!form) return
+    form.reset()
+    var date = form.querySelector('[name="recordDate"]')
+    var time = form.querySelector('[name="recordTime"]')
+    if (date) date.value = todayText()
+    if (time) {
+      var now = new Date()
+      time.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
+    }
+    var hint = form.querySelector('.baby-api-file-field small')
+    if (hint) hint.textContent = mediaLimitText()
+  }
+
+  function submitBabyApiRecordForm(form) {
+    if (!form || form.dataset.submitting === 'true') return
+    var type = getFieldValue(form, '[name="recordType"]')
+    var date = getFieldValue(form, '[name="recordDate"]')
+    if (!type) {
+      var typeField = form.querySelector('[name="recordType"]')
+      if (typeField) typeField.focus()
+      showPatchToast('\uAE30\uB85D\uC885\uB958\uB294 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
+      return
+    }
+    if (!date) {
+      var dateField = form.querySelector('[name="recordDate"]')
+      if (dateField) dateField.focus()
+      showPatchToast('\uB0A0\uC9DC\uB294 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
+      return
+    }
+
+    form.dataset.submitting = 'true'
+    setBabyApiRecordBusy(form, true)
+    var fileInput = form.querySelector('[name="files"]')
+    uploadMediaFiles(fileInput).then(function (files) {
+      return ensureApiBabyForDetail().then(function (babyId) {
+        return postJson('/babies/' + encodeURIComponent(babyId) + '/records', {
+          recordType: type,
+          recordDate: date,
+          recordTime: getFieldValue(form, '[name="recordTime"]') || null,
+          amountMl: optionalInteger(getFieldValue(form, '[name="amountMl"]')),
+          heightCm: optionalDecimal(getFieldValue(form, '[name="heightCm"]')),
+          weightKg: optionalDecimal(getFieldValue(form, '[name="weightKg"]')),
+          memo: getFieldValue(form, '[name="memo"]') || '',
+          mediaUrls: communityMediaUrls(files)
+        })
+      })
+    }).then(function () {
+      resetBabyApiRecordForm(form)
+      refreshServerDataViews(true)
+      showPatchToast('\uC721\uC544 \uAE30\uB85D\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
+    }).catch(function (error) {
+      if (String(error && error.message || '').indexOf('INVALID_MEDIA') < 0) {
+        showPatchToast('\uC721\uC544 \uAE30\uB85D \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+      }
+    }).finally(function () {
+      delete form.dataset.submitting
+      setBabyApiRecordBusy(form, false)
+    })
+  }
+
   document.addEventListener('click', function (event) {
     var tripButton = event.target && event.target.closest && event.target.closest('.trip-add-row .submit-action')
     if (tripButton) syncTripAddRow(tripButton.closest('.trip-add-row'))
@@ -3840,6 +4026,35 @@
   document.addEventListener('submit', function (event) {
     var diaryForm = event.target && event.target.closest && event.target.closest('.diary-form')
     if (diaryForm) syncDiaryForm(diaryForm)
+  }, true)
+
+  document.addEventListener('submit', function (event) {
+    var babyForm = event.target && event.target.closest && event.target.closest('.baby-api-record-form')
+    if (!babyForm) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitBabyApiRecordForm(babyForm)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var clearButton = event.target && event.target.closest && event.target.closest('[data-baby-api-clear]')
+    if (!clearButton) return
+    var form = clearButton.closest('.baby-api-record-form')
+    resetBabyApiRecordForm(form)
+  }, true)
+
+  document.addEventListener('change', function (event) {
+    var input = event.target && event.target.closest && event.target.closest('.baby-api-file-field input[type="file"]')
+    if (!input) return
+    var label = input.closest('.baby-api-file-field')
+    var hint = label && label.querySelector('small')
+    if (!hint) return
+    if (!input.files || !input.files.length) {
+      hint.textContent = mediaLimitText()
+      return
+    }
+    hint.textContent = Array.from(input.files).map(function (file) { return file.name }).join(', ')
   }, true)
 
   window.setInterval(flushApiQueue, 15000)

@@ -3398,6 +3398,169 @@
   box-shadow: inset 0 0 0 2px #3182f6;
 }
 
+.baby-api-record-card {
+  display: grid !important;
+  gap: 14px !important;
+  border-radius: 18px !important;
+  margin: 14px 0 !important;
+  padding: 18px !important;
+  background: #ffffff !important;
+  box-shadow: inset 0 0 0 1px #e5e8eb !important;
+}
+
+.baby-api-record-card header {
+  display: flex !important;
+  align-items: flex-start !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+
+.baby-api-record-card header div {
+  display: grid !important;
+  gap: 3px !important;
+}
+
+.baby-api-record-card header span,
+.baby-api-record-card header small,
+.baby-api-record-form label > span {
+  color: #6b7684 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+.baby-api-record-card header strong {
+  color: #191f28 !important;
+  font-size: 20px !important;
+  line-height: 1.25 !important;
+}
+
+.baby-api-record-form {
+  display: grid !important;
+  gap: 12px !important;
+}
+
+.baby-api-form-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+.baby-api-record-form label {
+  display: grid !important;
+  gap: 7px !important;
+}
+
+.baby-api-record-form input,
+.baby-api-record-form select,
+.baby-api-record-form textarea {
+  width: 100% !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  color: #191f28 !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  box-shadow: inset 0 0 0 1px #dfe4ea !important;
+  outline: none !important;
+}
+
+.baby-api-record-form input,
+.baby-api-record-form select {
+  min-height: 46px !important;
+  padding: 0 13px !important;
+}
+
+.baby-api-record-form textarea {
+  min-height: 92px !important;
+  resize: vertical !important;
+  padding: 13px !important;
+  line-height: 1.55 !important;
+}
+
+.baby-api-record-form input:focus,
+.baby-api-record-form select:focus,
+.baby-api-record-form textarea:focus {
+  box-shadow: inset 0 0 0 2px #3182f6 !important;
+}
+
+.baby-api-record-actions {
+  display: grid !important;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) !important;
+  gap: 10px !important;
+}
+
+.baby-api-record-actions button {
+  min-height: 48px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  cursor: pointer !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+}
+
+.baby-api-record-actions .cancel-button {
+  background: #fff1f2 !important;
+  color: #e42939 !important;
+}
+
+.baby-api-record-actions .save-button {
+  background: #3182f6 !important;
+  color: #ffffff !important;
+}
+
+.baby-insight-chip {
+  pointer-events: none !important;
+}
+
+.theme-dark .baby-api-record-card,
+.theme-dark .baby-api-record-form input,
+.theme-dark .baby-api-record-form select,
+.theme-dark .baby-api-record-form textarea {
+  background: #333942 !important;
+  color: #f3f5f7 !important;
+  box-shadow: inset 0 0 0 1px #454d58 !important;
+}
+
+.theme-dark .baby-api-record-card header strong {
+  color: #f3f5f7 !important;
+}
+
+.theme-dark .baby-api-record-card header span,
+.theme-dark .baby-api-record-card header small,
+.theme-dark .baby-api-record-form label > span {
+  color: #aeb7c2 !important;
+}
+
+@media (max-width: 760px) {
+  .baby-api-record-card {
+    padding: 14px !important;
+  }
+
+  .baby-api-record-card header {
+    align-items: stretch !important;
+    flex-direction: column !important;
+  }
+
+  .baby-api-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  .baby-api-memo,
+  .baby-api-file-field,
+  .baby-api-record-actions {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .baby-api-form-grid,
+  .baby-api-record-actions {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .media-edit-helper {
   display: block;
   margin-top: 8px;
