@@ -1,9 +1,9 @@
 import './index.css'
 
 const legacyCssPath = '/legacy/assets/index-CkWNYWFk.css'
-const legacyOverridesCssPath = '/legacy-overrides.css?v=20260605-48'
-const legacyPatchScriptPath = '/legacy-patch.js?v=20260605-48'
-const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260605-48'
+const legacyOverridesCssPath = '/legacy-overrides.css?v=20260608-01'
+const legacyPatchScriptPath = '/legacy-patch.js?v=20260608-01'
+const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260608-01'
 
 const root = document.getElementById('root')
 if (root) {

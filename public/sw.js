@@ -1,5 +1,5 @@
-const CACHE_NAME = 'family-platform-v1'
-const APP_SHELL = ['/', '/manifest.webmanifest', '/fp-icon.svg']
+const CACHE_NAME = 'family-platform-v2'
+const APP_SHELL = ['/', '/legacy/index.html', '/manifest.webmanifest', '/fp-icon.svg']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
