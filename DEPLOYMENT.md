@@ -127,6 +127,18 @@ scripts/backup-db.sh
 scripts/backup-uploads.sh
 ```
 
+Install an automatic daily backup job on the production server:
+
+```bash
+sudo APP_DIR=/opt/family-platform BACKUP_RETENTION_DAYS=14 scripts/install-backup-cron.sh
+```
+
+The default schedule is 03:15 every day. Override it with `BACKUP_TIME`, using normal cron syntax:
+
+```bash
+sudo APP_DIR=/opt/family-platform BACKUP_TIME="30 2 * * *" scripts/install-backup-cron.sh
+```
+
 On Windows:
 
 ```powershell
