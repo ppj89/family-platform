@@ -2,7 +2,7 @@
 
 Spring Boot API를 Go로 전환하기 위한 신규 백엔드입니다.
 
-현재 1차 전환 범위:
+현재 전환 범위:
 
 - `/api/health`
 - `/api/auth/register`
@@ -10,6 +10,15 @@ Spring Boot API를 Go로 전환하기 위한 신규 백엔드입니다.
 - `/api/auth/logout`
 - `/api/auth/me`
 - `/api/families`
+- `/api/families/{familyId}/members`
+- `/api/ledger-entries`
+- `/api/ledger-entries/summary`
+- `/api/schedules`
+- `/api/common-code-groups`
+- `/api/common-code-groups/{groupId}/codes`
+- `/api/trips`
+- `/api/trips/{tripId}/records`
+- `/api/travel-records/{recordId}`
 
 보안 기본값:
 
@@ -32,10 +41,8 @@ $env:DATABASE_URL='postgres://family_app:family_app_password@localhost:5432/fami
 
 ## 다음 전환 순서
 
-1. 가족 구성원 CRUD와 구성원별 권한 체크
-2. 가계부 API
-3. 캘린더/알림 API
-4. 여행/육아/일기 API
-5. 커뮤니티/댓글/첨부 API
-6. 파일 업로드 API
-7. Spring Boot 제거 및 Docker Compose API 이미지 교체
+1. 육아/일기 API
+2. 커뮤니티/댓글/첨부 API
+3. 파일 업로드 API
+4. 알림 API
+5. Spring Boot 제거 및 Docker Compose API 이미지 교체
