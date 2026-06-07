@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
-	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -36,8 +35,14 @@ type config struct {
 	allowedOrigins       []string
 	tokenSecret          []byte
 	tokenValiditySeconds int64
+	mediaStorageDriver   string
 	mediaStoragePath     string
 	mediaPublicPrefix    string
+	mediaS3Endpoint      string
+	mediaS3Region        string
+	mediaS3Bucket        string
+	mediaS3AccessKey     string
+	mediaS3SecretKey     string
 	maxFilesPerPost      int
 	maxReferenceLength   int
 	maxImageBytes        int64
@@ -45,9 +50,10 @@ type config struct {
 }
 
 type app struct {
-	cfg config
-	db  *pgxpool.Pool
-	log *slog.Logger
+	cfg        config
+	db         *pgxpool.Pool
+	log        *slog.Logger
+	mediaStore mediaStore
 }
 
 type authUser struct {
@@ -85,11 +91,12 @@ func main() {
 		os.Exit(1)
 	}
 
-	api := &app{cfg: cfg, db: db, log: logger}
-	if err := os.MkdirAll(cfg.mediaStoragePath, 0750); err != nil {
+	store, err := newMediaStore(ctx, cfg)
+	if err != nil {
 		logger.Error("media storage setup failed", "error", err)
 		os.Exit(1)
 	}
+	api := &app{cfg: cfg, db: db, log: logger, mediaStore: store}
 	if err := api.ensureSchema(ctx); err != nil {
 		logger.Error("database schema failed", "error", err)
 		os.Exit(1)
@@ -131,8 +138,14 @@ func loadConfig() (config, error) {
 		allowedOrigins:       splitCSV(getenv("APP_CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")),
 		tokenSecret:          []byte(secret),
 		tokenValiditySeconds: validity,
+		mediaStorageDriver:   strings.ToLower(getenv("APP_MEDIA_STORAGE_DRIVER", "local")),
 		mediaStoragePath:     getenv("APP_MEDIA_STORAGE_PATH", "uploads"),
 		mediaPublicPrefix:    strings.TrimRight(getenv("APP_MEDIA_PUBLIC_URL_PREFIX", "/api/media/files"), "/"),
+		mediaS3Endpoint:      strings.TrimRight(getenv("APP_MEDIA_S3_ENDPOINT", ""), "/"),
+		mediaS3Region:        getenv("APP_MEDIA_S3_REGION", "auto"),
+		mediaS3Bucket:        getenv("APP_MEDIA_S3_BUCKET", ""),
+		mediaS3AccessKey:     getenv("APP_MEDIA_S3_ACCESS_KEY_ID", ""),
+		mediaS3SecretKey:     getenv("APP_MEDIA_S3_SECRET_ACCESS_KEY", ""),
 		maxFilesPerPost:      envInt("APP_MEDIA_MAX_FILES_PER_POST", 6),
 		maxReferenceLength:   envInt("APP_MEDIA_MAX_REFERENCE_LENGTH", 2048),
 		maxImageBytes:        parseSize(getenv("APP_MEDIA_MAX_IMAGE_SIZE", "8MB"), 8*1024*1024),
@@ -1609,17 +1622,13 @@ func (a *app) uploadMedia(w http.ResponseWriter, r *http.Request, user authUser)
 		return
 	}
 	storedName := newSessionID() + safeExtension(header.Filename)
-	target := filepath.Join(a.cfg.mediaStoragePath, storedName)
-	out, err := os.OpenFile(target, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0640)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "file create failed")
+	written, err := a.mediaStore.Save(r.Context(), storedName, file, contentType, limit)
+	if errors.Is(err, errMediaTooLarge) || written > limit {
+		writeError(w, http.StatusRequestEntityTooLarge, "file is too large")
 		return
 	}
-	defer out.Close()
-	written, err := io.Copy(out, io.LimitReader(file, limit+1))
-	if err != nil || written > limit {
-		_ = os.Remove(target)
-		writeError(w, http.StatusRequestEntityTooLarge, "file is too large")
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "file save failed")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
@@ -1632,19 +1641,18 @@ func (a *app) uploadMedia(w http.ResponseWriter, r *http.Request, user authUser)
 }
 
 func (a *app) downloadMedia(w http.ResponseWriter, r *http.Request) {
-	fileName := filepath.Base(r.PathValue("fileName"))
-	if fileName == "." || fileName == string(filepath.Separator) {
+	fileName := r.PathValue("fileName")
+	if fileName == "" {
 		writeError(w, http.StatusBadRequest, "invalid file name")
 		return
 	}
-	path := filepath.Join(a.cfg.mediaStoragePath, fileName)
-	file, err := os.Open(path)
+	file, contentType, err := a.mediaStore.Open(r.Context(), fileName)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "file not found")
 		return
 	}
 	defer file.Close()
-	if contentType := mime.TypeByExtension(filepath.Ext(fileName)); contentType != "" {
+	if contentType != "" {
 		w.Header().Set("Content-Type", contentType)
 	}
 	w.Header().Set("Content-Disposition", "inline; filename=\""+strings.ReplaceAll(fileName, "\"", "")+"\"")

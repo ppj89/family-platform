@@ -65,7 +65,7 @@ The default media policy is intentionally conservative for low-cost operation:
 - Nginx `client_max_body_size` is set to 40 MB to match the backend request limit.
 - Uploaded files are stored in the `family_platform_uploads` Docker volume by default.
 - Back up both the PostgreSQL volume and the uploads volume before production deploys.
-- Move uploads to S3-compatible storage later when traffic or disk usage grows.
+- For the lowest-cost production path, move uploads to Cloudflare R2. See [docs/cloudflare-r2-storage.md](./docs/cloudflare-r2-storage.md).
 
 ## Run
 

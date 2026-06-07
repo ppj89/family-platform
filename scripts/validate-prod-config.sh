@@ -37,6 +37,7 @@ APP_SECURITY_TOKEN_VALIDITY_SECONDS
 APP_MEDIA_MAX_FILES_PER_POST
 APP_MEDIA_MAX_IMAGE_SIZE
 APP_MEDIA_MAX_VIDEO_SIZE
+APP_MEDIA_STORAGE_DRIVER
 VITE_API_BASE_URL
 WEB_PORT
 APP_DOMAIN
@@ -52,6 +53,7 @@ cors_origins="$(value_of APP_CORS_ALLOWED_ORIGINS)"
 vite_api_base="$(value_of VITE_API_BASE_URL)"
 app_domain="$(value_of APP_DOMAIN)"
 web_port="$(value_of WEB_PORT)"
+media_storage_driver="$(value_of APP_MEDIA_STORAGE_DRIVER)"
 
 if [ "$ALLOW_PLACEHOLDERS" != "1" ]; then
   case "$db_password" in
@@ -94,6 +96,26 @@ esac
 case "$web_port" in
   ''|*[!0-9]*)
     fail "WEB_PORT must be numeric"
+    ;;
+esac
+
+case "$media_storage_driver" in
+  local)
+    require_key APP_MEDIA_STORAGE_PATH
+    ;;
+  s3)
+    require_key APP_MEDIA_S3_ENDPOINT
+    require_key APP_MEDIA_S3_REGION
+    require_key APP_MEDIA_S3_BUCKET
+    require_key APP_MEDIA_S3_ACCESS_KEY_ID
+    require_key APP_MEDIA_S3_SECRET_ACCESS_KEY
+    [ -n "$(value_of APP_MEDIA_S3_ENDPOINT)" ] || fail "APP_MEDIA_S3_ENDPOINT is required for s3 media storage"
+    [ -n "$(value_of APP_MEDIA_S3_BUCKET)" ] || fail "APP_MEDIA_S3_BUCKET is required for s3 media storage"
+    [ -n "$(value_of APP_MEDIA_S3_ACCESS_KEY_ID)" ] || fail "APP_MEDIA_S3_ACCESS_KEY_ID is required for s3 media storage"
+    [ -n "$(value_of APP_MEDIA_S3_SECRET_ACCESS_KEY)" ] || fail "APP_MEDIA_S3_SECRET_ACCESS_KEY is required for s3 media storage"
+    ;;
+  *)
+    fail "APP_MEDIA_STORAGE_DRIVER must be local or s3"
     ;;
 esac
 

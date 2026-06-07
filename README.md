@@ -112,6 +112,7 @@ sudo APP_DIR=/opt/family-platform scripts/install-monitor-cron.sh
 ```
 
 Server setup details are in [DEPLOYMENT.md](./DEPLOYMENT.md). Production operation commands are in [OPERATIONS.md](./OPERATIONS.md).
+Cloudflare R2 media storage setup is in [docs/cloudflare-r2-storage.md](./docs/cloudflare-r2-storage.md).
 
 ## Security Notes
 
