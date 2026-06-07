@@ -91,6 +91,17 @@ jobs:
       - name: Build web image
         run: docker build -f Dockerfile .
 
+  production-smoke:
+    name: Production stack smoke
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run production stack smoke test
+        run: scripts/test-prod-stack.sh
+
   android:
     name: Android debug build
     runs-on: ubuntu-latest

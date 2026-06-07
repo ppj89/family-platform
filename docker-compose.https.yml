@@ -4,7 +4,7 @@ services:
 
   caddy:
     image: caddy:2.10-alpine
-    container_name: family-platform-caddy
+    container_name: ${CADDY_CONTAINER_NAME:-family-platform-caddy}
     restart: unless-stopped
     depends_on:
       - web

@@ -90,6 +90,14 @@ API_BASE_URL=http://localhost/api sh scripts/test-go-api.sh
 
 This creates and removes test data. Do not run it against production data without a fresh backup.
 
+To test the full production web/API/DB stack on a temporary port:
+
+```bash
+WEB_PORT=18080 WEB_BASE_URL=http://127.0.0.1:18080 scripts/test-prod-stack.sh
+```
+
+This starts an isolated Docker Compose project, verifies `/health` and `/api/health`, runs the full API integration test through the web proxy, and removes the temporary containers and volumes.
+
 ## Database
 
 The production API runs on Go. On startup it creates the required tables and indexes when they do not already exist.
