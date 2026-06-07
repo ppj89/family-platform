@@ -39,6 +39,7 @@ The default media policy is intentionally conservative for low-cost operation:
 - Images: up to 8 MB in the web UI
 - Videos: up to 30 MB in the web UI
 - Attachments: up to 6 files and 40 MB per request
+- Nginx `client_max_body_size` is set to 40 MB to match the backend request limit.
 - Uploaded files are stored in the `family_platform_uploads` Docker volume by default.
 - Back up both the PostgreSQL volume and the uploads volume before production deploys.
 - Move uploads to S3-compatible storage later when traffic or disk usage grows.
