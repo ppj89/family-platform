@@ -46,6 +46,35 @@ jobs:
         working-directory: backend-go
         run: go test ./...
 
+  api-integration:
+    name: Go API integration
+    runs-on: ubuntu-latest
+    needs: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start API stack
+        run: docker compose up --build -d db api
+
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8080/api/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs api
+          exit 1
+
+      - name: Run API integration tests
+        run: sh scripts/test-go-api.sh
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
   docker:
     name: Docker production config
     runs-on: ubuntu-latest

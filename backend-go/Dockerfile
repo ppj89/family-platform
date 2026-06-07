@@ -6,11 +6,10 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/family-api ./cmd/api
 
 FROM alpine:3.22
-RUN addgroup -S app && adduser -S app -G app
+RUN apk add --no-cache su-exec && addgroup -S app && adduser -S app -G app
 WORKDIR /app
 COPY --from=build /out/family-api /app/family-api
 RUN mkdir -p /app/uploads && chown -R app:app /app
-USER app
 EXPOSE 8080
 HEALTHCHECK --interval=10s --timeout=5s --retries=5 CMD wget -qO- http://127.0.0.1:8080/api/health || exit 1
-ENTRYPOINT ["/app/family-api"]
+ENTRYPOINT ["sh", "-c", "chown -R app:app /app/uploads && exec su-exec app /app/family-api"]
