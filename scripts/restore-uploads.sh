@@ -12,7 +12,7 @@ if [ ! -f "$BACKUP_PATH" ]; then
   exit 1
 fi
 
-VOLUME="${UPLOADS_VOLUME:-family-platform_family_platform_uploads}"
+VOLUME="${UPLOADS_VOLUME:-family_platform_prod_uploads}"
 BACKUP_DIR="$(cd "$(dirname "$BACKUP_PATH")" && pwd)"
 BACKUP_FILE="$(basename "$BACKUP_PATH")"
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VOLUME="${UPLOADS_VOLUME:-family-platform_family_platform_uploads}"
+VOLUME="${UPLOADS_VOLUME:-family_platform_prod_uploads}"
 BACKUP_DIR="${BACKUP_DIR:-backups}"
 TIMESTAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_PATH="$BACKUP_DIR/uploads-$TIMESTAMP.tar.gz"

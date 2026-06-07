@@ -68,6 +68,20 @@ HTTPS with Caddy:
 scripts/deploy-prod-https.sh
 ```
 
+After the first deployment, use the update script for normal releases. It backs up the running database and uploads volume when they exist, pulls the latest Git commit, redeploys the HTTPS stack, and verifies `/health` and `/api/health`.
+
+```bash
+scripts/update-prod-https.sh
+```
+
+Useful options:
+
+```bash
+SKIP_BACKUP=1 scripts/update-prod-https.sh
+SKIP_GIT_PULL=1 scripts/update-prod-https.sh
+HEALTH_BASE_URL=http://127.0.0.1 scripts/update-prod-https.sh
+```
+
 On Windows:
 
 ```powershell

@@ -2,7 +2,7 @@ $ErrorActionPreference = "Stop"
 
 $volume = $env:UPLOADS_VOLUME
 if ([string]::IsNullOrWhiteSpace($volume)) {
-  $volume = "family-platform_family_platform_uploads"
+  $volume = "family_platform_prod_uploads"
 }
 
 $backupDir = $env:BACKUP_DIR
