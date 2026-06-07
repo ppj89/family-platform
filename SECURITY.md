@@ -10,6 +10,7 @@ This project is prepared for production hardening, but final deployment must use
 - Duplicate login confirmation flow.
 - Previous token invalidation after confirmed force login.
 - Five failed password attempts lock the account for five minutes.
+- Production profile startup guard blocks the default or weak token secret.
 - CORS allow-list through environment variables.
 - Family-scoped access services for protected data.
 - Flyway schema migrations with production JPA validation.

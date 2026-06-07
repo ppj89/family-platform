@@ -24,7 +24,7 @@ powershell -ExecutionPolicy Bypass -File scripts\init-prod-env.ps1 -Domain https
 Use strong random values for:
 
 - `POSTGRES_PASSWORD`
-- `APP_SECURITY_TOKEN_SECRET`
+- `APP_SECURITY_TOKEN_SECRET` (minimum 48 characters; production startup fails if the default dev secret is used)
 
 Set:
 
