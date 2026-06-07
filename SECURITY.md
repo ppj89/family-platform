@@ -12,10 +12,11 @@ This project is prepared for production hardening, but final deployment must use
 - Five failed password attempts lock the account for five minutes.
 - Production profile startup guard blocks the default or weak token secret.
 - Default development account seeding is disabled unless explicitly enabled for local development.
+- Caddy, Nginx, and API security headers for content sniffing, frame blocking, referrer policy, and browser permission policy.
 - CORS allow-list through environment variables.
 - Family-scoped access services for protected data.
-- Flyway schema migrations with production JPA validation.
 - PostgreSQL backup and restore scripts for Docker deployments.
+- Production update script with backup, deploy, and health checks.
 
 ## Before Public Launch
 
