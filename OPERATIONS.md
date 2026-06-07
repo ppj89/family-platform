@@ -42,6 +42,7 @@ Monitor logs are written to `logs/monitor.log`.
 
 ```bash
 cd /opt/family-platform
+scripts/validate-prod-config.sh .env.production
 scripts/update-prod-https.sh
 ```
 

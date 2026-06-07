@@ -109,6 +109,12 @@ curl http://localhost/api/health
 docker compose -f docker-compose.prod.yml --env-file .env.production ps
 ```
 
+Before the first public deploy, validate production settings:
+
+```bash
+scripts/validate-prod-config.sh .env.production
+```
+
 Or run the production check helper:
 
 ```bash

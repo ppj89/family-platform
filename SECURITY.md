@@ -18,6 +18,7 @@ This project is prepared for production hardening, but final deployment must use
 - PostgreSQL backup and restore scripts for Docker deployments.
 - Production update script with backup, deploy, and health checks.
 - Ubuntu hardening script for firewall, swap, Docker log rotation, and unattended security updates.
+- Production configuration validator for secrets, CORS, compose, and Caddy checks.
 
 ## Before Public Launch
 

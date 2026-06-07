@@ -82,6 +82,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Validate production readiness
+        run: ALLOW_PLACEHOLDERS=1 scripts/validate-prod-config.sh .env.production.example
+
       - name: Validate production compose
         run: docker compose -f docker-compose.prod.yml --env-file .env.production.example config --quiet
 
