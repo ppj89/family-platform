@@ -16,6 +16,26 @@ The APK is generated at:
 android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
+Build a debug APK that points to the current production test API:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build-android-debug-server.ps1 -ApiBaseUrl "http://192.145.44.103/api"
+```
+
+Build and publish it to the server download URL:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-android-debug-server.ps1 -ApiBaseUrl "http://192.145.44.103/api" -ServerHost "192.145.44.103"
+```
+
+Android test download:
+
+```text
+http://192.145.44.103/downloads/app-debug.apk
+```
+
+This debug APK allows HTTP traffic only for testing with the server IP. Release builds should use a domain with HTTPS.
+
 ## Notes
 
 - Backend Java remains Java 25.

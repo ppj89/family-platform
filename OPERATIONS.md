@@ -4,16 +4,33 @@ This runbook is for the production Linux server after the first deployment.
 
 ## Daily Check
 
+From the server:
+
 ```bash
 cd /opt/family-platform
 scripts/check-prod.sh
+```
+
+From this Windows workspace:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-server.ps1
 ```
 
 Expected result:
 
 - `web: ok`
 - `api: ok`
+- `android debug apk: ok` when the test APK has been published
 - Docker services show as running or healthy.
+
+The current HTTP test URL is:
+
+```text
+http://192.145.44.103
+```
+
+Use `http://`, not `https://`, until a domain and HTTPS are configured.
 
 ## Monitoring
 
@@ -47,6 +64,15 @@ scripts/update-prod-https.sh
 ```
 
 The update script backs up the database and uploads volume when they exist, pulls the latest Git commit, redeploys the HTTPS stack, and verifies health endpoints.
+
+For the temporary HTTP/IP server, deploy with the production compose file only:
+
+```bash
+cd /opt/family-platform
+git pull
+docker compose -f docker-compose.prod.yml --env-file .env.production up --build -d
+scripts/check-prod.sh
+```
 
 ## Rollback
 
