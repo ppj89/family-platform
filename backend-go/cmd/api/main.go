@@ -555,15 +555,21 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	}
 	response, err := a.loginOAuthUser(r.Context(), providerName, profile, r.URL.Query().Get("forceLogin") == "true")
 	if errors.Is(err, errActiveSessionExists) {
-		writeError(w, http.StatusConflict, "active session exists")
+		writeOAuthCallbackHTML(w, http.StatusConflict, a.cfg.publicBaseURL, "", nil, "active session exists")
 		return
 	}
 	if err != nil {
 		a.log.Error("oauth login failed", "provider", providerName, "error", err)
-		writeError(w, http.StatusInternalServerError, "oauth login failed")
+		writeOAuthCallbackHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, "", nil, "oauth login failed")
 		return
 	}
-	writeJSON(w, http.StatusOK, response)
+	userPayload := map[string]any{
+		"userId":        response.UserID,
+		"email":         response.Email,
+		"nickname":      response.Nickname,
+		"platformAdmin": response.PlatformAdmin,
+	}
+	writeOAuthCallbackHTML(w, http.StatusOK, a.cfg.publicBaseURL, response.AccessToken, userPayload, "")
 }
 
 func (a *app) listFamilies(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -2491,6 +2497,57 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"message": message})
+}
+
+func writeOAuthCallbackHTML(w http.ResponseWriter, status int, publicBaseURL string, accessToken string, userPayload map[string]any, errorMessage string) {
+	redirectURL := strings.TrimRight(publicBaseURL, "/") + "/"
+	tokenJSON, _ := json.Marshal(accessToken)
+	userJSON, _ := json.Marshal(userPayload)
+	errorJSON, _ := json.Marshal(errorMessage)
+	redirectJSON, _ := json.Marshal(redirectURL)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
+	_, _ = fmt.Fprintf(w, `<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SSO Login</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f6fb; color: #191f28; }
+    main { width: min(420px, calc(100vw - 40px)); padding: 28px; border-radius: 24px; background: #fff; box-shadow: 0 18px 50px rgba(25, 31, 40, .12); text-align: center; }
+    h1 { margin: 0 0 10px; font-size: 24px; }
+    p { margin: 0; color: #6b7684; line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="title">SSO 로그인 처리 중</h1>
+    <p id="message">잠시만 기다려주세요.</p>
+  </main>
+  <script>
+    (function () {
+      var token = %s;
+      var user = %s;
+      var error = %s;
+      var redirect = %s;
+      if (error) {
+        document.getElementById('title').textContent = 'SSO 로그인이 필요합니다';
+        document.getElementById('message').textContent = error === 'active session exists'
+          ? '이미 로그인된 세션이 있습니다. 이메일 로그인으로 접속 후 기존 로그인을 교체해주세요.'
+          : 'SSO 로그인 처리 중 문제가 발생했습니다.';
+        window.setTimeout(function () { window.location.replace(redirect); }, 1800);
+        return;
+      }
+      localStorage.setItem('family-platform-access-token', token);
+      localStorage.setItem('family-platform-user', JSON.stringify(user));
+      document.getElementById('title').textContent = '로그인되었습니다';
+      document.getElementById('message').textContent = '가족 플랫폼으로 이동합니다.';
+      window.setTimeout(function () { window.location.replace(redirect); }, 350);
+    }());
+  </script>
+</body>
+</html>`, tokenJSON, userJSON, errorJSON, redirectJSON)
 }
 
 func normalizeEmail(email string) string {

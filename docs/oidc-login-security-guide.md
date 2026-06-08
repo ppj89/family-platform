@@ -100,3 +100,6 @@ Create, update, and delete APIs must check `can_create`, `can_update`, and
 - The frontend SSO buttons read `/api/auth/oauth/providers`; unconfigured
   providers show a setup 안내 message, and configured providers redirect to
   `/api/auth/oauth/{provider}/start`.
+- OAuth callback returns a short HTML handoff page that stores the Family
+  Platform access token in the same web storage keys as email login, then
+  redirects back to the app root.
