@@ -7,12 +7,12 @@ an account must be locked.
 
 ## Production Prerequisites
 
-- A real HTTPS domain, for example `https://family.example.com`.
+- A real HTTPS domain, for example `https://familyhistory.dedyn.io`.
 - OAuth client credentials for each provider that will be enabled.
 - A callback URL registered in each provider console:
-  - Google: `https://family.example.com/api/auth/oauth/google/callback`
-  - Naver: `https://family.example.com/api/auth/oauth/naver/callback`
-  - Kakao: `https://family.example.com/api/auth/oauth/kakao/callback`
+  - Google: `https://familyhistory.dedyn.io/api/auth/oauth/google/callback`
+  - Naver: `https://familyhistory.dedyn.io/api/auth/oauth/naver/callback`
+  - Kakao: `https://familyhistory.dedyn.io/api/auth/oauth/kakao/callback`
 - The frontend must never store provider client secrets.
 
 ## Environment Variables
@@ -20,13 +20,62 @@ an account must be locked.
 Use these names in `.env.production` when the domain and provider apps are ready.
 
 ```text
-APP_PUBLIC_BASE_URL=https://family.example.com
+APP_PUBLIC_BASE_URL=https://familyhistory.dedyn.io
 APP_OAUTH_GOOGLE_CLIENT_ID=
 APP_OAUTH_GOOGLE_CLIENT_SECRET=
 APP_OAUTH_NAVER_CLIENT_ID=
 APP_OAUTH_NAVER_CLIENT_SECRET=
 APP_OAUTH_KAKAO_CLIENT_ID=
 APP_OAUTH_KAKAO_CLIENT_SECRET=
+```
+
+## Provider Console Setup
+
+Use the exact callback URL for each provider. A missing slash, `http` instead of
+`https`, or a different domain will make provider login fail.
+
+### Google
+
+1. Open Google Cloud Console and create an OAuth consent screen.
+2. Create an OAuth client with application type `Web application`.
+3. Add `https://familyhistory.dedyn.io` as an authorized JavaScript origin.
+4. Add `https://familyhistory.dedyn.io/api/auth/oauth/google/callback` as an
+   authorized redirect URI.
+5. Copy the client ID and client secret.
+
+### Naver
+
+1. Open Naver Developers and create an application with Naver Login enabled.
+2. Add the service URL `https://familyhistory.dedyn.io`.
+3. Add `https://familyhistory.dedyn.io/api/auth/oauth/naver/callback` as the
+   callback URL.
+4. Copy the client ID and client secret.
+
+### Kakao
+
+1. Open Kakao Developers and enable Kakao Login.
+2. Add the web site domain `https://familyhistory.dedyn.io`.
+3. Add `https://familyhistory.dedyn.io/api/auth/oauth/kakao/callback` as the
+   redirect URI.
+4. Copy the REST API key as the client ID.
+5. Client secret is optional for Kakao in this backend. If it is enabled in
+   Kakao Developers, also set `APP_OAUTH_KAKAO_CLIENT_SECRET`.
+
+## Apply Credentials On Production
+
+Run the helper from `/opt/family-platform` on the server:
+
+```bash
+PROVIDER=naver CLIENT_ID=... CLIENT_SECRET=... scripts/set-prod-oauth.sh
+PROVIDER=google CLIENT_ID=... CLIENT_SECRET=... scripts/set-prod-oauth.sh
+PROVIDER=kakao CLIENT_ID=... scripts/set-prod-oauth.sh
+```
+
+After applying credentials, confirm that the provider reports
+`"configured": true`:
+
+```bash
+curl -fsS https://familyhistory.dedyn.io/api/auth/oauth/providers
 ```
 
 ## Recommended Backend Flow

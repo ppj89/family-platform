@@ -56,10 +56,18 @@ type oauthProviderConfig struct {
 	name         string
 	clientID     string
 	clientSecret string
+	secretNeeded bool
 	authURL      string
 	tokenURL     string
 	userInfoURL  string
 	scopes       []string
+}
+
+func (p oauthProviderConfig) isConfigured(publicBaseURL string) bool {
+	if strings.TrimSpace(publicBaseURL) == "" || strings.TrimSpace(p.clientID) == "" {
+		return false
+	}
+	return !p.secretNeeded || strings.TrimSpace(p.clientSecret) != ""
 }
 
 type app struct {
@@ -182,6 +190,7 @@ func loadOAuthProviders() map[string]oauthProviderConfig {
 			name:         "google",
 			clientID:     getenv("APP_OAUTH_GOOGLE_CLIENT_ID", ""),
 			clientSecret: getenv("APP_OAUTH_GOOGLE_CLIENT_SECRET", ""),
+			secretNeeded: true,
 			authURL:      "https://accounts.google.com/o/oauth2/v2/auth",
 			tokenURL:     "https://oauth2.googleapis.com/token",
 			userInfoURL:  "https://openidconnect.googleapis.com/v1/userinfo",
@@ -191,6 +200,7 @@ func loadOAuthProviders() map[string]oauthProviderConfig {
 			name:         "naver",
 			clientID:     getenv("APP_OAUTH_NAVER_CLIENT_ID", ""),
 			clientSecret: getenv("APP_OAUTH_NAVER_CLIENT_SECRET", ""),
+			secretNeeded: true,
 			authURL:      "https://nid.naver.com/oauth2.0/authorize",
 			tokenURL:     "https://nid.naver.com/oauth2.0/token",
 			userInfoURL:  "https://openapi.naver.com/v1/nid/me",
@@ -200,6 +210,7 @@ func loadOAuthProviders() map[string]oauthProviderConfig {
 			name:         "kakao",
 			clientID:     getenv("APP_OAUTH_KAKAO_CLIENT_ID", ""),
 			clientSecret: getenv("APP_OAUTH_KAKAO_CLIENT_SECRET", ""),
+			secretNeeded: false,
 			authURL:      "https://kauth.kakao.com/oauth/authorize",
 			tokenURL:     "https://kauth.kakao.com/oauth/token",
 			userInfoURL:  "https://kapi.kakao.com/v2/user/me",
@@ -461,7 +472,7 @@ func (a *app) oauthProviders(w http.ResponseWriter, r *http.Request) {
 		if !ok {
 			continue
 		}
-		configured := provider.clientID != "" && provider.clientSecret != "" && a.cfg.publicBaseURL != ""
+		configured := provider.isConfigured(a.cfg.publicBaseURL)
 		items = append(items, providerStatus{
 			Provider:   providerName,
 			Configured: configured,
@@ -478,7 +489,7 @@ func (a *app) oauthStart(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "oauth provider not supported")
 		return
 	}
-	if provider.clientID == "" || provider.clientSecret == "" || a.cfg.publicBaseURL == "" {
+	if !provider.isConfigured(a.cfg.publicBaseURL) {
 		writeError(w, http.StatusServiceUnavailable, "oauth provider is not configured")
 		return
 	}
@@ -518,7 +529,7 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "oauth provider not supported")
 		return
 	}
-	if provider.clientID == "" || provider.clientSecret == "" {
+	if !provider.isConfigured(a.cfg.publicBaseURL) {
 		writeError(w, http.StatusServiceUnavailable, "oauth provider is not configured")
 		return
 	}
@@ -2012,7 +2023,9 @@ func (a *app) exchangeOAuthCode(ctx context.Context, providerName string, provid
 	form := url.Values{}
 	form.Set("grant_type", "authorization_code")
 	form.Set("client_id", provider.clientID)
-	form.Set("client_secret", provider.clientSecret)
+	if strings.TrimSpace(provider.clientSecret) != "" {
+		form.Set("client_secret", provider.clientSecret)
+	}
 	form.Set("code", code)
 	form.Set("redirect_uri", a.oauthRedirectURL(providerName))
 
