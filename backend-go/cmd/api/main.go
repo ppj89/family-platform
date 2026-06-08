@@ -225,6 +225,7 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("POST /api/auth/login", a.login)
 	mux.HandleFunc("POST /api/auth/logout", a.requireAuth(a.logout))
 	mux.HandleFunc("GET /api/auth/me", a.requireAuth(a.me))
+	mux.HandleFunc("GET /api/auth/oauth/providers", a.oauthProviders)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/start", a.oauthStart)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", a.oauthCallback)
 	mux.HandleFunc("GET /api/families", a.requireAuth(a.listFamilies))
@@ -446,6 +447,28 @@ func (a *app) me(w http.ResponseWriter, r *http.Request, user authUser) {
 		Nickname:      nickname,
 		PlatformAdmin: user.PlatformAdmin,
 	})
+}
+
+func (a *app) oauthProviders(w http.ResponseWriter, r *http.Request) {
+	type providerStatus struct {
+		Provider   string `json:"provider"`
+		Configured bool   `json:"configured"`
+		StartURL   string `json:"startUrl"`
+	}
+	items := []providerStatus{}
+	for _, providerName := range []string{"naver", "google", "kakao"} {
+		provider, ok := a.cfg.oauth[providerName]
+		if !ok {
+			continue
+		}
+		configured := provider.clientID != "" && provider.clientSecret != "" && a.cfg.publicBaseURL != ""
+		items = append(items, providerStatus{
+			Provider:   providerName,
+			Configured: configured,
+			StartURL:   "/api/auth/oauth/" + providerName + "/start",
+		})
+	}
+	writeJSON(w, http.StatusOK, items)
 }
 
 func (a *app) oauthStart(w http.ResponseWriter, r *http.Request) {

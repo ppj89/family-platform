@@ -160,6 +160,20 @@
     })
   }
 
+  function apiGetJson(path) {
+    return fetch(API_BASE_URL + path).then(function (response) {
+      if (!response.ok) {
+        return response.text().then(function (message) {
+          var error = new Error(message || ('API ' + response.status))
+          error.status = response.status
+          error.body = message
+          throw error
+        })
+      }
+      return response.json()
+    })
+  }
+
   function parseAuthError(error) {
     var text = String(error && error.message ? error.message : error || '')
     if (text.indexOf('locked') >= 0 || text.indexOf('423') >= 0) {
@@ -2897,26 +2911,58 @@
 
     var divider = document.createElement('div')
     divider.className = 'auth-sso-divider'
-    divider.textContent = 'SSO 로그인'
+    divider.textContent = 'SSO \uB85C\uADF8\uC778'
     block.appendChild(divider)
 
+    var providerStatus = {}
+    var statusLoaded = false
     var providers = [
       { key: 'naver', label: '\uB124\uC774\uBC84' },
       { key: 'google', label: '\uAD6C\uAE00' },
       { key: 'kakao', label: '\uCE74\uCE74\uC624' }
     ]
 
+    function updateProviderButtons() {
+      providers.forEach(function (provider) {
+        var button = block.querySelector('[data-sso-provider="' + provider.key + '"]')
+        if (!button) return
+        var item = providerStatus[provider.key]
+        var configured = item && item.configured
+        button.classList.toggle('is-disabled', statusLoaded && !configured)
+        button.title = configured ? provider.label + ' \uB85C\uADF8\uC778' : '\uB3C4\uBA54\uC778\uACFC OAuth Client ID \uC124\uC815 \uD6C4 \uC5F0\uACB0\uB429\uB2C8\uB2E4.'
+      })
+    }
+
+    apiGetJson('/auth/oauth/providers').then(function (items) {
+      providerStatus = {}
+      ;(items || []).forEach(function (item) {
+        providerStatus[item.provider] = item
+      })
+      statusLoaded = true
+      updateProviderButtons()
+    }).catch(function () {
+      statusLoaded = true
+      updateProviderButtons()
+    })
+
     providers.forEach(function (provider) {
       var button = document.createElement('button')
       button.type = 'button'
       button.className = 'auth-sso-button ' + provider.key
+      button.dataset.ssoProvider = provider.key
       button.textContent = provider.label + ' \uB85C\uADF8\uC778'
       button.addEventListener('click', function () {
-        showPatchToast(provider.label + ' SSO는 도메인과 OAuth Client ID 설정 후 연결합니다.')
+        var item = providerStatus[provider.key]
+        if (!item || !item.configured) {
+          showPatchToast(provider.label + ' SSO\uB294 \uB3C4\uBA54\uC778\uACFC OAuth Client ID \uC124\uC815 \uD6C4 \uC5F0\uACB0\uB429\uB2C8\uB2E4.')
+          return
+        }
+        window.location.href = item.startUrl || (API_BASE_URL + '/auth/oauth/' + provider.key + '/start')
       })
       block.appendChild(button)
     })
 
+    updateProviderButtons()
     submit.insertAdjacentElement('afterend', block)
   }
 

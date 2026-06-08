@@ -7419,6 +7419,12 @@ select {
   color: #191600 !important;
 }
 
+.auth-sso-button.is-disabled {
+  opacity: 0.58 !important;
+  cursor: not-allowed !important;
+  box-shadow: none !important;
+}
+
 .home-today-schedule {
   cursor: pointer !important;
   order: -10 !important;

@@ -91,10 +91,12 @@ Create, update, and delete APIs must check `can_create`, `can_update`, and
 - Duplicate-login replacement is implemented through `forceLogin`.
 - Five-failure account locking is implemented.
 - SSO backend endpoints are prepared:
+  - `GET /api/auth/oauth/providers`
   - `GET /api/auth/oauth/{provider}/start`
   - `GET /api/auth/oauth/{provider}/callback`
 - Google, Naver, and Kakao are recognized providers.
 - The API stores one-time OAuth state values in `oauth_login_states`.
 - Provider credentials are still required before a real SSO login can be tested.
-- The frontend SSO buttons are intentionally disabled until domain, HTTPS, and
-  provider client credentials are configured.
+- The frontend SSO buttons read `/api/auth/oauth/providers`; unconfigured
+  providers show a setup 안내 message, and configured providers redirect to
+  `/api/auth/oauth/{provider}/start`.
