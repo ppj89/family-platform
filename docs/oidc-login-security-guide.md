@@ -90,7 +90,11 @@ Create, update, and delete APIs must check `can_create`, `can_update`, and
 - Email/password register and login are implemented.
 - Duplicate-login replacement is implemented through `forceLogin`.
 - Five-failure account locking is implemented.
-- SSO buttons are intentionally disabled until domain, HTTPS, and provider
-  client credentials are configured.
-- The next SSO implementation step is to add the `/start` and `/callback`
-  endpoints above, then connect each provider one by one.
+- SSO backend endpoints are prepared:
+  - `GET /api/auth/oauth/{provider}/start`
+  - `GET /api/auth/oauth/{provider}/callback`
+- Google, Naver, and Kakao are recognized providers.
+- The API stores one-time OAuth state values in `oauth_login_states`.
+- Provider credentials are still required before a real SSO login can be tested.
+- The frontend SSO buttons are intentionally disabled until domain, HTTPS, and
+  provider client credentials are configured.

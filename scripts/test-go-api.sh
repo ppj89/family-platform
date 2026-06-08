@@ -70,6 +70,10 @@ password="Testpass123!"
 health="$(api GET /health)"
 status="$(printf '%s' "$health" | json_value status)"
 [ "$status" = "UP" ]
+api_expect_status 503 GET /auth/oauth/google/start
+api_expect_status 503 GET /auth/oauth/naver/start
+api_expect_status 503 GET /auth/oauth/kakao/start
+api_expect_status 404 GET /auth/oauth/unknown/start
 
 register_body="$(printf '{"email":"%s","nickname":"api-test","password":"%s"}' "$email" "$password")"
 register_response="$(api POST /auth/register "$register_body")"

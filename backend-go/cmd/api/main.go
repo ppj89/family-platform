@@ -13,6 +13,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -43,10 +44,22 @@ type config struct {
 	mediaS3Bucket        string
 	mediaS3AccessKey     string
 	mediaS3SecretKey     string
+	publicBaseURL        string
+	oauth                map[string]oauthProviderConfig
 	maxFilesPerPost      int
 	maxReferenceLength   int
 	maxImageBytes        int64
 	maxVideoBytes        int64
+}
+
+type oauthProviderConfig struct {
+	name         string
+	clientID     string
+	clientSecret string
+	authURL      string
+	tokenURL     string
+	userInfoURL  string
+	scopes       []string
 }
 
 type app struct {
@@ -70,6 +83,14 @@ type authResponse struct {
 	Nickname      string `json:"nickname"`
 	PlatformAdmin bool   `json:"platformAdmin"`
 }
+
+type oauthProfile struct {
+	ProviderUserID string
+	Email          string
+	Nickname       string
+}
+
+var errActiveSessionExists = errors.New("active session exists")
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -146,11 +167,55 @@ func loadConfig() (config, error) {
 		mediaS3Bucket:        getenv("APP_MEDIA_S3_BUCKET", ""),
 		mediaS3AccessKey:     getenv("APP_MEDIA_S3_ACCESS_KEY_ID", ""),
 		mediaS3SecretKey:     getenv("APP_MEDIA_S3_SECRET_ACCESS_KEY", ""),
+		publicBaseURL:        defaultPublicBaseURL(),
+		oauth:                loadOAuthProviders(),
 		maxFilesPerPost:      envInt("APP_MEDIA_MAX_FILES_PER_POST", 6),
 		maxReferenceLength:   envInt("APP_MEDIA_MAX_REFERENCE_LENGTH", 2048),
 		maxImageBytes:        parseSize(getenv("APP_MEDIA_MAX_IMAGE_SIZE", "8MB"), 8*1024*1024),
 		maxVideoBytes:        parseSize(getenv("APP_MEDIA_MAX_VIDEO_SIZE", "30MB"), 30*1024*1024),
 	}, nil
+}
+
+func loadOAuthProviders() map[string]oauthProviderConfig {
+	return map[string]oauthProviderConfig{
+		"google": {
+			name:         "google",
+			clientID:     getenv("APP_OAUTH_GOOGLE_CLIENT_ID", ""),
+			clientSecret: getenv("APP_OAUTH_GOOGLE_CLIENT_SECRET", ""),
+			authURL:      "https://accounts.google.com/o/oauth2/v2/auth",
+			tokenURL:     "https://oauth2.googleapis.com/token",
+			userInfoURL:  "https://openidconnect.googleapis.com/v1/userinfo",
+			scopes:       []string{"openid", "email", "profile"},
+		},
+		"naver": {
+			name:         "naver",
+			clientID:     getenv("APP_OAUTH_NAVER_CLIENT_ID", ""),
+			clientSecret: getenv("APP_OAUTH_NAVER_CLIENT_SECRET", ""),
+			authURL:      "https://nid.naver.com/oauth2.0/authorize",
+			tokenURL:     "https://nid.naver.com/oauth2.0/token",
+			userInfoURL:  "https://openapi.naver.com/v1/nid/me",
+			scopes:       []string{"email", "profile"},
+		},
+		"kakao": {
+			name:         "kakao",
+			clientID:     getenv("APP_OAUTH_KAKAO_CLIENT_ID", ""),
+			clientSecret: getenv("APP_OAUTH_KAKAO_CLIENT_SECRET", ""),
+			authURL:      "https://kauth.kakao.com/oauth/authorize",
+			tokenURL:     "https://kauth.kakao.com/oauth/token",
+			userInfoURL:  "https://kapi.kakao.com/v2/user/me",
+			scopes:       []string{"profile_nickname", "account_email"},
+		},
+	}
+}
+
+func defaultPublicBaseURL() string {
+	if value := strings.TrimRight(strings.TrimSpace(os.Getenv("APP_PUBLIC_BASE_URL")), "/"); value != "" {
+		return value
+	}
+	if domain := strings.TrimSpace(os.Getenv("APP_DOMAIN")); domain != "" {
+		return "https://" + strings.Trim(domain, "/")
+	}
+	return "http://localhost:5173"
 }
 
 func (a *app) routes() http.Handler {
@@ -160,6 +225,8 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("POST /api/auth/login", a.login)
 	mux.HandleFunc("POST /api/auth/logout", a.requireAuth(a.logout))
 	mux.HandleFunc("GET /api/auth/me", a.requireAuth(a.me))
+	mux.HandleFunc("GET /api/auth/oauth/{provider}/start", a.oauthStart)
+	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", a.oauthCallback)
 	mux.HandleFunc("GET /api/families", a.requireAuth(a.listFamilies))
 	mux.HandleFunc("GET /api/families/{familyId}/members", a.requireAuth(a.listFamilyMembers))
 	mux.HandleFunc("POST /api/families/{familyId}/members", a.requireAuth(a.addFamilyMember))
@@ -379,6 +446,101 @@ func (a *app) me(w http.ResponseWriter, r *http.Request, user authUser) {
 		Nickname:      nickname,
 		PlatformAdmin: user.PlatformAdmin,
 	})
+}
+
+func (a *app) oauthStart(w http.ResponseWriter, r *http.Request) {
+	providerName := strings.ToLower(strings.TrimSpace(r.PathValue("provider")))
+	provider, ok := a.cfg.oauth[providerName]
+	if !ok {
+		writeError(w, http.StatusNotFound, "oauth provider not supported")
+		return
+	}
+	if provider.clientID == "" || provider.clientSecret == "" || a.cfg.publicBaseURL == "" {
+		writeError(w, http.StatusServiceUnavailable, "oauth provider is not configured")
+		return
+	}
+
+	state := newSessionID()
+	nonce := newSessionID()
+	_, err := a.db.Exec(r.Context(), `
+		insert into oauth_login_states (state, provider, nonce, created_at, expires_at)
+		values ($1, $2, $3, now(), $4)
+	`, state, providerName, nonce, time.Now().Add(10*time.Minute))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "oauth state creation failed")
+		return
+	}
+
+	params := url.Values{}
+	params.Set("client_id", provider.clientID)
+	params.Set("redirect_uri", a.oauthRedirectURL(providerName))
+	params.Set("response_type", "code")
+	params.Set("state", state)
+	if providerName == "google" {
+		params.Set("nonce", nonce)
+	}
+	if len(provider.scopes) > 0 {
+		params.Set("scope", strings.Join(provider.scopes, " "))
+	}
+	if providerName == "naver" {
+		params.Del("scope")
+	}
+	http.Redirect(w, r, provider.authURL+"?"+params.Encode(), http.StatusFound)
+}
+
+func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
+	providerName := strings.ToLower(strings.TrimSpace(r.PathValue("provider")))
+	provider, ok := a.cfg.oauth[providerName]
+	if !ok {
+		writeError(w, http.StatusNotFound, "oauth provider not supported")
+		return
+	}
+	if provider.clientID == "" || provider.clientSecret == "" {
+		writeError(w, http.StatusServiceUnavailable, "oauth provider is not configured")
+		return
+	}
+	if errMessage := strings.TrimSpace(r.URL.Query().Get("error")); errMessage != "" {
+		writeError(w, http.StatusBadRequest, "oauth provider error: "+errMessage)
+		return
+	}
+	code := strings.TrimSpace(r.URL.Query().Get("code"))
+	state := strings.TrimSpace(r.URL.Query().Get("state"))
+	if code == "" || state == "" {
+		writeError(w, http.StatusBadRequest, "oauth code and state are required")
+		return
+	}
+	if !a.consumeOAuthState(r.Context(), providerName, state) {
+		writeError(w, http.StatusBadRequest, "oauth state is invalid or expired")
+		return
+	}
+
+	accessToken, err := a.exchangeOAuthCode(r.Context(), providerName, provider, code)
+	if err != nil {
+		a.log.Error("oauth token exchange failed", "provider", providerName, "error", err)
+		writeError(w, http.StatusBadGateway, "oauth token exchange failed")
+		return
+	}
+	profile, err := a.fetchOAuthProfile(r.Context(), providerName, provider, accessToken)
+	if err != nil {
+		a.log.Error("oauth profile fetch failed", "provider", providerName, "error", err)
+		writeError(w, http.StatusBadGateway, "oauth profile fetch failed")
+		return
+	}
+	if profile.ProviderUserID == "" {
+		writeError(w, http.StatusBadGateway, "oauth profile is missing provider id")
+		return
+	}
+	response, err := a.loginOAuthUser(r.Context(), providerName, profile, r.URL.Query().Get("forceLogin") == "true")
+	if errors.Is(err, errActiveSessionExists) {
+		writeError(w, http.StatusConflict, "active session exists")
+		return
+	}
+	if err != nil {
+		a.log.Error("oauth login failed", "provider", providerName, "error", err)
+		writeError(w, http.StatusInternalServerError, "oauth login failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, response)
 }
 
 func (a *app) listFamilies(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -1805,6 +1967,207 @@ func (a *app) isActiveSession(ctx context.Context, user authUser) bool {
 	return err == nil && activeSessionID.Valid && activeSessionID.String == user.SessionID
 }
 
+func (a *app) oauthRedirectURL(provider string) string {
+	return a.cfg.publicBaseURL + "/api/auth/oauth/" + provider + "/callback"
+}
+
+func (a *app) consumeOAuthState(ctx context.Context, provider, state string) bool {
+	tag, err := a.db.Exec(ctx, `
+		delete from oauth_login_states
+		where state = $1 and provider = $2 and expires_at > now()
+	`, state, provider)
+	return err == nil && tag.RowsAffected() == 1
+}
+
+func (a *app) exchangeOAuthCode(ctx context.Context, providerName string, provider oauthProviderConfig, code string) (string, error) {
+	form := url.Values{}
+	form.Set("grant_type", "authorization_code")
+	form.Set("client_id", provider.clientID)
+	form.Set("client_secret", provider.clientSecret)
+	form.Set("code", code)
+	form.Set("redirect_uri", a.oauthRedirectURL(providerName))
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, provider.tokenURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return "", fmt.Errorf("oauth token endpoint returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var tokenResponse struct {
+		AccessToken string `json:"access_token"`
+		TokenType   string `json:"token_type"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&tokenResponse); err != nil {
+		return "", err
+	}
+	if tokenResponse.AccessToken == "" {
+		return "", fmt.Errorf("oauth access token is empty")
+	}
+	return tokenResponse.AccessToken, nil
+}
+
+func (a *app) fetchOAuthProfile(ctx context.Context, providerName string, provider oauthProviderConfig, accessToken string) (oauthProfile, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, provider.userInfoURL, nil)
+	if err != nil {
+		return oauthProfile{}, err
+	}
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return oauthProfile{}, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return oauthProfile{}, fmt.Errorf("oauth userinfo endpoint returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var raw map[string]any
+	if err := json.NewDecoder(resp.Body).Decode(&raw); err != nil {
+		return oauthProfile{}, err
+	}
+	switch providerName {
+	case "google":
+		return oauthProfile{
+			ProviderUserID: stringFromAny(raw["sub"]),
+			Email:          normalizeEmail(stringFromAny(raw["email"])),
+			Nickname:       firstNonEmpty(stringFromAny(raw["name"]), stringFromAny(raw["email"]), "Google User"),
+		}, nil
+	case "naver":
+		response, _ := raw["response"].(map[string]any)
+		return oauthProfile{
+			ProviderUserID: stringFromAny(response["id"]),
+			Email:          normalizeEmail(stringFromAny(response["email"])),
+			Nickname:       firstNonEmpty(stringFromAny(response["nickname"]), stringFromAny(response["name"]), stringFromAny(response["email"]), "Naver User"),
+		}, nil
+	case "kakao":
+		account, _ := raw["kakao_account"].(map[string]any)
+		profile, _ := account["profile"].(map[string]any)
+		return oauthProfile{
+			ProviderUserID: stringFromAny(raw["id"]),
+			Email:          normalizeEmail(stringFromAny(account["email"])),
+			Nickname:       firstNonEmpty(stringFromAny(profile["nickname"]), stringFromAny(account["email"]), "Kakao User"),
+		}, nil
+	default:
+		return oauthProfile{}, fmt.Errorf("oauth provider not supported")
+	}
+}
+
+func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauthProfile, forceLogin bool) (authResponse, error) {
+	email := profile.Email
+	if email == "" {
+		email = provider + "-" + profile.ProviderUserID + "@oauth.local"
+	}
+	nickname := strings.TrimSpace(profile.Nickname)
+	if nickname == "" {
+		nickname = provider + " user"
+	}
+
+	tx, err := a.db.Begin(ctx)
+	if err != nil {
+		return authResponse{}, err
+	}
+	defer tx.Rollback(ctx)
+
+	var userID int64
+	var currentEmail, currentNickname string
+	var platformAdmin bool
+	var activeSessionID sql.NullString
+	err = tx.QueryRow(ctx, `
+		select id, email, nickname, platform_admin, active_session_id
+		from app_users
+		where provider = $1 and provider_user_id = $2
+	`, provider, profile.ProviderUserID).Scan(&userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		created, err := a.findOrCreateOAuthUser(ctx, tx, provider, profile.ProviderUserID, email, nickname, &userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID)
+		if err != nil {
+			return authResponse{}, err
+		}
+		if created {
+			var familyID int64
+			if err := tx.QueryRow(ctx, "insert into family_groups (created_at, name) values (now(), $1) returning id", currentNickname+" family").Scan(&familyID); err != nil {
+				return authResponse{}, err
+			}
+			_, err = tx.Exec(ctx, `
+				insert into family_members (family_id, user_id, role, joined_at, can_read, can_create, can_update, can_delete)
+				values ($1, $2, 'FAMILY_ADMIN', now(), true, true, true, true)
+			`, familyID, userID)
+			if err != nil {
+				return authResponse{}, err
+			}
+		}
+	} else if err != nil {
+		return authResponse{}, err
+	}
+
+	if activeSessionID.Valid && activeSessionID.String != "" && !forceLogin {
+		return authResponse{}, errActiveSessionExists
+	}
+	sessionID := newSessionID()
+	_, err = tx.Exec(ctx, `
+		update app_users
+		set active_session_id = $1, failed_login_attempts = 0, locked_until = null
+		where id = $2
+	`, sessionID, userID)
+	if err != nil {
+		return authResponse{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return authResponse{}, err
+	}
+
+	user := authUser{ID: userID, Email: currentEmail, PlatformAdmin: platformAdmin, SessionID: sessionID}
+	return authResponse{
+		AccessToken:   a.issueToken(user),
+		UserID:        userID,
+		Email:         currentEmail,
+		Nickname:      currentNickname,
+		PlatformAdmin: platformAdmin,
+	}, nil
+}
+
+func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, providerUserID, email, nickname string, userID *int64, currentEmail *string, currentNickname *string, platformAdmin *bool, activeSessionID *sql.NullString) (bool, error) {
+	if email != "" {
+		err := tx.QueryRow(ctx, `
+			update app_users
+			set provider = coalesce(provider, $1),
+			    provider_user_id = coalesce(provider_user_id, $2)
+			where email = $3 and (provider is null or (provider = $1 and provider_user_id = $2))
+			returning id, email, nickname, platform_admin, active_session_id
+		`, provider, providerUserID, email).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
+		if err == nil {
+			return false, nil
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return false, err
+		}
+	}
+
+	var userCount int64
+	if err := tx.QueryRow(ctx, "select count(*) from app_users").Scan(&userCount); err != nil {
+		return false, err
+	}
+	err := tx.QueryRow(ctx, `
+		insert into app_users (created_at, email, nickname, platform_admin, provider, provider_user_id, active_session_id, failed_login_attempts)
+		values (now(), $1, $2, $3, $4, $5, '', 0)
+		returning id, email, nickname, platform_admin, active_session_id
+	`, email, nickname, userCount == 0, provider, providerUserID).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
+	return true, err
+}
+
 func (a *app) issueToken(user authUser) string {
 	expiresAt := time.Now().Add(time.Duration(a.cfg.tokenValiditySeconds) * time.Second).Unix()
 	payload := fmt.Sprintf("%d\n%s\n%t\n%d\n%s", user.ID, user.Email, user.PlatformAdmin, expiresAt, user.SessionID)
@@ -1888,6 +2251,17 @@ create table if not exists app_users (
   locked_until timestamp with time zone,
   failed_login_attempts integer default 0
 );
+alter table if exists app_users add column if not exists provider varchar(255);
+alter table if exists app_users add column if not exists provider_user_id varchar(255);
+create unique index if not exists idx_app_users_provider_subject on app_users (provider, provider_user_id) where provider is not null and provider_user_id is not null;
+create table if not exists oauth_login_states (
+  state varchar(255) primary key,
+  provider varchar(255) not null,
+  nonce varchar(255) not null,
+  created_at timestamp with time zone not null,
+  expires_at timestamp with time zone not null
+);
+create index if not exists idx_oauth_login_states_expires on oauth_login_states (expires_at);
 create table if not exists family_groups (
   id bigint generated by default as identity primary key,
   created_at timestamp with time zone,
@@ -2098,6 +2472,35 @@ func writeError(w http.ResponseWriter, status int, message string) {
 
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func stringFromAny(value any) string {
+	switch typed := value.(type) {
+	case nil:
+		return ""
+	case string:
+		return strings.TrimSpace(typed)
+	case float64:
+		if typed == float64(int64(typed)) {
+			return strconv.FormatInt(int64(typed), 10)
+		}
+		return strconv.FormatFloat(typed, 'f', -1, 64)
+	case int64:
+		return strconv.FormatInt(typed, 10)
+	case int:
+		return strconv.Itoa(typed)
+	default:
+		return strings.TrimSpace(fmt.Sprint(value))
+	}
 }
 
 func newSessionID() string {
