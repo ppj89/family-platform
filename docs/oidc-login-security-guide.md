@@ -60,6 +60,9 @@ Use the exact callback URL for each provider. A missing slash, `http` instead of
 4. Copy the REST API key as the client ID.
 5. Client secret is optional for Kakao in this backend. If it is enabled in
    Kakao Developers, also set `APP_OAUTH_KAKAO_CLIENT_SECRET`.
+6. Kakao email is not requested by default. Kakao account email may require
+   consent item configuration and additional app permission/review. The backend
+   can still log in with the Kakao provider user id and nickname.
 
 ## Apply Credentials On Production
 
