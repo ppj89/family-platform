@@ -1,107 +1,96 @@
-# OIDC 로그인, 중복 로그인, 인증 처리 가이드
+# OIDC and SSO Login Security Guide
 
-회사 프로젝트에서 OIDC 로그인을 바꿀 때는 `로그인 성공` 자체보다 `세션을 어떻게 발급하고 검증할지`가 핵심입니다.
+This project keeps the service session separate from the social login provider.
+Google, Naver, and Kakao confirm who the user is. The Family Platform API still
+decides which family data the user can access, which session is active, and when
+an account must be locked.
 
-## 권장 흐름
+## Production Prerequisites
 
-1. 사용자가 OIDC Provider 로그인 페이지로 이동합니다.
-2. 콜백에서 `code`를 받습니다.
-3. 백엔드가 `code`를 Provider에 전달해 `id_token`과 `access_token`을 받습니다.
-4. 백엔드가 `id_token`을 검증합니다.
-5. `issuer`, `audience`, `exp`, `nonce`, `sub`를 확인합니다.
-6. 내부 사용자 계정을 `provider + sub` 기준으로 찾거나 생성합니다.
-7. 내부 서비스용 세션 ID를 새로 발급합니다.
-8. DB에 `active_session_id`를 저장합니다.
-9. 프론트에는 내부 서비스 토큰 또는 보안 쿠키를 내려줍니다.
+- A real HTTPS domain, for example `https://family.example.com`.
+- OAuth client credentials for each provider that will be enabled.
+- A callback URL registered in each provider console:
+  - Google: `https://family.example.com/api/auth/oauth/google/callback`
+  - Naver: `https://family.example.com/api/auth/oauth/naver/callback`
+  - Kakao: `https://family.example.com/api/auth/oauth/kakao/callback`
+- The frontend must never store provider client secrets.
 
-## 중복 로그인 처리
+## Environment Variables
 
-DB 사용자 테이블에 아래 컬럼을 둡니다.
+Use these names in `.env.production` when the domain and provider apps are ready.
 
-```sql
-active_session_id varchar(255),
-session_issued_at timestamp with time zone,
-last_login_at timestamp with time zone
+```text
+APP_PUBLIC_BASE_URL=https://family.example.com
+APP_OAUTH_GOOGLE_CLIENT_ID=
+APP_OAUTH_GOOGLE_CLIENT_SECRET=
+APP_OAUTH_NAVER_CLIENT_ID=
+APP_OAUTH_NAVER_CLIENT_SECRET=
+APP_OAUTH_KAKAO_CLIENT_ID=
+APP_OAUTH_KAKAO_CLIENT_SECRET=
 ```
 
-로그인 시:
+## Recommended Backend Flow
+
+1. The frontend opens `/api/auth/oauth/{provider}/start`.
+2. The backend creates a short-lived OAuth state and nonce.
+3. The backend redirects to the provider login page.
+4. The provider redirects back to `/api/auth/oauth/{provider}/callback`.
+5. The backend exchanges `code` for tokens on the server side.
+6. The backend validates `issuer`, `audience`, `exp`, `nonce`, and provider user id.
+7. The backend finds or creates one local `app_users` row for `provider + subject`.
+8. The backend issues the normal Family Platform access token.
+9. The normal duplicate-login and active-session checks still apply.
+
+## Duplicate Login Rule
+
+The `app_users.active_session_id` column is the source of truth.
 
 ```text
 if active_session_id exists and forceLogin is false:
-  409 Conflict 반환
-  message = "현재 로그인이 되어있습니다. 로그인을 하시겠습니까?"
+  return 409 Conflict
+  message = "active session exists"
 
 if forceLogin is true:
-  active_session_id를 새 값으로 교체
-  기존 토큰은 다음 API 요청부터 무효 처리
+  replace active_session_id
+  previous tokens become invalid on the next authenticated request
 ```
 
-API 인증 시:
+Every authenticated API request must compare the token session id with
+`app_users.active_session_id`. If they differ, return `401 Unauthorized`.
 
-```text
-1. 토큰 서명 검증
-2. 토큰 만료 검증
-3. 토큰 안의 session_id 추출
-4. DB의 active_session_id와 비교
-5. 다르면 401 Unauthorized
-```
+## Password Login Lock Rule
 
-이 방식이면 별도 Redis 없이도 단일 서버에서는 중복 로그인 방지가 됩니다.
+Password login uses the same account table.
 
-## Go 예시
+- After 5 failed password attempts, set `locked_until = now() + 5 minutes`.
+- While locked, return `423 Locked`.
+- On successful login, reset `failed_login_attempts` and `locked_until`.
+- Do not compare passwords while the account is locked.
 
-```go
-func requireActiveSession(ctx context.Context, db *pgxpool.Pool, userID int64, sessionID string) bool {
-	var activeSessionID sql.NullString
-	err := db.QueryRow(ctx, "select active_session_id from users where id = $1", userID).Scan(&activeSessionID)
-	return err == nil && activeSessionID.Valid && activeSessionID.String == sessionID
-}
-```
+## Family Data Isolation
 
-## Spring Boot 예시
-
-```java
-boolean isActiveSession(AuthenticatedUser user) {
-  return users.findById(user.id())
-      .map(appUser -> user.sessionId().equals(appUser.getActiveSessionId()))
-      .orElse(false);
-}
-```
-
-## 로그인 실패 잠금
-
-권장 정책:
-
-- 실패 횟수는 사용자 단위로 저장
-- 5회 실패 시 5분 잠금
-- 잠금 중에는 비밀번호 비교도 하지 않음
-- 성공 로그인 시 실패 횟수와 잠금 시간 초기화
+SSO does not replace authorization. Every family-scoped query must filter by
+the authenticated user membership or by platform-admin scope.
 
 ```sql
-failed_login_attempts integer default 0,
-locked_until timestamp with time zone
+where exists (
+  select 1
+  from family_members m
+  where m.family_id = target.family_id
+    and m.user_id = $current_user_id
+    and m.can_read = true
+)
 ```
 
-## OIDC 검증 체크리스트
+Create, update, and delete APIs must check `can_create`, `can_update`, and
+`can_delete` in the same way.
 
-- `iss`가 기대한 Provider 주소와 같은지
-- `aud`가 우리 Client ID와 같은지
-- `exp`가 지나지 않았는지
-- `nonce`가 로그인 시작 시 저장한 값과 같은지
-- `sub`를 사용자 고유키로 쓰는지
-- 이메일은 변경될 수 있으므로 고유키로 쓰지 않는지
-- 콜백 URL은 HTTPS인지
-- 프론트에 OIDC Provider 토큰을 그대로 오래 보관하지 않는지
+## Current Implementation Status
 
-## 실무 결론
-
-OIDC는 외부 로그인 인증이고, 우리 서비스 권한은 내부 세션으로 관리하는 게 안전합니다.
-
-즉:
-
-```text
-OIDC Provider = 사용자가 누구인지 확인
-우리 백엔드 = 이 사용자가 우리 서비스에서 무엇을 할 수 있는지 결정
-```
-
-중복 로그인, 권한, 가족별 데이터 차단은 OIDC Provider가 아니라 우리 백엔드에서 처리해야 합니다.
+- Email/password register and login are implemented.
+- Duplicate-login replacement is implemented through `forceLogin`.
+- Five-failure account locking is implemented.
+- SSO buttons are intentionally disabled until domain, HTTPS, and provider
+  client credentials are configured.
+- The next SSO implementation step is to add the `/start` and `/callback`
+  endpoints above, then connect each provider one by one.
