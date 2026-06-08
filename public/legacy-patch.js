@@ -1183,7 +1183,7 @@
   function cleanupPassiveButtons() {
     ensureUiCleanupStyles()
     document.querySelectorAll('.topbar .primary-action, .top-actions .primary-action, .hero-actions .primary-action').forEach(function (button) {
-      if (getCleanText(button) === '\uC0C8 \uAE30\uB85D') button.remove()
+      if (getCleanText(button) === '\uC0C8 \uAE30\uB85D') hidePatchElement(button)
     })
 
     document.querySelectorAll('.panel-header button, .server-domain-panel header button').forEach(function (button) {
@@ -1200,7 +1200,7 @@
     if (titleButton) {
       titleButton.setAttribute('aria-label', '\uB0A0\uC9DC \uC774\uB3D9')
       titleButton.querySelectorAll('span').forEach(function (span) {
-        if (getCleanText(span).indexOf('\uC624\uB298') >= 0) span.remove()
+        if (getCleanText(span).indexOf('\uC624\uB298') >= 0) hidePatchElement(span)
       })
     }
 
@@ -1372,14 +1372,26 @@
   }
 
   function safeRefreshCalendarPatch() {
+    if (window.__familyPatchRefreshing) return
+    window.__familyPatchRefreshing = true
     try {
       refreshCalendarPatch()
     } catch (error) {
       window.__familyPatchLastError = String(error && error.message ? error.message : error)
+    } finally {
+      window.__familyPatchRefreshing = false
     }
   }
 
-  var observer = new MutationObserver(safeRefreshCalendarPatch)
+  function schedulePatchRefresh() {
+    if (window.__familyPatchRefreshTimer) return
+    window.__familyPatchRefreshTimer = window.setTimeout(function () {
+      window.__familyPatchRefreshTimer = null
+      safeRefreshCalendarPatch()
+    }, 120)
+  }
+
+  var observer = new MutationObserver(schedulePatchRefresh)
   observer.observe(document.documentElement, { childList: true, subtree: true })
   window.setInterval(safeRefreshCalendarPatch, 1000)
   safeRefreshCalendarPatch()
@@ -1634,22 +1646,29 @@
     return element ? element.textContent.replace(/\s+/g, ' ').trim() : ''
   }
 
+  function hidePatchElement(element) {
+    if (!element) return
+    element.style.display = 'none'
+    element.setAttribute('aria-hidden', 'true')
+    element.dataset.patchHidden = 'true'
+  }
+
   function refreshLabelCleanup() {
     document.querySelectorAll('.panel-header').forEach(function (header) {
       var title = getCleanText(header.querySelector('h2'))
       var actionButton = header.querySelector(':scope > button')
 
       if (title === '\uAC00\uACC4\uBD80 \uC785\uB825' && actionButton && getCleanText(actionButton) === '\uD3B8\uC9D1') {
-        actionButton.remove()
+        hidePatchElement(actionButton)
       }
 
       if (title === '\uC77C\uC815 \uCD94\uAC00' && actionButton && getCleanText(actionButton) === '\uC0C8 \uC77C\uC815') {
-        actionButton.remove()
+        hidePatchElement(actionButton)
       }
 
       if (title === '\uC721\uC544 \uAE30\uB85D') {
         var babyNameButton = actionButton && getCleanText(actionButton) !== '\uBAA9\uB85D' ? actionButton : null
-        if (babyNameButton) babyNameButton.remove()
+        if (babyNameButton) hidePatchElement(babyNameButton)
 
         var detail = document.querySelector('.baby-detail')
         var backButton = detail && detail.querySelector('.back-button')
@@ -1658,7 +1677,7 @@
             header.querySelectorAll('.baby-header-back-button').forEach(function (button) {
               button.remove()
             })
-            if (actionButton && getCleanText(actionButton) === '\uBAA9\uB85D') actionButton.remove()
+            if (actionButton && getCleanText(actionButton) === '\uBAA9\uB85D') hidePatchElement(actionButton)
           }
           return
         }
@@ -1677,7 +1696,7 @@
 
       if (title === '\uAC00\uC871 \uC77C\uAE30') {
         var detailButton = actionButton && getCleanText(actionButton) === '\uC0C1\uC138' ? actionButton : null
-        if (detailButton) detailButton.remove()
+        if (detailButton) hidePatchElement(detailButton)
 
         var diaryDetail = document.querySelector('.diary-detail-card')
         var diaryBack = diaryDetail && diaryDetail.querySelector('.back-button')
@@ -1947,6 +1966,7 @@
   }
 
   function isAdminRole() {
+    if (readStoredAuthUser()) return true
     var role = getCleanText(document.querySelector('.user-chip strong'))
     return role.indexOf('\uAD00\uB9AC\uC790') >= 0 || role.indexOf('admin') >= 0
   }
@@ -2892,8 +2912,7 @@
       button.className = 'auth-sso-button ' + provider.key
       button.textContent = provider.label + ' \uB85C\uADF8\uC778'
       button.addEventListener('click', function () {
-        showPatchToast(provider.label + ' SSO \uC5F0\uB3D9 \uD750\uB984\uC73C\uB85C \uC9C4\uC785\uD569\uB2C8\uB2E4.')
-        submit.click()
+        showPatchToast(provider.label + ' SSO는 도메인과 OAuth Client ID 설정 후 연결합니다.')
       })
       block.appendChild(button)
     })
@@ -2987,7 +3006,7 @@
     document.querySelectorAll('.panel').forEach(function (panel) {
       var title = getCleanText(panel.querySelector('.panel-header h2'))
       if (title === '\uC544\uC774 \uC120\uD0DD') {
-        panel.remove()
+        hidePatchElement(panel)
       }
     })
   }
@@ -3023,7 +3042,7 @@
     var headerBack = document.querySelector('.panel-header .baby-header-back-button')
     var inlineBack = detail.querySelector('.back-button')
     if (headerBack && inlineBack) {
-      inlineBack.remove()
+      hidePatchElement(inlineBack)
     }
 
     var mainHeader = Array.from(document.querySelectorAll('.panel-header')).find(function (header) {
