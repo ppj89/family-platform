@@ -62,9 +62,13 @@ services:
         condition: service_healthy
     ports:
       - "${WEB_PORT:-80}:80"
+    volumes:
+      - family_platform_prod_downloads:/usr/share/nginx/downloads:ro
 
 volumes:
   family_platform_prod_db:
     name: ${DB_VOLUME_NAME:-family_platform_prod_db}
   family_platform_prod_uploads:
     name: ${UPLOADS_VOLUME_NAME:-family_platform_prod_uploads}
+  family_platform_prod_downloads:
+    name: ${DOWNLOADS_VOLUME_NAME:-family_platform_prod_downloads}
