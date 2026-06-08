@@ -167,13 +167,14 @@
       var minutes = seconds ? Math.ceil(seconds / 60) : 5
       return '\uBE44\uBC00\uBC88\uD638 5\uD68C \uC2E4\uD328\uB85C \uACC4\uC815\uC774 \uC7A0\uAE40\uCC98\uB9AC\uB410\uC2B5\uB2C8\uB2E4. ' + minutes + '\uBD84 \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.'
     }
-    if (text.indexOf('already registered') >= 0) return '이미 가입된 이메일입니다. 로그인으로 진행해주세요.'
+    if (text.indexOf('already registered') >= 0 || text.indexOf('email is already registered') >= 0) return '이미 가입된 이메일입니다. 1인당 1개 계정만 사용할 수 있습니다.'
     if (text.indexOf('Invalid email or password') >= 0) return '이메일 또는 비밀번호를 확인해주세요.'
-    if (text.indexOf('invalid') >= 0 || text.indexOf('400') >= 0) return '이메일, 비밀번호 형식을 확인해주세요. 비밀번호는 10자 이상입니다.'
+    if (text.indexOf('length >= 8') >= 0 || text.indexOf('invalid') >= 0 || text.indexOf('400') >= 0) return '이메일, 닉네임, 8자 이상 비밀번호를 확인해주세요.'
     return '로그인 처리 중 오류가 발생했습니다.'
   }
 
   function getAuthMode(card) {
+    if (card && card.dataset.authMode) return card.dataset.authMode
     var active = card.querySelector('.auth-tabs button.active')
     var text = getCleanText(active)
     return text.indexOf('가입') >= 0 || text.toLowerCase().indexOf('register') >= 0 ? 'register' : 'login'
@@ -182,12 +183,12 @@
   function getAuthPayload(card) {
     var inputs = Array.from(card.querySelectorAll('input'))
     var emailInput = inputs.find(function (input) {
-      return input.type === 'email' || /@/.test(input.value || '') || /email|mail|이메일/i.test(input.placeholder || '')
+      return input.dataset.field === 'auth-email' || input.type === 'email' || /@/.test(input.value || '') || /email|mail|이메일/i.test(input.placeholder || '')
     }) || inputs[0]
     var passwordInput = inputs.find(function (input) {
-      return input.type === 'password' || /비밀번호|password/i.test(input.placeholder || '')
+      return input.dataset.field === 'auth-password' || input.type === 'password' || /비밀번호|password/i.test(input.placeholder || '')
     }) || inputs[1]
-    var nicknameInput = inputs.find(function (input) {
+    var nicknameInput = card.querySelector('[data-field="auth-nickname"]') || inputs.find(function (input) {
       if (input === emailInput || input === passwordInput) return false
       return input.type !== 'password'
     })
@@ -203,7 +204,7 @@
     var inputs = Array.from(card.querySelectorAll('input'))
     var target = null
     if (!payload.email) target = inputs[0]
-    else if (!payload.password || payload.password.length < 10) target = inputs.find(function (input) { return input.type === 'password' }) || inputs[1]
+    else if (!payload.password || payload.password.length < 8) target = inputs.find(function (input) { return input.type === 'password' }) || inputs[1]
     else if (mode === 'register' && !payload.nickname) target = inputs.find(function (input) { return input.type !== 'email' && input.type !== 'password' })
     if (target) {
       target.focus()
@@ -287,6 +288,105 @@
       button.click()
     }
     button.disabled = wasDisabled
+  }
+
+  function ensureAuthRegisterFields() {
+    var card = document.querySelector('.auth-card')
+    if (!card) return
+
+    var submit = card.querySelector('.auth-submit')
+    var inputs = Array.from(card.querySelectorAll('input'))
+    var emailInput = inputs.find(function (input) {
+      return input.type === 'email' || /@/.test(input.value || '') || /email|mail|이메일/i.test(input.placeholder || '')
+    }) || inputs[0]
+    var passwordInput = inputs.find(function (input) {
+      return input.type === 'password' || /비밀번호|password/i.test(input.placeholder || '')
+    }) || inputs[1]
+
+    if (emailInput) {
+      emailInput.dataset.field = 'auth-email'
+      emailInput.type = 'email'
+      emailInput.autocomplete = 'email'
+      if (!emailInput.placeholder || getCleanText(emailInput).indexOf('email') < 0) emailInput.placeholder = 'email@example.com'
+    }
+    if (passwordInput) {
+      passwordInput.dataset.field = 'auth-password'
+      passwordInput.type = 'password'
+      passwordInput.autocomplete = 'current-password'
+      passwordInput.minLength = 8
+      passwordInput.placeholder = '8자 이상'
+    }
+
+    var tabs = card.querySelector('.auth-tabs')
+    if (!tabs) {
+      tabs = document.createElement('div')
+      tabs.className = 'auth-tabs'
+      var anchor = card.querySelector('.auth-heading') || card.firstElementChild
+      if (anchor) anchor.insertAdjacentElement('beforebegin', tabs)
+      else card.prepend(tabs)
+    }
+
+    var tabButtons = Array.from(tabs.querySelectorAll('button'))
+    var loginTab = tabButtons.find(function (button) {
+      return getCleanText(button).indexOf('로그인') >= 0 || getCleanText(button).toLowerCase().indexOf('login') >= 0
+    })
+    var registerTab = tabButtons.find(function (button) {
+      var text = getCleanText(button)
+      return text.indexOf('회원가입') >= 0 || text.indexOf('가입') >= 0 || text.toLowerCase().indexOf('register') >= 0
+    })
+
+    if (!loginTab) {
+      loginTab = document.createElement('button')
+      loginTab.type = 'button'
+      tabs.appendChild(loginTab)
+    }
+    loginTab.textContent = '로그인'
+
+    if (!registerTab) {
+      registerTab = document.createElement('button')
+      registerTab.type = 'button'
+      tabs.appendChild(registerTab)
+    }
+    registerTab.textContent = '회원가입'
+
+    var nicknameField = card.querySelector('.auth-nickname-field')
+    if (!nicknameField) {
+      nicknameField = document.createElement('label')
+      nicknameField.className = 'auth-nickname-field'
+      nicknameField.innerHTML = '<span>닉네임</span><input data-field="auth-nickname" autocomplete="nickname" maxlength="30" placeholder="가족에게 보일 이름" />'
+      var passwordLabel = passwordInput && passwordInput.closest('label')
+      if (passwordLabel) passwordLabel.insertAdjacentElement('beforebegin', nicknameField)
+      else if (submit) submit.insertAdjacentElement('beforebegin', nicknameField)
+      else card.appendChild(nicknameField)
+    }
+
+    function setMode(mode) {
+      card.dataset.authMode = mode
+      loginTab.classList.toggle('active', mode === 'login')
+      registerTab.classList.toggle('active', mode === 'register')
+      nicknameField.style.display = mode === 'register' ? '' : 'none'
+      if (passwordInput) passwordInput.autocomplete = mode === 'register' ? 'new-password' : 'current-password'
+      if (submit && submit.dataset.authBusy !== 'true') submit.textContent = mode === 'register' ? '회원가입' : '로그인'
+    }
+
+    if (!card.dataset.authMode) {
+      var currentMode = getCleanText(tabs.querySelector('button.active')).indexOf('가입') >= 0 ? 'register' : 'login'
+      setMode(currentMode)
+    } else {
+      setMode(card.dataset.authMode)
+    }
+
+    if (!tabs.dataset.authRegisterClickReady) {
+      tabs.dataset.authRegisterClickReady = 'true'
+      loginTab.addEventListener('click', function (event) {
+        event.preventDefault()
+        setMode('login')
+      })
+      registerTab.addEventListener('click', function (event) {
+        event.preventDefault()
+        setMode('register')
+      })
+    }
   }
 
   function setNativeInputValue(input, value) {
@@ -374,9 +474,9 @@
 
       var mode = getAuthMode(card)
       var payload = getAuthPayload(card)
-      if (!payload.email || !payload.password || payload.password.length < 10 || (mode === 'register' && !payload.nickname)) {
+      if (!payload.email || !payload.password || payload.password.length < 8 || (mode === 'register' && !payload.nickname)) {
         focusEmptyAuthField(card, payload, mode)
-        showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 10\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 10\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+        showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
         return
       }
 
@@ -389,11 +489,11 @@
 
     var activeTab = card.querySelector('.auth-tabs button.active')
     var activeText = getCleanText(activeTab)
-    var mode = activeText.indexOf('\uAC00\uC871') >= 0 || activeText.toLowerCase().indexOf('register') >= 0 ? 'register' : 'login'
+    var mode = getAuthMode(card)
     var payload = getAuthPayload(card)
-    if (!payload.email || !payload.password || payload.password.length < 10 || (mode === 'register' && !payload.nickname)) {
+    if (!payload.email || !payload.password || payload.password.length < 8 || (mode === 'register' && !payload.nickname)) {
       focusEmptyAuthField(card, payload, mode)
-      showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 10\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 10\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+      showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
       return
     }
 
@@ -1252,6 +1352,7 @@
     enhanceDatepickers()
     syncScheduleBasisLayout()
     refreshLabelCleanup()
+    ensureAuthRegisterFields()
     enhanceAuthApi()
     restoreAuthSession()
     enhanceBabyGrowthTabs()

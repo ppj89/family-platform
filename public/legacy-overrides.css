@@ -8872,6 +8872,42 @@ body:has(.family-calendar-panel) .family-calendar-panel .calendar-view-tabs {
   color: #fff;
 }
 
+.auth-card .auth-nickname-field {
+  display: grid;
+  gap: 8px;
+}
+
+.auth-card .auth-nickname-field span {
+  color: #4e5968;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.auth-card .auth-nickname-field input {
+  height: 52px;
+  border: 0;
+  border-radius: 14px;
+  padding: 0 16px;
+  background: #f7f8fa;
+  color: #191f28;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+  outline: none;
+}
+
+.auth-card .auth-nickname-field input:focus {
+  box-shadow: inset 0 0 0 2px #3182f6;
+}
+
+.theme-dark .auth-card .auth-nickname-field span {
+  color: #aeb7c2;
+}
+
+.theme-dark .auth-card .auth-nickname-field input {
+  background: #3b424c;
+  color: #f3f5f7;
+  box-shadow: inset 0 0 0 1px #525b66;
+}
+
 @media (max-width: 640px) {
   .schedule-notification-popup {
     top: auto;

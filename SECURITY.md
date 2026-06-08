@@ -19,6 +19,20 @@ This project is prepared for production hardening, but final deployment must use
 - Production update script with backup, deploy, and health checks.
 - Ubuntu hardening script for firewall, swap, Docker log rotation, and unattended security updates.
 - Production configuration validator for secrets, CORS, compose, and Caddy checks.
+- GitHub CI security checks for npm high-severity audits and Go `govulncheck`.
+
+## Manual Security Check
+
+From this Windows workspace:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-security.ps1
+```
+
+The script runs:
+
+- `npm audit --audit-level=high`
+- Go vulnerability analysis with `govulncheck`
 
 ## Before Public Launch
 
@@ -26,5 +40,5 @@ This project is prepared for production hardening, but final deployment must use
 - Replace all default secrets.
 - Do not enable `app.seed-default-account` in production.
 - Keep `.env.production` out of Git.
-- Run dependency checks and penetration testing.
+- Run dependency checks, access-control tests, and penetration testing.
 - Schedule automatic PostgreSQL backups and restore drills.

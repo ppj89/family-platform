@@ -36,6 +36,17 @@ export async function login(payload: LoginPayload) {
   return response
 }
 
+export async function me() {
+  return apiRequest<AuthResponse>('/auth/me')
+}
+
+export async function requestLogout() {
+  await apiRequest<void>('/auth/logout', {
+    method: 'POST',
+  })
+  clearAuthToken()
+}
+
 export function logout() {
   clearAuthToken()
 }

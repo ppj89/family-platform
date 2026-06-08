@@ -95,6 +95,39 @@
   font-size: 28px;
 }
 
+.clean-user-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.clean-user-actions span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  border-radius: 13px;
+  padding: 0 14px;
+  background: #ffffff;
+  color: #1b64da;
+  font-size: 13px;
+  font-weight: 900;
+  box-shadow: inset 0 0 0 1px #d9e8ff;
+}
+
+.clean-user-actions button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 13px;
+  padding: 0 14px;
+  background: #ffffff;
+  color: #4e5968;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+}
+
 .legacy-frame-card {
   overflow: hidden;
   height: calc(100vh - 112px);
@@ -508,6 +541,10 @@
   box-shadow: inset 0 0 0 2px #3182f6;
 }
 
+.auth-card input::placeholder {
+  color: #b0b8c1;
+}
+
 .auth-submit {
   display: inline-flex;
   align-items: center;
@@ -520,6 +557,30 @@
   font: inherit;
   font-weight: 900;
   cursor: pointer;
+}
+
+.auth-submit:disabled {
+  cursor: progress;
+  opacity: 0.65;
+}
+
+.auth-message {
+  margin: -4px 0 0;
+  border-radius: 14px;
+  padding: 13px 14px;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.auth-message.error {
+  background: #fff0f2;
+  color: #d22030;
+}
+
+.auth-message.success {
+  background: #eaf7f0;
+  color: #008c6b;
 }
 
 .auth-helper {
@@ -563,6 +624,16 @@
   background: #3b424c;
   color: #f3f5f7;
   box-shadow: inset 0 0 0 1px #525b66;
+}
+
+.theme-dark .auth-message.error {
+  background: rgba(240, 68, 82, 0.16);
+  color: #ff9aa4;
+}
+
+.theme-dark .auth-message.success {
+  background: rgba(0, 190, 140, 0.16);
+  color: #75e0c4;
 }
 
 .theme-dark .auth-tabs button.active {

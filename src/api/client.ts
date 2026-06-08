@@ -5,6 +5,16 @@ type RequestOptions = Omit<RequestInit, 'body'> & {
   body?: unknown
 }
 
+export class ApiError extends Error {
+  status: number
+
+  constructor(status: number, message: string) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+  }
+}
+
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const token = authToken()
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -18,8 +28,15 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   })
 
   if (!response.ok) {
-    const message = await response.text()
-    throw new Error(message || `API request failed: ${response.status}`)
+    const responseText = await response.text()
+    let message = responseText
+    try {
+      const parsed = JSON.parse(responseText) as { message?: string }
+      message = parsed.message || responseText
+    } catch {
+      message = responseText
+    }
+    throw new ApiError(response.status, message || `API request failed: ${response.status}`)
   }
 
   if (response.status === 204) {

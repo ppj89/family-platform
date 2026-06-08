@@ -46,6 +46,35 @@ jobs:
         working-directory: backend-go
         run: go test ./...
 
+  security:
+    name: Security checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+
+      - name: Check Go vulnerabilities
+        working-directory: backend-go
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
   api-integration:
     name: Go API integration
     runs-on: ubuntu-latest

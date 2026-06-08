@@ -72,6 +72,12 @@ Full production stack smoke test:
 WEB_PORT=18080 WEB_BASE_URL=http://127.0.0.1:18080 scripts/test-prod-stack.sh
 ```
 
+Security checks:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-security.ps1
+```
+
 Android debug APK:
 
 ```powershell
