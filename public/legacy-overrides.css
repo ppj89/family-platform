@@ -9475,6 +9475,13 @@ body:has(.family-calendar-panel) .agenda-day-column[data-api-chip-count]::before
   box-shadow: none !important;
 }
 
+body:has(.family-calendar-panel) .calendar-hero,
+body:has(.family-calendar-panel) .fc-hero,
+.patch-family-group-root .community-hero,
+.patch-community-root .community-hero {
+  display: none !important;
+}
+
 .theme-dark,
 .theme-dark body,
 .theme-dark .app-shell,
