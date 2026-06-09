@@ -10,15 +10,17 @@
   var protectedAuthSnapshot = null
 
   window.setInterval(function () {
-    if (!protectedAuthSnapshot) {
-      var existingToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
-      var existingUser = readStoredAuthUser()
-      if (existingToken && existingUser && existingUser.email) {
+    var existingToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    var existingUser = readStoredAuthUser()
+    if (existingToken && existingUser && existingUser.email) {
+      if (!protectedAuthSnapshot || protectedAuthSnapshot.token !== existingToken) {
         protectedAuthSnapshot = { token: existingToken, user: existingUser }
         protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
       }
+      return
     }
     if (!protectedAuthSnapshot || !protectedAuthSnapshot.token) return
+    if (Date.now() > protectedAuthUntil) return
     localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, protectedAuthSnapshot.token)
     localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(protectedAuthSnapshot.user))
   }, 500)
@@ -207,20 +209,32 @@
     }
 
     document.addEventListener('click', function (event) {
-      var card = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-day-card')
+      var card = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day, .family-calendar-panel .agenda-day-column')
       if (!card || card.classList.contains('muted')) return
       window.__familyDirectCalendarDebug = { step: 'card', text: card.innerText }
-      var dayEl = card.querySelector('.day-number')
-      if (!dayEl) return
-      var day = Number(dayEl.textContent.trim())
-      if (!Number.isFinite(day)) return
       var focused = getFocusedDate()
-      var selectedDate = new Date(focused.getFullYear(), focused.getMonth(), day)
+      var selectedDate = null
+      if (card.classList.contains('agenda-day-column')) {
+        var title = card.querySelector('strong')
+        var numbers = title ? (title.textContent.match(/\d+/g) || []).map(Number) : []
+        if (numbers.length >= 2) selectedDate = new Date(focused.getFullYear(), numbers[0] - 1, numbers[1])
+      } else {
+        var dayEl = card.querySelector('.day-number') || card.querySelector('strong')
+        if (!dayEl) return
+        var day = Number(dayEl.textContent.trim())
+        if (!Number.isFinite(day)) return
+        selectedDate = new Date(focused.getFullYear(), focused.getMonth(), day)
+      }
+      if (!selectedDate) return
       var dateText = formatDate(selectedDate)
       event.preventDefault()
       event.stopPropagation()
       if (event.stopImmediatePropagation) event.stopImmediatePropagation()
       window.__familyDirectCalendarDebug = { step: 'click', dateText: dateText }
+      markCalendarSelection(card, selectedDate)
+      updateJumpInput(selectedDate)
+      updateScheduleFormVisibleDate(selectedDate)
+      updateSelectedDayPanel(selectedDate, card)
       apiGet('/families').then(function (families) {
         window.__familyDirectCalendarDebug = { step: 'families', dateText: dateText, families: families }
         var family = Array.isArray(families) ? families[0] : null
@@ -229,11 +243,7 @@
       }).then(function (items) {
         var scheduleItems = Array.isArray(items) ? items : []
         if (!scheduleItems.length) {
-          var texts = Array.from(card.querySelectorAll('span, button, small')).map(function (node) {
-            return String(node.textContent || '').trim()
-          }).filter(function (text) {
-            return text && !/^\d+$/.test(text) && text.indexOf('\uC74C\uB825') < 0 && text.indexOf('\uC6D4') < 0
-          })
+          var texts = collectScheduleTextsFromCalendarNode(card)
           scheduleItems = texts.map(function (text, index) {
             return { id: 'dom-' + index, title: text, scheduleDate: dateText, scheduleTime: '', category: '\uC77C\uC815', memberName: '', memo: '' }
           })
@@ -853,6 +863,20 @@
     triggerText.textContent = isScheduleBasisLunar() ? getLunarText(date) : formatDisplayDate(date)
   }
 
+  function markCalendarSelection(node, date) {
+    if (!node || !date) return
+    document.documentElement.dataset.calendarSelectedDate = formatDate(date)
+    document.documentElement.dataset.calendarMode = getActiveCalendarMode()
+    document.querySelectorAll('.calendar-day-card.selected, .calendar-day-card.active, .fc-day.selected, .fc-day.active, .agenda-day-column.active, .year-month-card.active').forEach(function (item) {
+      if (item !== node) {
+        item.classList.remove('selected')
+        item.classList.remove('active')
+      }
+    })
+    node.classList.add('selected')
+    node.classList.add('active')
+  }
+
   function isScheduleBasisLunar() {
     var triggerText = document.querySelector('.basis-field-patched .custom-select-trigger span')
     return !!triggerText && triggerText.textContent.trim() === '\uC74C\uB825'
@@ -1027,9 +1051,13 @@
       '.calendar-day-schedules span',
       '.calendar-day-card .schedule-chip',
       '.calendar-day-card .event-chip',
+      '.calendar-day-card .day-chip-stack em',
+      '.calendar-day-card em',
       '.calendar-day-card [class*="schedule"] span',
+      '.calendar-day-card [class*="schedule"] em',
       '.calendar-day-card [class*="schedule"] button',
       '.calendar-day-card [class*="event"] span',
+      '.calendar-day-card [class*="event"] em',
       '.calendar-day-card [class*="event"] button'
     ]
     var values = []
@@ -1103,8 +1131,15 @@
   }
 
   function hideSelectedDayPanels() {
+    var mode = getActiveCalendarMode()
+    document.documentElement.dataset.calendarMode = mode
     document.querySelectorAll('.selected-day-card').forEach(function (card) {
-      card.setAttribute('aria-hidden', 'true')
+      if (mode === 'day' || mode === 'week') {
+        card.removeAttribute('aria-hidden')
+        card.style.removeProperty('display')
+      } else {
+        card.setAttribute('aria-hidden', 'true')
+      }
     })
   }
 
@@ -1205,9 +1240,29 @@
     var card = document.querySelector('.schedule-list-card')
     if (!card) return
     var title = card.querySelector('.panel-header h2')
-    var count = card.querySelector('.panel-header button')
+    var count = card.querySelector('.panel-header button, .panel-header .passive-header-chip')
     if (title && label) title.textContent = label
     if (count && countText) count.textContent = countText
+  }
+
+  function refreshScheduleListCount() {
+    if (!document.querySelector('.family-calendar-panel')) return
+    var mode = getActiveCalendarMode()
+    document.documentElement.dataset.calendarMode = mode
+    var card = document.querySelector('.schedule-list-card')
+    if (!card) return
+    var title = card.querySelector('.panel-header h2')
+    var count = card.querySelector('.panel-header button, .panel-header .passive-header-chip')
+    var rows = Array.from(card.querySelectorAll('.schedule-row, .server-schedule-row')).filter(function (row) {
+      return !row.closest('[hidden]') && row.offsetParent !== null
+    })
+    if (mode === 'day') {
+      if (title) title.textContent = '\uC77C\uAC04 \uC77C\uC815\uD45C'
+      if (count) count.textContent = rows.length + '\uAC74'
+    } else if (mode === 'week') {
+      if (title) title.textContent = '\uC8FC\uAC04 \uC77C\uC815\uD45C'
+      if (count) count.textContent = rows.length + '\uAC74'
+    }
   }
 
   async function moveCalendarTo(target) {
@@ -1436,6 +1491,7 @@
         var day = Number((card.querySelector('.day-number') || {}).textContent || titleDate.getDate())
         if (Number.isFinite(day)) {
           var selectedDate = new Date(titleDate.getFullYear(), titleDate.getMonth(), day)
+          markCalendarSelection(card, selectedDate)
           updateJumpInput(selectedDate)
           updateScheduleFormVisibleDate(selectedDate)
           updateSelectedDayPanel(selectedDate)
@@ -1456,6 +1512,7 @@
         var day = Number((card.querySelector('strong') || {}).textContent || titleDate.getDate())
         if (Number.isFinite(day)) {
           var selectedDate = new Date(titleDate.getFullYear(), titleDate.getMonth(), day)
+          markCalendarSelection(card, selectedDate)
           updateJumpInput(selectedDate)
           updateScheduleFormVisibleDate(selectedDate)
           updateSelectedDayPanel(selectedDate)
@@ -1477,6 +1534,7 @@
         var numbers = title ? (title.textContent.match(/\d+/g) || []).map(Number) : []
         if (numbers.length >= 2) {
           var selectedDate = new Date(titleDate.getFullYear(), numbers[0] - 1, numbers[1])
+          markCalendarSelection(column, selectedDate)
           updateJumpInput(selectedDate)
           updateScheduleFormVisibleDate(selectedDate)
           updateSelectedDayPanel(selectedDate, column)
@@ -1509,6 +1567,7 @@
         })
         card.classList.add('active')
         setScheduleListContext(month + '\uC6D4 \uC77C\uC815\uD45C', (card.querySelector('span') || {}).textContent)
+        renderYearSelectedMonthList(selectedMonth)
       }
     })
   })
@@ -1542,18 +1601,121 @@
   }
 
   function collectMonthEventDays(month) {
-    if (month !== 6) return []
-    return Array.from(document.querySelectorAll('.schedule-row .schedule-date-badge strong')).map(function (item) {
-      return Number(item.textContent.trim())
-    }).filter(function (day) {
-      return Number.isFinite(day)
+    var year = getCurrentYearNumber()
+    var cache = window.__familyYearScheduleCache
+    if (cache && cache.year === year && cache.months && cache.months[month]) {
+      return cache.months[month].days.slice()
+    }
+    return Array.from(document.querySelectorAll('.schedule-row, .server-schedule-row')).map(function (row) {
+      var text = getCleanText(row)
+      var dateMatch = text.match(/(\d{4})[.\-/\s]+(\d{1,2})[.\-/\s]+(\d{1,2})/)
+      if (dateMatch) {
+        var rowMonth = Number(dateMatch[2])
+        return rowMonth === month ? Number(dateMatch[3]) : NaN
+      }
+      var monthMatch = text.match(/(\d{1,2})\uC6D4\s*(\d{1,2})/)
+      if (monthMatch) {
+        return Number(monthMatch[1]) === month ? Number(monthMatch[2]) : NaN
+      }
+      return NaN
+    }).filter(function (day, index, values) {
+      return Number.isFinite(day) && values.indexOf(day) === index
+    })
+  }
+
+  function fetchSchedulesDirect(startDate, endDate) {
+    var token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    if (!token) return Promise.resolve([])
+    var headers = { Authorization: 'Bearer ' + token }
+    return fetch('/api/families', { headers: headers }).then(function (response) {
+      if (!response.ok) return []
+      return response.json()
+    }).then(function (families) {
+      var family = Array.isArray(families) ? families[0] : null
+      if (!family || !family.id) return []
+      localStorage.setItem(AUTH_FAMILY_STORAGE_KEY, String(family.id))
+      return fetch('/api/schedules?familyId=' + encodeURIComponent(family.id) + '&startDate=' + encodeURIComponent(startDate) + '&endDate=' + encodeURIComponent(endDate), { headers: headers })
+    }).then(function (response) {
+      if (!response || !response.ok) return []
+      return response.json()
+    }).then(function (items) {
+      return Array.isArray(items) ? items.map(normalizeScheduleItem) : []
+    }).catch(function () {
+      return []
+    })
+  }
+
+  function ensureYearScheduleCache(year) {
+    var cache = window.__familyYearScheduleCache
+    if (cache && cache.year === year && (cache.loaded || cache.loading)) return
+    window.__familyYearScheduleCache = { year: year, loading: true, loaded: false, months: {} }
+    fetchSchedulesDirect(year + '-01-01', year + '-12-31').then(function (items) {
+      var months = {}
+      ;(items || []).forEach(function (item) {
+        var parts = String(item.scheduleDate || '').split('-').map(Number)
+        if (parts.length < 3 || !Number.isFinite(parts[1]) || !Number.isFinite(parts[2])) return
+        if (!months[parts[1]]) months[parts[1]] = { days: [], items: [] }
+        months[parts[1]].items.push(item)
+        if (months[parts[1]].days.indexOf(parts[2]) < 0) months[parts[1]].days.push(parts[2])
+      })
+      window.__familyYearScheduleCache = { year: year, loading: false, loaded: true, months: months }
+      window.setTimeout(function () {
+        decorateYearCalendar()
+        var active = document.querySelector('.year-month-card.active')
+        if (active) {
+          var strong = active.querySelector('strong')
+          var month = Number(((strong && strong.textContent.match(/\d+/g)) || [])[0])
+          if (Number.isFinite(month)) renderYearSelectedMonthList(new Date(year, month - 1, 1))
+        }
+      }, 0)
+    }).catch(function () {
+      window.__familyYearScheduleCache = { year: year, loading: false, loaded: true, months: {} }
+    })
+  }
+
+  function renderYearSelectedMonthList(monthDate) {
+    if (!monthDate || getActiveCalendarMode() !== 'year') return
+    var card = document.querySelector('.schedule-list-card')
+    if (!card) return
+    var month = monthDate.getMonth() + 1
+    var range = monthRangeFor(formatDate(monthDate))
+    setScheduleListContext(month + '\uC6D4 \uC77C\uC815\uD45C', '0\uAC74')
+    var list = card.querySelector('.schedule-list') || card.querySelector('.server-data-list')
+    if (!list) {
+      list = document.createElement('div')
+      list.className = 'schedule-list'
+      card.appendChild(list)
+    }
+    list.innerHTML = '<p class="empty-note">\uC77C\uC815\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</p>'
+    fetchSchedulesDirect(range.start, range.end).then(function (items) {
+      var schedules = (items || []).sort(function (a, b) {
+        return String(a.scheduleDate || '').localeCompare(String(b.scheduleDate || '')) || String(a.scheduleTime || '').localeCompare(String(b.scheduleTime || ''))
+      })
+      setScheduleListContext(month + '\uC6D4 \uC77C\uC815\uD45C', schedules.length + '\uAC74')
+      if (!schedules.length) {
+        list.innerHTML = '<p class="empty-note">\uD574\uB2F9 \uC6D4\uC5D0 \uB4F1\uB85D\uB41C \uC77C\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
+        return
+      }
+      list.innerHTML = schedules.map(function (item) {
+        var date = new Date(String(item.scheduleDate || todayText()) + 'T00:00:00')
+        return '<button type="button" class="schedule-row server-year-schedule-row" data-api-schedule-id="' + escapeHtml(item.id) + '">' +
+          '<span class="schedule-date-badge"><strong>' + date.getDate() + '</strong><span>' + escapeHtml(formatKoreanShortDate(date).replace(/^.*\((.)\).*$/, '$1')) + '</span></span>' +
+          '<div><strong>' + escapeHtml(item.title || '\uC77C\uC815') + '</strong><p>' + escapeHtml(scheduleTimeText(item) + ' \u00B7 ' + (item.category || '\uC77C\uC815') + (item.memberName ? ' \u00B7 ' + item.memberName : '')) + '</p><small>' + escapeHtml(item.memo || '') + '</small></div>' +
+          '</button>'
+      }).join('')
+      list.querySelectorAll('.server-year-schedule-row').forEach(function (row, index) {
+        row.addEventListener('click', function () {
+          openScheduleApiDetail(schedules[index])
+        })
+      })
     })
   }
 
   function decorateYearCalendar() {
     if (getActiveCalendarMode() !== 'year') return
-    var mode = document.documentElement.dataset.yearScheduleMode || 'list'
+    var mode = document.documentElement.dataset.yearScheduleMode || 'calendar'
     var year = getCurrentYearNumber()
+    ensureYearScheduleCache(year)
     document.querySelectorAll('.year-month-card').forEach(function (card) {
       var strong = card.querySelector('strong')
       var month = Number(((strong && strong.textContent.match(/\d+/g)) || [])[0])
@@ -1581,12 +1743,11 @@
     if (getActiveCalendarMode() !== 'year' || !grid) {
       var stale = document.querySelector('.family-calendar-panel .year-mode-tabs')
       if (stale) stale.remove()
-      delete document.documentElement.dataset.yearScheduleMode
       return
     }
     var existing = document.querySelector('.family-calendar-panel .year-mode-tabs')
     if (existing) {
-      decorateYearCalendar()
+      setYearMode(document.documentElement.dataset.yearScheduleMode || 'calendar')
       return
     }
 
@@ -1614,7 +1775,7 @@
     tabs.appendChild(calendarButton)
     tabs.appendChild(listButton)
     grid.parentElement.insertBefore(tabs, grid)
-    setYearMode(document.documentElement.dataset.yearScheduleMode || 'list')
+    setYearMode(document.documentElement.dataset.yearScheduleMode || 'calendar')
   }
 
   function wireScheduleDetailRows() {
@@ -1702,10 +1863,31 @@
 
     var iconButtons = Array.from(document.querySelectorAll('.top-actions .icon-button, .summary-actions .icon-button'))
     iconButtons.forEach(function (button, index) {
-      if (button.getAttribute('aria-label')) return
-      var label = index === 0 ? '\uD14C\uB9C8 \uBCC0\uACBD' : '\uCE98\uB9B0\uB354'
-      button.setAttribute('aria-label', label)
-      button.setAttribute('title', label)
+      var label = button.getAttribute('aria-label') || button.getAttribute('title') || ''
+      if (!label) {
+        label = index === 0 ? '\uD14C\uB9C8 \uBCC0\uACBD' : '\uCE98\uB9B0\uB354'
+        button.setAttribute('aria-label', label)
+        button.setAttribute('title', label)
+      }
+      if (label.indexOf('\uCE98\uB9B0\uB354') >= 0) {
+        hidePatchElement(button)
+      }
+    })
+
+    document.querySelectorAll('.top-actions, .summary-actions').forEach(function (group) {
+      var blankIconButtons = Array.from(group.querySelectorAll('.icon-button')).filter(function (button) {
+        return !getCleanText(button)
+      })
+      blankIconButtons.forEach(function (button, index) {
+        if (index > 0) {
+          button.setAttribute('aria-label', '\uCE98\uB9B0\uB354')
+          button.setAttribute('title', '\uCE98\uB9B0\uB354')
+          hidePatchElement(button)
+        } else if (!button.getAttribute('aria-label')) {
+          button.setAttribute('aria-label', '\uD14C\uB9C8 \uBCC0\uACBD')
+          button.setAttribute('title', '\uD14C\uB9C8 \uBCC0\uACBD')
+        }
+      })
     })
   }
 
@@ -1841,6 +2023,7 @@
     ensureYearModeTabs()
     wireScheduleDetailRows()
     hideSelectedDayPanels()
+    refreshScheduleListCount()
     normalizeLunarLabels()
     enhanceDatepickers()
     syncScheduleBasisLayout()
@@ -5000,11 +5183,14 @@
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
 
+    markCalendarSelection(target, selectedDate)
     updateJumpInput(selectedDate)
     updateScheduleFormVisibleDate(selectedDate)
     updateSelectedDayPanel(selectedDate, target)
     fetchSchedules(formatDate(selectedDate), formatDate(selectedDate)).then(function (items) {
-      openCalendarApiDayPopup(selectedDate, items)
+      if (!openCalendarApiDayPopup(selectedDate, items)) {
+        openCalendarDaySchedulePopup(selectedDate, collectScheduleTextsFromCalendarNode(target))
+      }
     })
   }, true)
 

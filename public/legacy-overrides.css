@@ -9330,3 +9330,138 @@ body:has(.family-calendar-panel) .family-calendar-panel .calendar-view-tabs {
     justify-self: start;
   }
 }
+
+/* 2026-06-09 calendar/dark-mode final overrides */
+.top-actions .icon-button[aria-label="캘린더"],
+.summary-actions .icon-button[aria-label="캘린더"],
+.top-actions .icon-button[title="캘린더"],
+.summary-actions .icon-button[title="캘린더"] {
+  display: none !important;
+}
+
+html[data-calendar-mode="day"] body .family-calendar-panel .selected-day-card,
+html[data-calendar-mode="week"] body .family-calendar-panel .selected-day-card,
+html[data-calendar-mode="day"] body .calendar-bottom-grid .selected-day-card,
+html[data-calendar-mode="week"] body .calendar-bottom-grid .selected-day-card {
+  display: grid !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+html[data-calendar-mode="month"] body .family-calendar-panel .selected-day-card,
+html[data-calendar-mode="year"] body .family-calendar-panel .selected-day-card,
+html[data-calendar-mode="month"] body .calendar-bottom-grid .selected-day-card,
+html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
+  display: none !important;
+}
+
+.family-calendar-panel .calendar-day-card.selected,
+.family-calendar-panel .calendar-day-card.active,
+.family-calendar-panel .fc-day.selected,
+.family-calendar-panel .fc-day.active,
+.family-calendar-panel .agenda-day-column.active,
+.family-calendar-panel .year-month-card.active {
+  border-color: #3182f6 !important;
+  box-shadow: inset 0 0 0 2px #3182f6, 0 12px 28px rgba(49, 130, 246, 0.13) !important;
+}
+
+.theme-dark,
+.theme-dark body,
+.theme-dark .app-shell,
+.theme-dark .workspace {
+  background: #171b22 !important;
+  color: #f3f6fb !important;
+}
+
+.theme-dark .panel,
+.theme-dark .summary-band,
+.theme-dark .filter-panel,
+.theme-dark .sync-panel,
+.theme-dark .calendar-hero,
+.theme-dark .calendar-hero-card,
+.theme-dark .calendar-title-button,
+.theme-dark .calendar-day-card,
+.theme-dark .agenda-day-column,
+.theme-dark .year-month-card,
+.theme-dark .schedule-list-card,
+.theme-dark .selected-day-card,
+.theme-dark .schedule-row,
+.theme-dark .server-schedule-list,
+.theme-dark .server-schedule-row,
+.theme-dark .server-domain-row,
+.theme-dark .server-data-empty,
+.theme-dark .community-panel,
+.theme-dark .community-board-card,
+.theme-dark .community-detail-card,
+.theme-dark .community-write-card,
+.theme-dark .home-today-schedule,
+.theme-dark .metric,
+.theme-dark .ledger-row,
+.theme-dark .daily-ledger article,
+.theme-dark .trip-card,
+.theme-dark .baby-card,
+.theme-dark .diary-list-row {
+  background: #252b35 !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+  color: #f3f6fb !important;
+}
+
+.theme-dark h1,
+.theme-dark h2,
+.theme-dark h3,
+.theme-dark strong,
+.theme-dark b,
+.theme-dark .panel-header h2,
+.theme-dark .calendar-day-card .day-number,
+.theme-dark .calendar-day-card strong,
+.theme-dark .agenda-day-column strong,
+.theme-dark .year-month-card strong,
+.theme-dark .schedule-row strong,
+.theme-dark .server-schedule-row strong,
+.theme-dark .server-domain-row strong,
+.theme-dark .ledger-row strong,
+.theme-dark .topbar h1,
+.theme-dark .brand strong {
+  color: #f8fafc !important;
+}
+
+.theme-dark p,
+.theme-dark small,
+.theme-dark label,
+.theme-dark label span,
+.theme-dark .eyebrow,
+.theme-dark .calendar-day-card small,
+.theme-dark .agenda-day-column small,
+.theme-dark .year-month-card span,
+.theme-dark .schedule-row p,
+.theme-dark .schedule-row small,
+.theme-dark .server-schedule-row span,
+.theme-dark .server-schedule-row small,
+.theme-dark .server-domain-row span,
+.theme-dark .server-domain-row small,
+.theme-dark .ledger-row span {
+  color: #b8c2cf !important;
+}
+
+.theme-dark input,
+.theme-dark textarea,
+.theme-dark select,
+.theme-dark .custom-select-trigger,
+.theme-dark .custom-select-menu,
+.theme-dark .date-picker-trigger,
+.theme-dark .calendar-popover,
+.theme-dark .icon-button,
+.theme-dark .summary-actions button,
+.theme-dark .panel-header button,
+.theme-dark .passive-header-chip {
+  background: #303742 !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  color: #f8fafc !important;
+}
+
+.theme-dark .primary-action,
+.theme-dark .submit-action,
+.theme-dark .save-button {
+  background: #3182f6 !important;
+  color: #ffffff !important;
+}
