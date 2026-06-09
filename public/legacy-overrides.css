@@ -5729,7 +5729,24 @@ body:has(.family-calendar-panel) .family-calendar-panel .calendar-bottom-grid {
 }
 
 .selected-day-card {
-  order: -1 !important;
+  display: none !important;
+}
+
+.schedule-day-patch-empty {
+  margin: 0 !important;
+  padding: 18px !important;
+  border-radius: 16px !important;
+  background: #f7f8fb !important;
+  color: #7b8794 !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  line-height: 1.5 !important;
+  text-align: center !important;
+}
+
+body .family-calendar-panel .selected-day-card,
+body .calendar-bottom-grid .selected-day-card {
+  display: none !important;
 }
 
 .schedule-list-card {

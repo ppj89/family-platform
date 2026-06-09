@@ -811,7 +811,8 @@
     var items = (scheduleTexts || []).map(function (text) {
       return text.trim()
     }).filter(Boolean)
-    if (!items.length) return
+    var old = document.querySelector('.schedule-day-patch-backdrop')
+    if (old) old.remove()
 
     if (items.length === 1) {
       var single = document.createElement('button')
@@ -820,9 +821,6 @@
       openSelectedDayDetail(single)
       return
     }
-
-    var old = document.querySelector('.schedule-day-patch-backdrop')
-    if (old) old.remove()
 
     var backdrop = document.createElement('div')
     backdrop.className = 'schedule-day-patch-backdrop schedule-detail-patch-backdrop'
@@ -844,6 +842,12 @@
 
     var list = document.createElement('div')
     list.className = 'schedule-day-patch-list'
+    if (!items.length) {
+      var empty = document.createElement('p')
+      empty.className = 'schedule-day-patch-empty'
+      empty.textContent = '\uC120\uD0DD\uD55C \uB0A0\uC9DC\uC5D0\uB294 \uC77C\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.'
+      list.appendChild(empty)
+    }
     items.forEach(function (text) {
       var button = document.createElement('button')
       button.type = 'button'
@@ -865,6 +869,12 @@
       if (event.target === backdrop) backdrop.remove()
     })
     document.body.appendChild(backdrop)
+  }
+
+  function hideSelectedDayPanels() {
+    document.querySelectorAll('.selected-day-card').forEach(function (card) {
+      card.setAttribute('aria-hidden', 'true')
+    })
   }
 
   function findScheduleRowByTitle(titleText) {
@@ -1587,6 +1597,7 @@
     cleanupCalendarChrome()
     ensureYearModeTabs()
     wireScheduleDetailRows()
+    hideSelectedDayPanels()
     normalizeLunarLabels()
     enhanceDatepickers()
     syncScheduleBasisLayout()
