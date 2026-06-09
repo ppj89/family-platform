@@ -28,6 +28,28 @@
   var MEDIA_MAX_IMAGE_BYTES = 8 * 1024 * 1024
   var MEDIA_MAX_VIDEO_BYTES = 30 * 1024 * 1024
   var MEDIA_MAX_TOTAL_BYTES = 40 * 1024 * 1024
+  var HOLIDAY_DATES = {
+    '2026-01-01': true,
+    '2026-02-16': true,
+    '2026-02-17': true,
+    '2026-02-18': true,
+    '2026-03-01': true,
+    '2026-03-02': true,
+    '2026-05-05': true,
+    '2026-05-24': true,
+    '2026-05-25': true,
+    '2026-06-03': true,
+    '2026-06-06': true,
+    '2026-08-15': true,
+    '2026-08-17': true,
+    '2026-09-24': true,
+    '2026-09-25': true,
+    '2026-09-26': true,
+    '2026-10-03': true,
+    '2026-10-05': true,
+    '2026-10-09': true,
+    '2026-12-25': true
+  }
 
   function parseDate(value) {
     if (!value) return null
@@ -914,7 +936,7 @@
     var card = document.querySelector('.selected-day-card')
     if (!card) return
 
-    var titleButton = card.querySelector('.panel-header button')
+    var titleButton = card.querySelector('.panel-header button, .panel-header .passive-header-chip')
     if (titleButton) titleButton.textContent = formatKoreanShortDate(date)
 
     var list = card.querySelector('.schedule-list')
@@ -944,6 +966,54 @@
       delete empty.dataset.selectedDayDetail
       delete empty.dataset.selectedDate
     }
+  }
+
+  function inferDateForCalendarCard(card, day) {
+    if (!card || !Number.isFinite(day)) return null
+    var focused = getFocusedDate()
+    var month = focused.getMonth()
+    var year = focused.getFullYear()
+    if (card.classList.contains('muted')) {
+      if (day > 20) {
+        month -= 1
+      } else {
+        month += 1
+      }
+    }
+    return new Date(year, month, day)
+  }
+
+  function decorateCalendarHolidays() {
+    if (!document.querySelector('.family-calendar-panel')) return
+    document.querySelectorAll('.calendar-day-card').forEach(function (card) {
+      var number = card.querySelector('.day-number')
+      var day = Number(number && number.textContent)
+      var date = inferDateForCalendarCard(card, day)
+      if (!date) return
+      var dateKey = formatDate(date)
+      card.classList.toggle('holiday', !!HOLIDAY_DATES[dateKey] || date.getDay() === 0)
+      card.classList.toggle('saturday', date.getDay() === 6)
+    })
+    document.querySelectorAll('.fc-day, .agenda-day-column').forEach(function (card) {
+      var title = card.querySelector('strong')
+      var nums = title ? (title.textContent.match(/\d+/g) || []).map(Number) : []
+      if (!nums.length) return
+      var focused = getFocusedDate()
+      var date = nums.length >= 2 ? new Date(focused.getFullYear(), nums[0] - 1, nums[1]) : new Date(focused.getFullYear(), focused.getMonth(), nums[0])
+      var dateKey = formatDate(date)
+      card.classList.toggle('holiday', !!HOLIDAY_DATES[dateKey] || date.getDay() === 0)
+      card.classList.toggle('saturday', date.getDay() === 6)
+    })
+  }
+
+  function syncSelectedDayHeaderFromState() {
+    var card = document.querySelector('.selected-day-card')
+    if (!card) return
+    var selectedText = document.documentElement.dataset.calendarSelectedDate
+    var date = selectedText ? parseDate(selectedText) : (getScheduleFormVisibleDate() || getFocusedDate())
+    if (!date) return
+    var chip = card.querySelector('.panel-header .passive-header-chip, .panel-header button')
+    if (chip) chip.textContent = formatKoreanShortDate(date)
   }
 
   function openSelectedDayDetail(target) {
@@ -1364,7 +1434,6 @@
       popover.className = 'calendar-popover jump-datepicker-popover jump-mode-' + mode + ' jump-level-' + level
       var title = level === 'year' ? year + '\uB144' : (level === 'month' ? year + '\uB144' : year + '\uB144 ' + (month + 1) + '\uC6D4')
       var html = '<header class="calendar-header"><button type="button" data-jump-prev>&lt;</button><button type="button" class="calendar-title-button"><span>' + title + '</span></button><button type="button" data-jump-next>&gt;</button></header>'
-      html += '<div class="calendar-today-row"><button type="button" data-jump-today>\uC624\uB298</button></div>'
 
       if (level === 'month') {
         html += '<div class="jump-month-grid">'
@@ -1522,6 +1591,21 @@
     }, 140)
   }
 
+  function normalizeTodayForDayAndWeek() {
+    window.setTimeout(function () {
+      var mode = getActiveCalendarMode()
+      if (mode !== 'day' && mode !== 'week') return
+      var today = new Date()
+      window.__familySuppressCalendarPopupUntil = Date.now() + 2500
+      moveCalendarTo(today)
+      updateJumpInput(today)
+      updateScheduleFormVisibleDate(today)
+      updateSelectedDayPanel(today)
+      calendarScheduleCache.key = ''
+      renderCalendarApiSchedules(true)
+    }, 360)
+  }
+
   function wireCalendarInteractions() {
     document.querySelectorAll('.family-calendar-panel .calendar-nav .calendar-title-button').forEach(function (button) {
       if (button.dataset.jumpPickerWired) return
@@ -1537,7 +1621,10 @@
     document.querySelectorAll('.family-calendar-panel .calendar-view-tabs button').forEach(function (button) {
       if (button.dataset.patchWired) return
       button.dataset.patchWired = 'true'
-      button.addEventListener('click', normalizeSelectedDateAfterViewChange)
+      button.addEventListener('click', function () {
+        normalizeSelectedDateAfterViewChange()
+        normalizeTodayForDayAndWeek()
+      })
     })
 
     document.querySelectorAll('.family-calendar-panel .calendar-day-card').forEach(function (card) {
@@ -2160,6 +2247,7 @@
     refreshScheduleListCount()
     renderCalendarApiSchedules(false)
     normalizeLunarLabels()
+    decorateCalendarHolidays()
     enhanceDatepickers()
     syncScheduleBasisLayout()
     refreshLabelCleanup()
@@ -2180,6 +2268,7 @@
     enhanceBabyProfileEdit()
     enhanceMediaUploadLimits()
     cleanupPassiveButtons()
+    syncSelectedDayHeaderFromState()
   }
 
   function safeRefreshCalendarPatch() {
