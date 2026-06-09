@@ -407,6 +407,15 @@
   line-height: 1.5;
 }
 
+.auth-shell .auth-copy,
+.auth-shell .auth-preview {
+  display: none !important;
+}
+
+.auth-shell .auth-visual {
+  min-height: auto !important;
+}
+
 .auth-card {
   position: relative;
   display: grid;
