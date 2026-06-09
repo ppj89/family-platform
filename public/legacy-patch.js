@@ -855,6 +855,14 @@
     return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
   }
 
+  function getScheduleFormDateValue(form) {
+    var trigger = form && form.querySelector('.date-picker-trigger')
+    if (trigger && trigger.dataset.solarDate) return trigger.dataset.solarDate
+    var visibleDate = getScheduleFormVisibleDate()
+    if (visibleDate) return formatDate(visibleDate)
+    return getDatePickerValue(form, '\uB0A0\uC9DC')
+  }
+
   function updateScheduleFormVisibleDate(date) {
     var trigger = document.querySelector('.schedule-form-card .date-picker-trigger')
     var triggerText = trigger && trigger.querySelector('span')
@@ -933,11 +941,11 @@
     var linkedContent = linkedRow && linkedRow.children && linkedRow.children.length > 1 ? linkedRow.children[1] : linkedRow
     var linkedMeta = linkedContent && linkedContent.querySelector('p')
     var linkedMemo = linkedContent && linkedContent.querySelector('small')
-    var old = document.querySelector('.schedule-detail-patch-backdrop')
+    var old = document.querySelector('.schedule-item-patch-backdrop')
     if (old) old.remove()
 
     var backdrop = document.createElement('div')
-    backdrop.className = 'schedule-detail-patch-backdrop'
+    backdrop.className = 'schedule-detail-patch-backdrop schedule-item-patch-backdrop'
     var dialog = document.createElement('section')
     dialog.className = 'schedule-detail-patch-dialog'
     var close = document.createElement('button')
@@ -996,13 +1004,19 @@
     document.body.appendChild(backdrop)
   }
 
-  function openScheduleApiDetail(item) {
+  function openScheduleApiDetail(item, options) {
     if (!item) return
-    var old = document.querySelector('.schedule-detail-patch-backdrop')
+    options = options || {}
+    var old = document.querySelector('.schedule-item-patch-backdrop')
     if (old) old.remove()
+    if (!options.keepParent) {
+      document.querySelectorAll('.schedule-detail-patch-backdrop:not(.schedule-day-patch-backdrop)').forEach(function (node) {
+        node.remove()
+      })
+    }
 
     var backdrop = document.createElement('div')
-    backdrop.className = 'schedule-detail-patch-backdrop'
+    backdrop.className = 'schedule-detail-patch-backdrop schedule-item-patch-backdrop'
     var dialog = document.createElement('section')
     dialog.className = 'schedule-detail-patch-dialog'
     var close = document.createElement('button')
@@ -1113,7 +1127,6 @@
       button.textContent = text
       button.dataset.selectedDate = formatKoreanShortDate(date)
       button.addEventListener('click', function () {
-        backdrop.remove()
         openSelectedDayDetail(button)
       })
       list.appendChild(button)
@@ -1588,7 +1601,7 @@
     for (var blank = 0; blank < first.getDay(); blank += 1) html += '<span></span>'
     for (var day = 1; day <= lastDate; day += 1) {
       var hasEvent = eventDays.indexOf(day) >= 0
-      html += '<span class="' + (hasEvent ? 'has-event' : '') + '">' + day + '</span>'
+      html += '<span data-year-mini-day="' + day + '" class="' + (hasEvent ? 'has-event' : '') + '">' + day + '</span>'
     }
     html += '</div>'
     return html
@@ -1691,6 +1704,10 @@
       var schedules = (items || []).sort(function (a, b) {
         return String(a.scheduleDate || '').localeCompare(String(b.scheduleDate || '')) || String(a.scheduleTime || '').localeCompare(String(b.scheduleTime || ''))
       })
+      window.__familyYearScheduleItemsById = window.__familyYearScheduleItemsById || {}
+      schedules.forEach(function (item) {
+        window.__familyYearScheduleItemsById[String(item.id)] = item
+      })
       setScheduleListContext(month + '\uC6D4 \uC77C\uC815\uD45C', schedules.length + '\uAC74')
       if (!schedules.length) {
         list.innerHTML = '<p class="empty-note">\uD574\uB2F9 \uC6D4\uC5D0 \uB4F1\uB85D\uB41C \uC77C\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
@@ -1722,7 +1739,8 @@
       if (!Number.isFinite(month)) return
       var mini = card.querySelector('.year-mini-calendar')
       if (mode === 'calendar') {
-        var key = year + '-' + month + '-' + collectMonthEventDays(month).join(',')
+        var monthDays = collectMonthEventDays(month)
+        var key = year + '-' + month + '-' + monthDays.join(',')
         if (!mini) {
           mini = document.createElement('div')
           mini.className = 'year-mini-calendar'
@@ -1730,10 +1748,36 @@
         }
         if (mini.dataset.key !== key) {
           mini.dataset.key = key
-          mini.innerHTML = buildMiniMonth(year, month, collectMonthEventDays(month))
+          mini.innerHTML = buildMiniMonth(year, month, monthDays)
         }
+        var countBadge = card.querySelector('.year-event-count')
+        if (!countBadge) {
+          countBadge = document.createElement('button')
+          countBadge.type = 'button'
+          countBadge.className = 'year-event-count'
+          card.appendChild(countBadge)
+        }
+        countBadge.textContent = monthDays.length ? monthDays.length + '\uAC74' : '\uC77C\uC815 \uC5C6\uC74C'
+        countBadge.disabled = !monthDays.length
+        mini.querySelectorAll('.year-mini-days span.has-event').forEach(function (dayNode) {
+          if (dayNode.dataset.yearDetailWired) return
+          dayNode.dataset.yearDetailWired = 'true'
+          dayNode.addEventListener('click', function (event) {
+            event.preventDefault()
+            event.stopPropagation()
+            var day = Number(dayNode.dataset.yearMiniDay || dayNode.textContent)
+            if (!Number.isFinite(day)) return
+            var selectedDate = new Date(year, month - 1, day)
+            updateScheduleFormVisibleDate(selectedDate)
+            fetchSchedulesDirect(formatDate(selectedDate), formatDate(selectedDate)).then(function (items) {
+              openCalendarApiDayPopup(selectedDate, items)
+            })
+          })
+        })
       } else if (mini) {
         mini.remove()
+        var staleCount = card.querySelector('.year-event-count')
+        if (staleCount) staleCount.remove()
       }
     })
   }
@@ -1779,6 +1823,23 @@
   }
 
   function wireScheduleDetailRows() {
+    if (!window.__familyYearScheduleDelegatedReady) {
+      window.__familyYearScheduleDelegatedReady = true
+      document.addEventListener('click', function (event) {
+        var row = event.target && event.target.closest && event.target.closest('.server-year-schedule-row')
+        if (!row) return
+        event.preventDefault()
+        event.stopPropagation()
+        var id = row.getAttribute('data-api-schedule-id')
+        var item = window.__familyYearScheduleItemsById && window.__familyYearScheduleItemsById[String(id)]
+        if (item) {
+          openScheduleApiDetail(item)
+          return
+        }
+        openScheduleDetail(row)
+      }, true)
+    }
+
     document.querySelectorAll('.schedule-row').forEach(function (row) {
       if (row.dataset.detailWired) return
       row.dataset.detailWired = 'true'
@@ -4367,8 +4428,7 @@
       button.type = 'button'
       button.textContent = scheduleTimeText(item) + ' ' + item.title
       button.addEventListener('click', function () {
-        backdrop.remove()
-        openScheduleApiDetail(item)
+        openScheduleApiDetail(item, { keepParent: true })
       })
       list.appendChild(button)
     })
@@ -4785,7 +4845,7 @@
       payload: {
         title: title,
         calendarBasis: normalizeScheduleBasis(getCustomSelectValue('\uAE30\uC900')),
-        scheduleDate: getDatePickerValue(form, '\uB0A0\uC9DC'),
+        scheduleDate: getScheduleFormDateValue(form),
         scheduleTime: timeValue || null,
         category: getCustomSelectValue('\uAD6C\uBD84') || '\uC77C\uC815',
         memberName: getCustomSelectValue('\uAC00\uC871') || null,

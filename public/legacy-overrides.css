@@ -6433,6 +6433,27 @@ html[data-year-schedule-mode="calendar"] .year-month-card > em {
   box-shadow: inset 0 0 0 1px #bfdcff !important;
 }
 
+.year-event-count {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  justify-self: start !important;
+  min-height: 30px !important;
+  margin-top: 2px !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: #edf4ff !important;
+  color: #1b64da !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.year-event-count:disabled {
+  background: #f2f4f7 !important;
+  color: #8b95a1 !important;
+}
+
 html[data-year-schedule-mode="list"] .year-month-card {
   min-height: 132px !important;
 }
