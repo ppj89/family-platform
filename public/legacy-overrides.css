@@ -9414,10 +9414,7 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 }
 
 body:has(.family-calendar-panel) .schedule-list-card > .schedule-list,
-body:has(.family-calendar-panel) .family-calendar-panel .day-chip-stack,
-body:has(.family-calendar-panel) .agenda-day-column em,
-body:has(.family-calendar-panel) .agenda-day-column > button,
-body:has(.family-calendar-panel) .agenda-day-column > span {
+body:has(.family-calendar-panel) .family-calendar-panel .day-chip-stack {
   display: none !important;
 }
 
@@ -9427,8 +9424,7 @@ body:has(.family-calendar-panel) .agenda-day-column > span {
 }
 
 body:has(.family-calendar-panel) .calendar-day-card[data-api-chip-title]::after,
-body:has(.family-calendar-panel) .fc-day[data-api-chip-title]::after,
-body:has(.family-calendar-panel) .agenda-day-column[data-api-chip-title]::after {
+body:has(.family-calendar-panel) .fc-day[data-api-chip-title]::after {
   content: attr(data-api-chip-title) !important;
   display: block !important;
   max-width: 100% !important;
@@ -9446,14 +9442,12 @@ body:has(.family-calendar-panel) .agenda-day-column[data-api-chip-title]::after 
 }
 
 body:has(.family-calendar-panel) .calendar-day-card[data-api-chip-title],
-body:has(.family-calendar-panel) .fc-day[data-api-chip-title],
-body:has(.family-calendar-panel) .agenda-day-column[data-api-chip-title] {
+body:has(.family-calendar-panel) .fc-day[data-api-chip-title] {
   position: relative !important;
 }
 
 body:has(.family-calendar-panel) .calendar-day-card[data-api-chip-count]::before,
-body:has(.family-calendar-panel) .fc-day[data-api-chip-count]::before,
-body:has(.family-calendar-panel) .agenda-day-column[data-api-chip-count]::before {
+body:has(.family-calendar-panel) .fc-day[data-api-chip-count]::before {
   content: attr(data-api-chip-count) !important;
   position: absolute !important;
   right: 8px !important;
@@ -9475,8 +9469,6 @@ body:has(.family-calendar-panel) .agenda-day-column[data-api-chip-count]::before
   box-shadow: none !important;
 }
 
-body:has(.family-calendar-panel) .calendar-hero,
-body:has(.family-calendar-panel) .fc-hero,
 .patch-family-group-root .community-hero,
 .patch-community-root .community-hero {
   display: none !important;
