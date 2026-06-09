@@ -114,7 +114,13 @@ sudo APP_DIR=/opt/family-platform scripts/install-backup-cron.sh
 Health and disk monitor:
 
 ```bash
-sudo APP_DIR=/opt/family-platform scripts/install-monitor-cron.sh
+sudo APP_DIR=/opt/family-platform BASE_URL=https://familyhistory.dedyn.io EXPECT_SSO_CONFIGURED=true scripts/install-monitor-cron.sh
+```
+
+External production check from Windows:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-prod.ps1 -BaseUrl https://familyhistory.dedyn.io -Https -ExpectSsoConfigured -SkipCompose
 ```
 
 Server setup details are in [DEPLOYMENT.md](./DEPLOYMENT.md). Production operation commands are in [OPERATIONS.md](./OPERATIONS.md).

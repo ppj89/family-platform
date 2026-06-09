@@ -8,29 +8,30 @@ From the server:
 
 ```bash
 cd /opt/family-platform
-scripts/check-prod.sh
+HTTPS=true BASE_URL=https://familyhistory.dedyn.io EXPECT_SSO_CONFIGURED=true scripts/check-prod.sh
 ```
 
 From this Windows workspace:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-server.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\check-prod.ps1 -BaseUrl https://familyhistory.dedyn.io -Https -ExpectSsoConfigured -SkipCompose
 ```
 
 Expected result:
 
 - `web: ok`
 - `api: ok`
+- `auth gate: ok`
+- `sso providers: configured`
+- `security headers: ok`
 - `android debug apk: ok` when the test APK has been published
 - Docker services show as running or healthy.
 
-The current HTTP test URL is:
+The current production URL is:
 
 ```text
-http://192.145.44.103
+https://familyhistory.dedyn.io
 ```
-
-Use `http://`, not `https://`, until a domain and HTTPS are configured.
 
 ## Monitoring
 
@@ -38,13 +39,13 @@ Run a one-time monitor check:
 
 ```bash
 cd /opt/family-platform
-scripts/monitor-prod.sh
+BASE_URL=https://familyhistory.dedyn.io EXPECT_SSO_CONFIGURED=true scripts/monitor-prod.sh
 ```
 
 Install a 5-minute health and disk monitor:
 
 ```bash
-sudo APP_DIR=/opt/family-platform scripts/install-monitor-cron.sh
+sudo APP_DIR=/opt/family-platform BASE_URL=https://familyhistory.dedyn.io EXPECT_SSO_CONFIGURED=true scripts/install-monitor-cron.sh
 ```
 
 Optional alert webhook:

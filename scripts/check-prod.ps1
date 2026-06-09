@@ -1,12 +1,14 @@
 param(
   [string]$EnvFile = ".env.production",
   [string]$BaseUrl = "http://127.0.0.1",
-  [switch]$Https
+  [switch]$Https,
+  [switch]$ExpectSsoConfigured,
+  [switch]$SkipCompose
 )
 
 $ErrorActionPreference = "Stop"
 
-if (!(Test-Path $EnvFile)) {
+if (!$SkipCompose -and !(Test-Path $EnvFile)) {
   throw "$EnvFile is missing."
 }
 
@@ -16,15 +18,70 @@ if ($Https) {
 }
 $composeArgs += @("--env-file", $EnvFile)
 
-Write-Host "Compose services"
-docker compose @composeArgs ps
+if (!$SkipCompose) {
+  Write-Host "Compose services"
+  docker compose @composeArgs ps
+  Write-Host ""
+}
 
-Write-Host ""
 Write-Host "Health checks"
 Invoke-WebRequest -UseBasicParsing "$BaseUrl/health" | Out-Null
 Write-Host "web: ok"
-Invoke-WebRequest -UseBasicParsing "$BaseUrl/api/health" | Out-Null
+$apiHealth = Invoke-RestMethod -UseBasicParsing "$BaseUrl/api/health"
+if ($apiHealth.status -ne "UP" -or $apiHealth.runtime -ne "go") {
+  throw "Unexpected API health response: $($apiHealth | ConvertTo-Json -Compress)"
+}
 Write-Host "api: ok"
+
+$authGateStatus = $null
+try {
+  $authGateResponse = Invoke-WebRequest -UseBasicParsing "$BaseUrl/api/families"
+  $authGateStatus = $authGateResponse.StatusCode
+} catch {
+  if ($_.Exception.Response) {
+    $authGateStatus = $_.Exception.Response.StatusCode.value__
+  }
+}
+if ($authGateStatus -ne 401) {
+  throw "Expected /api/families to return 401, got $authGateStatus."
+}
+Write-Host "auth gate: ok"
+
+$oauthProviders = Invoke-RestMethod -UseBasicParsing "$BaseUrl/api/auth/oauth/providers"
+$providerNames = @($oauthProviders | ForEach-Object { $_.provider })
+foreach ($provider in @("naver", "google", "kakao")) {
+  if ($providerNames -notcontains $provider) {
+    throw "Missing SSO provider: $provider"
+  }
+}
+if ($ExpectSsoConfigured) {
+  $notConfigured = @($oauthProviders | Where-Object { -not $_.configured })
+  if ($notConfigured.Count -gt 0) {
+    throw "Expected all SSO providers to be configured: $($oauthProviders | ConvertTo-Json -Compress)"
+  }
+  Write-Host "sso providers: configured"
+} else {
+  Write-Host "sso providers: reachable"
+}
+
+$headersResponse = Invoke-WebRequest -UseBasicParsing -Method Head "$BaseUrl/"
+$contentTypeOptions = [string]$headersResponse.Headers["X-Content-Type-Options"]
+$frameOptions = [string]$headersResponse.Headers["X-Frame-Options"]
+$referrerPolicy = [string]$headersResponse.Headers["Referrer-Policy"]
+$hsts = [string]$headersResponse.Headers["Strict-Transport-Security"]
+if ($contentTypeOptions -notmatch "(^|,)\s*nosniff\s*(,|$)") {
+  throw "Missing X-Content-Type-Options header."
+}
+if ($frameOptions -notmatch "(^|,)\s*DENY\s*(,|$)") {
+  throw "Missing X-Frame-Options header."
+}
+if ($referrerPolicy -notmatch "(^|,)\s*strict-origin-when-cross-origin\s*(,|$)") {
+  throw "Missing Referrer-Policy header."
+}
+if ($Https -and !$hsts) {
+  throw "Missing Strict-Transport-Security header."
+}
+Write-Host "security headers: ok"
 
 $downloadUrl = "$BaseUrl/downloads/app-debug.apk"
 try {
@@ -36,13 +93,15 @@ try {
   Write-Host "android debug apk: skipped ($downloadUrl is not available)"
 }
 
-Write-Host ""
-Write-Host "Recent container logs"
-$logServices = @("api", "web")
-if ($Https) {
-  $logServices += "caddy"
+if (!$SkipCompose) {
+  Write-Host ""
+  Write-Host "Recent container logs"
+  $logServices = @("api", "web")
+  if ($Https) {
+    $logServices += "caddy"
+  }
+  docker compose @composeArgs logs --tail=40 @logServices
 }
-docker compose @composeArgs logs --tail=40 @logServices
 
 Write-Host ""
 Write-Host "Production check passed at $BaseUrl"
