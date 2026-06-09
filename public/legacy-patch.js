@@ -431,6 +431,16 @@
     localStorage.removeItem(AUTH_TRIP_STORAGE_KEY)
   }
 
+  function logoutCurrentSession() {
+    var token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    if (!token) return
+    fetch(apiBaseUrlForAuth() + '/auth/logout', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + token },
+      keepalive: true
+    }).catch(function () {})
+  }
+
   function restoreAuthSession() {
     var card = document.querySelector('.auth-card')
     if (!card || card.dataset.sessionRestoreReady === 'true') return
@@ -1446,6 +1456,7 @@
     if (!button) return
     var text = getCleanText(button)
     if (text.indexOf('\uB85C\uADF8\uC544\uC6C3') >= 0 || text.toLowerCase().indexOf('logout') >= 0) {
+      logoutCurrentSession()
       clearStoredAuth()
     }
   }, true)

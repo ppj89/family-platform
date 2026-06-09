@@ -363,6 +363,7 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "database commit failed")
 		return
 	}
+	a.recordLoginHistory(r.Context(), &userID, email, "password", "REGISTER", "SUCCESS", "")
 	user := authUser{ID: userID, Email: email, PlatformAdmin: userCount == 0, SessionID: sessionID}
 	writeJSON(w, http.StatusCreated, authResponse{
 		AccessToken:   a.issueToken(user),
@@ -394,10 +395,12 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 		from app_users where email = $1
 	`, email).Scan(&userID, &nickname, &platformAdmin, &passwordHash, &activeSessionID, &lockedUntil, &failedAttempts)
 	if err != nil {
+		a.recordLoginHistory(r.Context(), nil, email, "password", "LOGIN", "FAIL", "invalid email")
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
 	if lockedUntil.Valid && lockedUntil.Time.After(time.Now()) {
+		a.recordLoginHistory(r.Context(), &userID, email, "password", "LOGIN", "LOCKED", "account is locked")
 		writeError(w, http.StatusLocked, "account is locked")
 		return
 	}
@@ -412,10 +415,12 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 		} else {
 			_, _ = a.db.Exec(r.Context(), "update app_users set failed_login_attempts = $1 where id = $2", failedAttempts, userID)
 		}
+		a.recordLoginHistory(r.Context(), &userID, email, "password", "LOGIN", "FAIL", "invalid password")
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
 	if activeSessionID.Valid && activeSessionID.String != "" && !req.ForceLogin {
+		a.recordLoginHistory(r.Context(), &userID, email, "password", "LOGIN", "ACTIVE_SESSION", "active session exists")
 		writeError(w, http.StatusConflict, "active session exists")
 		return
 	}
@@ -429,6 +434,7 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "login failed")
 		return
 	}
+	a.recordLoginHistory(r.Context(), &userID, email, "password", "LOGIN", "SUCCESS", "")
 	user := authUser{ID: userID, Email: email, PlatformAdmin: platformAdmin, SessionID: sessionID}
 	writeJSON(w, http.StatusOK, authResponse{
 		AccessToken:   a.issueToken(user),
@@ -441,6 +447,7 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 
 func (a *app) logout(w http.ResponseWriter, r *http.Request, user authUser) {
 	_, _ = a.db.Exec(r.Context(), "update app_users set active_session_id = null where id = $1 and active_session_id = $2", user.ID, user.SessionID)
+	a.recordLoginHistory(r.Context(), &user.ID, user.Email, "password", "LOGOUT", "SUCCESS", "")
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -551,29 +558,35 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	accessToken, err := a.exchangeOAuthCode(r.Context(), providerName, provider, code)
 	if err != nil {
 		a.log.Error("oauth token exchange failed", "provider", providerName, "error", err)
+		a.recordLoginHistory(r.Context(), nil, "", providerName, "SSO_LOGIN", "FAIL", "token exchange failed")
 		writeError(w, http.StatusBadGateway, "oauth token exchange failed")
 		return
 	}
 	profile, err := a.fetchOAuthProfile(r.Context(), providerName, provider, accessToken)
 	if err != nil {
 		a.log.Error("oauth profile fetch failed", "provider", providerName, "error", err)
+		a.recordLoginHistory(r.Context(), nil, "", providerName, "SSO_LOGIN", "FAIL", "profile fetch failed")
 		writeError(w, http.StatusBadGateway, "oauth profile fetch failed")
 		return
 	}
 	if profile.ProviderUserID == "" {
+		a.recordLoginHistory(r.Context(), nil, profile.Email, providerName, "SSO_LOGIN", "FAIL", "missing provider id")
 		writeError(w, http.StatusBadGateway, "oauth profile is missing provider id")
 		return
 	}
 	response, err := a.loginOAuthUser(r.Context(), providerName, profile, true)
 	if errors.Is(err, errActiveSessionExists) {
+		a.recordLoginHistory(r.Context(), nil, profile.Email, providerName, "SSO_LOGIN", "ACTIVE_SESSION", "active session exists")
 		writeOAuthCallbackHTML(w, http.StatusConflict, a.cfg.publicBaseURL, "", nil, "active session exists")
 		return
 	}
 	if err != nil {
 		a.log.Error("oauth login failed", "provider", providerName, "error", err)
+		a.recordLoginHistory(r.Context(), nil, profile.Email, providerName, "SSO_LOGIN", "FAIL", "oauth login failed")
 		writeOAuthCallbackHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, "", nil, "oauth login failed")
 		return
 	}
+	a.recordLoginHistory(r.Context(), &response.UserID, response.Email, providerName, "SSO_LOGIN", "SUCCESS", "")
 	userPayload := map[string]any{
 		"userId":        response.UserID,
 		"email":         response.Email,
@@ -2327,6 +2340,18 @@ create table if not exists app_users (
 alter table if exists app_users add column if not exists provider varchar(255);
 alter table if exists app_users add column if not exists provider_user_id varchar(255);
 create unique index if not exists idx_app_users_provider_subject on app_users (provider, provider_user_id) where provider is not null and provider_user_id is not null;
+create table if not exists login_histories (
+  id bigint generated by default as identity primary key,
+  user_id bigint references app_users(id) on delete set null,
+  email varchar(255),
+  provider varchar(255) not null,
+  event_type varchar(255) not null,
+  result varchar(255) not null,
+  reason varchar(512),
+  created_at timestamp with time zone not null
+);
+create index if not exists idx_login_histories_user_created on login_histories (user_id, created_at desc);
+create index if not exists idx_login_histories_email_created on login_histories (email, created_at desc);
 create table if not exists oauth_identities (
   provider varchar(255) not null,
   provider_user_id varchar(255) not null,
@@ -2549,6 +2574,17 @@ func writeJSON(w http.ResponseWriter, status int, body any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"message": message})
+}
+
+func (a *app) recordLoginHistory(ctx context.Context, userID *int64, email, provider, eventType, result, reason string) {
+	var userValue any
+	if userID != nil {
+		userValue = *userID
+	}
+	_, _ = a.db.Exec(ctx, `
+		insert into login_histories (user_id, email, provider, event_type, result, reason, created_at)
+		values ($1, $2, $3, $4, $5, $6, now())
+	`, userValue, normalizeEmail(email), provider, eventType, result, reason)
 }
 
 func writeOAuthCallbackHTML(w http.ResponseWriter, status int, publicBaseURL string, accessToken string, userPayload map[string]any, errorMessage string) {
