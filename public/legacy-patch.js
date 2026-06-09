@@ -360,6 +360,11 @@
       var text = getCleanText(button)
       return text.indexOf('회원가입') >= 0 || text.indexOf('가입') >= 0 || text.toLowerCase().indexOf('register') >= 0
     })
+    if (!registerTab) {
+      registerTab = tabButtons.find(function (button) {
+        return button !== loginTab
+      })
+    }
 
     if (!loginTab) {
       loginTab = document.createElement('button')
@@ -374,6 +379,9 @@
       tabs.appendChild(registerTab)
     }
     registerTab.textContent = '회원가입'
+    Array.from(tabs.querySelectorAll('button')).forEach(function (button) {
+      if (button !== loginTab && button !== registerTab) button.remove()
+    })
 
     var nicknameField = card.querySelector('.auth-nickname-field')
     if (!nicknameField) {
