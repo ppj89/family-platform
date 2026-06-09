@@ -56,6 +56,13 @@ export async function requestLogout() {
   }
 }
 
+export async function resendVerificationEmail(email: string) {
+  return apiRequest<{ message: string }>('/auth/verification/resend', {
+    method: 'POST',
+    body: { email },
+  })
+}
+
 export function logout() {
   void requestLogout()
 }

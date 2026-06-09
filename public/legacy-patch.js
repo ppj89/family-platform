@@ -188,6 +188,56 @@
     return '로그인 처리 중 오류가 발생했습니다.'
   }
 
+  function isEmailVerificationError(error) {
+    var text = String(error && error.message ? error.message : error || '')
+    return text.indexOf('email verification') >= 0 || (error && error.status === 403)
+  }
+
+  function resendVerificationEmail(email, trigger) {
+    var normalized = String(email || '').trim()
+    if (!normalized) {
+      showPatchToast('이메일을 먼저 입력해주세요.')
+      return
+    }
+    if (trigger) {
+      trigger.disabled = true
+      trigger.textContent = '전송 중...'
+    }
+    apiJson('/auth/verification/resend', { email: normalized })
+      .then(function () {
+        showPatchToast('인증 메일을 다시 요청했습니다.')
+      })
+      .catch(function () {
+        showPatchToast('인증 메일 요청 중 오류가 발생했습니다.')
+      })
+      .finally(function () {
+        if (trigger) {
+          trigger.disabled = false
+          trigger.textContent = '인증메일 다시 받기'
+        }
+      })
+  }
+
+  function ensureVerificationResendAction(card, email) {
+    if (!card) return
+    var helper = card.querySelector('.auth-helper')
+    if (!helper) return
+    var button = helper.querySelector('[data-auth-resend-verification]')
+    if (!button) {
+      button = document.createElement('button')
+      button.type = 'button'
+      button.dataset.authResendVerification = 'true'
+      button.className = 'auth-resend-verification'
+      button.textContent = '인증메일 다시 받기'
+      helper.appendChild(button)
+    }
+    button.hidden = false
+    button.dataset.email = email || ''
+    button.onclick = function () {
+      resendVerificationEmail(button.dataset.email || getAuthPayload(card).email, button)
+    }
+  }
+
   function getAuthMode(card) {
     if (card && card.dataset.authMode) return card.dataset.authMode
     var active = card.querySelector('.auth-tabs button.active')
@@ -302,6 +352,9 @@
           })
           return
         }
+        if (mode === 'login' && isEmailVerificationError(error)) {
+          ensureVerificationResendAction(submit && submit.closest('.auth-card'), payload.email)
+        }
         showPatchToast(parseAuthError(error))
       }).finally(function () {
         setAuthSubmitBusy(submit, mode, false)
@@ -406,6 +459,8 @@
       loginTab.classList.toggle('active', mode === 'login')
       registerTab.classList.toggle('active', mode === 'register')
       nicknameField.style.display = mode === 'register' ? '' : 'none'
+      var resendButton = card.querySelector('[data-auth-resend-verification]')
+      if (resendButton) resendButton.hidden = true
       if (passwordInput) passwordInput.autocomplete = mode === 'register' ? 'new-password' : 'current-password'
       if (submit && submit.dataset.authBusy !== 'true') submit.textContent = mode === 'register' ? '회원가입' : '로그인'
       normalizeAuthCopy(card, mode)
