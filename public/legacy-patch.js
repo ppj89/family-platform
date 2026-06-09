@@ -311,6 +311,31 @@
     return dispatchRealClick(targetCard)
   }
 
+  function getYearSelectedMonthDate() {
+    var stored = parseDate(document.documentElement.dataset.yearSelectedMonth || '')
+    if (stored) return new Date(stored.getFullYear(), stored.getMonth(), 1)
+    var active = document.querySelector('.year-month-card.active')
+    var strong = active && active.querySelector('strong')
+    var month = Number(((strong && strong.textContent.match(/\d+/g)) || [])[0])
+    if (Number.isFinite(month)) return new Date(getCurrentYearNumber(), month - 1, 1)
+    return new Date(getCurrentYearNumber(), new Date().getMonth(), 1)
+  }
+
+  function setYearSelectedMonth(monthDate) {
+    if (!monthDate) return
+    var normalized = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1)
+    document.documentElement.dataset.yearSelectedMonth = formatDate(normalized)
+    document.querySelectorAll('.year-month-card.active').forEach(function (item) {
+      item.classList.remove('active')
+    })
+    var monthText = String(normalized.getMonth() + 1)
+    Array.from(document.querySelectorAll('.year-month-card')).forEach(function (card) {
+      var strong = card.querySelector('strong')
+      var month = ((strong && strong.textContent.match(/\d+/g)) || [])[0]
+      if (month === monthText) card.classList.add('active')
+    })
+  }
+
   function updateJumpInput(date) {
     var input = document.querySelector('.calendar-jump-control input')
     if (input) input.value = formatDate(date)
@@ -1738,12 +1763,9 @@
       var month = Number(((strong && strong.textContent.match(/\d+/g)) || [])[0])
       if (Number.isFinite(month)) {
         var selectedMonth = new Date(titleDate.getFullYear(), month - 1, 1)
+        setYearSelectedMonth(selectedMonth)
         updateJumpInput(selectedMonth)
         updateScheduleFormVisibleDate(selectedMonth)
-        document.querySelectorAll('.year-month-card.active').forEach(function (item) {
-          item.classList.remove('active')
-        })
-        card.classList.add('active')
         setScheduleListContext(month + '\uC6D4 \uC77C\uC815\uD45C', (card.querySelector('span') || {}).textContent)
         renderYearSelectedMonthList(selectedMonth)
       }
@@ -1841,12 +1863,7 @@
       window.__familyYearScheduleCache = { year: year, token: cacheToken, family: localStorage.getItem(AUTH_FAMILY_STORAGE_KEY) || cacheFamily, loading: false, loaded: true, months: months }
       window.setTimeout(function () {
         decorateYearCalendar()
-        var active = document.querySelector('.year-month-card.active')
-        if (active) {
-          var strong = active.querySelector('strong')
-          var month = Number(((strong && strong.textContent.match(/\d+/g)) || [])[0])
-          if (Number.isFinite(month)) renderYearSelectedMonthList(new Date(year, month - 1, 1))
-        }
+        renderYearSelectedMonthList(getYearSelectedMonthDate())
       }, 0)
     }).catch(function () {
       window.__familyYearScheduleCache = { year: year, token: cacheToken, family: cacheFamily, loading: false, loaded: true, months: {} }
@@ -1857,9 +1874,11 @@
     if (!monthDate || getActiveCalendarMode() !== 'year') return
     var card = document.querySelector('.schedule-list-card')
     if (!card) return
+    setYearSelectedMonth(monthDate)
     var month = monthDate.getMonth() + 1
     var range = monthRangeFor(formatDate(monthDate))
     setScheduleListContext(month + '\uC6D4 \uC77C\uC815\uD45C', '0\uAC74')
+    var selectedKey = formatDate(new Date(monthDate.getFullYear(), monthDate.getMonth(), 1))
     var list = card.querySelector('.api-schedule-list')
     if (!list) {
       list = document.createElement('div')
@@ -1868,6 +1887,7 @@
     }
     list.innerHTML = '<p class="empty-note">\uC77C\uC815\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</p>'
     fetchSchedulesDirect(range.start, range.end).then(function (items) {
+      if (document.documentElement.dataset.yearSelectedMonth !== selectedKey) return
       var schedules = (items || []).sort(function (a, b) {
         return String(a.scheduleDate || '').localeCompare(String(b.scheduleDate || '')) || String(a.scheduleTime || '').localeCompare(String(b.scheduleTime || ''))
       })
@@ -4667,12 +4687,7 @@
     removeDeveloperServerPanels()
     var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
     if (mode === 'year') {
-      var activeMonthCard = document.querySelector('.year-month-card.active') || document.querySelector('.year-month-card')
-      var strong = activeMonthCard && activeMonthCard.querySelector('strong')
-      var month = Number(((strong && strong.textContent.match(/\d+/g)) || [])[0])
-      if (Number.isFinite(month)) {
-        renderYearSelectedMonthList(new Date(getCurrentYearNumber(), month - 1, 1))
-      }
+      renderYearSelectedMonthList(getYearSelectedMonthDate())
       return Promise.resolve([])
     }
     var label = mode === 'day' ? '\uC77C\uAC04 \uC77C\uC815\uD45C' : (mode === 'week' ? '\uC8FC\uAC04 \uC77C\uC815\uD45C' : '\uC6D4\uAC04 \uC77C\uC815\uD45C')
