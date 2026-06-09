@@ -2296,6 +2296,17 @@
   }, true)
 
   document.addEventListener('click', function (event) {
+    var target = event.target && event.target.closest && event.target.closest('button,a,[role="button"],.nav-item')
+    if (!target || target.closest('.auth-card')) return
+    if (getCleanText(target) !== '\uCEE4\uBBA4\uB2C8\uD2F0') return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    clearFamilyGroupPage()
+    queueOpenCommunityPage(true)
+  }, true)
+
+  document.addEventListener('click', function (event) {
     var nav = event.target && event.target.closest && event.target.closest('.nav-item')
     if (!isFamilyGroupNavItem(nav)) return
     event.preventDefault()
@@ -3189,6 +3200,12 @@
     var content = document.querySelector('.content-grid')
     if (!content) return
 
+    Array.from(content.querySelectorAll('.summary-band, .panel')).forEach(function (panel) {
+      if (getCleanText(panel).indexOf('\uAC00\uC871 \uC0DD\uD65C \uB370\uC774\uD130') >= 0) {
+        hidePatchElement(panel)
+      }
+    })
+
     var panels = Array.from(content.querySelectorAll('.panel'))
     var todayPanel = panels.find(function (panel) {
       var h2 = panel.querySelector('.panel-header h2')
@@ -3757,10 +3774,11 @@
     return item.scheduleTime ? String(item.scheduleTime).slice(0, 5) : '\uC2DC\uAC04 \uBBF8\uC815'
   }
 
-  function renderHomeSchedulesFromApi() {
+  function renderHomeSchedulesFromApi(force) {
     var todayPanel = document.querySelector('.home-today-schedule')
     var list = todayPanel && todayPanel.querySelector('.task-list')
     if (!list || todayPanel.dataset.apiLoading === 'true') return
+    if (!force && todayPanel.dataset.apiBacked === 'true') return
     todayPanel.dataset.apiLoading = 'true'
 
     var today = todayText()
@@ -3780,9 +3798,10 @@
     })
   }
 
-  function renderHomeLedgerFromApi() {
+  function renderHomeLedgerFromApi(force) {
     var table = document.querySelector('.content-grid .panel.wide .ledger-table')
     if (!table || table.dataset.apiLoading === 'true') return
+    if (!force && table.dataset.apiBacked === 'true') return
     table.dataset.apiLoading = 'true'
 
     var range = monthRangeFor(todayText())
@@ -4062,8 +4081,8 @@
 
   function refreshServerDataViews(force) {
     if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return
-    renderHomeSchedulesFromApi()
-    renderHomeLedgerFromApi()
+    renderHomeSchedulesFromApi(force)
+    renderHomeLedgerFromApi(force)
     renderCalendarServerSchedules(force)
     renderLedgerServerEntries(force)
     renderTravelServerEntries(force)
