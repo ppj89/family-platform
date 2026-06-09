@@ -1747,13 +1747,18 @@
       }
       list.innerHTML = schedules.map(function (item) {
         var date = new Date(String(item.scheduleDate || todayText()) + 'T00:00:00')
-        return '<button type="button" class="schedule-row server-year-schedule-row" data-api-schedule-id="' + escapeHtml(item.id) + '">' +
+        return '<div class="schedule-row server-year-schedule-row" role="button" tabindex="0" data-api-schedule-id="' + escapeHtml(item.id) + '">' +
           '<span class="schedule-date-badge"><strong>' + date.getDate() + '</strong><span>' + escapeHtml(formatKoreanShortDate(date).replace(/^.*\((.)\).*$/, '$1')) + '</span></span>' +
           '<div><strong>' + escapeHtml(item.title || '\uC77C\uC815') + '</strong><p>' + escapeHtml(scheduleTimeText(item) + ' \u00B7 ' + (item.category || '\uC77C\uC815') + (item.memberName ? ' \u00B7 ' + item.memberName : '')) + '</p><small>' + escapeHtml(item.memo || '') + '</small></div>' +
-          '</button>'
+          '</div>'
       }).join('')
       list.querySelectorAll('.server-year-schedule-row').forEach(function (row, index) {
         row.addEventListener('click', function () {
+          openScheduleApiDetail(schedules[index])
+        })
+        row.addEventListener('keydown', function (event) {
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
           openScheduleApiDetail(schedules[index])
         })
       })
@@ -4479,10 +4484,10 @@
   function renderScheduleRowsFromApi(items, label) {
     var card = document.querySelector('.schedule-list-card')
     if (!card) return
-    var list = card.querySelector('.schedule-list')
+    var list = card.querySelector('.api-schedule-list')
     if (!list) {
       list = document.createElement('div')
-      list.className = 'schedule-list'
+      list.className = 'api-schedule-list'
       card.appendChild(list)
     }
     var schedules = (items || []).slice().sort(function (a, b) {
@@ -4497,15 +4502,20 @@
     list.innerHTML = schedules.map(function (item) {
       var date = new Date(String(item.scheduleDate || todayText()) + 'T00:00:00')
       var weekday = formatKoreanShortDate(date).replace(/^.*\((.)\).*$/, '$1')
-      return '<button type="button" class="schedule-row api-schedule-row" data-api-schedule-id="' + escapeHtml(item.id) + '">' +
+      return '<div class="schedule-row api-schedule-row" role="button" tabindex="0" data-api-schedule-id="' + escapeHtml(item.id) + '">' +
         '<span class="schedule-date-badge"><strong>' + date.getDate() + '</strong><span>' + escapeHtml(weekday) + '</span></span>' +
         '<div><strong>' + escapeHtml(item.title || '\uC77C\uC815') + '</strong><p>' + escapeHtml(scheduleTimeText(item) + ' \u00B7 ' + (item.category || '\uC77C\uC815') + (item.memberName ? ' \u00B7 ' + item.memberName : '')) + '</p><small>' + escapeHtml(item.memo || '') + '</small></div>' +
         '<div class="schedule-row-actions"><button type="button" class="edit-button">\uC218\uC815</button><button type="button" class="danger-button">\uC0AD\uC81C</button></div>' +
-        '</button>'
+        '</div>'
     }).join('')
     list.querySelectorAll('.api-schedule-row').forEach(function (row, index) {
       row.addEventListener('click', function (event) {
         if (event.target && event.target.closest && event.target.closest('.schedule-row-actions button')) return
+        openScheduleApiDetail(schedules[index])
+      })
+      row.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
         openScheduleApiDetail(schedules[index])
       })
     })
@@ -4516,34 +4526,11 @@
     removeDeveloperServerPanels()
     var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
     var label = mode === 'day' ? '\uC77C\uAC04 \uC77C\uC815\uD45C' : (mode === 'week' ? '\uC8FC\uAC04 \uC77C\uC815\uD45C' : (mode === 'year' ? '\uC5F0\uAC04 \uC77C\uC815\uD45C' : '\uC6D4\uAC04 \uC77C\uC815\uD45C'))
-    document.querySelectorAll('.family-calendar-panel .day-chip-stack').forEach(function (stack) {
-      stack.innerHTML = ''
-    })
     if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) {
       renderScheduleRowsFromApi([], label)
       return Promise.resolve([])
     }
     return loadCalendarScheduleCache(force).then(function (items) {
-      var grouped = {}
-      ;(items || []).forEach(function (item) {
-        var key = String(item.scheduleDate || '')
-        if (!grouped[key]) grouped[key] = []
-        grouped[key].push(item)
-      })
-      document.querySelectorAll('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day').forEach(function (card, index) {
-        var date = getCalendarCardDate(card, index)
-        if (!date) return
-        var key = formatDate(date)
-        var stack = card.querySelector('.day-chip-stack')
-        if (!stack) {
-          stack = document.createElement('div')
-          stack.className = 'day-chip-stack'
-          card.appendChild(stack)
-        }
-        stack.innerHTML = (grouped[key] || []).slice(0, 3).map(function (item) {
-          return '<em data-api-schedule-id="' + escapeHtml(item.id) + '">' + escapeHtml(item.title || '\uC77C\uC815') + '</em>'
-        }).join('')
-      })
       renderScheduleRowsFromApi(items, label)
       return items
     })

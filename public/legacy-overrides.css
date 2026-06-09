@@ -9401,6 +9401,28 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06) !important;
 }
 
+.schedule-row.api-schedule-row {
+  width: 100% !important;
+  border: 0 !important;
+  outline: 0 !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+}
+
+.schedule-row.api-schedule-row:focus-visible {
+  box-shadow: inset 0 0 0 2px #3182f6 !important;
+}
+
+body:has(.family-calendar-panel) .schedule-list-card > .schedule-list,
+body:has(.family-calendar-panel) .family-calendar-panel .day-chip-stack {
+  display: none !important;
+}
+
+.api-schedule-list {
+  display: grid !important;
+  gap: 12px !important;
+}
+
 .theme-dark .family-calendar-panel .year-month-card.active {
   border-color: #34445c !important;
   background: #202a36 !important;
