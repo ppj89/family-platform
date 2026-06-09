@@ -211,6 +211,7 @@
     document.addEventListener('click', function (event) {
       var card = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day, .family-calendar-panel .agenda-day-column')
       if (!card || card.classList.contains('muted')) return
+      var suppressPopup = Date.now() < (window.__familySuppressCalendarPopupUntil || 0)
       window.__familyDirectCalendarDebug = { step: 'card', text: card.innerText }
       var focused = getFocusedDate()
       var selectedDate = null
@@ -235,6 +236,7 @@
       updateJumpInput(selectedDate)
       updateScheduleFormVisibleDate(selectedDate)
       updateSelectedDayPanel(selectedDate, card)
+      if (suppressPopup) return
       apiGet('/families').then(function (families) {
         window.__familyDirectCalendarDebug = { step: 'families', dateText: dateText, families: families }
         var family = Array.isArray(families) ? families[0] : null
@@ -547,16 +549,9 @@
 
   function submitLegacyAuthForm(button) {
     if (!button) return
-    var form = button.closest && button.closest('.auth-card')
     var wasDisabled = button.disabled
     button.disabled = false
-    if (form && form.requestSubmit) {
-      form.requestSubmit(button)
-    } else if (form) {
-      form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
-    } else {
-      button.click()
-    }
+    button.click()
     button.disabled = wasDisabled
   }
 
@@ -703,6 +698,15 @@
     localStorage.removeItem(AUTH_TRIP_STORAGE_KEY)
   }
 
+  function forceClearStoredAuth() {
+    protectedAuthUntil = 0
+    protectedAuthSnapshot = null
+    localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+    localStorage.removeItem(AUTH_USER_STORAGE_KEY)
+    localStorage.removeItem(AUTH_FAMILY_STORAGE_KEY)
+    localStorage.removeItem(AUTH_TRIP_STORAGE_KEY)
+  }
+
   var lastLogoutRequestAt = 0
 
   function logoutCurrentSession() {
@@ -725,8 +729,11 @@
     var depth = 0
     while (node && node !== document.body && depth < 7) {
       if (node.nodeType === 1) {
-        var text = getCleanText(node)
-        if (text.indexOf('\uB85C\uADF8\uC544\uC6C3') >= 0 || text.toLowerCase().indexOf('logout') >= 0) {
+        var tag = String(node.tagName || '').toLowerCase()
+        var role = node.getAttribute && String(node.getAttribute('role') || '').toLowerCase()
+        var isInteractive = tag === 'button' || tag === 'a' || role === 'button' || node.classList.contains('logout-button')
+        var text = getCleanText(node).replace(/\s+/g, ' ').trim()
+        if (isInteractive && (text === '\uB85C\uADF8\uC544\uC6C3' || text.toLowerCase() === 'logout')) {
           return node
         }
       }
@@ -782,7 +789,7 @@
         })
       }
     }).catch(function () {
-      clearStoredAuth()
+      forceClearStoredAuth()
       delete card.dataset.sessionRestoreReady
     })
   }
@@ -1985,12 +1992,13 @@
     }
     if (window.__familyCalendarEntryActive) return
     window.__familyCalendarEntryActive = true
-    var today = new Date()
-    document.documentElement.dataset.calendarSelectedDate = formatDate(today)
-    updateScheduleFormVisibleDate(today)
-    updateJumpInput(today)
-    window.setTimeout(function () {
-      moveCalendarTo(today).then(function () {
+      var today = new Date()
+      document.documentElement.dataset.calendarSelectedDate = formatDate(today)
+      updateScheduleFormVisibleDate(today)
+      updateJumpInput(today)
+      window.__familySuppressCalendarPopupUntil = Date.now() + 2500
+      window.setTimeout(function () {
+        moveCalendarTo(today).then(function () {
         updateSelectedDayPanel(today)
         refreshServerDataViews(true)
       }).catch(function () {})
@@ -4174,7 +4182,12 @@
     }, options || {})).then(function (response) {
       if (!response.ok) {
         return response.text().then(function (message) {
-          throw new Error(message || ('API ' + response.status))
+          var error = new Error(message || ('API ' + response.status))
+          error.status = response.status
+          if (response.status === 401 && String(message || '').indexOf('invalid session') >= 0) {
+            forceClearStoredAuth()
+          }
+          throw error
         })
       }
       if (response.status === 204) return null
@@ -4802,15 +4815,21 @@
     renderBabyServerEntries(force)
   }
 
-  function getCurrentFamilyId() {
+  function getCurrentFamilyId(forceRefresh) {
     var cachedId = Number(localStorage.getItem(API_FAMILY_ID_KEY) || '')
-    if (Number.isFinite(cachedId) && cachedId > 0) return Promise.resolve(cachedId)
+    if (!forceRefresh && Number.isFinite(cachedId) && cachedId > 0) return Promise.resolve(cachedId)
 
     return apiRequest('/families').then(function (families) {
       var family = Array.isArray(families) ? families[0] : null
       if (!family || !family.id) throw new Error('No family group available')
       localStorage.setItem(API_FAMILY_ID_KEY, String(family.id))
       return family.id
+    })
+  }
+
+  function postScheduleWithFreshFamily(payload, forceRefresh) {
+    return getCurrentFamilyId(forceRefresh).then(function (familyId) {
+      return postJson('/schedules?familyId=' + encodeURIComponent(familyId), payload)
     })
   }
 
@@ -4929,8 +4948,12 @@
       return
     }
     form.dataset.scheduleSubmitting = 'true'
-    return getCurrentFamilyId().then(function (familyId) {
-      return postJson('/schedules?familyId=' + encodeURIComponent(familyId), payload)
+    return postScheduleWithFreshFamily(payload, false).catch(function (error) {
+      localStorage.removeItem(API_FAMILY_ID_KEY)
+      return postScheduleWithFreshFamily(payload, true).catch(function (retryError) {
+        retryError.__firstScheduleError = error
+        throw retryError
+      })
     }).then(function () {
       calendarScheduleCache.key = ''
       calendarScheduleCache.items = []
