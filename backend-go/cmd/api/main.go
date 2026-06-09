@@ -298,6 +298,7 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("DELETE /api/diaries/{diaryId}", a.requireAuth(a.deleteDiary))
 	mux.HandleFunc("GET /api/community/posts", a.requireAuth(a.listCommunityPosts))
 	mux.HandleFunc("POST /api/community/posts", a.requireAuth(a.createCommunityPost))
+	mux.HandleFunc("GET /api/community/posts/best", a.requireAuth(a.listCommunityBestPosts))
 	mux.HandleFunc("GET /api/community/posts/{postId}", a.requireAuth(a.getCommunityPost))
 	mux.HandleFunc("PUT /api/community/posts/{postId}", a.requireAuth(a.updateCommunityPost))
 	mux.HandleFunc("DELETE /api/community/posts/{postId}", a.requireAuth(a.deleteCommunityPost))
@@ -1711,16 +1712,18 @@ func (a *app) deleteDiary(w http.ResponseWriter, r *http.Request, user authUser)
 }
 
 type communityPostItem struct {
-	ID         int64    `json:"id"`
-	BoardType  string   `json:"boardType"`
-	FamilyID   *int64   `json:"familyId,omitempty"`
-	AuthorID   *int64   `json:"authorId,omitempty"`
-	AuthorName string   `json:"authorName"`
-	Title      string   `json:"title"`
-	Body       string   `json:"body"`
-	MediaURLs  []string `json:"mediaUrls"`
-	CreatedAt  string   `json:"createdAt"`
-	UpdatedAt  string   `json:"updatedAt"`
+	ID              int64    `json:"id"`
+	BoardType       string   `json:"boardType"`
+	FamilyID        *int64   `json:"familyId,omitempty"`
+	AuthorID        *int64   `json:"authorId,omitempty"`
+	AuthorName      string   `json:"authorName"`
+	Title           string   `json:"title"`
+	Body            string   `json:"body"`
+	MediaURLs       []string `json:"mediaUrls"`
+	ViewCount       int64    `json:"viewCount"`
+	PeriodViewCount int64    `json:"periodViewCount,omitempty"`
+	CreatedAt       string   `json:"createdAt"`
+	UpdatedAt       string   `json:"updatedAt"`
 }
 
 type communityCommentItem struct {
@@ -1739,7 +1742,7 @@ func (a *app) listCommunityPosts(w http.ResponseWriter, r *http.Request, user au
 		return
 	}
 	familyID := queryInt64(r, "familyId", 0)
-	query := `select id, board_type, family_id, author_id, author_name, title, body::text, created_at, updated_at from community_posts where board_type = $1`
+	query := `select id, board_type, family_id, author_id, author_name, title, body::text, coalesce(view_count,0), created_at, updated_at from community_posts where board_type = $1`
 	args := []any{board}
 	if familyID > 0 && board != "free" && board != "notice" {
 		if !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
@@ -1771,11 +1774,70 @@ func (a *app) getCommunityPost(w http.ResponseWriter, r *http.Request, user auth
 	if !ok || !a.requirePostRead(w, r.Context(), user, post) {
 		return
 	}
+	a.recordCommunityPostView(r.Context(), postID)
+	post, ok = a.communityPostByID(w, r.Context(), postID)
+	if !ok {
+		return
+	}
 	comments, ok := a.communityComments(w, r.Context(), postID)
 	if !ok {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"post": post, "comments": comments})
+}
+
+func (a *app) listCommunityBestPosts(w http.ResponseWriter, r *http.Request, user authUser) {
+	board, ok := normalizeBoard(w, r.URL.Query().Get("boardType"))
+	if !ok || !a.requireBoardRead(w, user, board) {
+		return
+	}
+	period := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("period")))
+	var days int
+	switch period {
+	case "", "daily", "day":
+		days = 1
+	case "weekly", "week":
+		days = 7
+	case "monthly", "month":
+		days = 30
+	default:
+		writeError(w, http.StatusBadRequest, "invalid period")
+		return
+	}
+	rows, err := a.db.Query(r.Context(), `
+		select p.id, p.board_type, p.family_id, p.author_id, p.author_name, p.title, p.body::text,
+		       coalesce(p.view_count,0), p.created_at, p.updated_at, coalesce(sum(v.view_count),0) as period_views
+		from community_posts p
+		left join community_post_view_stats v
+		  on v.community_post_id = p.id
+		 and v.view_date >= current_date - (($2::int - 1) * interval '1 day')
+		where p.board_type = $1
+		group by p.id
+		order by period_views desc, coalesce(p.view_count,0) desc, p.created_at desc
+		limit 10
+	`, board, days)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	defer rows.Close()
+	items := []communityPostItem{}
+	for rows.Next() {
+		var item communityPostItem
+		var familyID, authorID sql.NullInt64
+		var createdAt, updatedAt time.Time
+		if err := rows.Scan(&item.ID, &item.BoardType, &familyID, &authorID, &item.AuthorName, &item.Title, &item.Body, &item.ViewCount, &createdAt, &updatedAt, &item.PeriodViewCount); err != nil {
+			writeError(w, http.StatusInternalServerError, "database scan failed")
+			return
+		}
+		item.FamilyID = nullInt64(familyID)
+		item.AuthorID = nullInt64(authorID)
+		item.MediaURLs = a.mediaURLs(r.Context(), "community_post_media_urls", "community_post_id", item.ID)
+		item.CreatedAt = formatTime(createdAt)
+		item.UpdatedAt = formatTime(updatedAt)
+		items = append(items, item)
+	}
+	writeJSON(w, http.StatusOK, items)
 }
 
 func (a *app) createCommunityPost(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -1827,6 +1889,7 @@ func (a *app) deleteCommunityPost(w http.ResponseWriter, r *http.Request, user a
 	}
 	_, _ = a.db.Exec(r.Context(), "delete from community_comments where post_id = $1", postID)
 	_, _ = a.db.Exec(r.Context(), "delete from community_post_media_urls where community_post_id = $1", postID)
+	_, _ = a.db.Exec(r.Context(), "delete from community_post_view_stats where community_post_id = $1", postID)
 	_, _ = a.db.Exec(r.Context(), "delete from community_posts where id = $1", postID)
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -2642,11 +2705,19 @@ create table if not exists community_posts (
   created_at timestamp with time zone,
   family_id bigint,
   title varchar(255),
-  updated_at timestamp with time zone
+  updated_at timestamp with time zone,
+  view_count bigint not null default 0
 );
+alter table community_posts add column if not exists view_count bigint not null default 0;
 create table if not exists community_post_media_urls (
   community_post_id bigint not null,
   media_urls varchar(2048)
+);
+create table if not exists community_post_view_stats (
+  community_post_id bigint not null,
+  view_date date not null,
+  view_count bigint not null default 0,
+  primary key (community_post_id, view_date)
 );
 create table if not exists community_comments (
   id bigint generated by default as identity primary key,
@@ -2680,6 +2751,8 @@ create index if not exists idx_baby_profiles_family on baby_profiles (family_id)
 create index if not exists idx_baby_records_baby_date on baby_records (baby_id, record_date);
 create index if not exists idx_family_diaries_family_date on family_diaries (family_id, diary_date);
 create index if not exists idx_community_posts_board_created on community_posts (board_type, created_at);
+create index if not exists idx_community_posts_board_views on community_posts (board_type, view_count);
+create index if not exists idx_community_post_view_stats_date on community_post_view_stats (view_date, view_count);
 create index if not exists idx_community_comments_post_created on community_comments (post_id, created_at);
 create index if not exists idx_app_notifications_user_created on app_notifications (user_id, created_at);
 `)
@@ -3990,16 +4063,16 @@ func (a *app) saveCommunityPost(w http.ResponseWriter, r *http.Request, id int64
 		err = tx.QueryRow(r.Context(), `
 			insert into community_posts (board_type, family_id, author_id, author_name, title, body, created_at, updated_at)
 			values ($1,$2,$3,$4,$5,$6,now(),now())
-			returning id, board_type, family_id, author_id, author_name, title, body::text, created_at, updated_at
+			returning id, board_type, family_id, author_id, author_name, title, body::text, coalesce(view_count,0), created_at, updated_at
 		`, req.BoardType, req.FamilyID, user.ID, a.displayName(r.Context(), user), req.Title, req.Body).
-			Scan(&item.ID, &item.BoardType, &familyID, &authorID, &item.AuthorName, &item.Title, &item.Body, &createdAt, &updatedAt)
+			Scan(&item.ID, &item.BoardType, &familyID, &authorID, &item.AuthorName, &item.Title, &item.Body, &item.ViewCount, &createdAt, &updatedAt)
 	} else {
 		err = tx.QueryRow(r.Context(), `
 			update community_posts set board_type=$1, family_id=$2, title=$3, body=$4, updated_at=now()
 			where id=$5
-			returning id, board_type, family_id, author_id, author_name, title, body::text, created_at, updated_at
+			returning id, board_type, family_id, author_id, author_name, title, body::text, coalesce(view_count,0), created_at, updated_at
 		`, req.BoardType, req.FamilyID, req.Title, req.Body, id).
-			Scan(&item.ID, &item.BoardType, &familyID, &authorID, &item.AuthorName, &item.Title, &item.Body, &createdAt, &updatedAt)
+			Scan(&item.ID, &item.BoardType, &familyID, &authorID, &item.AuthorName, &item.Title, &item.Body, &item.ViewCount, &createdAt, &updatedAt)
 	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "post save failed")
@@ -4030,7 +4103,7 @@ func (a *app) scanCommunityPosts(w http.ResponseWriter, ctx context.Context, row
 		var item communityPostItem
 		var familyID, authorID sql.NullInt64
 		var createdAt, updatedAt time.Time
-		if err := rows.Scan(&item.ID, &item.BoardType, &familyID, &authorID, &item.AuthorName, &item.Title, &item.Body, &createdAt, &updatedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.BoardType, &familyID, &authorID, &item.AuthorName, &item.Title, &item.Body, &item.ViewCount, &createdAt, &updatedAt); err != nil {
 			writeError(w, http.StatusInternalServerError, "database scan failed")
 			return nil, false
 		}
@@ -4045,7 +4118,7 @@ func (a *app) scanCommunityPosts(w http.ResponseWriter, ctx context.Context, row
 }
 
 func (a *app) communityPostByID(w http.ResponseWriter, ctx context.Context, postID int64) (communityPostItem, bool) {
-	rows, err := a.db.Query(ctx, `select id, board_type, family_id, author_id, author_name, title, body::text, created_at, updated_at from community_posts where id = $1`, postID)
+	rows, err := a.db.Query(ctx, `select id, board_type, family_id, author_id, author_name, title, body::text, coalesce(view_count,0), created_at, updated_at from community_posts where id = $1`, postID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return communityPostItem{}, false
@@ -4057,6 +4130,16 @@ func (a *app) communityPostByID(w http.ResponseWriter, ctx context.Context, post
 		return communityPostItem{}, false
 	}
 	return items[0], true
+}
+
+func (a *app) recordCommunityPostView(ctx context.Context, postID int64) {
+	_, _ = a.db.Exec(ctx, "update community_posts set view_count = coalesce(view_count,0) + 1 where id = $1", postID)
+	_, _ = a.db.Exec(ctx, `
+		insert into community_post_view_stats (community_post_id, view_date, view_count)
+		values ($1, current_date, 1)
+		on conflict (community_post_id, view_date)
+		do update set view_count = community_post_view_stats.view_count + 1
+	`, postID)
 }
 
 func (a *app) communityComments(w http.ResponseWriter, ctx context.Context, postID int64) ([]communityCommentItem, bool) {

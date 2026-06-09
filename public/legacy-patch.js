@@ -2410,6 +2410,9 @@
     editingPostId: null,
     loadingTabs: {},
     loadedTabs: {},
+    best: { daily: [], weekly: [], monthly: [] },
+    bestLoading: false,
+    bestLoadedAt: 0,
     notice: [
       {
         id: 'notice-1',
@@ -2632,6 +2635,8 @@
       date: when.date,
       time: when.time,
       files: (item.mediaUrls || []).map(communityFileFromUrl),
+      views: Number(item.viewCount || item.views || 0),
+      periodViews: Number(item.periodViewCount || item.periodViews || 0),
       comments: (detailComments || []).map(normalizeCommunityComment)
     }
   }
@@ -2668,9 +2673,42 @@
     return apiRequest('/community/posts/' + encodeURIComponent(post.serverId)).then(function (detail) {
       var next = normalizeCommunityPost(detail.post || {}, detail.comments || [])
       replaceCommunityPost(tab, next)
+      if (tab === 'free') loadCommunityBestPosts(true)
       return next
     }).catch(function () {
       return post
+    })
+  }
+
+  function loadCommunityBestPosts(force) {
+    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve(communityState.best)
+    if (communityState.bestLoading) return Promise.resolve(communityState.best)
+    if (!force && communityState.bestLoadedAt && Date.now() - communityState.bestLoadedAt < 30000) {
+      return Promise.resolve(communityState.best)
+    }
+    communityState.bestLoading = true
+    var periods = ['daily', 'weekly', 'monthly']
+    return Promise.all(periods.map(function (period) {
+      return apiRequest('/community/posts/best?boardType=free&period=' + period).then(function (items) {
+        return (Array.isArray(items) ? items : []).map(function (item) {
+          return normalizeCommunityPost(item, [])
+        })
+      }).catch(function () {
+        return []
+      })
+    })).then(function (results) {
+      communityState.best = {
+        daily: results[0],
+        weekly: results[1],
+        monthly: results[2]
+      }
+      communityState.bestLoadedAt = Date.now()
+      if (document.documentElement.dataset.patchPage === 'community' && communityState.activeTab === 'free' && communityState.view === 'list') {
+        renderCommunityPage(true)
+      }
+      return communityState.best
+    }).finally(function () {
+      communityState.bestLoading = false
     })
   }
 
@@ -2890,6 +2928,7 @@
     ].join('')
 
     wireCommunityPage()
+    if (tab === 'free' && communityState.view === 'list') loadCommunityBestPosts(false)
   }
 
   function renderCommunityComposer(tab, admin) {
@@ -3020,6 +3059,37 @@
     }).join('') + '</div>'
   }
 
+  function formatCommunityNumber(value) {
+    return String(Number(value || 0).toLocaleString('ko-KR'))
+  }
+
+  function renderCommunityBestPanel() {
+    var labels = {
+      daily: '\uC77C\uC77C\uBCA0\uC2A4\uD2B8',
+      weekly: '\uC8FC\uAC04\uBCA0\uC2A4\uD2B8',
+      monthly: '\uC6D4\uAC04\uBCA0\uC2A4\uD2B8'
+    }
+    return '<div class="community-best-grid">' + ['daily', 'weekly', 'monthly'].map(function (period) {
+      var rows = communityState.best[period] || []
+      return [
+        '<section class="community-best-card">',
+        '<div class="community-best-head"><strong>' + labels[period] + '</strong><span>TOP 10</span></div>',
+        '<div class="community-best-list">',
+        rows.length ? rows.map(function (post, index) {
+          return [
+            '<button type="button" class="community-best-row" data-community-open-post="' + escapeHtml(post.id) + '">',
+            '<b>' + (index + 1) + '</b>',
+            '<span>' + escapeHtml(post.title) + '</span>',
+            '<small>\uC870\uD68C ' + formatCommunityNumber(post.periodViews || post.views || 0) + '</small>',
+            '</button>'
+          ].join('')
+        }).join('') : '<p>\uC544\uC9C1 \uC870\uD68C \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</p>',
+        '</div>',
+        '</section>'
+      ].join('')
+    }).join('') + '</div>'
+  }
+
   function renderCommunityBoard(tab, admin) {
     if (tab !== 'free' && !admin) return '<div class="community-locked">\uAD00\uB9AC\uC790\uB9CC \uC791\uC131\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.</div>'
     if (communityState.view === 'detail' && communityState.selectedPostId) return renderCommunityDetail(tab)
@@ -3029,13 +3099,14 @@
       '<button type="button" data-community-compose-toggle>' + (communityState.composing ? '\uC791\uC131 \uB2EB\uAE30' : '\uAE00\uC4F0\uAE30') + '</button>',
       '</div>',
       communityState.composing ? renderCommunityEditor(tab, null) : '',
+      tab === 'free' ? renderCommunityBestPanel() : '',
       '<div class="community-free-list">',
       communityItems(tab).map(function (post) {
         return [
           '<button type="button" class="community-free-row" data-community-open-post="' + escapeHtml(post.id) + '">',
           renderCommunityThumb(post),
           '<div><strong>' + escapeHtml(post.title) + '</strong>',
-          '<span>' + escapeHtml(post.author) + ' / ' + escapeHtml(post.date || '') + ' ' + escapeHtml(post.time || '') + ' / \uB313\uAE00 ' + ((post.comments || []).length) + '</span></div>',
+          '<span>' + escapeHtml(post.author) + ' / ' + escapeHtml(post.date || '') + ' ' + escapeHtml(post.time || '') + ' / \uC870\uD68C ' + formatCommunityNumber(post.views || 0) + ' / \uB313\uAE00 ' + ((post.comments || []).length) + '</span></div>',
           '</button>'
         ].join('')
       }).join(''),
@@ -3077,7 +3148,7 @@
       communityState.editingPostId === post.id ? renderCommunityEditor(tab, post) : [
         '<article class="community-detail-article">',
         '<h3>' + escapeHtml(post.title) + '</h3>',
-        '<span>' + escapeHtml(post.author) + ' / ' + escapeHtml(post.date || '') + ' ' + escapeHtml(post.time || '') + '</span>',
+        '<span>' + escapeHtml(post.author) + ' / ' + escapeHtml(post.date || '') + ' ' + escapeHtml(post.time || '') + ' / \uC870\uD68C ' + formatCommunityNumber(post.views || 0) + '</span>',
         '<p>' + escapeHtml(post.body) + '</p>',
         renderCommunityFiles(post.files || []),
         '</article>'
