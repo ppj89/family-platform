@@ -210,7 +210,7 @@
     document.addEventListener('click', function (event) {
       var card = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day, .family-calendar-panel .agenda-day-column')
       if (!card || card.classList.contains('muted')) return
-      var suppressPopup = Date.now() < (window.__familySuppressCalendarPopupUntil || 0)
+      var suppressPopup = !event.isTrusted && Date.now() < (window.__familySuppressCalendarPopupUntil || 0)
       window.__familyDirectCalendarDebug = { step: 'card', text: card.innerText }
       var focused = getFocusedDate()
       var selectedDate = null
@@ -236,12 +236,13 @@
       updateScheduleFormVisibleDate(selectedDate)
       updateSelectedDayPanel(selectedDate, card)
       if (suppressPopup) return
-      apiGet('/families').then(function (families) {
-        window.__familyDirectCalendarDebug = { step: 'families', dateText: dateText, families: families }
-        var family = Array.isArray(families) ? families[0] : null
-        if (!family || !family.id) return []
-        return apiGet('/schedules?familyId=' + encodeURIComponent(family.id) + '&startDate=' + dateText + '&endDate=' + dateText)
-      }).then(function (items) {
+      var cachedItems = schedulesForDate(selectedDate)
+      if (cachedItems.length) {
+        window.__familyDirectCalendarDebug = { step: 'cached', dateText: dateText, items: cachedItems }
+        showSchedules(selectedDate, cachedItems)
+        return
+      }
+      fetchSchedules(dateText, dateText).then(function (items) {
         var scheduleItems = Array.isArray(items) ? items : []
         if (!scheduleItems.length && !currentToken()) {
           var texts = collectScheduleTextsFromCalendarNode(card)
@@ -914,7 +915,7 @@
     var card = document.querySelector('.selected-day-card')
     if (!card) return
 
-    var titleButton = card.querySelector('.panel-header button')
+    var titleButton = card.querySelector('.panel-header button, .panel-header .passive-header-chip')
     if (titleButton) titleButton.textContent = formatKoreanShortDate(date)
 
     var list = card.querySelector('.schedule-list')
@@ -944,6 +945,25 @@
       delete empty.dataset.selectedDayDetail
       delete empty.dataset.selectedDate
     }
+  }
+
+  function syncCalendarTitleForSelectedDate(date) {
+    if (!date) return
+    var titleButton = document.querySelector('.family-calendar-panel .calendar-title-button')
+    if (!titleButton) return
+    var mode = getActiveCalendarMode()
+    var text = ''
+    if (mode === 'day') {
+      text = formatKoreanShortDate(date)
+    } else if (mode === 'week') {
+      var start = weekStart(date)
+      text = formatKoreanShortDate(start) + ' - ' + formatKoreanShortDate(addDays(start, 6))
+    } else if (mode === 'year') {
+      text = date.getFullYear() + '\uB144'
+    } else {
+      text = date.getFullYear() + '\uB144 ' + (date.getMonth() + 1) + '\uC6D4'
+    }
+    titleButton.textContent = text
   }
 
   function openSelectedDayDetail(target) {
@@ -1504,21 +1524,35 @@
       var mode = getActiveCalendarMode()
       var today = new Date()
       var focused = getFocusedDate()
-      var selected = (mode === 'day' || mode === 'week') ? today : (getScheduleFormVisibleDate() || focused)
+      var selected = (mode === 'day' || mode === 'week' || mode === 'month') ? today : (getScheduleFormVisibleDate() || focused)
       window.__familySuppressCalendarPopupUntil = Date.now() + 2500
       if (mode === 'year') {
         var monthStart = new Date(selected.getFullYear(), selected.getMonth(), 1)
         clickVisibleMonth(monthStart)
         updateJumpInput(monthStart)
         updateScheduleFormVisibleDate(monthStart)
-      } else {
+        syncCalendarTitleForSelectedDate(monthStart)
+        calendarScheduleCache.key = ''
+        renderCalendarApiSchedules(true)
+        return
+      }
+      moveCalendarTo(selected).then(function () {
         clickVisibleDay(selected)
         updateJumpInput(selected)
         updateScheduleFormVisibleDate(selected)
         updateSelectedDayPanel(selected)
-      }
-      calendarScheduleCache.key = ''
-      renderCalendarApiSchedules(true)
+        syncCalendarTitleForSelectedDate(selected)
+        calendarScheduleCache.key = ''
+        renderCalendarApiSchedules(true)
+      }).catch(function () {
+        clickVisibleDay(selected)
+        updateJumpInput(selected)
+        updateScheduleFormVisibleDate(selected)
+        updateSelectedDayPanel(selected)
+        syncCalendarTitleForSelectedDate(selected)
+        calendarScheduleCache.key = ''
+        renderCalendarApiSchedules(true)
+      })
     }, 140)
   }
 
@@ -2004,10 +2038,12 @@
       document.documentElement.dataset.calendarSelectedDate = formatDate(today)
       updateScheduleFormVisibleDate(today)
       updateJumpInput(today)
+      syncCalendarTitleForSelectedDate(today)
       window.__familySuppressCalendarPopupUntil = Date.now() + 2500
       window.setTimeout(function () {
         moveCalendarTo(today).then(function () {
         updateSelectedDayPanel(today)
+        syncCalendarTitleForSelectedDate(today)
         refreshServerDataViews(true)
       }).catch(function () {})
     }, 160)
@@ -4418,8 +4454,12 @@
   }
 
   function rangeForCalendarMode() {
-    var focused = apiDate(getFocusedDate ? getFocusedDate() : todayText())
     var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
+    var selectedDate = document.documentElement.dataset.calendarSelectedDate
+    var formDate = getScheduleFormVisibleDate && getScheduleFormVisibleDate()
+    var focused = (mode === 'day' || mode === 'week')
+      ? (selectedDate || (formDate ? apiDate(formDate) : todayText()))
+      : apiDate(getFocusedDate ? getFocusedDate() : todayText())
     if (mode === 'year') return { start: focused.slice(0, 4) + '-01-01', end: focused.slice(0, 4) + '-12-31' }
     if (mode === 'day') return { start: focused, end: focused }
     if (mode === 'week') {
@@ -4529,7 +4569,7 @@
     removeDeveloperServerPanels()
     var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
     var label = mode === 'day' ? '\uC77C\uAC04 \uC77C\uC815\uD45C' : (mode === 'week' ? '\uC8FC\uAC04 \uC77C\uC815\uD45C' : (mode === 'year' ? '\uC5F0\uAC04 \uC77C\uC815\uD45C' : '\uC6D4\uAC04 \uC77C\uC815\uD45C'))
-    document.querySelectorAll('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day').forEach(function (card) {
+    document.querySelectorAll('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day, .family-calendar-panel .agenda-day-column').forEach(function (card) {
       card.removeAttribute('data-api-chip-title')
       card.removeAttribute('data-api-chip-count')
     })
@@ -4544,7 +4584,7 @@
         if (!grouped[key]) grouped[key] = []
         grouped[key].push(item)
       })
-      document.querySelectorAll('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day').forEach(function (card, index) {
+      document.querySelectorAll('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day, .family-calendar-panel .agenda-day-column').forEach(function (card, index) {
         var date = getCalendarCardDate(card, index)
         if (!date) return
         var dayItems = grouped[formatDate(date)] || []
@@ -4562,10 +4602,6 @@
     var old = document.querySelector('.schedule-day-patch-backdrop')
     if (old) old.remove()
     if (!items.length) return false
-    if (items.length === 1) {
-      openScheduleApiDetail(items[0])
-      return true
-    }
 
     var backdrop = document.createElement('div')
     backdrop.className = 'schedule-day-patch-backdrop schedule-detail-patch-backdrop'
@@ -5466,6 +5502,7 @@
   document.addEventListener('click', function (event) {
     var target = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day, .family-calendar-panel .agenda-day-column')
     if (!target) return
+    if (window.__familyDirectCalendarPopupReady) return
     if (target.classList && target.classList.contains('muted')) return
 
     var titleDate = getFocusedDate()
