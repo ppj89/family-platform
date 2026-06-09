@@ -226,6 +226,18 @@
     }
   }
 
+  function normalizeAuthCopy(card, mode) {
+    if (!card) return
+    var heading = card.querySelector('.auth-heading strong')
+    var description = card.querySelector('.auth-heading p')
+    if (heading) heading.textContent = mode === 'register' ? '\uD68C\uC6D0\uAC00\uC785' : '\uB85C\uADF8\uC778'
+    if (description) {
+      description.textContent = mode === 'register'
+        ? '\uB2C9\uB124\uC784\uC740 \uAC8C\uC2DC\uAE00\uACFC \uAC00\uC871 \uAE30\uB85D\uC5D0 \uD45C\uC2DC\uB429\uB2C8\uB2E4.'
+        : '\uAC00\uC785\uD55C \uC774\uBA54\uC77C\uACFC \uBE44\uBC00\uBC88\uD638\uB85C \uC811\uC18D\uD569\uB2C8\uB2E4.'
+    }
+  }
+
   function completeAuth(button, response) {
     localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.accessToken)
     localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify({
@@ -367,7 +379,7 @@
     if (!nicknameField) {
       nicknameField = document.createElement('label')
       nicknameField.className = 'auth-nickname-field'
-      nicknameField.innerHTML = '<span>닉네임</span><input data-field="auth-nickname" autocomplete="nickname" maxlength="30" placeholder="가족에게 보일 이름" />'
+      nicknameField.innerHTML = '<span>닉네임</span><input data-field="auth-nickname" autocomplete="nickname" maxlength="30" placeholder="닉네임" />'
       var passwordLabel = passwordInput && passwordInput.closest('label')
       if (passwordLabel) passwordLabel.insertAdjacentElement('beforebegin', nicknameField)
       else if (submit) submit.insertAdjacentElement('beforebegin', nicknameField)
@@ -381,6 +393,7 @@
       nicknameField.style.display = mode === 'register' ? '' : 'none'
       if (passwordInput) passwordInput.autocomplete = mode === 'register' ? 'new-password' : 'current-password'
       if (submit && submit.dataset.authBusy !== 'true') submit.textContent = mode === 'register' ? '회원가입' : '로그인'
+      normalizeAuthCopy(card, mode)
     }
 
     if (!card.dataset.authMode) {
@@ -431,7 +444,12 @@
     localStorage.removeItem(AUTH_TRIP_STORAGE_KEY)
   }
 
+  var lastLogoutRequestAt = 0
+
   function logoutCurrentSession() {
+    var now = Date.now()
+    if (now - lastLogoutRequestAt < 800) return
+    lastLogoutRequestAt = now
     var token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
     if (!token) return
     fetch(apiBaseUrlForAuth() + '/auth/logout', {
@@ -439,6 +457,22 @@
       headers: { Authorization: 'Bearer ' + token },
       keepalive: true
     }).catch(function () {})
+  }
+
+  function findLogoutClickTarget(target) {
+    var node = target
+    var depth = 0
+    while (node && node !== document.body && depth < 7) {
+      if (node.nodeType === 1) {
+        var text = getCleanText(node)
+        if (text.indexOf('\uB85C\uADF8\uC544\uC6C3') >= 0 || text.toLowerCase().indexOf('logout') >= 0) {
+          return node
+        }
+      }
+      node = node.parentElement
+      depth += 1
+    }
+    return null
   }
 
   function restoreAuthSession() {
@@ -1451,14 +1485,15 @@
   document.addEventListener('submit', handleAuthFormSubmitEvent, true)
   window.__familyAuthPatchReady = true
 
+  document.addEventListener('pointerdown', function (event) {
+    if (!findLogoutClickTarget(event.target)) return
+    logoutCurrentSession()
+  }, true)
+
   document.addEventListener('click', function (event) {
-    var button = event.target && event.target.closest && event.target.closest('button')
-    if (!button) return
-    var text = getCleanText(button)
-    if (text.indexOf('\uB85C\uADF8\uC544\uC6C3') >= 0 || text.toLowerCase().indexOf('logout') >= 0) {
-      logoutCurrentSession()
-      clearStoredAuth()
-    }
+    if (!findLogoutClickTarget(event.target)) return
+    logoutCurrentSession()
+    clearStoredAuth()
   }, true)
 
   document.addEventListener('click', function (event) {

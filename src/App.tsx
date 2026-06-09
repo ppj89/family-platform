@@ -200,7 +200,7 @@ export default function App() {
             {authMode === 'register' && (
               <label>
                 <span>닉네임</span>
-                <input autoComplete="nickname" maxLength={30} placeholder="가족에게 보일 이름" value={authForm.nickname} onChange={(event) => updateAuthField('nickname', event.target.value)} />
+                <input autoComplete="nickname" maxLength={30} placeholder="닉네임" value={authForm.nickname} onChange={(event) => updateAuthField('nickname', event.target.value)} />
               </label>
             )}
 

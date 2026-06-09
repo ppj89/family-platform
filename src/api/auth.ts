@@ -41,12 +41,15 @@ export async function me() {
 }
 
 export async function requestLogout() {
-  await apiRequest<void>('/auth/logout', {
-    method: 'POST',
-  })
-  clearAuthToken()
+  try {
+    await apiRequest<void>('/auth/logout', {
+      method: 'POST',
+    })
+  } finally {
+    clearAuthToken()
+  }
 }
 
 export function logout() {
-  clearAuthToken()
+  void requestLogout()
 }
