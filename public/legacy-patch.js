@@ -1563,10 +1563,6 @@
 
   function refreshCalendarPatch() {
     if (document.documentElement.dataset.patchPage === 'community') {
-      ensureCommunityMenu()
-      wireCommunityPage()
-      enhanceMediaUploadLimits()
-      cleanupPassiveButtons()
       return
     }
     if (document.documentElement.dataset.patchPage === 'family-group') {
@@ -2307,8 +2303,6 @@
     if (!nav) nav = document.querySelector('.community-nav-item')
     if (nav) nav.classList.add('active')
     renderCommunityPage(force)
-    window.setTimeout(function () { renderCommunityPage(true) }, 0)
-    window.setTimeout(function () { renderCommunityPage(true) }, 160)
   }
 
   function communityTabLabel(tab) {
@@ -2602,12 +2596,6 @@
     root.dataset.communityReady = communityState.activeTab
 
     var tab = communityState.activeTab
-    var needsServerLoad = !communityState.loadedTabs[tab] && !communityState.loadingTabs[tab]
-    if (needsServerLoad) loadCommunityList(tab, false).then(function () {
-      if (document.documentElement.dataset.patchPage === 'community' && communityState.activeTab === tab) {
-        renderCommunityPage(true)
-      }
-    })
     var admin = isAdminRole()
     var bodyHtml = renderCommunityBoard(tab, admin)
     root.innerHTML = [
