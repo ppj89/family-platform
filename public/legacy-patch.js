@@ -2139,6 +2139,7 @@
     wireScheduleDetailRows()
     hideSelectedDayPanels()
     refreshScheduleListCount()
+    renderCalendarApiSchedules(false)
     normalizeLunarLabels()
     enhanceDatepickers()
     syncScheduleBasisLayout()
@@ -4038,7 +4039,7 @@
     var card = document.createElement('section')
     card.className = 'baby-api-record-card'
     card.innerHTML = [
-      '<header><div><span>\uC721\uC544 \uAE30\uB85D</span><strong>\uC0C8 \uAE30\uB85D \uCD94\uAC00</strong></div><small>DB\uC5D0 \uBC14\uB85C \uC800\uC7A5\uB429\uB2C8\uB2E4.</small></header>',
+      '<header><div><span>\uC721\uC544 \uAE30\uB85D</span><strong>\uC0C8 \uAE30\uB85D \uCD94\uAC00</strong></div><small>\uC800\uC7A5 \uD6C4 \uAE30\uB85D\uC5D0 \uBC18\uC601\uB429\uB2C8\uB2E4.</small></header>',
       '<form class="baby-api-record-form">',
       '<div class="baby-api-form-grid">',
       '<label><span>\uAE30\uB85D\uC885\uB958</span><select name="recordType" required><option value="\uC218\uC720">\uC218\uC720</option><option value="\uB300\uBCC0">\uB300\uBCC0</option><option value="\uC18C\uBCC0">\uC18C\uBCC0</option><option value="\uC218\uBA74">\uC218\uBA74</option><option value="\uC131\uC7A5">\uC131\uC7A5</option><option value="\uBCD1\uC6D0">\uBCD1\uC6D0</option><option value="\uBA54\uBAA8">\uBA54\uBAA8</option></select></label>',
@@ -4411,9 +4412,13 @@
   function rangeForCalendarMode() {
     var focused = apiDate(getFocusedDate ? getFocusedDate() : todayText())
     var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
-    return mode === 'year'
-      ? { start: focused.slice(0, 4) + '-01-01', end: focused.slice(0, 4) + '-12-31' }
-      : (mode === 'day' ? { start: focused, end: focused } : monthRangeFor(focused))
+    if (mode === 'year') return { start: focused.slice(0, 4) + '-01-01', end: focused.slice(0, 4) + '-12-31' }
+    if (mode === 'day') return { start: focused, end: focused }
+    if (mode === 'week') {
+      var start = weekStart(new Date(focused + 'T00:00:00'))
+      return { start: apiDate(start), end: apiDate(addDays(start, 6)) }
+    }
+    return monthRangeFor(focused)
   }
 
   function normalizeScheduleItem(item) {
@@ -4453,6 +4458,94 @@
       return item.scheduleDate === dateText
     }).sort(function (a, b) {
       return String(a.scheduleTime || '').localeCompare(String(b.scheduleTime || ''))
+    })
+  }
+
+  function getCalendarCardDate(card, index) {
+    var focused = getFocusedDate ? getFocusedDate() : new Date()
+    if (card.classList.contains('calendar-day-card')) {
+      var first = new Date(focused.getFullYear(), focused.getMonth(), 1)
+      var start = addDays(first, -first.getDay())
+      return addDays(start, index)
+    }
+    var strong = card.querySelector('strong, .day-number')
+    var text = strong ? strong.textContent : ''
+    var nums = (text.match(/\d+/g) || []).map(Number)
+    if (nums.length >= 2) return new Date(focused.getFullYear(), nums[0] - 1, nums[1])
+    if (nums.length === 1) return new Date(focused.getFullYear(), focused.getMonth(), nums[0])
+    return null
+  }
+
+  function renderScheduleRowsFromApi(items, label) {
+    var card = document.querySelector('.schedule-list-card')
+    if (!card) return
+    var list = card.querySelector('.schedule-list')
+    if (!list) {
+      list = document.createElement('div')
+      list.className = 'schedule-list'
+      card.appendChild(list)
+    }
+    var schedules = (items || []).slice().sort(function (a, b) {
+      return String(a.scheduleDate || '').localeCompare(String(b.scheduleDate || '')) ||
+        String(a.scheduleTime || '').localeCompare(String(b.scheduleTime || ''))
+    })
+    setScheduleListContext(label || '\uC77C\uC815\uD45C', schedules.length + '\uAC74')
+    if (!schedules.length) {
+      list.innerHTML = '<p class="empty-note">\uB4F1\uB85D\uB41C \uC77C\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
+      return
+    }
+    list.innerHTML = schedules.map(function (item) {
+      var date = new Date(String(item.scheduleDate || todayText()) + 'T00:00:00')
+      var weekday = formatKoreanShortDate(date).replace(/^.*\((.)\).*$/, '$1')
+      return '<button type="button" class="schedule-row api-schedule-row" data-api-schedule-id="' + escapeHtml(item.id) + '">' +
+        '<span class="schedule-date-badge"><strong>' + date.getDate() + '</strong><span>' + escapeHtml(weekday) + '</span></span>' +
+        '<div><strong>' + escapeHtml(item.title || '\uC77C\uC815') + '</strong><p>' + escapeHtml(scheduleTimeText(item) + ' \u00B7 ' + (item.category || '\uC77C\uC815') + (item.memberName ? ' \u00B7 ' + item.memberName : '')) + '</p><small>' + escapeHtml(item.memo || '') + '</small></div>' +
+        '<div class="schedule-row-actions"><button type="button" class="edit-button">\uC218\uC815</button><button type="button" class="danger-button">\uC0AD\uC81C</button></div>' +
+        '</button>'
+    }).join('')
+    list.querySelectorAll('.api-schedule-row').forEach(function (row, index) {
+      row.addEventListener('click', function (event) {
+        if (event.target && event.target.closest && event.target.closest('.schedule-row-actions button')) return
+        openScheduleApiDetail(schedules[index])
+      })
+    })
+  }
+
+  function renderCalendarApiSchedules(force) {
+    if (!document.querySelector('.family-calendar-panel')) return Promise.resolve([])
+    removeDeveloperServerPanels()
+    var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
+    var label = mode === 'day' ? '\uC77C\uAC04 \uC77C\uC815\uD45C' : (mode === 'week' ? '\uC8FC\uAC04 \uC77C\uC815\uD45C' : (mode === 'year' ? '\uC5F0\uAC04 \uC77C\uC815\uD45C' : '\uC6D4\uAC04 \uC77C\uC815\uD45C'))
+    document.querySelectorAll('.family-calendar-panel .day-chip-stack').forEach(function (stack) {
+      stack.innerHTML = ''
+    })
+    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) {
+      renderScheduleRowsFromApi([], label)
+      return Promise.resolve([])
+    }
+    return loadCalendarScheduleCache(force).then(function (items) {
+      var grouped = {}
+      ;(items || []).forEach(function (item) {
+        var key = String(item.scheduleDate || '')
+        if (!grouped[key]) grouped[key] = []
+        grouped[key].push(item)
+      })
+      document.querySelectorAll('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day').forEach(function (card, index) {
+        var date = getCalendarCardDate(card, index)
+        if (!date) return
+        var key = formatDate(date)
+        var stack = card.querySelector('.day-chip-stack')
+        if (!stack) {
+          stack = document.createElement('div')
+          stack.className = 'day-chip-stack'
+          card.appendChild(stack)
+        }
+        stack.innerHTML = (grouped[key] || []).slice(0, 3).map(function (item) {
+          return '<em data-api-schedule-id="' + escapeHtml(item.id) + '">' + escapeHtml(item.title || '\uC77C\uC815') + '</em>'
+        }).join('')
+      })
+      renderScheduleRowsFromApi(items, label)
+      return items
     })
   }
 
@@ -4549,6 +4642,8 @@
   }
 
   function ensureServerSchedulePanel() {
+    removeDeveloperServerPanels()
+    return
     var card = document.querySelector('.schedule-list-card')
     if (!card || card.querySelector('.server-schedule-list')) return
     var list = document.createElement('div')
@@ -4558,6 +4653,8 @@
   }
 
   function renderCalendarServerSchedules(force) {
+    removeDeveloperServerPanels()
+    return
     if (!document.querySelector('.family-calendar-panel')) return
     ensureServerSchedulePanel()
     var panel = document.querySelector('.server-schedule-list')
@@ -4584,6 +4681,8 @@
   }
 
   function ensureServerLedgerPanel() {
+    removeDeveloperServerPanels()
+    return
     if (!document.querySelector('.ledger-form') && !document.querySelector('.daily-ledger')) return
     if (document.querySelector('.server-ledger-list')) return
     var anchor = document.querySelector('.daily-ledger') || document.querySelector('.ledger-form')
@@ -4595,6 +4694,8 @@
   }
 
   function renderLedgerServerEntries(force) {
+    removeDeveloperServerPanels()
+    return
     if (getCleanText(document.querySelector('.topbar h1')) !== '\uAC00\uACC4\uBD80') return
     ensureServerLedgerPanel()
     var panel = document.querySelector('.server-ledger-list')
@@ -4676,6 +4777,8 @@
   }
 
   function ensureServerTravelPanel() {
+    removeDeveloperServerPanels()
+    return
     if (!document.querySelector('.travel-form') && !document.querySelector('.trip-list') && !document.querySelector('.travel-summary')) return
     if (document.querySelector('.server-travel-list')) return
     var anchor = document.querySelector('.trip-list') || document.querySelector('.travel-summary') || document.querySelector('.travel-form')
@@ -4687,6 +4790,8 @@
   }
 
   function renderTravelServerEntries(force) {
+    removeDeveloperServerPanels()
+    return
     if (getCleanText(document.querySelector('.topbar h1')) !== '\uC5EC\uD589') return
     ensureServerTravelPanel()
     var panel = document.querySelector('.server-travel-list')
@@ -4720,6 +4825,8 @@
   }
 
   function ensureServerDiaryPanel() {
+    removeDeveloperServerPanels()
+    return
     if (!document.querySelector('.diary-list') && !document.querySelector('.diary-grid') && !document.querySelector('.diary-form')) return
     if (document.querySelector('.server-diary-list')) return
     var anchor = document.querySelector('.diary-list') || document.querySelector('.diary-grid') || document.querySelector('.diary-form')
@@ -4731,6 +4838,8 @@
   }
 
   function renderDiaryServerEntries(force) {
+    removeDeveloperServerPanels()
+    return
     if (getCleanText(document.querySelector('.topbar h1')) !== '\uC77C\uAE30') return
     ensureServerDiaryPanel()
     var panel = document.querySelector('.server-diary-list')
@@ -4759,6 +4868,8 @@
   }
 
   function ensureServerBabyPanel() {
+    removeDeveloperServerPanels()
+    return
     if (!document.querySelector('.baby-card') && !document.querySelector('.baby-record-list') && !document.querySelector('.baby-record-row')) return
     if (document.querySelector('.server-baby-list')) return
     var anchor = document.querySelector('.baby-record-list') || document.querySelector('.baby-card')
@@ -4770,6 +4881,8 @@
   }
 
   function renderBabyServerEntries(force) {
+    removeDeveloperServerPanels()
+    return
     if (getCleanText(document.querySelector('.topbar h1')) !== '\uC721\uC544') return
     ensureServerBabyPanel()
     var panel = document.querySelector('.server-baby-list')
@@ -4804,15 +4917,23 @@
     })
   }
 
+  function removeDeveloperServerPanels() {
+    document.querySelectorAll([
+      '.server-schedule-list',
+      '.server-ledger-list',
+      '.server-travel-list',
+      '.server-diary-list',
+      '.server-baby-list'
+    ].join(',')).forEach(function (panel) {
+      panel.remove()
+    })
+  }
+
   function refreshServerDataViews(force) {
+    removeDeveloperServerPanels()
     if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return
     renderHomeSchedulesFromApi(force)
     renderHomeLedgerFromApi(force)
-    renderCalendarServerSchedules(force)
-    renderLedgerServerEntries(force)
-    renderTravelServerEntries(force)
-    renderDiaryServerEntries(force)
-    renderBabyServerEntries(force)
   }
 
   function getCurrentFamilyId(forceRefresh) {
@@ -4967,7 +5088,7 @@
         updateJumpInput(date)
       }
       refreshServerDataViews(true)
-      loadCalendarScheduleCache(true)
+      renderCalendarApiSchedules(true)
       loadScheduleNotifications(true)
       if (titleInput) {
         titleInput.value = ''
