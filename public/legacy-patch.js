@@ -121,16 +121,19 @@
       }).catch(function () { return null })
     }
 
-    function removeSchedulePopups() {
-      document.querySelectorAll('.schedule-detail-patch-backdrop, .schedule-day-patch-backdrop').forEach(function (node) {
+    function removeSchedulePopups(keepDayList) {
+      var selector = keepDayList
+        ? '.schedule-item-patch-backdrop, .schedule-detail-patch-backdrop:not(.schedule-day-patch-backdrop)'
+        : '.schedule-detail-patch-backdrop, .schedule-day-patch-backdrop'
+      document.querySelectorAll(selector).forEach(function (node) {
         node.remove()
       })
     }
 
-    function showScheduleDetail(date, item) {
-      removeSchedulePopups()
+    function showScheduleDetail(date, item, keepDayList) {
+      removeSchedulePopups(keepDayList)
       var backdrop = document.createElement('div')
-      backdrop.className = 'schedule-detail-patch-backdrop'
+      backdrop.className = 'schedule-detail-patch-backdrop schedule-item-patch-backdrop'
       var dialog = document.createElement('section')
       dialog.className = 'schedule-detail-patch-dialog'
       var close = document.createElement('button')
@@ -169,10 +172,6 @@
         removeSchedulePopups()
         return
       }
-      if (items.length === 1) {
-        showScheduleDetail(date, items[0])
-        return
-      }
       removeSchedulePopups()
       var backdrop = document.createElement('div')
       backdrop.className = 'schedule-day-patch-backdrop schedule-detail-patch-backdrop'
@@ -194,7 +193,7 @@
         var button = document.createElement('button')
         button.type = 'button'
         button.textContent = (item.scheduleTime ? String(item.scheduleTime).slice(0, 5) + ' ' : '') + (item.title || '\uC77C\uC815')
-        button.addEventListener('click', function () { showScheduleDetail(date, item) })
+        button.addEventListener('click', function () { showScheduleDetail(date, item, true) })
         list.appendChild(button)
       })
       dialog.appendChild(close)
@@ -244,7 +243,7 @@
         return apiGet('/schedules?familyId=' + encodeURIComponent(family.id) + '&startDate=' + dateText + '&endDate=' + dateText)
       }).then(function (items) {
         var scheduleItems = Array.isArray(items) ? items : []
-        if (!scheduleItems.length) {
+        if (!scheduleItems.length && !currentToken()) {
           var texts = collectScheduleTextsFromCalendarNode(card)
           scheduleItems = texts.map(function (text, index) {
             return { id: 'dom-' + index, title: text, scheduleDate: dateText, scheduleTime: '', category: '\uC77C\uC815', memberName: '', memo: '' }
@@ -1503,8 +1502,10 @@
   function normalizeSelectedDateAfterViewChange() {
     window.setTimeout(function () {
       var mode = getActiveCalendarMode()
+      var today = new Date()
       var focused = getFocusedDate()
-      var selected = getScheduleFormVisibleDate() || focused
+      var selected = (mode === 'day' || mode === 'week') ? today : (getScheduleFormVisibleDate() || focused)
+      window.__familySuppressCalendarPopupUntil = Date.now() + 2500
       if (mode === 'year') {
         var monthStart = new Date(selected.getFullYear(), selected.getMonth(), 1)
         clickVisibleMonth(monthStart)
@@ -1516,6 +1517,8 @@
         updateScheduleFormVisibleDate(selected)
         updateSelectedDayPanel(selected)
       }
+      calendarScheduleCache.key = ''
+      renderCalendarApiSchedules(true)
     }, 140)
   }
 
@@ -1725,10 +1728,10 @@
     var month = monthDate.getMonth() + 1
     var range = monthRangeFor(formatDate(monthDate))
     setScheduleListContext(month + '\uC6D4 \uC77C\uC815\uD45C', '0\uAC74')
-    var list = card.querySelector('.schedule-list') || card.querySelector('.server-data-list')
+    var list = card.querySelector('.api-schedule-list')
     if (!list) {
       list = document.createElement('div')
-      list.className = 'schedule-list'
+      list.className = 'api-schedule-list'
       card.appendChild(list)
     }
     list.innerHTML = '<p class="empty-note">\uC77C\uC815\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</p>'
@@ -4526,11 +4529,29 @@
     removeDeveloperServerPanels()
     var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
     var label = mode === 'day' ? '\uC77C\uAC04 \uC77C\uC815\uD45C' : (mode === 'week' ? '\uC8FC\uAC04 \uC77C\uC815\uD45C' : (mode === 'year' ? '\uC5F0\uAC04 \uC77C\uC815\uD45C' : '\uC6D4\uAC04 \uC77C\uC815\uD45C'))
+    document.querySelectorAll('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day').forEach(function (card) {
+      card.removeAttribute('data-api-chip-title')
+      card.removeAttribute('data-api-chip-count')
+    })
     if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) {
       renderScheduleRowsFromApi([], label)
       return Promise.resolve([])
     }
     return loadCalendarScheduleCache(force).then(function (items) {
+      var grouped = {}
+      ;(items || []).forEach(function (item) {
+        var key = String(item.scheduleDate || '')
+        if (!grouped[key]) grouped[key] = []
+        grouped[key].push(item)
+      })
+      document.querySelectorAll('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day').forEach(function (card, index) {
+        var date = getCalendarCardDate(card, index)
+        if (!date) return
+        var dayItems = grouped[formatDate(date)] || []
+        if (!dayItems.length) return
+        card.setAttribute('data-api-chip-title', dayItems[0].title || '\uC77C\uC815')
+        if (dayItems.length > 1) card.setAttribute('data-api-chip-count', '+' + (dayItems.length - 1))
+      })
       renderScheduleRowsFromApi(items, label)
       return items
     })
