@@ -82,11 +82,16 @@ register_body="$(printf '{"email":"%s","nickname":"api-test","password":"%s"}' "
 register_response="$(api POST /auth/register "$register_body")"
 TOKEN="$(printf '%s' "$register_response" | json_value accessToken)"
 user_id="$(printf '%s' "$register_response" | json_value userId)"
+registered_token="$TOKEN"
 
 api GET /auth/me >/dev/null
 api_expect_status 409 POST /auth/login "$(printf '{"email":"%s","password":"%s"}' "$email" "$password")"
 forced_response="$(api POST /auth/login "$(printf '{"email":"%s","password":"%s","forceLogin":true}' "$email" "$password")")"
 TOKEN="$(printf '%s' "$forced_response" | json_value accessToken)"
+forced_token="$TOKEN"
+TOKEN="$registered_token"
+api_expect_status 401 GET /auth/me
+TOKEN="$forced_token"
 
 families="$(api GET /families)"
 family_id="$(printf '%s' "$families" | json_value 0.id)"
@@ -167,6 +172,11 @@ api DELETE "/schedules/$schedule_id" >/dev/null
 api DELETE "/ledger-entries/$ledger_id" >/dev/null
 api DELETE "/common-code-groups/$group_id/codes/$code_id" >/dev/null
 api DELETE "/common-code-groups/$group_id" >/dev/null
+api POST /auth/logout >/dev/null
+api_expect_status 401 GET /auth/me
+relogin_response="$(api POST /auth/login "$(printf '{"email":"%s","password":"%s"}' "$email" "$password")")"
+TOKEN="$(printf '%s' "$relogin_response" | json_value accessToken)"
+api GET /auth/me >/dev/null
 api POST /auth/logout >/dev/null
 
 echo "Go API integration test passed for user $user_id family $family_id"
