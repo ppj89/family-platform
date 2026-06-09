@@ -13,6 +13,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"net/smtp"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -31,25 +32,31 @@ const (
 )
 
 type config struct {
-	port                 string
-	databaseURL          string
-	allowedOrigins       []string
-	tokenSecret          []byte
-	tokenValiditySeconds int64
-	mediaStorageDriver   string
-	mediaStoragePath     string
-	mediaPublicPrefix    string
-	mediaS3Endpoint      string
-	mediaS3Region        string
-	mediaS3Bucket        string
-	mediaS3AccessKey     string
-	mediaS3SecretKey     string
-	publicBaseURL        string
-	oauth                map[string]oauthProviderConfig
-	maxFilesPerPost      int
-	maxReferenceLength   int
-	maxImageBytes        int64
-	maxVideoBytes        int64
+	port                      string
+	databaseURL               string
+	allowedOrigins            []string
+	tokenSecret               []byte
+	tokenValiditySeconds      int64
+	mediaStorageDriver        string
+	mediaStoragePath          string
+	mediaPublicPrefix         string
+	mediaS3Endpoint           string
+	mediaS3Region             string
+	mediaS3Bucket             string
+	mediaS3AccessKey          string
+	mediaS3SecretKey          string
+	publicBaseURL             string
+	oauth                     map[string]oauthProviderConfig
+	maxFilesPerPost           int
+	maxReferenceLength        int
+	maxImageBytes             int64
+	maxVideoBytes             int64
+	emailVerificationRequired bool
+	smtpHost                  string
+	smtpPort                  string
+	smtpUsername              string
+	smtpPassword              string
+	smtpFrom                  string
 }
 
 type oauthProviderConfig struct {
@@ -162,25 +169,31 @@ func loadConfig() (config, error) {
 		databaseURL = fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", user, password, host, port, db)
 	}
 	return config{
-		port:                 getenv("PORT", "8080"),
-		databaseURL:          databaseURL,
-		allowedOrigins:       splitCSV(getenv("APP_CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")),
-		tokenSecret:          []byte(secret),
-		tokenValiditySeconds: validity,
-		mediaStorageDriver:   strings.ToLower(getenv("APP_MEDIA_STORAGE_DRIVER", "local")),
-		mediaStoragePath:     getenv("APP_MEDIA_STORAGE_PATH", "uploads"),
-		mediaPublicPrefix:    strings.TrimRight(getenv("APP_MEDIA_PUBLIC_URL_PREFIX", "/api/media/files"), "/"),
-		mediaS3Endpoint:      strings.TrimRight(getenv("APP_MEDIA_S3_ENDPOINT", ""), "/"),
-		mediaS3Region:        getenv("APP_MEDIA_S3_REGION", "auto"),
-		mediaS3Bucket:        getenv("APP_MEDIA_S3_BUCKET", ""),
-		mediaS3AccessKey:     getenv("APP_MEDIA_S3_ACCESS_KEY_ID", ""),
-		mediaS3SecretKey:     getenv("APP_MEDIA_S3_SECRET_ACCESS_KEY", ""),
-		publicBaseURL:        defaultPublicBaseURL(),
-		oauth:                loadOAuthProviders(),
-		maxFilesPerPost:      envInt("APP_MEDIA_MAX_FILES_PER_POST", 6),
-		maxReferenceLength:   envInt("APP_MEDIA_MAX_REFERENCE_LENGTH", 2048),
-		maxImageBytes:        parseSize(getenv("APP_MEDIA_MAX_IMAGE_SIZE", "8MB"), 8*1024*1024),
-		maxVideoBytes:        parseSize(getenv("APP_MEDIA_MAX_VIDEO_SIZE", "30MB"), 30*1024*1024),
+		port:                      getenv("PORT", "8080"),
+		databaseURL:               databaseURL,
+		allowedOrigins:            splitCSV(getenv("APP_CORS_ALLOWED_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173")),
+		tokenSecret:               []byte(secret),
+		tokenValiditySeconds:      validity,
+		mediaStorageDriver:        strings.ToLower(getenv("APP_MEDIA_STORAGE_DRIVER", "local")),
+		mediaStoragePath:          getenv("APP_MEDIA_STORAGE_PATH", "uploads"),
+		mediaPublicPrefix:         strings.TrimRight(getenv("APP_MEDIA_PUBLIC_URL_PREFIX", "/api/media/files"), "/"),
+		mediaS3Endpoint:           strings.TrimRight(getenv("APP_MEDIA_S3_ENDPOINT", ""), "/"),
+		mediaS3Region:             getenv("APP_MEDIA_S3_REGION", "auto"),
+		mediaS3Bucket:             getenv("APP_MEDIA_S3_BUCKET", ""),
+		mediaS3AccessKey:          getenv("APP_MEDIA_S3_ACCESS_KEY_ID", ""),
+		mediaS3SecretKey:          getenv("APP_MEDIA_S3_SECRET_ACCESS_KEY", ""),
+		publicBaseURL:             defaultPublicBaseURL(),
+		oauth:                     loadOAuthProviders(),
+		maxFilesPerPost:           envInt("APP_MEDIA_MAX_FILES_PER_POST", 6),
+		maxReferenceLength:        envInt("APP_MEDIA_MAX_REFERENCE_LENGTH", 2048),
+		maxImageBytes:             parseSize(getenv("APP_MEDIA_MAX_IMAGE_SIZE", "8MB"), 8*1024*1024),
+		maxVideoBytes:             parseSize(getenv("APP_MEDIA_MAX_VIDEO_SIZE", "30MB"), 30*1024*1024),
+		emailVerificationRequired: envBool("APP_AUTH_EMAIL_VERIFICATION_REQUIRED", false),
+		smtpHost:                  getenv("APP_SMTP_HOST", ""),
+		smtpPort:                  getenv("APP_SMTP_PORT", "587"),
+		smtpUsername:              getenv("APP_SMTP_USERNAME", ""),
+		smtpPassword:              getenv("APP_SMTP_PASSWORD", ""),
+		smtpFrom:                  getenv("APP_SMTP_FROM", ""),
 	}, nil
 }
 
@@ -236,6 +249,8 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("POST /api/auth/login", a.login)
 	mux.HandleFunc("POST /api/auth/logout", a.requireAuth(a.logout))
 	mux.HandleFunc("GET /api/auth/me", a.requireAuth(a.me))
+	mux.HandleFunc("GET /api/auth/verify-email", a.verifyEmail)
+	mux.HandleFunc("POST /api/auth/verification/resend", a.resendVerificationEmail)
 	mux.HandleFunc("GET /api/auth/oauth/providers", a.oauthProviders)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/start", a.oauthStart)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", a.oauthCallback)
@@ -322,7 +337,11 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "password hashing failed")
 		return
 	}
-	sessionID := newSessionID()
+	requiresEmailVerification := a.cfg.emailVerificationRequired
+	sessionID := ""
+	if !requiresEmailVerification {
+		sessionID = newSessionID()
+	}
 
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
@@ -338,10 +357,10 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 	}
 	var userID int64
 	err = tx.QueryRow(r.Context(), `
-		insert into app_users (created_at, email, nickname, platform_admin, password_hash, active_session_id, failed_login_attempts)
-		values (now(), $1, $2, $3, $4, $5, 0)
+		insert into app_users (created_at, email, nickname, platform_admin, password_hash, active_session_id, failed_login_attempts, email_verification_required, email_verified_at)
+		values (now(), $1, $2, $3, $4, $5, 0, $6, case when $6 then null else now() end)
 		returning id
-	`, email, nickname, userCount == 0, string(passwordHash), sessionID).Scan(&userID)
+	`, email, nickname, userCount == 0, string(passwordHash), sessionID, requiresEmailVerification).Scan(&userID)
 	if err != nil {
 		writeError(w, http.StatusConflict, "email is already registered")
 		return
@@ -364,6 +383,18 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.recordLoginHistory(r.Context(), &userID, email, "password", "REGISTER", "SUCCESS", "")
+	if requiresEmailVerification {
+		if err := a.createAndSendEmailVerification(r.Context(), userID, email, nickname); err != nil {
+			a.log.Error("email verification dispatch failed", "email", email, "error", err)
+		}
+		writeJSON(w, http.StatusAccepted, map[string]any{
+			"email":                     email,
+			"nickname":                  nickname,
+			"emailVerificationRequired": true,
+			"message":                   "email verification required",
+		})
+		return
+	}
 	user := authUser{ID: userID, Email: email, PlatformAdmin: userCount == 0, SessionID: sessionID}
 	writeJSON(w, http.StatusCreated, authResponse{
 		AccessToken:   a.issueToken(user),
@@ -389,11 +420,13 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 	var platformAdmin bool
 	var activeSessionID sql.NullString
 	var lockedUntil sql.NullTime
+	var emailVerifiedAt sql.NullTime
+	var emailVerificationRequired bool
 	var failedAttempts int
 	err := a.db.QueryRow(r.Context(), `
-		select id, nickname, platform_admin, coalesce(password_hash, ''), active_session_id, locked_until, coalesce(failed_login_attempts, 0)
+		select id, nickname, platform_admin, coalesce(password_hash, ''), active_session_id, locked_until, coalesce(failed_login_attempts, 0), email_verified_at, coalesce(email_verification_required, false)
 		from app_users where email = $1
-	`, email).Scan(&userID, &nickname, &platformAdmin, &passwordHash, &activeSessionID, &lockedUntil, &failedAttempts)
+	`, email).Scan(&userID, &nickname, &platformAdmin, &passwordHash, &activeSessionID, &lockedUntil, &failedAttempts, &emailVerifiedAt, &emailVerificationRequired)
 	if err != nil {
 		a.recordLoginHistory(r.Context(), nil, email, "password", "LOGIN", "FAIL", "invalid email")
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
@@ -417,6 +450,11 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 		}
 		a.recordLoginHistory(r.Context(), &userID, email, "password", "LOGIN", "FAIL", "invalid password")
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
+		return
+	}
+	if emailVerificationRequired && !emailVerifiedAt.Valid {
+		a.recordLoginHistory(r.Context(), &userID, email, "password", "LOGIN", "VERIFY_REQUIRED", "email verification required")
+		writeError(w, http.StatusForbidden, "email verification required")
 		return
 	}
 	if activeSessionID.Valid && activeSessionID.String != "" && !req.ForceLogin {
@@ -594,6 +632,83 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		"platformAdmin": response.PlatformAdmin,
 	}
 	writeOAuthCallbackHTML(w, http.StatusOK, a.cfg.publicBaseURL, response.AccessToken, userPayload, "")
+}
+
+func (a *app) verifyEmail(w http.ResponseWriter, r *http.Request) {
+	token := strings.TrimSpace(r.URL.Query().Get("token"))
+	if token == "" {
+		writeEmailVerificationHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, false, "인증 토큰이 없습니다.")
+		return
+	}
+	tokenHash := verificationTokenHash(token)
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "데이터베이스 연결에 실패했습니다.")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var tokenID, userID int64
+	var email string
+	err = tx.QueryRow(r.Context(), `
+		select t.id, u.id, u.email
+		from email_verification_tokens t
+		join app_users u on u.id = t.user_id
+		where t.token_hash = $1 and t.used_at is null and t.expires_at > now()
+		for update
+	`, tokenHash).Scan(&tokenID, &userID, &email)
+	if err != nil {
+		a.recordLoginHistory(r.Context(), nil, "", "password", "EMAIL_VERIFY", "FAIL", "invalid or expired token")
+		writeEmailVerificationHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, false, "인증 링크가 만료되었거나 올바르지 않습니다.")
+		return
+	}
+	if _, err := tx.Exec(r.Context(), `
+		update app_users
+		set email_verified_at = now(), email_verification_required = false
+		where id = $1
+	`, userID); err != nil {
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "이메일 인증 처리에 실패했습니다.")
+		return
+	}
+	if _, err := tx.Exec(r.Context(), "update email_verification_tokens set used_at = now() where id = $1", tokenID); err != nil {
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "이메일 인증 처리에 실패했습니다.")
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "이메일 인증 처리에 실패했습니다.")
+		return
+	}
+	a.recordLoginHistory(r.Context(), &userID, email, "password", "EMAIL_VERIFY", "SUCCESS", "")
+	writeEmailVerificationHTML(w, http.StatusOK, a.cfg.publicBaseURL, true, "이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다.")
+}
+
+func (a *app) resendVerificationEmail(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	email := normalizeEmail(req.Email)
+	if email == "" {
+		writeJSON(w, http.StatusAccepted, map[string]string{"message": "verification email accepted"})
+		return
+	}
+	var userID int64
+	var nickname string
+	var verifiedAt sql.NullTime
+	var required bool
+	err := a.db.QueryRow(r.Context(), `
+		select id, nickname, email_verified_at, coalesce(email_verification_required, false)
+		from app_users
+		where email = $1
+	`, email).Scan(&userID, &nickname, &verifiedAt, &required)
+	if err == nil && required && !verifiedAt.Valid {
+		if sendErr := a.createAndSendEmailVerification(r.Context(), userID, email, nickname); sendErr != nil {
+			a.log.Error("email verification resend failed", "email", email, "error", sendErr)
+		}
+	}
+	writeJSON(w, http.StatusAccepted, map[string]string{"message": "verification email accepted"})
 }
 
 func (a *app) listFamilies(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -2212,7 +2327,9 @@ func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, pr
 		err := tx.QueryRow(ctx, `
 			update app_users
 			set provider = coalesce(provider, $1),
-			    provider_user_id = coalesce(provider_user_id, $2)
+			    provider_user_id = coalesce(provider_user_id, $2),
+			    email_verified_at = coalesce(email_verified_at, now()),
+			    email_verification_required = false
 			where email = $3
 			returning id, email, nickname, platform_admin, active_session_id
 		`, provider, providerUserID, email).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
@@ -2232,8 +2349,8 @@ func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, pr
 		return false, err
 	}
 	err := tx.QueryRow(ctx, `
-		insert into app_users (created_at, email, nickname, platform_admin, provider, provider_user_id, active_session_id, failed_login_attempts)
-		values (now(), $1, $2, $3, $4, $5, '', 0)
+		insert into app_users (created_at, email, nickname, platform_admin, provider, provider_user_id, active_session_id, failed_login_attempts, email_verified_at, email_verification_required)
+		values (now(), $1, $2, $3, $4, $5, '', 0, now(), false)
 		returning id, email, nickname, platform_admin, active_session_id
 	`, email, nickname, userCount == 0, provider, providerUserID).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
 	if err != nil {
@@ -2335,10 +2452,14 @@ create table if not exists app_users (
   password_hash varchar(255),
   active_session_id varchar(255),
   locked_until timestamp with time zone,
-  failed_login_attempts integer default 0
+  failed_login_attempts integer default 0,
+  email_verified_at timestamp with time zone,
+  email_verification_required boolean not null default false
 );
 alter table if exists app_users add column if not exists provider varchar(255);
 alter table if exists app_users add column if not exists provider_user_id varchar(255);
+alter table if exists app_users add column if not exists email_verified_at timestamp with time zone;
+alter table if exists app_users add column if not exists email_verification_required boolean not null default false;
 create unique index if not exists idx_app_users_provider_subject on app_users (provider, provider_user_id) where provider is not null and provider_user_id is not null;
 create table if not exists login_histories (
   id bigint generated by default as identity primary key,
@@ -2360,6 +2481,16 @@ create table if not exists oauth_identities (
   primary key (provider, provider_user_id)
 );
 create index if not exists idx_oauth_identities_user on oauth_identities (user_id);
+create table if not exists email_verification_tokens (
+  id bigint generated by default as identity primary key,
+  user_id bigint not null references app_users(id) on delete cascade,
+  token_hash varchar(255) not null unique,
+  created_at timestamp with time zone not null,
+  expires_at timestamp with time zone not null,
+  used_at timestamp with time zone
+);
+create index if not exists idx_email_verification_tokens_user on email_verification_tokens (user_id, created_at desc);
+create index if not exists idx_email_verification_tokens_expires on email_verification_tokens (expires_at);
 create table if not exists oauth_login_states (
   state varchar(255) primary key,
   provider varchar(255) not null,
@@ -2587,6 +2718,89 @@ func (a *app) recordLoginHistory(ctx context.Context, userID *int64, email, prov
 	`, userValue, normalizeEmail(email), provider, eventType, result, reason)
 }
 
+func verificationTokenHash(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return base64.RawURLEncoding.EncodeToString(sum[:])
+}
+
+func (a *app) createAndSendEmailVerification(ctx context.Context, userID int64, email, nickname string) error {
+	token := newSessionID()
+	tokenHash := verificationTokenHash(token)
+	_, err := a.db.Exec(ctx, `
+		insert into email_verification_tokens (user_id, token_hash, created_at, expires_at)
+		values ($1, $2, now(), now() + interval '24 hours')
+	`, userID, tokenHash)
+	if err != nil {
+		return err
+	}
+	verifyURL := strings.TrimRight(a.cfg.publicBaseURL, "/") + "/api/auth/verify-email?token=" + url.QueryEscape(token)
+	return a.sendVerificationEmail(email, nickname, verifyURL)
+}
+
+func (a *app) sendVerificationEmail(email, nickname, verifyURL string) error {
+	if strings.TrimSpace(a.cfg.smtpHost) == "" || strings.TrimSpace(a.cfg.smtpFrom) == "" {
+		return fmt.Errorf("SMTP is not configured")
+	}
+	from := a.cfg.smtpFrom
+	subject := "Family Platform 이메일 인증"
+	displayName := strings.TrimSpace(nickname)
+	if displayName == "" {
+		displayName = "회원"
+	}
+	body := fmt.Sprintf("%s님, 아래 링크를 눌러 이메일 인증을 완료해주세요.\n\n%s\n\n이 링크는 24시간 동안 사용할 수 있습니다.", displayName, verifyURL)
+	message := strings.Join([]string{
+		"From: " + from,
+		"To: " + email,
+		"Subject: " + mimeHeader(subject),
+		"MIME-Version: 1.0",
+		"Content-Type: text/plain; charset=UTF-8",
+		"",
+		body,
+	}, "\r\n")
+	addr := a.cfg.smtpHost + ":" + a.cfg.smtpPort
+	var auth smtp.Auth
+	if strings.TrimSpace(a.cfg.smtpUsername) != "" || strings.TrimSpace(a.cfg.smtpPassword) != "" {
+		auth = smtp.PlainAuth("", a.cfg.smtpUsername, a.cfg.smtpPassword, a.cfg.smtpHost)
+	}
+	return smtp.SendMail(addr, auth, from, []string{email}, []byte(message))
+}
+
+func mimeHeader(value string) string {
+	return "=?UTF-8?B?" + base64.StdEncoding.EncodeToString([]byte(value)) + "?="
+}
+
+func writeEmailVerificationHTML(w http.ResponseWriter, status int, publicBaseURL string, success bool, message string) {
+	redirectURL := strings.TrimRight(publicBaseURL, "/") + "/"
+	title := "이메일 인증"
+	if success {
+		title = "인증 완료"
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
+	_, _ = fmt.Fprintf(w, `<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>%s</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f6fb; color: #191f28; }
+    main { width: min(420px, calc(100vw - 40px)); padding: 28px; border-radius: 24px; background: #fff; box-shadow: 0 18px 50px rgba(25, 31, 40, .12); text-align: center; }
+    h1 { margin: 0 0 10px; font-size: 24px; }
+    p { margin: 0 0 20px; color: #6b7684; line-height: 1.55; }
+    a { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; padding: 0 22px; border-radius: 14px; background: #3182f6; color: #fff; font-weight: 800; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>%s</h1>
+    <p>%s</p>
+    <a href="%s">로그인 화면으로 이동</a>
+  </main>
+</body>
+</html>`, title, title, message, redirectURL)
+}
+
 func writeOAuthCallbackHTML(w http.ResponseWriter, status int, publicBaseURL string, accessToken string, userPayload map[string]any, errorMessage string) {
 	redirectURL := strings.TrimRight(publicBaseURL, "/") + "/"
 	tokenJSON, _ := json.Marshal(accessToken)
@@ -2685,6 +2899,21 @@ func getenv(key, fallback string) string {
 		return fallback
 	}
 	return value
+}
+
+func envBool(key string, fallback bool) bool {
+	value := strings.ToLower(strings.TrimSpace(os.Getenv(key)))
+	if value == "" {
+		return fallback
+	}
+	switch value {
+	case "1", "true", "yes", "y", "on":
+		return true
+	case "0", "false", "no", "n", "off":
+		return false
+	default:
+		return fallback
+	}
 }
 
 func splitCSV(value string) []string {

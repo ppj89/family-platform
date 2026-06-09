@@ -1,11 +1,13 @@
 import { apiRequest, clearAuthToken, setAuthToken } from './client'
 
 export type AuthResponse = {
-  accessToken: string
+  accessToken?: string
   userId: number
   email: string
   nickname: string
   platformAdmin: boolean
+  emailVerificationRequired?: boolean
+  message?: string
 }
 
 export type LoginPayload = {
@@ -23,7 +25,9 @@ export async function register(payload: RegisterPayload) {
     method: 'POST',
     body: payload,
   })
-  setAuthToken(response.accessToken)
+  if (response.accessToken) {
+    setAuthToken(response.accessToken)
+  }
   return response
 }
 
@@ -32,7 +36,9 @@ export async function login(payload: LoginPayload) {
     method: 'POST',
     body: payload,
   })
-  setAuthToken(response.accessToken)
+  if (response.accessToken) {
+    setAuthToken(response.accessToken)
+  }
   return response
 }
 

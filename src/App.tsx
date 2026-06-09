@@ -29,6 +29,9 @@ const initialAuthForm = {
 
 function authMessage(error: unknown) {
   if (error instanceof ApiError) {
+    if (error.status === 403 && error.message.includes('email verification')) {
+      return '이메일 인증 후 로그인할 수 있습니다. 받은 메일의 인증 링크를 확인해주세요.'
+    }
     if (error.status === 409) {
       if (error.message.includes('active session')) {
         return '이미 로그인되어 있는 계정입니다.'
@@ -104,6 +107,12 @@ export default function App() {
         authMode === 'register'
           ? await register({ email, nickname, password })
           : await login({ email, password })
+      if (response.emailVerificationRequired) {
+        setAuthMode('login')
+        setAuthForm((prev) => ({ ...prev, password: '', nickname: '' }))
+        setAuthNotice('회원가입되었습니다. 이메일 인증 링크를 확인한 뒤 로그인해주세요.')
+        return
+      }
       setCurrentUser(response)
       setAuthForm(initialAuthForm)
       setAuthNotice(authMode === 'register' ? '회원가입되었습니다.' : '로그인되었습니다.')

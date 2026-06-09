@@ -89,6 +89,7 @@ powershell -ExecutionPolicy Bypass -File scripts\build-android-debug.ps1
 1. Prepare a Linux server with Docker.
 2. Generate `.env.production`.
 3. Review `APP_CORS_ALLOWED_ORIGINS`, `APP_DOMAIN`, `WEB_PORT`, and secrets.
+4. For production email sign-up, keep `APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true` and set `APP_SMTP_HOST`, `APP_SMTP_PORT`, `APP_SMTP_FROM`, and SMTP credentials if your provider requires them. SSO users are de-duplicated by provider account and marked verified automatically.
 4. Deploy with Docker Compose and Caddy HTTPS.
 5. Install automatic backups.
 

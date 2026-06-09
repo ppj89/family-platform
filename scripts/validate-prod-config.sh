@@ -34,6 +34,7 @@ POSTGRES_PASSWORD
 APP_CORS_ALLOWED_ORIGINS
 APP_SECURITY_TOKEN_SECRET
 APP_SECURITY_TOKEN_VALIDITY_SECONDS
+APP_AUTH_EMAIL_VERIFICATION_REQUIRED
 APP_MEDIA_MAX_FILES_PER_POST
 APP_MEDIA_MAX_IMAGE_SIZE
 APP_MEDIA_MAX_VIDEO_SIZE
@@ -54,6 +55,7 @@ vite_api_base="$(value_of VITE_API_BASE_URL)"
 app_domain="$(value_of APP_DOMAIN)"
 web_port="$(value_of WEB_PORT)"
 media_storage_driver="$(value_of APP_MEDIA_STORAGE_DRIVER)"
+email_verification_required="$(value_of APP_AUTH_EMAIL_VERIFICATION_REQUIRED)"
 
 if [ "$ALLOW_PLACEHOLDERS" != "1" ]; then
   case "$db_password" in
@@ -116,6 +118,22 @@ case "$media_storage_driver" in
     ;;
   *)
     fail "APP_MEDIA_STORAGE_DRIVER must be local or s3"
+    ;;
+esac
+
+case "$email_verification_required" in
+  true|1|yes|on)
+    require_key APP_SMTP_HOST
+    require_key APP_SMTP_PORT
+    require_key APP_SMTP_FROM
+    [ -n "$(value_of APP_SMTP_HOST)" ] || fail "APP_SMTP_HOST is required when APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true"
+    [ -n "$(value_of APP_SMTP_PORT)" ] || fail "APP_SMTP_PORT is required when APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true"
+    [ -n "$(value_of APP_SMTP_FROM)" ] || fail "APP_SMTP_FROM is required when APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true"
+    ;;
+  false|0|no|off)
+    ;;
+  *)
+    fail "APP_AUTH_EMAIL_VERIFICATION_REQUIRED must be true or false"
     ;;
 esac
 
