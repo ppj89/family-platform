@@ -564,7 +564,7 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadGateway, "oauth profile is missing provider id")
 		return
 	}
-	response, err := a.loginOAuthUser(r.Context(), providerName, profile, r.URL.Query().Get("forceLogin") == "true")
+	response, err := a.loginOAuthUser(r.Context(), providerName, profile, true)
 	if errors.Is(err, errActiveSessionExists) {
 		writeOAuthCallbackHTML(w, http.StatusConflict, a.cfg.publicBaseURL, "", nil, "active session exists")
 		return
