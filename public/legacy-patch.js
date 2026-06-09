@@ -1016,6 +1016,18 @@
     if (chip) chip.textContent = formatKoreanShortDate(date)
   }
 
+  function cleanupHardcodedCalendarRows() {
+    document.querySelectorAll('.selected-day-card').forEach(function (card) {
+      card.remove()
+    })
+    document.querySelectorAll('.schedule-list-card .schedule-list:not(.api-schedule-list)').forEach(function (list) {
+      list.remove()
+    })
+    document.querySelectorAll('.schedule-list-card .schedule-row:not(.api-schedule-row):not(.server-year-schedule-row)').forEach(function (row) {
+      row.remove()
+    })
+  }
+
   function openSelectedDayDetail(target) {
     var text = target ? target.textContent.trim() : ''
     if (!text) return
@@ -1246,12 +1258,7 @@
     var mode = getActiveCalendarMode()
     document.documentElement.dataset.calendarMode = mode
     document.querySelectorAll('.selected-day-card').forEach(function (card) {
-      if (mode === 'day' || mode === 'week') {
-        card.removeAttribute('aria-hidden')
-        card.style.removeProperty('display')
-      } else {
-        card.setAttribute('aria-hidden', 'true')
-      }
+      card.remove()
     })
   }
 
@@ -1394,9 +1401,10 @@
 
     var direction = steps < 0 ? -1 : 1
     var count = Math.min(Math.abs(steps), 1600)
+    if (count > 1) document.documentElement.classList.add('calendar-silent-moving')
     for (var index = 0; index < count; index += 1) {
       clickNavButton(direction)
-      await new Promise(function (resolve) { window.setTimeout(resolve, 6) })
+      await new Promise(function (resolve) { window.setTimeout(resolve, 0) })
     }
 
     window.setTimeout(function () {
@@ -1408,6 +1416,7 @@
         updateScheduleFormVisibleDate(target)
       }
       updateJumpInput(target)
+      document.documentElement.classList.remove('calendar-silent-moving')
     }, 120)
   }
 
@@ -1420,6 +1429,7 @@
   function renderJumpDatepicker(baseDate) {
     var old = document.querySelector('.jump-datepicker-popover')
     if (old) old.remove()
+    document.documentElement.classList.add('calendar-jump-open')
 
     var mode = getActiveCalendarMode()
     var selected = baseDate || getScheduleFormVisibleDate() || getFocusedDate()
@@ -1507,6 +1517,7 @@
         updateJumpInput(today)
         updateScheduleFormVisibleDate(today)
         popover.remove()
+        document.documentElement.classList.remove('calendar-jump-open')
         return
       }
       var monthButton = target.closest('[data-jump-month]')
@@ -1519,6 +1530,7 @@
           updateJumpInput(pickedMonth)
           updateScheduleFormVisibleDate(pickedMonth)
           popover.remove()
+          document.documentElement.classList.remove('calendar-jump-open')
         } else {
           level = 'day'
           draw()
@@ -1536,6 +1548,7 @@
           updateJumpInput(pickedYear)
           updateScheduleFormVisibleDate(pickedYear)
           popover.remove()
+          document.documentElement.classList.remove('calendar-jump-open')
         } else {
           level = 'month'
           draw()
@@ -1550,6 +1563,7 @@
         updateJumpInput(picked)
         updateScheduleFormVisibleDate(picked)
         popover.remove()
+        document.documentElement.classList.remove('calendar-jump-open')
       }
     })
   }
@@ -1573,7 +1587,8 @@
       var mode = getActiveCalendarMode()
       var today = new Date()
       var focused = getFocusedDate()
-      var selected = (mode === 'day' || mode === 'week') ? today : (getScheduleFormVisibleDate() || focused)
+      var stored = parseDate(document.documentElement.dataset.calendarSelectedDate || '')
+      var selected = (mode === 'day' || mode === 'week') ? (stored || getScheduleFormVisibleDate() || focused || today) : (getScheduleFormVisibleDate() || stored || focused)
       window.__familySuppressCalendarPopupUntil = Date.now() + 2500
       if (mode === 'year') {
         var monthStart = new Date(selected.getFullYear(), selected.getMonth(), 1)
@@ -1595,7 +1610,9 @@
     window.setTimeout(function () {
       var mode = getActiveCalendarMode()
       if (mode !== 'day' && mode !== 'week') return
-      var today = new Date()
+      var selectedText = document.documentElement.dataset.calendarSelectedDate
+      var selected = selectedText ? parseDate(selectedText) : null
+      var today = selected || getScheduleFormVisibleDate() || new Date()
       window.__familySuppressCalendarPopupUntil = Date.now() + 2500
       moveCalendarTo(today)
       updateJumpInput(today)
@@ -1616,6 +1633,23 @@
         if (event.stopImmediatePropagation) event.stopImmediatePropagation()
         renderJumpDatepicker(getScheduleFormVisibleDate() || getFocusedDate())
       }, true)
+    })
+
+    document.querySelectorAll('.family-calendar-panel .calendar-nav > button:not(.calendar-title-button)').forEach(function (button) {
+      if (button.dataset.patchNavWired) return
+      button.dataset.patchNavWired = 'true'
+      button.addEventListener('click', function () {
+        window.setTimeout(function () {
+          var mode = getActiveCalendarMode()
+          if (mode !== 'day' && mode !== 'week') return
+          var focused = getFocusedDate()
+          document.documentElement.dataset.calendarSelectedDate = formatDate(focused)
+          updateJumpInput(focused)
+          updateScheduleFormVisibleDate(focused)
+          calendarScheduleCache.key = ''
+          renderCalendarApiSchedules(true)
+        }, 180)
+      })
     })
 
     document.querySelectorAll('.family-calendar-panel .calendar-view-tabs button').forEach(function (button) {
@@ -2541,7 +2575,10 @@
   document.addEventListener('click', function (event) {
     if (event.target && event.target.closest && (event.target.closest('.jump-datepicker-popover') || event.target.closest('.family-calendar-panel .calendar-title-button'))) return
     var jump = document.querySelector('.jump-datepicker-popover')
-    if (jump) jump.remove()
+    if (jump) {
+      jump.remove()
+      document.documentElement.classList.remove('calendar-jump-open')
+    }
   }, true)
 
   function getCleanText(element) {
@@ -4587,6 +4624,7 @@
   function renderScheduleRowsFromApi(items, label) {
     var card = document.querySelector('.schedule-list-card')
     if (!card) return
+    cleanupHardcodedCalendarRows()
     var list = card.querySelector('.api-schedule-list')
     if (!list) {
       list = document.createElement('div')
@@ -4628,7 +4666,16 @@
     if (!document.querySelector('.family-calendar-panel')) return Promise.resolve([])
     removeDeveloperServerPanels()
     var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
-    var label = mode === 'day' ? '\uC77C\uAC04 \uC77C\uC815\uD45C' : (mode === 'week' ? '\uC8FC\uAC04 \uC77C\uC815\uD45C' : (mode === 'year' ? '\uC5F0\uAC04 \uC77C\uC815\uD45C' : '\uC6D4\uAC04 \uC77C\uC815\uD45C'))
+    if (mode === 'year') {
+      var activeMonthCard = document.querySelector('.year-month-card.active') || document.querySelector('.year-month-card')
+      var strong = activeMonthCard && activeMonthCard.querySelector('strong')
+      var month = Number(((strong && strong.textContent.match(/\d+/g)) || [])[0])
+      if (Number.isFinite(month)) {
+        renderYearSelectedMonthList(new Date(getCurrentYearNumber(), month - 1, 1))
+      }
+      return Promise.resolve([])
+    }
+    var label = mode === 'day' ? '\uC77C\uAC04 \uC77C\uC815\uD45C' : (mode === 'week' ? '\uC8FC\uAC04 \uC77C\uC815\uD45C' : '\uC6D4\uAC04 \uC77C\uC815\uD45C')
     document.querySelectorAll('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day').forEach(function (card) {
       card.removeAttribute('data-api-chip-title')
       card.removeAttribute('data-api-chip-count')
@@ -5565,6 +5612,15 @@
 
   function handleCalendarTitleJumpEvent(event) {
     var titleButton = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-nav .calendar-title-button')
+    if (!titleButton && event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-toolbar')) {
+      var candidate = document.querySelector('.family-calendar-panel .calendar-nav .calendar-title-button')
+      if (candidate && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+        var rect = candidate.getBoundingClientRect()
+        if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+          titleButton = candidate
+        }
+      }
+    }
     if (!titleButton) return
     event.preventDefault()
     event.stopPropagation()
@@ -5573,7 +5629,9 @@
   }
 
   document.addEventListener('click', handleCalendarTitleJumpEvent, true)
+  document.addEventListener('pointerdown', handleCalendarTitleJumpEvent, true)
   document.addEventListener('pointerup', handleCalendarTitleJumpEvent, true)
+  document.addEventListener('touchstart', handleCalendarTitleJumpEvent, true)
   document.addEventListener('touchend', handleCalendarTitleJumpEvent, true)
 
   document.addEventListener('click', function (event) {

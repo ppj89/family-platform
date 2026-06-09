@@ -40,44 +40,7 @@ const defaultDraft: ScheduleDraft = {
   note: '',
 }
 
-const initialSchedules: Schedule[] = [
-  {
-    id: 1,
-    title: '엄마 생일',
-    date: '2026-06-12',
-    time: '09:00',
-    category: '생일',
-    member: '엄마',
-    repeat: 'yearly',
-    basis: 'solar',
-    note: '케이크 예약, 저녁 식사 장소 정하기',
-    createdAt: 1,
-  },
-  {
-    id: 2,
-    title: '소아과 정기검진',
-    date: '2026-06-05',
-    time: '14:30',
-    category: '병원',
-    member: '첫째',
-    repeat: 'none',
-    basis: 'solar',
-    note: '예방접종 수첩 챙기기',
-    createdAt: 2,
-  },
-  {
-    id: 3,
-    title: '할머니 생신',
-    date: '2026-06-20',
-    time: '18:00',
-    category: '기념일',
-    member: '전체 가족',
-    repeat: 'yearly',
-    basis: 'lunar',
-    note: '음력 기준으로 매년 확인',
-    createdAt: 3,
-  },
-]
+const initialSchedules: Schedule[] = []
 
 const holidayNames: Record<string, string> = {
   '2026-01-01': '신정',
@@ -129,7 +92,6 @@ export default function FamilyCalendar() {
 
   const range = useMemo(() => getViewRange(view, focusDate), [focusDate, view])
   const occurrences = useMemo(() => getOccurrences(schedules, range.start, range.end), [schedules, range])
-  const selectedOccurrences = useMemo(() => getOccurrences(schedules, focusDate, focusDate), [focusDate, schedules])
   const monthDates = useMemo(() => getMonthDates(focusDate), [focusDate])
 
   const updateDraft = <K extends keyof ScheduleDraft>(key: K, value: ScheduleDraft[K]) => {
@@ -243,7 +205,6 @@ export default function FamilyCalendar() {
           )}
 
           <div className="fc-lists stacked">
-            <ScheduleList onDelete={requestDeleteSchedule} onEdit={editSchedule} onOpen={setSelected} schedules={selectedOccurrences} title="선택일 상세" />
             <ScheduleList onDelete={requestDeleteSchedule} onEdit={editSchedule} onOpen={setSelected} schedules={occurrences} title={`${getViewLabel(view)} 일정표`} />
           </div>
         </main>

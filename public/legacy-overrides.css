@@ -8905,6 +8905,17 @@ body:has(.family-calendar-panel) .family-calendar-panel .calendar-view-tabs {
   background: #ffffff !important;
 }
 
+html.calendar-silent-moving body:has(.family-calendar-panel) .family-month-grid,
+html.calendar-silent-moving body:has(.family-calendar-panel) .week-agenda-grid,
+html.calendar-silent-moving body:has(.family-calendar-panel) .agenda-day-column,
+html.calendar-silent-moving body:has(.family-calendar-panel) .year-schedule-grid {
+  opacity: 0 !important;
+}
+
+html.calendar-jump-open body:has(.family-calendar-panel) .family-calendar-panel .calendar-nav {
+  visibility: hidden !important;
+}
+
 @media (max-width: 620px) {
   body:has(.family-calendar-panel) .workspace {
     overflow-x: hidden !important;
