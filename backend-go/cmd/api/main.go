@@ -887,7 +887,7 @@ func (a *app) listLedgerEntries(w http.ResponseWriter, r *http.Request, user aut
 		select id, family_id, title, entry_type, category, payment_method, member_name, coalesce(amount, 0),
 		       transaction_date, memo, created_at
 		from ledger_entries
-		where family_id = $1 and transaction_date between $2 and $3
+		where family_id = $1 and transaction_date between $2 and $3 and deleted_at is null
 		order by transaction_date desc, created_at desc
 	`, familyID, start, end)
 	if err != nil {
@@ -913,7 +913,7 @@ func (a *app) ledgerSummary(w http.ResponseWriter, r *http.Request, user authUse
 		  coalesce(sum(case when entry_type = 'expense' then amount else 0 end), 0),
 		  coalesce(sum(case when entry_type = 'income' then amount else 0 end), 0)
 		from ledger_entries
-		where family_id = $1 and transaction_date between $2 and $3
+		where family_id = $1 and transaction_date between $2 and $3 and deleted_at is null
 	`, familyID, start, end).Scan(&expense, &income)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
@@ -935,6 +935,7 @@ func (a *app) createLedgerEntry(w http.ResponseWriter, r *http.Request, user aut
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "ledger_entry", item.ID, familyID, user.ID, "create", item)
 	writeJSON(w, http.StatusCreated, item)
 }
 
@@ -943,7 +944,7 @@ func (a *app) updateLedgerEntry(w http.ResponseWriter, r *http.Request, user aut
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from ledger_entries where id = $1", entryID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from ledger_entries where id = $1 and deleted_at is null", entryID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
 		return
 	}
@@ -955,6 +956,7 @@ func (a *app) updateLedgerEntry(w http.ResponseWriter, r *http.Request, user aut
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "ledger_entry", item.ID, familyID, user.ID, "update", item)
 	writeJSON(w, http.StatusOK, item)
 }
 
@@ -963,11 +965,12 @@ func (a *app) deleteLedgerEntry(w http.ResponseWriter, r *http.Request, user aut
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from ledger_entries where id = $1", entryID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from ledger_entries where id = $1 and deleted_at is null", entryID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
 		return
 	}
-	_, _ = a.db.Exec(r.Context(), "delete from ledger_entries where id = $1", entryID)
+	_, _ = a.db.Exec(r.Context(), "update ledger_entries set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", entryID)
+	a.recordDataChange(r.Context(), "ledger_entry", entryID, familyID, user.ID, "delete", map[string]any{"id": entryID})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -993,7 +996,7 @@ func (a *app) listSchedules(w http.ResponseWriter, r *http.Request, user authUse
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, title, calendar_basis, schedule_date, schedule_time::text, category, member_name, repeat_rule, memo, created_at
 		from family_schedules
-		where family_id = $1 and schedule_date between $2 and $3
+		where family_id = $1 and schedule_date between $2 and $3 and deleted_at is null
 		order by schedule_date asc, schedule_time asc nulls last, created_at desc
 	`, familyID, start, end)
 	if err != nil {
@@ -1021,6 +1024,7 @@ func (a *app) createSchedule(w http.ResponseWriter, r *http.Request, user authUs
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "family_schedule", item.ID, familyID, user.ID, "create", item)
 	writeJSON(w, http.StatusCreated, item)
 }
 
@@ -1029,7 +1033,7 @@ func (a *app) updateSchedule(w http.ResponseWriter, r *http.Request, user authUs
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_schedules where id = $1", id)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_schedules where id = $1 and deleted_at is null", id)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
 		return
 	}
@@ -1041,6 +1045,7 @@ func (a *app) updateSchedule(w http.ResponseWriter, r *http.Request, user authUs
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "family_schedule", item.ID, familyID, user.ID, "update", item)
 	writeJSON(w, http.StatusOK, item)
 }
 
@@ -1049,11 +1054,12 @@ func (a *app) deleteSchedule(w http.ResponseWriter, r *http.Request, user authUs
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_schedules where id = $1", id)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_schedules where id = $1 and deleted_at is null", id)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
 		return
 	}
-	_, _ = a.db.Exec(r.Context(), "delete from family_schedules where id = $1", id)
+	_, _ = a.db.Exec(r.Context(), "update family_schedules set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", id)
+	a.recordDataChange(r.Context(), "family_schedule", id, familyID, user.ID, "delete", map[string]any{"id": id})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1279,7 +1285,7 @@ func (a *app) listTrips(w http.ResponseWriter, r *http.Request, user authUser) {
 	}
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, title, start_date, end_date, description, created_at
-		from trips where family_id = $1 order by created_at desc
+		from trips where family_id = $1 and deleted_at is null order by created_at desc
 	`, familyID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
@@ -1306,6 +1312,7 @@ func (a *app) createTrip(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "trip", item.ID, familyID, user.ID, "create", item)
 	writeJSON(w, http.StatusCreated, item)
 }
 
@@ -1314,7 +1321,7 @@ func (a *app) updateTrip(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1", tripID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1 and deleted_at is null", tripID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
 		return
 	}
@@ -1326,6 +1333,7 @@ func (a *app) updateTrip(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "trip", item.ID, familyID, user.ID, "update", item)
 	writeJSON(w, http.StatusOK, item)
 }
 
@@ -1334,13 +1342,13 @@ func (a *app) deleteTrip(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1", tripID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1 and deleted_at is null", tripID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
 		return
 	}
-	_, _ = a.db.Exec(r.Context(), "delete from travel_record_media_urls where travel_record_id in (select id from travel_records where trip_id = $1)", tripID)
-	_, _ = a.db.Exec(r.Context(), "delete from travel_records where trip_id = $1", tripID)
-	_, _ = a.db.Exec(r.Context(), "delete from trips where id = $1", tripID)
+	_, _ = a.db.Exec(r.Context(), "update travel_records set deleted_at = now(), updated_at = now() where trip_id = $1 and deleted_at is null", tripID)
+	_, _ = a.db.Exec(r.Context(), "update trips set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", tripID)
+	a.recordDataChange(r.Context(), "trip", tripID, familyID, user.ID, "delete", map[string]any{"id": tripID})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1349,7 +1357,7 @@ func (a *app) listTravelRecords(w http.ResponseWriter, r *http.Request, user aut
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1", tripID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1 and deleted_at is null", tripID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
 		return
 	}
@@ -1365,7 +1373,7 @@ func (a *app) createTravelRecord(w http.ResponseWriter, r *http.Request, user au
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1", tripID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1 and deleted_at is null", tripID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
@@ -1377,6 +1385,7 @@ func (a *app) createTravelRecord(w http.ResponseWriter, r *http.Request, user au
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "travel_record", item.ID, familyID, user.ID, "create", item)
 	writeJSON(w, http.StatusCreated, item)
 }
 
@@ -1387,7 +1396,7 @@ func (a *app) updateTravelRecord(w http.ResponseWriter, r *http.Request, user au
 	}
 	var tripID, familyID int64
 	err := a.db.QueryRow(r.Context(), `
-		select r.trip_id, t.family_id from travel_records r join trips t on t.id = r.trip_id where r.id = $1
+		select r.trip_id, t.family_id from travel_records r join trips t on t.id = r.trip_id where r.id = $1 and r.deleted_at is null and t.deleted_at is null
 	`, recordID).Scan(&tripID, &familyID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "travel record not found")
@@ -1404,6 +1413,7 @@ func (a *app) updateTravelRecord(w http.ResponseWriter, r *http.Request, user au
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "travel_record", item.ID, familyID, user.ID, "update", item)
 	writeJSON(w, http.StatusOK, item)
 }
 
@@ -1414,7 +1424,7 @@ func (a *app) deleteTravelRecord(w http.ResponseWriter, r *http.Request, user au
 	}
 	var tripID, familyID int64
 	err := a.db.QueryRow(r.Context(), `
-		select r.trip_id, t.family_id from travel_records r join trips t on t.id = r.trip_id where r.id = $1
+		select r.trip_id, t.family_id from travel_records r join trips t on t.id = r.trip_id where r.id = $1 and r.deleted_at is null and t.deleted_at is null
 	`, recordID).Scan(&tripID, &familyID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "travel record not found")
@@ -1423,8 +1433,8 @@ func (a *app) deleteTravelRecord(w http.ResponseWriter, r *http.Request, user au
 	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
 		return
 	}
-	_, _ = a.db.Exec(r.Context(), "delete from travel_record_media_urls where travel_record_id = $1", recordID)
-	_, _ = a.db.Exec(r.Context(), "delete from travel_records where id = $1", recordID)
+	_, _ = a.db.Exec(r.Context(), "update travel_records set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", recordID)
+	a.recordDataChange(r.Context(), "travel_record", recordID, familyID, user.ID, "delete", map[string]any{"id": recordID, "tripId": tripID})
 	_ = tripID
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -1463,7 +1473,7 @@ func (a *app) listBabies(w http.ResponseWriter, r *http.Request, user authUser) 
 	}
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at
-		from baby_profiles where family_id = $1 order by created_at desc
+		from baby_profiles where family_id = $1 and deleted_at is null order by created_at desc
 	`, familyID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
@@ -1490,6 +1500,7 @@ func (a *app) createBaby(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "baby_profile", item.ID, familyID, user.ID, "create", item)
 	writeJSON(w, http.StatusCreated, item)
 }
 
@@ -1498,7 +1509,7 @@ func (a *app) updateBaby(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1", babyID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1 and deleted_at is null", babyID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
 		return
 	}
@@ -1510,6 +1521,7 @@ func (a *app) updateBaby(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "baby_profile", item.ID, familyID, user.ID, "update", item)
 	writeJSON(w, http.StatusOK, item)
 }
 
@@ -1518,13 +1530,13 @@ func (a *app) deleteBaby(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1", babyID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1 and deleted_at is null", babyID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
 		return
 	}
-	_, _ = a.db.Exec(r.Context(), "delete from baby_record_media_urls where baby_record_id in (select id from baby_records where baby_id = $1)", babyID)
-	_, _ = a.db.Exec(r.Context(), "delete from baby_records where baby_id = $1", babyID)
-	_, _ = a.db.Exec(r.Context(), "delete from baby_profiles where id = $1", babyID)
+	_, _ = a.db.Exec(r.Context(), "update baby_records set deleted_at = now(), updated_at = now() where baby_id = $1 and deleted_at is null", babyID)
+	_, _ = a.db.Exec(r.Context(), "update baby_profiles set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", babyID)
+	a.recordDataChange(r.Context(), "baby_profile", babyID, familyID, user.ID, "delete", map[string]any{"id": babyID})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1533,14 +1545,14 @@ func (a *app) listBabyRecords(w http.ResponseWriter, r *http.Request, user authU
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1", babyID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1 and deleted_at is null", babyID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
 		return
 	}
 	start, end := r.URL.Query().Get("startDate"), r.URL.Query().Get("endDate")
 	query := `
 		select id, baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at
-		from baby_records where baby_id = $1
+		from baby_records where baby_id = $1 and deleted_at is null
 	`
 	args := []any{babyID}
 	if validDate(start) && validDate(end) {
@@ -1566,7 +1578,7 @@ func (a *app) createBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1", babyID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1 and deleted_at is null", babyID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
@@ -1578,6 +1590,7 @@ func (a *app) createBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "baby_record", item.ID, familyID, user.ID, "create", item)
 	writeJSON(w, http.StatusCreated, item)
 }
 
@@ -1587,7 +1600,7 @@ func (a *app) updateBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 		return
 	}
 	var babyID, familyID int64
-	err := a.db.QueryRow(r.Context(), `select r.baby_id, b.family_id from baby_records r join baby_profiles b on b.id = r.baby_id where r.id = $1`, recordID).Scan(&babyID, &familyID)
+	err := a.db.QueryRow(r.Context(), `select r.baby_id, b.family_id from baby_records r join baby_profiles b on b.id = r.baby_id where r.id = $1 and r.deleted_at is null and b.deleted_at is null`, recordID).Scan(&babyID, &familyID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "baby record not found")
 		return
@@ -1603,6 +1616,7 @@ func (a *app) updateBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "baby_record", item.ID, familyID, user.ID, "update", item)
 	writeJSON(w, http.StatusOK, item)
 }
 
@@ -1612,7 +1626,7 @@ func (a *app) deleteBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 		return
 	}
 	var familyID int64
-	err := a.db.QueryRow(r.Context(), `select b.family_id from baby_records r join baby_profiles b on b.id = r.baby_id where r.id = $1`, recordID).Scan(&familyID)
+	err := a.db.QueryRow(r.Context(), `select b.family_id from baby_records r join baby_profiles b on b.id = r.baby_id where r.id = $1 and r.deleted_at is null and b.deleted_at is null`, recordID).Scan(&familyID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "baby record not found")
 		return
@@ -1620,8 +1634,8 @@ func (a *app) deleteBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
 		return
 	}
-	_, _ = a.db.Exec(r.Context(), "delete from baby_record_media_urls where baby_record_id = $1", recordID)
-	_, _ = a.db.Exec(r.Context(), "delete from baby_records where id = $1", recordID)
+	_, _ = a.db.Exec(r.Context(), "update baby_records set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", recordID)
+	a.recordDataChange(r.Context(), "baby_record", recordID, familyID, user.ID, "delete", map[string]any{"id": recordID})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1646,7 +1660,7 @@ func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser)
 	}
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, title, body, diary_date, weather, mood, min_temperature, max_temperature, created_at
-		from family_diaries where family_id = $1 and diary_date between $2 and $3
+		from family_diaries where family_id = $1 and diary_date between $2 and $3 and deleted_at is null
 		order by diary_date desc, created_at desc
 	`, familyID, start, end)
 	if err != nil {
@@ -1674,6 +1688,7 @@ func (a *app) createDiary(w http.ResponseWriter, r *http.Request, user authUser)
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "family_diary", item.ID, familyID, user.ID, "create", item)
 	writeJSON(w, http.StatusCreated, item)
 }
 
@@ -1682,7 +1697,7 @@ func (a *app) updateDiary(w http.ResponseWriter, r *http.Request, user authUser)
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_diaries where id = $1", diaryID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_diaries where id = $1 and deleted_at is null", diaryID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
 		return
 	}
@@ -1694,6 +1709,7 @@ func (a *app) updateDiary(w http.ResponseWriter, r *http.Request, user authUser)
 	if !ok {
 		return
 	}
+	a.recordDataChange(r.Context(), "family_diary", item.ID, familyID, user.ID, "update", item)
 	writeJSON(w, http.StatusOK, item)
 }
 
@@ -1702,12 +1718,12 @@ func (a *app) deleteDiary(w http.ResponseWriter, r *http.Request, user authUser)
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_diaries where id = $1", diaryID)
+	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_diaries where id = $1 and deleted_at is null", diaryID)
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
 		return
 	}
-	_, _ = a.db.Exec(r.Context(), "delete from family_diary_media_urls where family_diary_id = $1", diaryID)
-	_, _ = a.db.Exec(r.Context(), "delete from family_diaries where id = $1", diaryID)
+	_, _ = a.db.Exec(r.Context(), "update family_diaries set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", diaryID)
+	a.recordDataChange(r.Context(), "family_diary", diaryID, familyID, user.ID, "delete", map[string]any{"id": diaryID})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1742,7 +1758,7 @@ func (a *app) listCommunityPosts(w http.ResponseWriter, r *http.Request, user au
 		return
 	}
 	familyID := queryInt64(r, "familyId", 0)
-	query := `select id, board_type, family_id, author_id, author_name, title, body::text, coalesce(view_count,0), created_at, updated_at from community_posts where board_type = $1`
+	query := `select id, board_type, family_id, author_id, author_name, title, body::text, coalesce(view_count,0), created_at, updated_at from community_posts where board_type = $1 and deleted_at is null`
 	args := []any{board}
 	if familyID > 0 && board != "free" && board != "notice" {
 		if !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
@@ -1811,7 +1827,7 @@ func (a *app) listCommunityBestPosts(w http.ResponseWriter, r *http.Request, use
 		left join community_post_view_stats v
 		  on v.community_post_id = p.id
 		 and v.view_date >= current_date - (($2::int - 1) * interval '1 day')
-		where p.board_type = $1
+		where p.board_type = $1 and p.deleted_at is null
 		group by p.id
 		order by period_views desc, coalesce(p.view_count,0) desc, p.created_at desc
 		limit 10
@@ -1852,6 +1868,11 @@ func (a *app) createCommunityPost(w http.ResponseWriter, r *http.Request, user a
 	if !ok {
 		return
 	}
+	var familyID int64
+	if item.FamilyID != nil {
+		familyID = *item.FamilyID
+	}
+	a.recordDataChange(r.Context(), "community_post", item.ID, familyID, user.ID, "create", item)
 	writeJSON(w, http.StatusCreated, item)
 }
 
@@ -1875,6 +1896,11 @@ func (a *app) updateCommunityPost(w http.ResponseWriter, r *http.Request, user a
 	if !ok {
 		return
 	}
+	var familyID int64
+	if item.FamilyID != nil {
+		familyID = *item.FamilyID
+	}
+	a.recordDataChange(r.Context(), "community_post", item.ID, familyID, user.ID, "update", item)
 	writeJSON(w, http.StatusOK, item)
 }
 
@@ -1887,10 +1913,13 @@ func (a *app) deleteCommunityPost(w http.ResponseWriter, r *http.Request, user a
 	if !ok || !a.requirePostWrite(w, user, post) {
 		return
 	}
-	_, _ = a.db.Exec(r.Context(), "delete from community_comments where post_id = $1", postID)
-	_, _ = a.db.Exec(r.Context(), "delete from community_post_media_urls where community_post_id = $1", postID)
-	_, _ = a.db.Exec(r.Context(), "delete from community_post_view_stats where community_post_id = $1", postID)
-	_, _ = a.db.Exec(r.Context(), "delete from community_posts where id = $1", postID)
+	_, _ = a.db.Exec(r.Context(), "update community_comments set deleted_at = now(), updated_at = now() where post_id = $1 and deleted_at is null", postID)
+	_, _ = a.db.Exec(r.Context(), "update community_posts set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", postID)
+	var familyID int64
+	if post.FamilyID != nil {
+		familyID = *post.FamilyID
+	}
+	a.recordDataChange(r.Context(), "community_post", postID, familyID, user.ID, "delete", map[string]any{"id": postID})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -1930,6 +1959,11 @@ func (a *app) createCommunityComment(w http.ResponseWriter, r *http.Request, use
 	item.AuthorID = &authorID
 	item.CreatedAt = formatTime(createdAt)
 	item.UpdatedAt = formatTime(updatedAt)
+	var familyID int64
+	if post.FamilyID != nil {
+		familyID = *post.FamilyID
+	}
+	a.recordDataChange(r.Context(), "community_comment", item.ID, familyID, user.ID, "create", item)
 	writeJSON(w, http.StatusCreated, item)
 }
 
@@ -1954,7 +1988,7 @@ func (a *app) updateCommunityComment(w http.ResponseWriter, r *http.Request, use
 	var authorID sql.NullInt64
 	var createdAt, updatedAt time.Time
 	err := a.db.QueryRow(r.Context(), `
-		update community_comments set body=$1, updated_at=now() where id=$2
+		update community_comments set body=$1, updated_at=now() where id=$2 and deleted_at is null
 		returning id, post_id, author_id, author_name, body::text, created_at, updated_at
 	`, req.Body, commentID).Scan(&item.ID, &item.PostID, &authorID, &item.AuthorName, &item.Body, &createdAt, &updatedAt)
 	if err != nil {
@@ -1964,6 +1998,7 @@ func (a *app) updateCommunityComment(w http.ResponseWriter, r *http.Request, use
 	item.AuthorID = nullInt64(authorID)
 	item.CreatedAt = formatTime(createdAt)
 	item.UpdatedAt = formatTime(updatedAt)
+	a.recordDataChange(r.Context(), "community_comment", item.ID, 0, user.ID, "update", item)
 	writeJSON(w, http.StatusOK, item)
 }
 
@@ -1977,7 +2012,8 @@ func (a *app) deleteCommunityComment(w http.ResponseWriter, r *http.Request, use
 		writeError(w, http.StatusForbidden, "only the author can change this content")
 		return
 	}
-	_, _ = a.db.Exec(r.Context(), "delete from community_comments where id = $1", commentID)
+	_, _ = a.db.Exec(r.Context(), "update community_comments set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", commentID)
+	a.recordDataChange(r.Context(), "community_comment", commentID, 0, user.ID, "delete", map[string]any{"id": commentID})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -2115,7 +2151,7 @@ func (a *app) createScheduleReminders(w http.ResponseWriter, r *http.Request, us
 	for _, familyID := range familyIDs {
 		schedules, err := a.db.Query(r.Context(), `
 			select id, title, coalesce(schedule_time::text, ''), coalesce(category, '일정')
-			from family_schedules where family_id = $1 and schedule_date = $2
+			from family_schedules where family_id = $1 and schedule_date = $2 and deleted_at is null
 		`, familyID, targetDate)
 		if err != nil {
 			continue
@@ -2585,6 +2621,8 @@ create table if not exists family_schedules (
   calendar_basis varchar(255),
   category varchar(255),
   created_at timestamp with time zone,
+  updated_at timestamp with time zone,
+  deleted_at timestamp with time zone,
   family_id bigint,
   member_name varchar(255),
   memo varchar(255),
@@ -2593,11 +2631,15 @@ create table if not exists family_schedules (
   schedule_time time without time zone,
   title varchar(255)
 );
+alter table if exists family_schedules add column if not exists updated_at timestamp with time zone;
+alter table if exists family_schedules add column if not exists deleted_at timestamp with time zone;
 create table if not exists ledger_entries (
   id bigint generated by default as identity primary key,
   amount numeric(38,2),
   category varchar(255),
   created_at timestamp with time zone,
+  updated_at timestamp with time zone,
+  deleted_at timestamp with time zone,
   entry_type varchar(255),
   family_id bigint,
   member_name varchar(255),
@@ -2606,20 +2648,28 @@ create table if not exists ledger_entries (
   title varchar(255),
   transaction_date date
 );
+alter table if exists ledger_entries add column if not exists updated_at timestamp with time zone;
+alter table if exists ledger_entries add column if not exists deleted_at timestamp with time zone;
 create table if not exists trips (
   id bigint generated by default as identity primary key,
   created_at timestamp with time zone,
+  updated_at timestamp with time zone,
+  deleted_at timestamp with time zone,
   description varchar(255),
   end_date date,
   family_id bigint,
   start_date date,
   title varchar(255)
 );
+alter table if exists trips add column if not exists updated_at timestamp with time zone;
+alter table if exists trips add column if not exists deleted_at timestamp with time zone;
 create table if not exists travel_records (
   id bigint generated by default as identity primary key,
   amount numeric(38,2),
   category varchar(255),
   created_at timestamp with time zone,
+  updated_at timestamp with time zone,
+  deleted_at timestamp with time zone,
   latitude double precision,
   location varchar(255),
   longitude double precision,
@@ -2630,6 +2680,8 @@ create table if not exists travel_records (
   title varchar(255),
   trip_id bigint
 );
+alter table if exists travel_records add column if not exists updated_at timestamp with time zone;
+alter table if exists travel_records add column if not exists deleted_at timestamp with time zone;
 create table if not exists travel_record_media_urls (
   travel_record_id bigint not null,
   media_urls varchar(2048)
@@ -2656,6 +2708,8 @@ create table if not exists baby_profiles (
   id bigint generated by default as identity primary key,
   birth_date date,
   created_at timestamp with time zone,
+  updated_at timestamp with time zone,
+  deleted_at timestamp with time zone,
   family_id bigint,
   gender varchar(255),
   latest_height_cm numeric(38,2),
@@ -2664,11 +2718,15 @@ create table if not exists baby_profiles (
   name varchar(255),
   photo_url varchar(2048)
 );
+alter table if exists baby_profiles add column if not exists updated_at timestamp with time zone;
+alter table if exists baby_profiles add column if not exists deleted_at timestamp with time zone;
 create table if not exists baby_records (
   id bigint generated by default as identity primary key,
   amount_ml integer,
   baby_id bigint,
   created_at timestamp with time zone,
+  updated_at timestamp with time zone,
+  deleted_at timestamp with time zone,
   height_cm numeric(38,2),
   memo varchar(255),
   record_date date,
@@ -2676,6 +2734,8 @@ create table if not exists baby_records (
   record_type varchar(255),
   weight_kg numeric(38,2)
 );
+alter table if exists baby_records add column if not exists updated_at timestamp with time zone;
+alter table if exists baby_records add column if not exists deleted_at timestamp with time zone;
 create table if not exists baby_record_media_urls (
   baby_record_id bigint not null,
   media_urls varchar(2048)
@@ -2684,6 +2744,8 @@ create table if not exists family_diaries (
   id bigint generated by default as identity primary key,
   body text,
   created_at timestamp with time zone,
+  updated_at timestamp with time zone,
+  deleted_at timestamp with time zone,
   diary_date date,
   family_id bigint,
   max_temperature integer,
@@ -2692,6 +2754,8 @@ create table if not exists family_diaries (
   title varchar(255),
   weather varchar(255)
 );
+alter table if exists family_diaries add column if not exists updated_at timestamp with time zone;
+alter table if exists family_diaries add column if not exists deleted_at timestamp with time zone;
 create table if not exists family_diary_media_urls (
   family_diary_id bigint not null,
   media_urls varchar(2048)
@@ -2706,9 +2770,11 @@ create table if not exists community_posts (
   family_id bigint,
   title varchar(255),
   updated_at timestamp with time zone,
+  deleted_at timestamp with time zone,
   view_count bigint not null default 0
 );
 alter table community_posts add column if not exists view_count bigint not null default 0;
+alter table if exists community_posts add column if not exists deleted_at timestamp with time zone;
 create table if not exists community_post_media_urls (
   community_post_id bigint not null,
   media_urls varchar(2048)
@@ -2726,8 +2792,22 @@ create table if not exists community_comments (
   body text,
   created_at timestamp with time zone,
   post_id bigint,
-  updated_at timestamp with time zone
+  updated_at timestamp with time zone,
+  deleted_at timestamp with time zone
 );
+alter table if exists community_comments add column if not exists deleted_at timestamp with time zone;
+create table if not exists data_change_histories (
+  id bigint generated by default as identity primary key,
+  entity_type varchar(255) not null,
+  entity_id bigint not null,
+  family_id bigint,
+  actor_user_id bigint,
+  action varchar(64) not null,
+  created_at timestamp with time zone not null,
+  snapshot jsonb
+);
+create index if not exists idx_data_change_histories_entity on data_change_histories (entity_type, entity_id, created_at desc);
+create index if not exists idx_data_change_histories_family on data_change_histories (family_id, created_at desc);
 create table if not exists app_notifications (
   id bigint generated by default as identity primary key,
   body varchar(255),
@@ -2789,6 +2869,17 @@ func (a *app) recordLoginHistory(ctx context.Context, userID *int64, email, prov
 		insert into login_histories (user_id, email, provider, event_type, result, reason, created_at)
 		values ($1, $2, $3, $4, $5, $6, now())
 	`, userValue, normalizeEmail(email), provider, eventType, result, reason)
+}
+
+func (a *app) recordDataChange(ctx context.Context, entityType string, entityID int64, familyID int64, userID int64, action string, snapshot any) {
+	var snapshotJSON []byte
+	if snapshot != nil {
+		snapshotJSON, _ = json.Marshal(snapshot)
+	}
+	_, _ = a.db.Exec(ctx, `
+		insert into data_change_histories (entity_type, entity_id, family_id, actor_user_id, action, created_at, snapshot)
+		values ($1, $2, $3, $4, $5, now(), $6)
+	`, entityType, entityID, familyID, userID, action, snapshotJSON)
 }
 
 func verificationTokenHash(token string) string {
@@ -3159,15 +3250,15 @@ func (a *app) saveLedgerEntry(w http.ResponseWriter, r *http.Request, entryID in
 	var err error
 	if entryID == 0 {
 		err = a.db.QueryRow(r.Context(), `
-			insert into ledger_entries (family_id, title, entry_type, category, payment_method, member_name, amount, transaction_date, memo, created_at)
-			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, now())
+			insert into ledger_entries (family_id, title, entry_type, category, payment_method, member_name, amount, transaction_date, memo, created_at, updated_at)
+			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
 			returning id, family_id, title, entry_type, category, payment_method, member_name, coalesce(amount, 0), transaction_date, memo, created_at
 		`, familyID, req.Title, req.EntryType, req.Category, req.PaymentMethod, req.MemberName, req.Amount, req.TransactionDate, req.Memo).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &item.EntryType, &category, &payment, &member, &item.Amount, &transactionDate, &memo, &createdAt)
 	} else {
 		err = a.db.QueryRow(r.Context(), `
-			update ledger_entries set title = $1, entry_type = $2, category = $3, payment_method = $4, member_name = $5, amount = $6, transaction_date = $7, memo = $8
-			where id = $9 and family_id = $10
+			update ledger_entries set title = $1, entry_type = $2, category = $3, payment_method = $4, member_name = $5, amount = $6, transaction_date = $7, memo = $8, updated_at = now()
+			where id = $9 and family_id = $10 and deleted_at is null
 			returning id, family_id, title, entry_type, category, payment_method, member_name, coalesce(amount, 0), transaction_date, memo, created_at
 		`, req.Title, req.EntryType, req.Category, req.PaymentMethod, req.MemberName, req.Amount, req.TransactionDate, req.Memo, entryID, familyID).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &item.EntryType, &category, &payment, &member, &item.Amount, &transactionDate, &memo, &createdAt)
@@ -3242,15 +3333,15 @@ func (a *app) saveSchedule(w http.ResponseWriter, r *http.Request, id int64, fam
 	var err error
 	if id == 0 {
 		err = a.db.QueryRow(r.Context(), `
-			insert into family_schedules (family_id, title, calendar_basis, schedule_date, schedule_time, category, member_name, repeat_rule, memo, created_at)
-			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,now())
+			insert into family_schedules (family_id, title, calendar_basis, schedule_date, schedule_time, category, member_name, repeat_rule, memo, created_at, updated_at)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,now(),now())
 			returning id, family_id, title, calendar_basis, schedule_date, schedule_time::text, category, member_name, repeat_rule, memo, created_at
 		`, familyID, req.Title, req.CalendarBasis, req.ScheduleDate, req.ScheduleTime, req.Category, req.MemberName, req.RepeatRule, req.Memo).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &item.CalendarBasis, &scheduleDate, &scheduleTime, &category, &member, &repeat, &memo, &createdAt)
 	} else {
 		err = a.db.QueryRow(r.Context(), `
-			update family_schedules set title=$1, calendar_basis=$2, schedule_date=$3, schedule_time=$4, category=$5, member_name=$6, repeat_rule=$7, memo=$8
-			where id=$9 and family_id=$10
+			update family_schedules set title=$1, calendar_basis=$2, schedule_date=$3, schedule_time=$4, category=$5, member_name=$6, repeat_rule=$7, memo=$8, updated_at=now()
+			where id=$9 and family_id=$10 and deleted_at is null
 			returning id, family_id, title, calendar_basis, schedule_date, schedule_time::text, category, member_name, repeat_rule, memo, created_at
 		`, req.Title, req.CalendarBasis, req.ScheduleDate, req.ScheduleTime, req.Category, req.MemberName, req.RepeatRule, req.Memo, id, familyID).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &item.CalendarBasis, &scheduleDate, &scheduleTime, &category, &member, &repeat, &memo, &createdAt)
@@ -3419,15 +3510,15 @@ func (a *app) saveTrip(w http.ResponseWriter, r *http.Request, id int64, familyI
 	var err error
 	if id == 0 {
 		err = a.db.QueryRow(r.Context(), `
-			insert into trips (family_id, title, start_date, end_date, description, created_at)
-			values ($1,$2,$3,$4,$5,now())
+			insert into trips (family_id, title, start_date, end_date, description, created_at, updated_at)
+			values ($1,$2,$3,$4,$5,now(),now())
 			returning id, family_id, title, start_date, end_date, description, created_at
 		`, familyID, req.Title, req.StartDate, req.EndDate, req.Description).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &startDate, &endDate, &description, &createdAt)
 	} else {
 		err = a.db.QueryRow(r.Context(), `
-			update trips set title=$1, start_date=$2, end_date=$3, description=$4
-			where id=$5 and family_id=$6
+			update trips set title=$1, start_date=$2, end_date=$3, description=$4, updated_at=now()
+			where id=$5 and family_id=$6 and deleted_at is null
 			returning id, family_id, title, start_date, end_date, description, created_at
 		`, req.Title, req.StartDate, req.EndDate, req.Description, id, familyID).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &startDate, &endDate, &description, &createdAt)
@@ -3507,15 +3598,15 @@ func (a *app) saveTravelRecord(w http.ResponseWriter, r *http.Request, id int64,
 	var recordDate, createdAt time.Time
 	if id == 0 {
 		err = tx.QueryRow(r.Context(), `
-			insert into travel_records (trip_id, sort_order, title, category, amount, note, location, latitude, longitude, record_date, record_time, created_at)
-			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now())
+			insert into travel_records (trip_id, sort_order, title, category, amount, note, location, latitude, longitude, record_date, record_time, created_at, updated_at)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now(),now())
 			returning id, trip_id, sort_order, title, category, coalesce(amount, 0), note, location, latitude, longitude, record_date, record_time::text, created_at
 		`, tripID, req.SortOrder, req.Title, req.Category, req.Amount, req.Note, req.Location, req.Latitude, req.Longitude, req.RecordDate, req.RecordTime).
 			Scan(&item.ID, &item.TripID, &sortOrder, &item.Title, &category, &item.Amount, &note, &item.Location, &item.Latitude, &item.Longitude, &recordDate, &recordTime, &createdAt)
 	} else {
 		err = tx.QueryRow(r.Context(), `
-			update travel_records set sort_order=$1, title=$2, category=$3, amount=$4, note=$5, location=$6, latitude=$7, longitude=$8, record_date=$9, record_time=$10
-			where id=$11 and trip_id=$12
+			update travel_records set sort_order=$1, title=$2, category=$3, amount=$4, note=$5, location=$6, latitude=$7, longitude=$8, record_date=$9, record_time=$10, updated_at=now()
+			where id=$11 and trip_id=$12 and deleted_at is null
 			returning id, trip_id, sort_order, title, category, coalesce(amount, 0), note, location, latitude, longitude, record_date, record_time::text, created_at
 		`, req.SortOrder, req.Title, req.Category, req.Amount, req.Note, req.Location, req.Latitude, req.Longitude, req.RecordDate, req.RecordTime, id, tripID).
 			Scan(&item.ID, &item.TripID, &sortOrder, &item.Title, &category, &item.Amount, &note, &item.Location, &item.Latitude, &item.Longitude, &recordDate, &recordTime, &createdAt)
@@ -3551,7 +3642,7 @@ func (a *app) saveTravelRecord(w http.ResponseWriter, r *http.Request, id int64,
 func (a *app) travelRecordsByTrip(w http.ResponseWriter, ctx context.Context, tripID int64) ([]travelRecordItem, bool) {
 	rows, err := a.db.Query(ctx, `
 		select id, trip_id, sort_order, title, category, coalesce(amount, 0), note, location, latitude, longitude, record_date, record_time::text, created_at
-		from travel_records where trip_id = $1 order by sort_order asc nulls last, created_at desc
+		from travel_records where trip_id = $1 and deleted_at is null order by sort_order asc nulls last, created_at desc
 	`, tripID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
@@ -3708,15 +3799,15 @@ func (a *app) saveBaby(w http.ResponseWriter, r *http.Request, id int64, familyI
 	var err error
 	if id == 0 {
 		err = a.db.QueryRow(r.Context(), `
-			insert into baby_profiles (family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at)
-			values ($1,$2,$3,$4,$5,$6,$7,$8,now())
+			insert into baby_profiles (family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at, updated_at)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,now(),now())
 			returning id, family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at
 		`, familyID, req.Name, req.Gender, req.BirthDate, req.Memo, req.PhotoURL, req.LatestHeightCm, req.LatestWeightKg).
 			Scan(&item.ID, &item.FamilyID, &item.Name, &gender, &birthDate, &memo, &photo, &height, &weight, &createdAt)
 	} else {
 		err = a.db.QueryRow(r.Context(), `
-			update baby_profiles set name=$1, gender=$2, birth_date=$3, memo=$4, photo_url=$5, latest_height_cm=$6, latest_weight_kg=$7
-			where id=$8 and family_id=$9
+			update baby_profiles set name=$1, gender=$2, birth_date=$3, memo=$4, photo_url=$5, latest_height_cm=$6, latest_weight_kg=$7, updated_at=now()
+			where id=$8 and family_id=$9 and deleted_at is null
 			returning id, family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at
 		`, req.Name, req.Gender, req.BirthDate, req.Memo, req.PhotoURL, req.LatestHeightCm, req.LatestWeightKg, id, familyID).
 			Scan(&item.ID, &item.FamilyID, &item.Name, &gender, &birthDate, &memo, &photo, &height, &weight, &createdAt)
@@ -3800,15 +3891,15 @@ func (a *app) saveBabyRecord(w http.ResponseWriter, r *http.Request, id int64, b
 	var recordDate, createdAt time.Time
 	if id == 0 {
 		err = tx.QueryRow(r.Context(), `
-			insert into baby_records (baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at)
-			values ($1,$2,$3,$4,$5,$6,$7,$8,now())
+			insert into baby_records (baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at, updated_at)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,now(),now())
 			returning id, baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at
 		`, babyID, req.RecordType, req.RecordDate, req.RecordTime, req.AmountMl, req.HeightCm, req.WeightKg, req.Memo).
 			Scan(&item.ID, &item.BabyID, &item.RecordType, &recordDate, &recordTime, &amount, &height, &weight, &memo, &createdAt)
 	} else {
 		err = tx.QueryRow(r.Context(), `
-			update baby_records set record_type=$1, record_date=$2, record_time=$3, amount_ml=$4, height_cm=$5, weight_kg=$6, memo=$7
-			where id=$8 and baby_id=$9
+			update baby_records set record_type=$1, record_date=$2, record_time=$3, amount_ml=$4, height_cm=$5, weight_kg=$6, memo=$7, updated_at=now()
+			where id=$8 and baby_id=$9 and deleted_at is null
 			returning id, baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at
 		`, req.RecordType, req.RecordDate, req.RecordTime, req.AmountMl, req.HeightCm, req.WeightKg, req.Memo, id, babyID).
 			Scan(&item.ID, &item.BabyID, &item.RecordType, &recordDate, &recordTime, &amount, &height, &weight, &memo, &createdAt)
@@ -3825,7 +3916,7 @@ func (a *app) saveBabyRecord(w http.ResponseWriter, r *http.Request, id int64, b
 		}
 	}
 	if req.HeightCm != nil || req.WeightKg != nil {
-		_, _ = tx.Exec(r.Context(), "update baby_profiles set latest_height_cm = coalesce($1, latest_height_cm), latest_weight_kg = coalesce($2, latest_weight_kg) where id = $3", req.HeightCm, req.WeightKg, babyID)
+		_, _ = tx.Exec(r.Context(), "update baby_profiles set latest_height_cm = coalesce($1, latest_height_cm), latest_weight_kg = coalesce($2, latest_weight_kg), updated_at = now() where id = $3 and deleted_at is null", req.HeightCm, req.WeightKg, babyID)
 	}
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "database commit failed")
@@ -3908,15 +3999,15 @@ func (a *app) saveDiary(w http.ResponseWriter, r *http.Request, id int64, family
 	var diaryDate, createdAt time.Time
 	if id == 0 {
 		err = tx.QueryRow(r.Context(), `
-			insert into family_diaries (family_id, title, body, diary_date, weather, mood, min_temperature, max_temperature, created_at)
-			values ($1,$2,$3,$4,$5,$6,$7,$8,now())
+			insert into family_diaries (family_id, title, body, diary_date, weather, mood, min_temperature, max_temperature, created_at, updated_at)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,now(),now())
 			returning id, family_id, title, body::text, diary_date, weather, mood, min_temperature, max_temperature, created_at
 		`, familyID, req.Title, req.Body, req.DiaryDate, req.Weather, req.Mood, req.MinTemperature, req.MaxTemperature).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &item.Body, &diaryDate, &weather, &mood, &minTemp, &maxTemp, &createdAt)
 	} else {
 		err = tx.QueryRow(r.Context(), `
-			update family_diaries set title=$1, body=$2, diary_date=$3, weather=$4, mood=$5, min_temperature=$6, max_temperature=$7
-			where id=$8 and family_id=$9
+			update family_diaries set title=$1, body=$2, diary_date=$3, weather=$4, mood=$5, min_temperature=$6, max_temperature=$7, updated_at=now()
+			where id=$8 and family_id=$9 and deleted_at is null
 			returning id, family_id, title, body::text, diary_date, weather, mood, min_temperature, max_temperature, created_at
 		`, req.Title, req.Body, req.DiaryDate, req.Weather, req.Mood, req.MinTemperature, req.MaxTemperature, id, familyID).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &item.Body, &diaryDate, &weather, &mood, &minTemp, &maxTemp, &createdAt)
@@ -4069,7 +4160,7 @@ func (a *app) saveCommunityPost(w http.ResponseWriter, r *http.Request, id int64
 	} else {
 		err = tx.QueryRow(r.Context(), `
 			update community_posts set board_type=$1, family_id=$2, title=$3, body=$4, updated_at=now()
-			where id=$5
+			where id=$5 and deleted_at is null
 			returning id, board_type, family_id, author_id, author_name, title, body::text, coalesce(view_count,0), created_at, updated_at
 		`, req.BoardType, req.FamilyID, req.Title, req.Body, id).
 			Scan(&item.ID, &item.BoardType, &familyID, &authorID, &item.AuthorName, &item.Title, &item.Body, &item.ViewCount, &createdAt, &updatedAt)
@@ -4118,7 +4209,7 @@ func (a *app) scanCommunityPosts(w http.ResponseWriter, ctx context.Context, row
 }
 
 func (a *app) communityPostByID(w http.ResponseWriter, ctx context.Context, postID int64) (communityPostItem, bool) {
-	rows, err := a.db.Query(ctx, `select id, board_type, family_id, author_id, author_name, title, body::text, coalesce(view_count,0), created_at, updated_at from community_posts where id = $1`, postID)
+	rows, err := a.db.Query(ctx, `select id, board_type, family_id, author_id, author_name, title, body::text, coalesce(view_count,0), created_at, updated_at from community_posts where id = $1 and deleted_at is null`, postID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return communityPostItem{}, false
@@ -4133,7 +4224,7 @@ func (a *app) communityPostByID(w http.ResponseWriter, ctx context.Context, post
 }
 
 func (a *app) recordCommunityPostView(ctx context.Context, postID int64) {
-	_, _ = a.db.Exec(ctx, "update community_posts set view_count = coalesce(view_count,0) + 1 where id = $1", postID)
+	_, _ = a.db.Exec(ctx, "update community_posts set view_count = coalesce(view_count,0) + 1 where id = $1 and deleted_at is null", postID)
 	_, _ = a.db.Exec(ctx, `
 		insert into community_post_view_stats (community_post_id, view_date, view_count)
 		values ($1, current_date, 1)
@@ -4145,7 +4236,7 @@ func (a *app) recordCommunityPostView(ctx context.Context, postID int64) {
 func (a *app) communityComments(w http.ResponseWriter, ctx context.Context, postID int64) ([]communityCommentItem, bool) {
 	rows, err := a.db.Query(ctx, `
 		select id, post_id, author_id, author_name, body::text, created_at, updated_at
-		from community_comments where post_id = $1 order by created_at asc
+		from community_comments where post_id = $1 and deleted_at is null order by created_at asc
 	`, postID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
@@ -4170,7 +4261,7 @@ func (a *app) communityComments(w http.ResponseWriter, ctx context.Context, post
 }
 
 func (a *app) commentOwner(w http.ResponseWriter, ctx context.Context, commentID int64) (communityCommentItem, bool) {
-	rows, err := a.db.Query(ctx, `select id, post_id, author_id, author_name, body::text, created_at, updated_at from community_comments where id = $1`, commentID)
+	rows, err := a.db.Query(ctx, `select id, post_id, author_id, author_name, body::text, created_at, updated_at from community_comments where id = $1 and deleted_at is null`, commentID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return communityCommentItem{}, false

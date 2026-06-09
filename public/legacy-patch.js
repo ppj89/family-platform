@@ -688,7 +688,7 @@
   }
 
   function apiBaseUrlForAuth() {
-    return window.FAMILY_PLATFORM_API_BASE_URL || localStorage.getItem('family-platform-api-base-url') || 'http://localhost:8080/api'
+    return window.FAMILY_PLATFORM_API_BASE_URL || localStorage.getItem('family-platform-api-base-url') || '/api'
   }
 
   function clearStoredAuth() {
@@ -860,6 +860,8 @@
     if (trigger && trigger.dataset.solarDate) return trigger.dataset.solarDate
     var visibleDate = getScheduleFormVisibleDate()
     if (visibleDate) return formatDate(visibleDate)
+    var selected = document.documentElement.dataset.calendarSelectedDate
+    if (selected && /^\d{4}-\d{2}-\d{2}$/.test(selected)) return selected
     return getDatePickerValue(form, '\uB0A0\uC9DC')
   }
 
@@ -868,6 +870,12 @@
     var triggerText = trigger && trigger.querySelector('span')
     if (!triggerText) return
     if (trigger) trigger.dataset.solarDate = formatDate(date)
+    document.documentElement.dataset.calendarSelectedDate = formatDate(date)
+    document.querySelectorAll('.schedule-form-card input[type="date"], .schedule-form-card input[name*="date" i]').forEach(function (input) {
+      input.value = formatDate(date)
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      input.dispatchEvent(new Event('change', { bubbles: true }))
+    })
     triggerText.textContent = isScheduleBasisLunar() ? getLunarText(date) : formatDisplayDate(date)
   }
 
@@ -1969,6 +1977,26 @@
     })
   }
 
+  function syncCalendarEntryToToday() {
+    var isCalendar = !!document.querySelector('.family-calendar-panel') && getCleanText(document.querySelector('.topbar h1')) === '\uCE98\uB9B0\uB354'
+    if (!isCalendar) {
+      window.__familyCalendarEntryActive = false
+      return
+    }
+    if (window.__familyCalendarEntryActive) return
+    window.__familyCalendarEntryActive = true
+    var today = new Date()
+    document.documentElement.dataset.calendarSelectedDate = formatDate(today)
+    updateScheduleFormVisibleDate(today)
+    updateJumpInput(today)
+    window.setTimeout(function () {
+      moveCalendarTo(today).then(function () {
+        updateSelectedDayPanel(today)
+        refreshServerDataViews(true)
+      }).catch(function () {})
+    }, 160)
+  }
+
   function cleanupStaleServerPanels() {
     if (window.__serverPanelCleanupScheduled) return
     window.__serverPanelCleanupScheduled = true
@@ -2098,6 +2126,7 @@
     ensureCommunityMenu()
     wireCalendarInteractions()
     cleanupCalendarChrome()
+    syncCalendarEntryToToday()
     ensureYearModeTabs()
     wireScheduleDetailRows()
     hideSelectedDayPanels()
@@ -4112,7 +4141,7 @@
     })
   }
 
-  var API_BASE_URL = window.FAMILY_PLATFORM_API_BASE_URL || localStorage.getItem('family-platform-api-base-url') || 'http://localhost:8080/api'
+  var API_BASE_URL = window.FAMILY_PLATFORM_API_BASE_URL || localStorage.getItem('family-platform-api-base-url') || '/api'
   var API_QUEUE_KEY = 'family-platform-api-sync-queue'
   var API_TRIP_ID_KEY = AUTH_TRIP_STORAGE_KEY
   var API_AUTH_TOKEN_KEY = AUTH_TOKEN_STORAGE_KEY
@@ -4921,7 +4950,9 @@
         titleInput.value = ''
         titleInput.dispatchEvent(new Event('input', { bubbles: true }))
       }
-    }).catch(function () {
+    }).catch(function (error) {
+      window.__familyLastScheduleSaveError = String(error && error.message ? error.message : error)
+      if (window.console && console.warn) console.warn('schedule save failed', error)
       showPatchToast('\uC77C\uC815 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
     }).finally(function () {
       delete form.dataset.scheduleSubmitting
