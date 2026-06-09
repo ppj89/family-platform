@@ -2242,6 +2242,12 @@
     var titleButton = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-title-button')
     if (!titleButton) return
 
+    if (isCalendarTodayTitleClick(event.target)) {
+      closeJumpDatepicker()
+      window.__familySuppressCalendarPopupUntil = Date.now() + 1500
+      return
+    }
+
     event.preventDefault()
     event.stopPropagation()
     if (window.__calendarTitlePointerOpenedAt && Date.now() - window.__calendarTitlePointerOpenedAt < 500) return
@@ -2257,6 +2263,12 @@
     var titleButton = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-title-button')
     if (!titleButton) return
 
+    if (isCalendarTodayTitleClick(event.target)) {
+      closeJumpDatepicker()
+      window.__familySuppressCalendarPopupUntil = Date.now() + 1500
+      return
+    }
+
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
@@ -2268,6 +2280,16 @@
     window.__calendarTitlePointerOpenedAt = Date.now()
     renderJumpDatepicker(getScheduleFormVisibleDate() || getFocusedDate())
   }, true)
+
+  function isCalendarTodayTitleClick(target) {
+    var todayLabel = target && target.closest && target.closest('.family-calendar-panel .calendar-title-button span')
+    return !!todayLabel && getCleanText(todayLabel).indexOf('오늘') >= 0
+  }
+
+  function closeJumpDatepicker() {
+    var current = document.querySelector('.jump-datepicker-popover')
+    if (current) current.remove()
+  }
 
   function normalizeLunarLabels() {
     var items = Array.from(document.querySelectorAll('.family-calendar-panel .calendar-day-card small'))

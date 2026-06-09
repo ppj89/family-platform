@@ -1,5 +1,5 @@
 import { type FormEvent, useMemo, useState } from 'react'
-import { AlertTriangle, CalendarDays, CheckCircle2, ChevronLeft, ChevronRight, Clock, Edit3, Plus, Trash2, X } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight, Clock, Edit3, Plus, Trash2, X } from 'lucide-react'
 import './FamilyCalendar.css'
 
 type CalendarView = 'day' | 'week' | 'month' | 'year'
@@ -213,19 +213,6 @@ export default function FamilyCalendar() {
 
   return (
     <section className="fc-page">
-      <header className="fc-hero">
-        <div>
-          <span>Family Calendar</span>
-          <h2>가족 일정과 기념일</h2>
-          <p>생일, 병원, 학교, 가족 행사를 양력/음력 기준과 반복 주기로 관리합니다.</p>
-        </div>
-        <div className="fc-today-card">
-          <CalendarDays size={21} />
-          <strong>{formatReadableDate(focusDate)}</strong>
-          <small>{formatLunarDate(focusDate)}</small>
-        </div>
-      </header>
-
       <div className="fc-layout">
         <main className="fc-main-card">
           <div className="fc-toolbar">

@@ -8810,7 +8810,13 @@ body:has(.family-calendar-panel) .family-calendar-panel .calendar-nav .calendar-
 }
 
 body:has(.family-calendar-panel) .family-calendar-panel .calendar-nav .calendar-title-button span {
-  display: none !important;
+  display: block !important;
+  color: #8b95a1 !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  line-height: 1.1 !important;
+  text-align: center !important;
+  white-space: nowrap !important;
 }
 
 body:has(.family-calendar-panel) .family-calendar-panel .calendar-view-tabs {
@@ -8881,13 +8887,13 @@ body:has(.family-calendar-panel) .family-calendar-panel .calendar-view-tabs {
 }
 
 .jump-datepicker-popover.jump-level-day .calendar-header .calendar-title-button span::after {
-  content: "  ▾" !important;
+  content: "  \25BE" !important;
   color: #8b95a1 !important;
   font-size: 11px !important;
 }
 
 .jump-datepicker-popover.jump-level-month .calendar-header .calendar-title-button span::after {
-  content: "  ▾" !important;
+  content: "  \25BE" !important;
   color: #8b95a1 !important;
   font-size: 11px !important;
 }
