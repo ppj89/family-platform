@@ -726,6 +726,92 @@
     document.body.appendChild(backdrop)
   }
 
+  function collectScheduleTextsFromCalendarNode(node) {
+    if (!node) return []
+    var selectors = [
+      '.fc-day-schedules span',
+      '.fc-agenda-day button',
+      '.agenda-day-column span',
+      '.day-schedules span',
+      '.calendar-day-schedules span',
+      '.calendar-day-card .schedule-chip',
+      '.calendar-day-card .event-chip',
+      '.calendar-day-card [class*="schedule"] span',
+      '.calendar-day-card [class*="schedule"] button',
+      '.calendar-day-card [class*="event"] span',
+      '.calendar-day-card [class*="event"] button'
+    ]
+    var values = []
+    selectors.forEach(function (selector) {
+      node.querySelectorAll(selector).forEach(function (item) {
+        var text = getCleanText(item)
+        if (!text || /^\d+$/.test(text) || text.indexOf('\uC74C\uB825') >= 0) return
+        if (values.indexOf(text) < 0) values.push(text)
+      })
+    })
+    return values
+  }
+
+  function openCalendarDaySchedulePopup(date, scheduleTexts) {
+    var items = (scheduleTexts || []).map(function (text) {
+      return text.trim()
+    }).filter(Boolean)
+    if (!items.length) return
+
+    if (items.length === 1) {
+      var single = document.createElement('button')
+      single.dataset.selectedDate = formatKoreanShortDate(date)
+      single.textContent = items[0]
+      openSelectedDayDetail(single)
+      return
+    }
+
+    var old = document.querySelector('.schedule-day-patch-backdrop')
+    if (old) old.remove()
+
+    var backdrop = document.createElement('div')
+    backdrop.className = 'schedule-day-patch-backdrop schedule-detail-patch-backdrop'
+    var dialog = document.createElement('section')
+    dialog.className = 'schedule-day-patch-dialog schedule-detail-patch-dialog'
+
+    var close = document.createElement('button')
+    close.type = 'button'
+    close.className = 'schedule-detail-patch-close'
+    close.textContent = 'x'
+    close.addEventListener('click', function () { backdrop.remove() })
+
+    var dateLabel = document.createElement('span')
+    dateLabel.className = 'schedule-detail-patch-date'
+    dateLabel.textContent = formatKoreanShortDate(date)
+
+    var heading = document.createElement('h2')
+    heading.textContent = '\uC120\uD0DD\uC77C \uC77C\uC815'
+
+    var list = document.createElement('div')
+    list.className = 'schedule-day-patch-list'
+    items.forEach(function (text) {
+      var button = document.createElement('button')
+      button.type = 'button'
+      button.textContent = text
+      button.dataset.selectedDate = formatKoreanShortDate(date)
+      button.addEventListener('click', function () {
+        backdrop.remove()
+        openSelectedDayDetail(button)
+      })
+      list.appendChild(button)
+    })
+
+    dialog.appendChild(close)
+    dialog.appendChild(dateLabel)
+    dialog.appendChild(heading)
+    dialog.appendChild(list)
+    backdrop.appendChild(dialog)
+    backdrop.addEventListener('click', function (event) {
+      if (event.target === backdrop) backdrop.remove()
+    })
+    document.body.appendChild(backdrop)
+  }
+
   function findScheduleRowByTitle(titleText) {
     var normalized = (titleText || '').trim()
     if (!normalized) return null
@@ -1050,16 +1136,33 @@
       if (card.dataset.patchWired) return
       card.dataset.patchWired = 'true'
       card.addEventListener('click', function () {
-      var titleDate = getFocusedDate()
-      var day = Number((card.querySelector('.day-number') || {}).textContent || titleDate.getDate())
-      if (Number.isFinite(day)) {
-        var selectedDate = new Date(titleDate.getFullYear(), titleDate.getMonth(), day)
-        updateJumpInput(selectedDate)
-        updateScheduleFormVisibleDate(selectedDate)
-        updateSelectedDayPanel(selectedDate)
-      }
+        var titleDate = getFocusedDate()
+        var day = Number((card.querySelector('.day-number') || {}).textContent || titleDate.getDate())
+        if (Number.isFinite(day)) {
+          var selectedDate = new Date(titleDate.getFullYear(), titleDate.getMonth(), day)
+          updateJumpInput(selectedDate)
+          updateScheduleFormVisibleDate(selectedDate)
+          updateSelectedDayPanel(selectedDate)
+          openCalendarDaySchedulePopup(selectedDate, collectScheduleTextsFromCalendarNode(card))
+        }
+      })
     })
-  })
+
+    document.querySelectorAll('.family-calendar-panel .fc-day').forEach(function (card) {
+      if (card.dataset.patchWired) return
+      card.dataset.patchWired = 'true'
+      card.addEventListener('click', function () {
+        var titleDate = getFocusedDate()
+        var day = Number((card.querySelector('strong') || {}).textContent || titleDate.getDate())
+        if (Number.isFinite(day)) {
+          var selectedDate = new Date(titleDate.getFullYear(), titleDate.getMonth(), day)
+          updateJumpInput(selectedDate)
+          updateScheduleFormVisibleDate(selectedDate)
+          updateSelectedDayPanel(selectedDate)
+          openCalendarDaySchedulePopup(selectedDate, collectScheduleTextsFromCalendarNode(card))
+        }
+      })
+    })
 
     document.querySelectorAll('.family-calendar-panel .agenda-day-column').forEach(function (column) {
       if (column.dataset.patchWired) return
@@ -1073,6 +1176,7 @@
           updateJumpInput(selectedDate)
           updateScheduleFormVisibleDate(selectedDate)
           updateSelectedDayPanel(selectedDate, column)
+          openCalendarDaySchedulePopup(selectedDate, collectScheduleTextsFromCalendarNode(column))
           document.querySelectorAll('.agenda-day-column.active').forEach(function (item) {
             item.classList.remove('active')
           })

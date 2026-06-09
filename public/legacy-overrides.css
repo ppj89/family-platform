@@ -6492,6 +6492,32 @@ html[data-year-schedule-mode="list"] .year-month-card {
   line-height: 1.6 !important;
 }
 
+.schedule-day-patch-list {
+  display: grid !important;
+  gap: 10px !important;
+}
+
+.schedule-day-patch-list button {
+  display: flex !important;
+  min-height: 50px !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  border: 1px solid #dce8fb !important;
+  border-radius: 16px !important;
+  padding: 0 14px !important;
+  background: #f4f8ff !important;
+  color: #1b64da !important;
+  cursor: pointer !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+  text-align: left !important;
+}
+
+.schedule-day-patch-list button:active {
+  transform: translateY(1px) !important;
+}
+
 .calendar-popover {
   z-index: 30000 !important;
   width: min(328px, calc(100vw - 32px)) !important;
