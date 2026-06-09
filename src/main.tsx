@@ -9,9 +9,9 @@ declare global {
 window.FAMILY_PLATFORM_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const legacyCssPath = '/legacy/assets/index-CkWNYWFk.css'
-const legacyOverridesCssPath = '/legacy-overrides.css?v=20260609-46'
-const legacyPatchScriptPath = '/legacy-patch.js?v=20260609-41'
-const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260609-02'
+const legacyOverridesCssPath = '/legacy-overrides.css?v=20260610-02'
+const legacyPatchScriptPath = '/legacy-patch.js?v=20260610-02'
+const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260610-02'
 
 const root = document.getElementById('root')
 if (root) {

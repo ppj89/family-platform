@@ -8754,6 +8754,26 @@ select {
 }
 
 /* Calendar navigation hard fix */
+body:has(.family-calendar-panel) .topbar {
+  min-height: 0 !important;
+  margin-bottom: 14px !important;
+  gap: 12px !important;
+}
+
+body:has(.family-calendar-panel) .topbar .eyebrow:empty {
+  display: none !important;
+}
+
+@media (min-width: 1121px) {
+  body:has(.family-calendar-panel) .family-calendar-panel {
+    grid-row: 1 !important;
+  }
+
+  body:has(.family-calendar-panel) .schedule-form-card {
+    grid-row: 1 !important;
+  }
+}
+
 body:has(.family-calendar-panel) .family-calendar-panel .calendar-toolbar {
   display: grid !important;
   grid-template-columns: minmax(250px, 320px) minmax(0, 1fr) !important;
@@ -8783,6 +8803,7 @@ body:has(.family-calendar-panel) .family-calendar-panel .calendar-nav > button {
   min-height: 38px !important;
   padding: 0 !important;
   flex: none !important;
+  background: #ffffff !important;
 }
 
 body:has(.family-calendar-panel) .family-calendar-panel .calendar-nav .calendar-title-button {
@@ -8810,13 +8831,7 @@ body:has(.family-calendar-panel) .family-calendar-panel .calendar-nav .calendar-
 }
 
 body:has(.family-calendar-panel) .family-calendar-panel .calendar-nav .calendar-title-button span {
-  display: block !important;
-  color: #8b95a1 !important;
-  font-size: 11px !important;
-  font-weight: 800 !important;
-  line-height: 1.1 !important;
-  text-align: center !important;
-  white-space: nowrap !important;
+  display: none !important;
 }
 
 body:has(.family-calendar-panel) .family-calendar-panel .calendar-view-tabs {
@@ -8886,16 +8901,8 @@ body:has(.family-calendar-panel) .family-calendar-panel .calendar-view-tabs {
   cursor: pointer !important;
 }
 
-.jump-datepicker-popover.jump-level-day .calendar-header .calendar-title-button span::after {
-  content: "  \25BE" !important;
-  color: #8b95a1 !important;
-  font-size: 11px !important;
-}
-
-.jump-datepicker-popover.jump-level-month .calendar-header .calendar-title-button span::after {
-  content: "  \25BE" !important;
-  color: #8b95a1 !important;
-  font-size: 11px !important;
+.jump-datepicker-popover .calendar-header > button {
+  background: #ffffff !important;
 }
 
 @media (max-width: 620px) {

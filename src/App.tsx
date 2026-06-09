@@ -10,7 +10,7 @@ type AuthMode = 'login' | 'register'
 
 const menus: Array<{ key: MenuKey; label: string; caption: string; icon: typeof Home }> = [
   { key: 'dashboard', label: '홈', caption: '오늘의 가족 기록', icon: Home },
-  { key: 'calendar', label: '캘린더', caption: '가족 일정과 기념일 공유', icon: CalendarDays },
+  { key: 'calendar', label: '캘린더', caption: '', icon: CalendarDays },
   { key: 'ledger', label: '가계부', caption: '수입, 지출, 카드 내역', icon: WalletCards },
   { key: 'travel', label: '여행', caption: '장소, 동선, 비용 기록', icon: MapPinned },
   { key: 'baby', label: '육아', caption: '수유, 배변, 성장 기록', icon: Baby },

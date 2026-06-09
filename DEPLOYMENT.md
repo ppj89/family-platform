@@ -151,7 +151,6 @@ The production API runs on Go. On startup it creates the required tables and ind
 
 - Existing PostgreSQL data is reused.
 - Back up the database before every deploy.
-- Keep the old Spring Boot backend folder only as a temporary migration reference until production testing is complete.
 
 Create a PostgreSQL backup before every production deploy:
 

@@ -4,61 +4,12 @@
   width: min(1220px, 100%);
 }
 
-.fc-hero {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 190px;
-  gap: 14px;
-  align-items: center;
-  border-radius: 18px;
-  padding: 18px 20px;
-  background: linear-gradient(135deg, #f8fbff 0%, #eef7ff 62%, #fff7fa 100%);
-  box-shadow: inset 0 0 0 1px #e5e8eb;
-}
-
-.fc-hero span,
 .fc-page label span,
 .fc-form-head button,
 .fc-list-card header span {
   color: #6b7684;
   font-size: 12px;
   font-weight: 800;
-}
-
-.fc-hero h2 {
-  margin: 5px 0;
-  color: #191f28;
-  font-size: 22px;
-  line-height: 1.28;
-}
-
-.fc-hero p {
-  margin: 0;
-  color: #6b7684;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.fc-today-card {
-  display: grid;
-  gap: 5px;
-  border-radius: 14px;
-  padding: 14px;
-  background: rgba(255, 255, 255, 0.85);
-  box-shadow: 0 12px 30px rgba(49, 130, 246, 0.12), inset 0 0 0 1px #e5e8eb;
-}
-
-.fc-today-card svg {
-  color: #3182f6;
-}
-
-.fc-today-card strong {
-  color: #191f28;
-  font-size: 15px;
-}
-
-.fc-today-card small {
-  color: #6b7684;
-  font-size: 12px;
 }
 
 .fc-layout {
@@ -705,16 +656,6 @@
 @media (max-width: 680px) {
   .fc-page {
     gap: 12px;
-  }
-
-  .fc-hero {
-    grid-template-columns: 1fr;
-    border-radius: 16px;
-    padding: 16px;
-  }
-
-  .fc-hero h2 {
-    font-size: 20px;
   }
 
   .fc-toolbar {

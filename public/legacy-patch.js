@@ -1523,6 +1523,17 @@
   }
 
   function wireCalendarInteractions() {
+    document.querySelectorAll('.family-calendar-panel .calendar-nav .calendar-title-button').forEach(function (button) {
+      if (button.dataset.jumpPickerWired) return
+      button.dataset.jumpPickerWired = 'true'
+      button.addEventListener('click', function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+        renderJumpDatepicker(getScheduleFormVisibleDate() || getFocusedDate())
+      }, true)
+    })
+
     document.querySelectorAll('.family-calendar-panel .calendar-view-tabs button').forEach(function (button) {
       if (button.dataset.patchWired) return
       button.dataset.patchWired = 'true'
@@ -2242,12 +2253,6 @@
     var titleButton = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-title-button')
     if (!titleButton) return
 
-    if (isCalendarTodayTitleClick(event.target)) {
-      closeJumpDatepicker()
-      window.__familySuppressCalendarPopupUntil = Date.now() + 1500
-      return
-    }
-
     event.preventDefault()
     event.stopPropagation()
     if (window.__calendarTitlePointerOpenedAt && Date.now() - window.__calendarTitlePointerOpenedAt < 500) return
@@ -2263,12 +2268,6 @@
     var titleButton = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-title-button')
     if (!titleButton) return
 
-    if (isCalendarTodayTitleClick(event.target)) {
-      closeJumpDatepicker()
-      window.__familySuppressCalendarPopupUntil = Date.now() + 1500
-      return
-    }
-
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
@@ -2280,16 +2279,6 @@
     window.__calendarTitlePointerOpenedAt = Date.now()
     renderJumpDatepicker(getScheduleFormVisibleDate() || getFocusedDate())
   }, true)
-
-  function isCalendarTodayTitleClick(target) {
-    var todayLabel = target && target.closest && target.closest('.family-calendar-panel .calendar-title-button span')
-    return !!todayLabel && getCleanText(todayLabel).indexOf('오늘') >= 0
-  }
-
-  function closeJumpDatepicker() {
-    var current = document.querySelector('.jump-datepicker-popover')
-    if (current) current.remove()
-  }
 
   function normalizeLunarLabels() {
     var items = Array.from(document.querySelectorAll('.family-calendar-panel .calendar-day-card small'))
@@ -5484,6 +5473,19 @@
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     submitScheduleFormDirect(form)
   }, true)
+
+  function handleCalendarTitleJumpEvent(event) {
+    var titleButton = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-nav .calendar-title-button')
+    if (!titleButton) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    renderJumpDatepicker(getScheduleFormVisibleDate() || getFocusedDate())
+  }
+
+  document.addEventListener('click', handleCalendarTitleJumpEvent, true)
+  document.addEventListener('pointerup', handleCalendarTitleJumpEvent, true)
+  document.addEventListener('touchend', handleCalendarTitleJumpEvent, true)
 
   document.addEventListener('click', function (event) {
     var target = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-day-card, .family-calendar-panel .fc-day, .family-calendar-panel .agenda-day-column')

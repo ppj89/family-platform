@@ -222,7 +222,6 @@ export default function FamilyCalendar() {
               </button>
               <button className="fc-current" onClick={() => setFocusDate(today)} type="button">
                 <strong>{getRangeTitle(view, focusDate)}</strong>
-                <span>오늘로 이동</span>
               </button>
               <button aria-label="다음" onClick={() => moveFocus(1)} type="button">
                 <ChevronRight size={18} />
