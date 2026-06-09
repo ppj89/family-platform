@@ -313,12 +313,13 @@
 
   function getYearSelectedMonthDate() {
     var stored = parseDate(document.documentElement.dataset.yearSelectedMonth || '')
-    if (stored) return new Date(stored.getFullYear(), stored.getMonth(), 1)
+    var currentYear = getCurrentYearNumber()
+    if (stored) return new Date(currentYear, stored.getMonth(), 1)
     var active = document.querySelector('.year-month-card.active')
     var strong = active && active.querySelector('strong')
     var month = Number(((strong && strong.textContent.match(/\d+/g)) || [])[0])
-    if (Number.isFinite(month)) return new Date(getCurrentYearNumber(), month - 1, 1)
-    return new Date(getCurrentYearNumber(), new Date().getMonth(), 1)
+    if (Number.isFinite(month)) return new Date(currentYear, month - 1, 1)
+    return new Date(currentYear, new Date().getMonth(), 1)
   }
 
   function setYearSelectedMonth(monthDate) {
@@ -334,6 +335,38 @@
       var month = ((strong && strong.textContent.match(/\d+/g)) || [])[0]
       if (month === monthText) card.classList.add('active')
     })
+  }
+
+  function getYearMonthFromCard(card) {
+    if (!card) return null
+    var strong = card.querySelector('strong')
+    var month = Number(((strong && strong.textContent.match(/\d+/g)) || [])[0])
+    if (!Number.isFinite(month)) return null
+    return new Date(getCurrentYearNumber(), month - 1, 1)
+  }
+
+  function selectYearMonthFromCard(card) {
+    var selectedMonth = getYearMonthFromCard(card)
+    if (!selectedMonth) return false
+    setYearSelectedMonth(selectedMonth)
+    updateJumpInput(selectedMonth)
+    updateScheduleFormVisibleDate(selectedMonth)
+    renderYearSelectedMonthList(selectedMonth, true)
+    return true
+  }
+
+  function ensureYearMonthClickGuard() {
+    if (window.__familyYearMonthClickGuardReady) return
+    window.__familyYearMonthClickGuardReady = true
+    document.addEventListener('click', function (event) {
+      var card = event.target && event.target.closest && event.target.closest('.family-calendar-panel .year-month-card')
+      if (!card || getActiveCalendarMode() !== 'year') return
+      if (event.target.closest && event.target.closest('.year-mini-days span.has-event')) return
+      if (!selectYearMonthFromCard(card)) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    }, true)
   }
 
   function updateJumpInput(date) {
@@ -1758,19 +1791,9 @@
       if (card.dataset.patchWired) return
       card.dataset.patchWired = 'true'
       card.addEventListener('click', function () {
-      var titleDate = getFocusedDate()
-      var strong = card.querySelector('strong')
-      var month = Number(((strong && strong.textContent.match(/\d+/g)) || [])[0])
-      if (Number.isFinite(month)) {
-        var selectedMonth = new Date(titleDate.getFullYear(), month - 1, 1)
-        setYearSelectedMonth(selectedMonth)
-        updateJumpInput(selectedMonth)
-        updateScheduleFormVisibleDate(selectedMonth)
-        setScheduleListContext(month + '\uC6D4 \uC77C\uC815\uD45C', (card.querySelector('span') || {}).textContent)
-        renderYearSelectedMonthList(selectedMonth, true)
-      }
+        selectYearMonthFromCard(card)
+      })
     })
-  })
   }
 
   function setYearMode(mode) {
@@ -1870,6 +1893,54 @@
     })
   }
 
+  function cachedYearMonthItems(monthDate) {
+    var cache = window.__familyYearScheduleCache
+    if (!cache || !cache.loaded || cache.year !== monthDate.getFullYear() || !cache.months) return null
+    var month = monthDate.getMonth() + 1
+    return ((cache.months[month] && cache.months[month].items) || []).map(normalizeScheduleItem)
+  }
+
+  function paintYearSelectedMonthList(monthDate, items) {
+    var card = document.querySelector('.schedule-list-card')
+    if (!card) return
+    var month = monthDate.getMonth() + 1
+    var list = card.querySelector('.api-schedule-list')
+    if (!list) {
+      list = document.createElement('div')
+      list.className = 'api-schedule-list'
+      card.appendChild(list)
+    }
+    var schedules = (items || []).map(normalizeScheduleItem).sort(function (a, b) {
+      return String(a.scheduleDate || '').localeCompare(String(b.scheduleDate || '')) || String(a.scheduleTime || '').localeCompare(String(b.scheduleTime || ''))
+    })
+    window.__familyYearScheduleItemsById = window.__familyYearScheduleItemsById || {}
+    schedules.forEach(function (item) {
+      window.__familyYearScheduleItemsById[String(item.id)] = item
+    })
+    setScheduleListContext(month + '\uC6D4 \uC77C\uC815\uD45C', schedules.length + '\uAC74')
+    if (!schedules.length) {
+      list.innerHTML = '<p class="empty-note">\uD574\uB2F9 \uC6D4\uC5D0 \uB4F1\uB85D\uB41C \uC77C\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
+      return
+    }
+    list.innerHTML = schedules.map(function (item) {
+      var date = new Date(String(item.scheduleDate || todayText()) + 'T00:00:00')
+      return '<div class="schedule-row server-year-schedule-row" role="button" tabindex="0" data-api-schedule-id="' + escapeHtml(item.id) + '">' +
+        '<span class="schedule-date-badge"><strong>' + date.getDate() + '</strong><span>' + escapeHtml(formatKoreanShortDate(date).replace(/^.*\((.)\).*$/, '$1')) + '</span></span>' +
+        '<div><strong>' + escapeHtml(item.title || '\uC77C\uC815') + '</strong><p>' + escapeHtml(scheduleTimeText(item) + ' \u00B7 ' + (item.category || '\uC77C\uC815') + (item.memberName ? ' \u00B7 ' + item.memberName : '')) + '</p><small>' + escapeHtml(item.memo || '') + '</small></div>' +
+        '</div>'
+    }).join('')
+    list.querySelectorAll('.server-year-schedule-row').forEach(function (row, index) {
+      row.addEventListener('click', function () {
+        openScheduleApiDetail(schedules[index])
+      })
+      row.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        event.preventDefault()
+        openScheduleApiDetail(schedules[index])
+      })
+    })
+  }
+
   function renderYearSelectedMonthList(monthDate, force) {
     if (!monthDate || getActiveCalendarMode() !== 'year') return
     var card = document.querySelector('.schedule-list-card')
@@ -1886,41 +1957,19 @@
     }
     var state = window.__familyYearMonthListState || {}
     if (!force && state.key === selectedKey && (state.loading || state.ready)) return
+    var cached = cachedYearMonthItems(monthDate)
+    if (cached) {
+      window.__familyYearMonthListState = { key: selectedKey, loading: false, ready: true }
+      paintYearSelectedMonthList(monthDate, cached)
+      return
+    }
     window.__familyYearMonthListState = { key: selectedKey, loading: true, ready: false }
     setScheduleListContext(month + '\uC6D4 \uC77C\uC815\uD45C', '0\uAC74')
     list.innerHTML = '<p class="empty-note">\uC77C\uC815\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</p>'
     fetchSchedulesDirect(range.start, range.end).then(function (items) {
       if (document.documentElement.dataset.yearSelectedMonth !== selectedKey) return
-      var schedules = (items || []).sort(function (a, b) {
-        return String(a.scheduleDate || '').localeCompare(String(b.scheduleDate || '')) || String(a.scheduleTime || '').localeCompare(String(b.scheduleTime || ''))
-      })
-      window.__familyYearScheduleItemsById = window.__familyYearScheduleItemsById || {}
-      schedules.forEach(function (item) {
-        window.__familyYearScheduleItemsById[String(item.id)] = item
-      })
       window.__familyYearMonthListState = { key: selectedKey, loading: false, ready: true }
-      setScheduleListContext(month + '\uC6D4 \uC77C\uC815\uD45C', schedules.length + '\uAC74')
-      if (!schedules.length) {
-        list.innerHTML = '<p class="empty-note">\uD574\uB2F9 \uC6D4\uC5D0 \uB4F1\uB85D\uB41C \uC77C\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
-        return
-      }
-      list.innerHTML = schedules.map(function (item) {
-        var date = new Date(String(item.scheduleDate || todayText()) + 'T00:00:00')
-        return '<div class="schedule-row server-year-schedule-row" role="button" tabindex="0" data-api-schedule-id="' + escapeHtml(item.id) + '">' +
-          '<span class="schedule-date-badge"><strong>' + date.getDate() + '</strong><span>' + escapeHtml(formatKoreanShortDate(date).replace(/^.*\((.)\).*$/, '$1')) + '</span></span>' +
-          '<div><strong>' + escapeHtml(item.title || '\uC77C\uC815') + '</strong><p>' + escapeHtml(scheduleTimeText(item) + ' \u00B7 ' + (item.category || '\uC77C\uC815') + (item.memberName ? ' \u00B7 ' + item.memberName : '')) + '</p><small>' + escapeHtml(item.memo || '') + '</small></div>' +
-          '</div>'
-      }).join('')
-      list.querySelectorAll('.server-year-schedule-row').forEach(function (row, index) {
-        row.addEventListener('click', function () {
-          openScheduleApiDetail(schedules[index])
-        })
-        row.addEventListener('keydown', function (event) {
-          if (event.key !== 'Enter' && event.key !== ' ') return
-          event.preventDefault()
-          openScheduleApiDetail(schedules[index])
-        })
-      })
+      paintYearSelectedMonthList(monthDate, items)
     }).catch(function () {
       if (document.documentElement.dataset.yearSelectedMonth !== selectedKey) return
       window.__familyYearMonthListState = { key: selectedKey, loading: false, ready: false }
@@ -2301,6 +2350,7 @@
     cleanupStaleServerPanels()
     ensureCalendarJumpControl()
     ensureCommunityMenu()
+    ensureYearMonthClickGuard()
     wireCalendarInteractions()
     cleanupCalendarChrome()
     syncCalendarEntryToToday()
@@ -4696,6 +4746,10 @@
     removeDeveloperServerPanels()
     var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
     if (mode === 'year') {
+      if (force) {
+        window.__familyYearScheduleCache = null
+        window.__familyYearMonthListState = null
+      }
       renderYearSelectedMonthList(getYearSelectedMonthDate(), false)
       return Promise.resolve([])
     }
