@@ -2129,10 +2129,23 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 	var platformAdmin bool
 	var activeSessionID sql.NullString
 	err = tx.QueryRow(ctx, `
-		select id, email, nickname, platform_admin, active_session_id
-		from app_users
-		where provider = $1 and provider_user_id = $2
+		select u.id, u.email, u.nickname, u.platform_admin, u.active_session_id
+		from oauth_identities oi
+		join app_users u on u.id = oi.user_id
+		where oi.provider = $1 and oi.provider_user_id = $2
 	`, provider, profile.ProviderUserID).Scan(&userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		err = tx.QueryRow(ctx, `
+			select id, email, nickname, platform_admin, active_session_id
+			from app_users
+			where provider = $1 and provider_user_id = $2
+		`, provider, profile.ProviderUserID).Scan(&userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID)
+		if err == nil {
+			if err := a.linkOAuthIdentity(ctx, tx, provider, profile.ProviderUserID, userID); err != nil {
+				return authResponse{}, err
+			}
+		}
+	}
 	if errors.Is(err, pgx.ErrNoRows) {
 		created, err := a.findOrCreateOAuthUser(ctx, tx, provider, profile.ProviderUserID, email, nickname, &userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID)
 		if err != nil {
@@ -2187,10 +2200,13 @@ func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, pr
 			update app_users
 			set provider = coalesce(provider, $1),
 			    provider_user_id = coalesce(provider_user_id, $2)
-			where email = $3 and (provider is null or (provider = $1 and provider_user_id = $2))
+			where email = $3
 			returning id, email, nickname, platform_admin, active_session_id
 		`, provider, providerUserID, email).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
 		if err == nil {
+			if err := a.linkOAuthIdentity(ctx, tx, provider, providerUserID, *userID); err != nil {
+				return false, err
+			}
 			return false, nil
 		}
 		if !errors.Is(err, pgx.ErrNoRows) {
@@ -2207,7 +2223,22 @@ func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, pr
 		values (now(), $1, $2, $3, $4, $5, '', 0)
 		returning id, email, nickname, platform_admin, active_session_id
 	`, email, nickname, userCount == 0, provider, providerUserID).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
-	return true, err
+	if err != nil {
+		return false, err
+	}
+	if err := a.linkOAuthIdentity(ctx, tx, provider, providerUserID, *userID); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (a *app) linkOAuthIdentity(ctx context.Context, tx pgx.Tx, provider, providerUserID string, userID int64) error {
+	_, err := tx.Exec(ctx, `
+		insert into oauth_identities (provider, provider_user_id, user_id, created_at)
+		values ($1, $2, $3, now())
+		on conflict (provider, provider_user_id) do update set user_id = excluded.user_id
+	`, provider, providerUserID, userID)
+	return err
 }
 
 func (a *app) issueToken(user authUser) string {
@@ -2296,6 +2327,14 @@ create table if not exists app_users (
 alter table if exists app_users add column if not exists provider varchar(255);
 alter table if exists app_users add column if not exists provider_user_id varchar(255);
 create unique index if not exists idx_app_users_provider_subject on app_users (provider, provider_user_id) where provider is not null and provider_user_id is not null;
+create table if not exists oauth_identities (
+  provider varchar(255) not null,
+  provider_user_id varchar(255) not null,
+  user_id bigint not null references app_users(id) on delete cascade,
+  created_at timestamp with time zone not null,
+  primary key (provider, provider_user_id)
+);
+create index if not exists idx_oauth_identities_user on oauth_identities (user_id);
 create table if not exists oauth_login_states (
   state varchar(255) primary key,
   provider varchar(255) not null,
