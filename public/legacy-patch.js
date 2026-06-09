@@ -952,7 +952,11 @@
     close.type = 'button'
     close.className = 'schedule-detail-patch-close'
     close.textContent = 'x'
-    close.addEventListener('click', function () { backdrop.remove() })
+    close.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      backdrop.remove()
+    })
 
     var date = document.createElement('span')
     date.className = 'schedule-detail-patch-date'
@@ -999,6 +1003,7 @@
     dialog.appendChild(actions)
     backdrop.appendChild(dialog)
     backdrop.addEventListener('click', function (event) {
+      event.stopPropagation()
       if (event.target === backdrop) backdrop.remove()
     })
     document.body.appendChild(backdrop)
@@ -1023,7 +1028,11 @@
     close.type = 'button'
     close.className = 'schedule-detail-patch-close'
     close.textContent = 'x'
-    close.addEventListener('click', function () { backdrop.remove() })
+    close.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      backdrop.remove()
+    })
 
     var date = document.createElement('span')
     date.className = 'schedule-detail-patch-date'
@@ -1050,6 +1059,7 @@
     dialog.appendChild(memo)
     backdrop.appendChild(dialog)
     backdrop.addEventListener('click', function (event) {
+      event.stopPropagation()
       if (event.target === backdrop) backdrop.remove()
     })
     document.body.appendChild(backdrop)
@@ -1110,7 +1120,11 @@
     close.type = 'button'
     close.className = 'schedule-detail-patch-close'
     close.textContent = 'x'
-    close.addEventListener('click', function () { backdrop.remove() })
+    close.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      backdrop.remove()
+    })
 
     var dateLabel = document.createElement('span')
     dateLabel.className = 'schedule-detail-patch-date'
@@ -1138,6 +1152,7 @@
     dialog.appendChild(list)
     backdrop.appendChild(dialog)
     backdrop.addEventListener('click', function (event) {
+      event.stopPropagation()
       if (event.target === backdrop) backdrop.remove()
     })
     document.body.appendChild(backdrop)
@@ -1660,8 +1675,10 @@
 
   function ensureYearScheduleCache(year) {
     var cache = window.__familyYearScheduleCache
-    if (cache && cache.year === year && (cache.loaded || cache.loading)) return
-    window.__familyYearScheduleCache = { year: year, loading: true, loaded: false, months: {} }
+    var cacheToken = (localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || '').slice(-24)
+    var cacheFamily = localStorage.getItem(AUTH_FAMILY_STORAGE_KEY) || ''
+    if (cache && cache.year === year && cache.token === cacheToken && cache.family === cacheFamily && (cache.loaded || cache.loading)) return
+    window.__familyYearScheduleCache = { year: year, token: cacheToken, family: cacheFamily, loading: true, loaded: false, months: {} }
     fetchSchedulesDirect(year + '-01-01', year + '-12-31').then(function (items) {
       var months = {}
       ;(items || []).forEach(function (item) {
@@ -1671,7 +1688,7 @@
         months[parts[1]].items.push(item)
         if (months[parts[1]].days.indexOf(parts[2]) < 0) months[parts[1]].days.push(parts[2])
       })
-      window.__familyYearScheduleCache = { year: year, loading: false, loaded: true, months: months }
+      window.__familyYearScheduleCache = { year: year, token: cacheToken, family: localStorage.getItem(AUTH_FAMILY_STORAGE_KEY) || cacheFamily, loading: false, loaded: true, months: months }
       window.setTimeout(function () {
         decorateYearCalendar()
         var active = document.querySelector('.year-month-card.active')
@@ -1682,7 +1699,7 @@
         }
       }, 0)
     }).catch(function () {
-      window.__familyYearScheduleCache = { year: year, loading: false, loaded: true, months: {} }
+      window.__familyYearScheduleCache = { year: year, token: cacheToken, family: cacheFamily, loading: false, loaded: true, months: {} }
     })
   }
 
@@ -4856,6 +4873,61 @@
     flushApiQueue()
   }
 
+  function buildSchedulePayloadFromForm(form) {
+    var title = getInputValueByLabel(form, '\uC77C\uC815\uBA85') || firstInputValue(form)
+    if (!title) return null
+    var timeValue = getInputValueByLabel(form, '\uC2DC\uAC04')
+    if (timeValue && !/^\d{2}:\d{2}$/.test(timeValue)) timeValue = null
+    return {
+      title: title,
+      calendarBasis: normalizeScheduleBasis(getCustomSelectValue('\uAE30\uC900')),
+      scheduleDate: getScheduleFormDateValue(form),
+      scheduleTime: timeValue || null,
+      category: getCustomSelectValue('\uAD6C\uBD84') || '\uC77C\uC815',
+      memberName: getCustomSelectValue('\uAC00\uC871') || null,
+      repeatRule: normalizeScheduleRepeat(getCustomSelectValue('\uBC18\uBCF5')),
+      memo: getInputValueByLabel(form, '\uBA54\uBAA8') || ''
+    }
+  }
+
+  function submitScheduleFormDirect(form) {
+    if (!form || form.dataset.scheduleSubmitting === 'true') return
+    var payload = buildSchedulePayloadFromForm(form)
+    var titleInput = form.querySelector('input')
+    if (!payload) {
+      if (titleInput) titleInput.focus()
+      showPatchToast('\uC77C\uC815\uBA85\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+      return
+    }
+    form.dataset.scheduleSubmitting = 'true'
+    return getCurrentFamilyId().then(function (familyId) {
+      return postJson('/schedules?familyId=' + encodeURIComponent(familyId), payload)
+    }).then(function () {
+      calendarScheduleCache.key = ''
+      calendarScheduleCache.items = []
+      calendarScheduleCache.loadedAt = 0
+      window.__familyYearScheduleCache = null
+      showPatchToast('\uC77C\uC815\uC774 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.')
+      var date = parseDate(payload.scheduleDate)
+      if (date) {
+        updateScheduleFormVisibleDate(date)
+        updateSelectedDayPanel(date)
+        updateJumpInput(date)
+      }
+      refreshServerDataViews(true)
+      loadCalendarScheduleCache(true)
+      loadScheduleNotifications(true)
+      if (titleInput) {
+        titleInput.value = ''
+        titleInput.dispatchEvent(new Event('input', { bubbles: true }))
+      }
+    }).catch(function () {
+      showPatchToast('\uC77C\uC815 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+    }).finally(function () {
+      delete form.dataset.scheduleSubmitting
+    })
+  }
+
   function normalizeLedgerType(value) {
     var text = String(value || '')
     return text.indexOf('\uC218\uC785') >= 0 || text.toLowerCase() === 'income' ? 'income' : 'expense'
@@ -5202,22 +5274,10 @@
   document.addEventListener('submit', function (event) {
     var form = event.target && event.target.closest && event.target.closest('.schedule-form-card')
     if (!form) return
-    syncScheduleForm(form)
-    var beforeRows = document.querySelectorAll('.schedule-row').length
-    window.setTimeout(function () {
-      var afterRows = document.querySelectorAll('.schedule-row').length
-      var titleInput = form.querySelector('input')
-      if (afterRows > beforeRows) {
-        showPatchToast('\uC77C\uC815\uC774 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.')
-        var date = getScheduleFormVisibleDate() || getFocusedDate()
-        if (date) {
-          updateSelectedDayPanel(date)
-          updateJumpInput(date)
-        }
-      } else if (titleInput && !titleInput.value.trim()) {
-        titleInput.focus()
-      }
-    }, 220)
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitScheduleFormDirect(form)
   }, true)
 
   document.addEventListener('click', function (event) {

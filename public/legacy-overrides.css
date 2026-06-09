@@ -6488,6 +6488,14 @@ html[data-year-schedule-mode="list"] .year-month-card {
   backdrop-filter: blur(6px) !important;
 }
 
+.schedule-day-patch-backdrop {
+  z-index: 50000 !important;
+}
+
+.schedule-item-patch-backdrop {
+  z-index: 50020 !important;
+}
+
 .schedule-detail-patch-dialog {
   position: relative !important;
   display: grid !important;
