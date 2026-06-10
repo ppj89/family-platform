@@ -3497,7 +3497,7 @@ func writeEmailVerificationHTML(w http.ResponseWriter, status int, publicBaseURL
 </html>`, title, title, message, redirectURL)
 }
 
-func writeOAuthCallbackHTML(w http.ResponseWriter, status int, publicBaseURL string, accessToken string, userPayload map[string]any, errorMessage string) {
+func writeOAuthCallbackHTMLLegacyBroken(w http.ResponseWriter, status int, publicBaseURL string, accessToken string, userPayload map[string]any, errorMessage string) {
 	redirectURL := strings.TrimRight(publicBaseURL, "/") + "/"
 	tokenJSON, _ := json.Marshal(accessToken)
 	userJSON, _ := json.Marshal(userPayload)
@@ -3544,6 +3544,66 @@ func writeOAuthCallbackHTML(w http.ResponseWriter, status int, publicBaseURL str
       localStorage.setItem('family-platform-sso-complete', String(Date.now()));
       document.getElementById('title').textContent = '로그인되었습니다';
       document.getElementById('message').textContent = '가족 플랫폼으로 이동합니다.';
+      window.setTimeout(function () { window.location.replace(redirect); }, 350);
+    }());
+  </script>
+</body>
+</html>`, tokenJSON, userJSON, errorJSON, redirectJSON)
+}
+
+func writeOAuthCallbackHTML(w http.ResponseWriter, status int, publicBaseURL string, accessToken string, userPayload map[string]any, errorMessage string) {
+	redirectURL := strings.TrimRight(publicBaseURL, "/") + "/"
+	tokenJSON, _ := json.Marshal(accessToken)
+	userJSON, _ := json.Marshal(userPayload)
+	errorJSON, _ := json.Marshal(errorMessage)
+	redirectJSON, _ := json.Marshal(redirectURL)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(status)
+	_, _ = fmt.Fprintf(w, `<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SSO Login</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f6fb; color: #191f28; }
+    main { width: min(420px, calc(100vw - 40px)); padding: 28px; border-radius: 24px; background: #fff; box-shadow: 0 18px 50px rgba(25, 31, 40, .12); text-align: center; }
+    h1 { margin: 0 0 10px; font-size: 24px; }
+    p { margin: 0; color: #6b7684; line-height: 1.55; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 id="title">SSO login is being processed</h1>
+    <p id="message">Please wait a moment.</p>
+  </main>
+  <script>
+    (function () {
+      var token = %s;
+      var user = %s;
+      var error = %s;
+      var redirect = %s;
+      if (error) {
+        document.getElementById('title').textContent = 'SSO login needs attention';
+        document.getElementById('message').textContent = error === 'active session exists'
+          ? 'There is already an active session. Please use email login once to replace the existing session.'
+          : (error === 'oauth email consent required'
+            ? 'Email consent is required to prevent duplicate accounts.'
+            : 'A problem occurred while processing SSO login.');
+        window.setTimeout(function () { window.location.replace(redirect); }, 1800);
+        return;
+      }
+      if (!token || !user) {
+        document.getElementById('title').textContent = 'SSO login failed';
+        document.getElementById('message').textContent = 'Login data was not received. Please try again.';
+        window.setTimeout(function () { window.location.replace(redirect); }, 1800);
+        return;
+      }
+      localStorage.setItem('family-platform-access-token', token);
+      localStorage.setItem('family-platform-user', JSON.stringify(user));
+      localStorage.setItem('family-platform-sso-complete', String(Date.now()));
+      document.getElementById('title').textContent = 'Login completed';
+      document.getElementById('message').textContent = 'Opening Family Platform.';
       window.setTimeout(function () { window.location.replace(redirect); }, 350);
     }());
   </script>
