@@ -423,6 +423,80 @@
     }, 1600)
   }
 
+  var apiLoadingState = {
+    count: 0,
+    showTimer: 0,
+    hideTimer: 0,
+    installed: false
+  }
+
+  function ensureApiLoadingBar() {
+    var bar = document.querySelector('.global-api-loading')
+    if (bar) return bar
+    bar = document.createElement('div')
+    bar.className = 'global-api-loading'
+    bar.innerHTML = '<div class="global-api-loading-track"><span></span></div><strong>데이터 불러오는 중</strong>'
+    document.body.appendChild(bar)
+    return bar
+  }
+
+  function setApiLoadingVisible(visible) {
+    var bar = ensureApiLoadingBar()
+    bar.classList.toggle('active', !!visible)
+  }
+
+  function beginApiLoading() {
+    apiLoadingState.count += 1
+    if (apiLoadingState.hideTimer) {
+      window.clearTimeout(apiLoadingState.hideTimer)
+      apiLoadingState.hideTimer = 0
+    }
+    if (!apiLoadingState.showTimer) {
+      apiLoadingState.showTimer = window.setTimeout(function () {
+        apiLoadingState.showTimer = 0
+        if (apiLoadingState.count > 0) setApiLoadingVisible(true)
+      }, 120)
+    }
+  }
+
+  function endApiLoading() {
+    apiLoadingState.count = Math.max(0, apiLoadingState.count - 1)
+    if (apiLoadingState.count > 0) return
+    if (apiLoadingState.showTimer) {
+      window.clearTimeout(apiLoadingState.showTimer)
+      apiLoadingState.showTimer = 0
+    }
+    apiLoadingState.hideTimer = window.setTimeout(function () {
+      if (apiLoadingState.count === 0) setApiLoadingVisible(false)
+    }, 180)
+  }
+
+  function shouldTrackApiRequest(input) {
+    var url = typeof input === 'string' ? input : (input && input.url) || ''
+    if (!url) return false
+    try {
+      var parsed = new URL(url, window.location.origin)
+      return parsed.pathname.indexOf('/api/') === 0
+    } catch (error) {
+      return String(url).indexOf('/api/') >= 0
+    }
+  }
+
+  function installApiLoadingInterceptor() {
+    if (apiLoadingState.installed || !window.fetch) return
+    apiLoadingState.installed = true
+    var originalFetch = window.fetch.bind(window)
+    window.fetch = function (input, init) {
+      var tracked = shouldTrackApiRequest(input)
+      if (tracked) beginApiLoading()
+      return originalFetch(input, init).finally(function () {
+        if (tracked) endApiLoading()
+      })
+    }
+  }
+
+  installApiLoadingInterceptor()
+
   function apiJson(path, body) {
     return fetch(API_BASE_URL + path, {
       method: 'POST',
