@@ -5,6 +5,7 @@ import (
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/tls"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
@@ -12,6 +13,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/smtp"
 	"net/url"
@@ -3144,12 +3146,7 @@ func (a *app) sendVerificationEmail(email, nickname, verifyURL string) error {
 		"",
 		body,
 	}, "\r\n")
-	addr := a.cfg.smtpHost + ":" + a.cfg.smtpPort
-	var auth smtp.Auth
-	if strings.TrimSpace(a.cfg.smtpUsername) != "" || strings.TrimSpace(a.cfg.smtpPassword) != "" {
-		auth = smtp.PlainAuth("", a.cfg.smtpUsername, a.cfg.smtpPassword, a.cfg.smtpHost)
-	}
-	return smtp.SendMail(addr, auth, from, []string{email}, []byte(message))
+	return a.sendMail(from, []string{email}, []byte(message))
 }
 
 func (a *app) sendPasswordResetEmail(email, nickname, resetURL string) error {
@@ -3172,12 +3169,7 @@ func (a *app) sendPasswordResetEmail(email, nickname, resetURL string) error {
 		"",
 		body,
 	}, "\r\n")
-	addr := a.cfg.smtpHost + ":" + a.cfg.smtpPort
-	var auth smtp.Auth
-	if strings.TrimSpace(a.cfg.smtpUsername) != "" || strings.TrimSpace(a.cfg.smtpPassword) != "" {
-		auth = smtp.PlainAuth("", a.cfg.smtpUsername, a.cfg.smtpPassword, a.cfg.smtpHost)
-	}
-	return smtp.SendMail(addr, auth, from, []string{email}, []byte(message))
+	return a.sendMail(from, []string{email}, []byte(message))
 }
 
 func (a *app) sendRecoveryInquiryEmail(id int64, email, nickname, contact, recoveryType, inquiryMessage string) error {
@@ -3204,12 +3196,72 @@ func (a *app) sendRecoveryInquiryEmail(id int64, email, nickname, contact, recov
 		"",
 		body,
 	}, "\r\n")
-	addr := a.cfg.smtpHost + ":" + a.cfg.smtpPort
-	var auth smtp.Auth
-	if strings.TrimSpace(a.cfg.smtpUsername) != "" || strings.TrimSpace(a.cfg.smtpPassword) != "" {
-		auth = smtp.PlainAuth("", a.cfg.smtpUsername, a.cfg.smtpPassword, a.cfg.smtpHost)
+	return a.sendMail(from, []string{from}, []byte(message))
+}
+
+func (a *app) sendMail(from string, recipients []string, message []byte) error {
+	host := strings.TrimSpace(a.cfg.smtpHost)
+	port := strings.TrimSpace(a.cfg.smtpPort)
+	if port == "" {
+		port = "587"
 	}
-	return smtp.SendMail(addr, auth, from, []string{from}, []byte(message))
+	addr := net.JoinHostPort(host, port)
+	timeout := 10 * time.Second
+	dialer := &net.Dialer{Timeout: timeout}
+	var conn net.Conn
+	var err error
+	if port == "465" {
+		conn, err = tls.DialWithDialer(dialer, "tcp", addr, &tls.Config{ServerName: host, MinVersion: tls.VersionTLS12})
+	} else {
+		conn, err = dialer.Dial("tcp", addr)
+	}
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	_ = conn.SetDeadline(time.Now().Add(timeout))
+
+	client, err := smtp.NewClient(conn, host)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+
+	if port != "465" {
+		if ok, _ := client.Extension("STARTTLS"); ok {
+			if err := client.StartTLS(&tls.Config{ServerName: host, MinVersion: tls.VersionTLS12}); err != nil {
+				return err
+			}
+		}
+	}
+	if strings.TrimSpace(a.cfg.smtpUsername) != "" || strings.TrimSpace(a.cfg.smtpPassword) != "" {
+		if ok, _ := client.Extension("AUTH"); ok {
+			auth := smtp.PlainAuth("", a.cfg.smtpUsername, a.cfg.smtpPassword, host)
+			if err := client.Auth(auth); err != nil {
+				return err
+			}
+		}
+	}
+	if err := client.Mail(from); err != nil {
+		return err
+	}
+	for _, recipient := range recipients {
+		if err := client.Rcpt(recipient); err != nil {
+			return err
+		}
+	}
+	writer, err := client.Data()
+	if err != nil {
+		return err
+	}
+	if _, err := writer.Write(message); err != nil {
+		_ = writer.Close()
+		return err
+	}
+	if err := writer.Close(); err != nil {
+		return err
+	}
+	return client.Quit()
 }
 
 func maskEmail(email string) string {
