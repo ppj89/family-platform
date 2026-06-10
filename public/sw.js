@@ -1,4 +1,4 @@
-const CACHE_NAME = 'family-platform-v2'
+const CACHE_NAME = 'family-platform-v3'
 const APP_SHELL = ['/', '/legacy/index.html', '/manifest.webmanifest', '/fp-icon.svg']
 
 self.addEventListener('install', (event) => {
