@@ -738,12 +738,16 @@ body.api-loading-blocked::before {
 
 .auth-recovery-panel {
   display: grid;
-  gap: 14px;
-  margin: 4px 0 16px;
+  gap: 12px;
+  max-height: min(48vh, 430px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  margin: 2px 0 12px;
   border: 1px solid rgba(49, 130, 246, 0.16);
   border-radius: 18px;
-  padding: 16px;
+  padding: 14px;
   background: #f7fbff;
+  scrollbar-width: thin;
 }
 
 .auth-recovery-panel[hidden] {
@@ -785,11 +789,12 @@ body.api-loading-blocked::before {
 .auth-recovery-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .auth-recovery-panel textarea {
   width: 100%;
+  min-height: 92px;
   border: 1px solid #e5e8eb;
   border-radius: 14px;
   padding: 13px 14px;
@@ -803,6 +808,10 @@ body.api-loading-blocked::before {
 @media (max-width: 520px) {
   .auth-recovery-grid {
     grid-template-columns: 1fr;
+  }
+
+  .auth-recovery-panel {
+    max-height: 42vh;
   }
 }
 

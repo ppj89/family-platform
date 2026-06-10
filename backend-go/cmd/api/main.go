@@ -239,7 +239,7 @@ func loadOAuthProviders() map[string]oauthProviderConfig {
 			authURL:      "https://kauth.kakao.com/oauth/authorize",
 			tokenURL:     "https://kauth.kakao.com/oauth/token",
 			userInfoURL:  "https://kapi.kakao.com/v2/user/me",
-			scopes:       []string{"profile_nickname", "account_email"},
+			scopes:       []string{"profile_nickname"},
 		},
 	}
 }

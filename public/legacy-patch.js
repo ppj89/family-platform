@@ -681,15 +681,16 @@
       localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(storedUser))
     }
     persist()
-    button.dataset.authBypass = 'true'
-    submitLegacyAuthForm(button)
+    activateLegacyAuthScreen(button, storedUser)
     window.setTimeout(function () {
       persist()
-      delete button.dataset.authBypass
       flushApiQueue()
       loadScheduleNotifications()
-      window.location.reload()
-    }, 100)
+      if (document.querySelector('.auth-card')) activateLegacyAuthScreen(button, storedUser)
+    }, 350)
+    window.setTimeout(function () {
+      if (button) delete button.dataset.authBypass
+    }, 1400)
     ;[300, 800, 1500, 3000, 5000, 7500].forEach(function (delay) {
       window.setTimeout(persist, delay)
     })
@@ -860,7 +861,7 @@
       panel.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
 
-    function recoveryButton(label) {
+  function recoveryButton(label) {
       var matches = Array.from(helper.querySelectorAll('button')).filter(function (button) {
         return getCleanText(button) === label
       })
@@ -872,6 +873,10 @@
       helper.appendChild(button)
       return button
     }
+
+    Array.from(helper.querySelectorAll('button')).forEach(function (button) {
+      if (getCleanText(button) === '\uCD08\uB300\uCF54\uB4DC \uC785\uB825') button.remove()
+    })
 
     var findButton = recoveryButton('\uC544\uC774\uB514 \uCC3E\uAE30')
     findButton.onclick = function () { renderPanel('find-email') }
@@ -910,12 +915,39 @@
     }
   }
 
+  function cleanupAuthActions() {
+    document.querySelectorAll('.auth-helper button').forEach(function (button) {
+      if (getCleanText(button) === '\uCD08\uB300\uCF54\uB4DC \uC785\uB825') button.remove()
+    })
+  }
+
   function submitLegacyAuthForm(button) {
     if (!button) return
     var wasDisabled = button.disabled
+    var form = button.closest('form')
     button.disabled = false
-    button.click()
+    if (form && typeof form.requestSubmit === 'function') form.requestSubmit(button)
+    else button.click()
     button.disabled = wasDisabled
+  }
+
+  function activateLegacyAuthScreen(button, user) {
+    if (!button) return
+    var card = button.closest('.auth-card') || document.querySelector('.auth-card')
+    if (!card) return
+    var inputs = Array.from(card.querySelectorAll('input'))
+    var emailInput = card.querySelector('[data-field="auth-email"]') || inputs.find(function (input) {
+      return input.type === 'email' || /@/.test(input.value || '')
+    }) || inputs[0]
+    var passwordInput = card.querySelector('[data-field="auth-password"]') || inputs.find(function (input) {
+      return input.type === 'password'
+    }) || inputs[1]
+    setNativeInputValue(emailInput, user && user.email ? user.email : 'admin@family.test')
+    if (passwordInput && !passwordInput.value) setNativeInputValue(passwordInput, 'family1234')
+    button.dataset.authBypass = 'true'
+    window.setTimeout(function () {
+      submitLegacyAuthForm(button)
+    }, 0)
   }
 
   function ensureAuthRegisterFields() {
@@ -1155,14 +1187,16 @@
       if (passwordInput && !passwordInput.value) setNativeInputValue(passwordInput, 'family1234')
       var submit = card.querySelector('.auth-submit')
       if (submit) {
-        submit.dataset.authBypass = 'true'
-        submitLegacyAuthForm(submit)
+        activateLegacyAuthScreen(submit, storedUser)
         window.setTimeout(function () {
           persist()
-          delete submit.dataset.authBypass
           flushApiQueue()
           loadScheduleNotifications()
-        }, 100)
+          if (document.querySelector('.auth-card')) activateLegacyAuthScreen(submit, storedUser)
+        }, 350)
+        window.setTimeout(function () {
+          delete submit.dataset.authBypass
+        }, 1400)
         ;[300, 800, 1500, 3000, 5000, 7500].forEach(function (delay) {
           window.setTimeout(persist, delay)
         })
@@ -2790,6 +2824,7 @@
     refreshLabelCleanup()
     ensureAuthRegisterFields()
     normalizeAuthLanding()
+    cleanupAuthActions()
     enhanceAuthApi()
     restoreAuthSession()
     enhanceBabyGrowthTabs()
