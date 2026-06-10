@@ -91,6 +91,29 @@
     return modes[activeIndex] || 'month'
   }
 
+  function calendarModeDateKey(mode) {
+    return 'calendar' + String(mode || getActiveCalendarMode()).replace(/^[a-z]/, function (char) {
+      return char.toUpperCase()
+    }) + 'Date'
+  }
+
+  function getCalendarModeDate(mode) {
+    return parseDate(document.documentElement.dataset[calendarModeDateKey(mode)] || '')
+  }
+
+  function setCalendarModeDate(mode, date) {
+    if (!date) return
+    document.documentElement.dataset[calendarModeDateKey(mode)] = formatDate(date)
+  }
+
+  function ensureCalendarModeDefaultDates() {
+    if (!document.querySelector('.family-calendar-panel')) return
+    var today = new Date()
+    modes.forEach(function (mode) {
+      if (!getCalendarModeDate(mode)) setCalendarModeDate(mode, today)
+    })
+  }
+
   function getTitleNumbers() {
     var title = document.querySelector('.family-calendar-panel .calendar-title-button strong')
     var text = title ? title.textContent.trim() : ''
@@ -254,6 +277,7 @@
       if (event.stopImmediatePropagation) event.stopImmediatePropagation()
       window.__familyDirectCalendarDebug = { step: 'click', dateText: dateText }
       markCalendarSelection(card, selectedDate)
+      setCalendarModeDate(getActiveCalendarMode(), selectedDate)
       updateJumpInput(selectedDate)
       updateScheduleFormVisibleDate(selectedDate)
       updateSelectedDayPanel(selectedDate, card)
@@ -272,6 +296,7 @@
           })
         }
         window.__familyDirectCalendarDebug = { step: 'schedules', dateText: dateText, items: scheduleItems }
+        if (!scheduleItems.length) resetScheduleCreateFieldsForDate(selectedDate)
         showSchedules(selectedDate, scheduleItems)
       })
     }, true)
@@ -348,6 +373,7 @@
   function selectYearMonthFromCard(card) {
     var selectedMonth = getYearMonthFromCard(card)
     if (!selectedMonth) return false
+    setCalendarModeDate('year', selectedMonth)
     setYearSelectedMonth(selectedMonth)
     updateJumpInput(selectedMonth)
     updateScheduleFormVisibleDate(selectedMonth)
@@ -975,8 +1001,10 @@
 
   function markCalendarSelection(node, date) {
     if (!node || !date) return
+    var mode = getActiveCalendarMode()
+    setCalendarModeDate(mode, date)
     document.documentElement.dataset.calendarSelectedDate = formatDate(date)
-    document.documentElement.dataset.calendarMode = getActiveCalendarMode()
+    document.documentElement.dataset.calendarMode = mode
     document.querySelectorAll('.calendar-day-card.selected, .calendar-day-card.active, .fc-day.selected, .fc-day.active, .agenda-day-column.active, .year-month-card.active').forEach(function (item) {
       if (item !== node) {
         item.classList.remove('selected')
@@ -999,6 +1027,7 @@
   }
 
   function updateSelectedDayPanel(date, agendaSource) {
+    ensureSelectedDayCard()
     var card = document.querySelector('.selected-day-card')
     if (!card) return
 
@@ -1009,9 +1038,7 @@
     if (!list) return
 
     if (agendaSource) {
-      var items = Array.from(agendaSource.querySelectorAll('span')).map(function (item) {
-        return item.textContent.trim()
-      }).filter(Boolean)
+      var items = collectScheduleTextsFromCalendarNode(agendaSource)
 
       if (items.length) {
         var note = list.querySelector('.empty-note') || list.firstElementChild
@@ -1032,6 +1059,20 @@
       delete empty.dataset.selectedDayDetail
       delete empty.dataset.selectedDate
     }
+  }
+
+  function ensureSelectedDayCard() {
+    var mode = getActiveCalendarMode()
+    if (mode !== 'day' && mode !== 'week') return
+    if (document.querySelector('.selected-day-card')) return
+    var scheduleCard = document.querySelector('.schedule-list-card')
+    var panel = document.querySelector('.family-calendar-panel')
+    if (!scheduleCard && !panel) return
+    var card = document.createElement('section')
+    card.className = 'panel-card selected-day-card'
+    card.innerHTML = '<div class="panel-header"><h2>\uC120\uD0DD\uC77C</h2><button type="button" class="passive-header-chip"></button></div><div class="schedule-list"><p class="empty-note">\uC120\uD0DD\uD55C \uB0A0\uC9DC\uC5D0\uB294 \uC77C\uC815\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p></div>'
+    if (scheduleCard && scheduleCard.parentElement) scheduleCard.parentElement.insertBefore(card, scheduleCard)
+    else if (panel && panel.parentElement) panel.parentElement.insertBefore(card, panel.nextSibling)
   }
 
   function inferDateForCalendarCard(card, day) {
@@ -1083,9 +1124,6 @@
   }
 
   function cleanupHardcodedCalendarRows() {
-    document.querySelectorAll('.selected-day-card').forEach(function (card) {
-      card.remove()
-    })
     document.querySelectorAll('.schedule-list-card .schedule-list:not(.api-schedule-list)').forEach(function (list) {
       list.remove()
     })
@@ -1358,6 +1396,10 @@
   function hideSelectedDayPanels() {
     var mode = getActiveCalendarMode()
     document.documentElement.dataset.calendarMode = mode
+    if (mode === 'day' || mode === 'week') {
+      ensureSelectedDayCard()
+      return
+    }
     document.querySelectorAll('.selected-day-card').forEach(function (card) {
       card.remove()
     })
@@ -1614,6 +1656,7 @@
       }
       if (target.closest('[data-jump-today]')) {
         var today = new Date()
+        setCalendarModeDate(mode, today)
         moveCalendarTo(today)
         updateJumpInput(today)
         updateScheduleFormVisibleDate(today)
@@ -1627,6 +1670,7 @@
         view = pickedMonth
         selected = pickedMonth
         if (mode === 'month') {
+          setCalendarModeDate(mode, pickedMonth)
           moveCalendarTo(pickedMonth)
           updateJumpInput(pickedMonth)
           updateScheduleFormVisibleDate(pickedMonth)
@@ -1645,6 +1689,7 @@
         view = new Date(pickedYear.getFullYear(), view.getMonth(), 1)
         selected = view
         if (mode === 'year') {
+          setCalendarModeDate(mode, pickedYear)
           moveCalendarTo(pickedYear)
           updateJumpInput(pickedYear)
           updateScheduleFormVisibleDate(pickedYear)
@@ -1660,6 +1705,7 @@
       var dayButton = target.closest('[data-jump-day]')
       if (dayButton) {
         var picked = new Date(view.getFullYear(), view.getMonth(), Number(dayButton.dataset.jumpDay))
+        setCalendarModeDate(mode, picked)
         moveCalendarTo(picked)
         updateJumpInput(picked)
         updateScheduleFormVisibleDate(picked)
@@ -1688,15 +1734,16 @@
       var mode = getActiveCalendarMode()
       var today = new Date()
       var focused = getFocusedDate()
-      var stored = parseDate(document.documentElement.dataset.calendarSelectedDate || '')
-      var selected = (mode === 'day' || mode === 'week') ? (stored || getScheduleFormVisibleDate() || focused || today) : (getScheduleFormVisibleDate() || stored || focused)
+      var selected = getCalendarModeDate(mode) || today
       window.__familySuppressCalendarPopupUntil = Date.now() + 2500
       if (mode === 'year') {
         var monthStart = new Date(selected.getFullYear(), selected.getMonth(), 1)
+        setCalendarModeDate(mode, monthStart)
         clickVisibleMonth(monthStart)
         updateJumpInput(monthStart)
         updateScheduleFormVisibleDate(monthStart)
       } else {
+        setCalendarModeDate(mode, selected)
         clickVisibleDay(selected)
         updateJumpInput(selected)
         updateScheduleFormVisibleDate(selected)
@@ -1711,10 +1758,9 @@
     window.setTimeout(function () {
       var mode = getActiveCalendarMode()
       if (mode !== 'day' && mode !== 'week') return
-      var selectedText = document.documentElement.dataset.calendarSelectedDate
-      var selected = selectedText ? parseDate(selectedText) : null
-      var today = selected || getScheduleFormVisibleDate() || new Date()
+      var today = getCalendarModeDate(mode) || new Date()
       window.__familySuppressCalendarPopupUntil = Date.now() + 2500
+      setCalendarModeDate(mode, today)
       moveCalendarTo(today)
       updateJumpInput(today)
       updateScheduleFormVisibleDate(today)
@@ -1732,7 +1778,8 @@
         event.preventDefault()
         event.stopPropagation()
         if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-        renderJumpDatepicker(getScheduleFormVisibleDate() || getFocusedDate())
+        var modeDate = getCalendarModeDate(getActiveCalendarMode())
+        renderJumpDatepicker(modeDate || getFocusedDate())
       }, true)
     })
 
@@ -1744,6 +1791,7 @@
           var mode = getActiveCalendarMode()
           if (mode !== 'day' && mode !== 'week') return
           var focused = getFocusedDate()
+          setCalendarModeDate(mode, focused)
           document.documentElement.dataset.calendarSelectedDate = formatDate(focused)
           updateJumpInput(focused)
           updateScheduleFormVisibleDate(focused)
@@ -2094,7 +2142,7 @@
         }
         countBadge.textContent = monthDays.length ? monthDays.length + '\uAC74' : '\uC77C\uC815 \uC5C6\uC74C'
         countBadge.disabled = !monthDays.length
-        mini.querySelectorAll('.year-mini-days span.has-event').forEach(function (dayNode) {
+        mini.querySelectorAll('.year-mini-days span').forEach(function (dayNode) {
           if (dayNode.dataset.yearDetailWired) return
           dayNode.dataset.yearDetailWired = 'true'
           dayNode.addEventListener('click', function (event) {
@@ -2103,8 +2151,10 @@
             var day = Number(dayNode.dataset.yearMiniDay || dayNode.textContent)
             if (!Number.isFinite(day)) return
             var selectedDate = new Date(year, month - 1, day)
+            setCalendarModeDate('year', selectedDate)
             updateScheduleFormVisibleDate(selectedDate)
             fetchSchedulesDirect(formatDate(selectedDate), formatDate(selectedDate)).then(function (items) {
+              if (!items || !items.length) resetScheduleCreateFieldsForDate(selectedDate)
               openCalendarApiDayPopup(selectedDate, items)
             })
           })
@@ -2296,6 +2346,9 @@
     if (window.__familyCalendarEntryActive) return
     window.__familyCalendarEntryActive = true
       var today = new Date()
+      modes.forEach(function (mode) {
+        if (!getCalendarModeDate(mode)) setCalendarModeDate(mode, today)
+      })
       document.documentElement.dataset.calendarSelectedDate = formatDate(today)
       updateScheduleFormVisibleDate(today)
       updateJumpInput(today)
@@ -2433,6 +2486,7 @@
       return
     }
     cleanupStaleServerPanels()
+    ensureCalendarModeDefaultDates()
     ensureCalendarJumpControl()
     ensureCommunityMenu()
     ensureYearMonthClickGuard()
@@ -4720,8 +4774,9 @@
   }
 
   function rangeForCalendarMode() {
-    var focused = apiDate(getFocusedDate ? getFocusedDate() : todayText())
     var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
+    var modeDate = getCalendarModeDate(mode)
+    var focused = apiDate(modeDate || (getFocusedDate ? getFocusedDate() : todayText()))
     if (mode === 'year') return { start: focused.slice(0, 4) + '-01-01', end: focused.slice(0, 4) + '-12-31' }
     if (mode === 'day') return { start: focused, end: focused }
     if (mode === 'week') {
@@ -4835,6 +4890,7 @@
     if (!document.querySelector('.family-calendar-panel')) return Promise.resolve([])
     removeDeveloperServerPanels()
     var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
+    var requestMode = mode
     if (mode === 'year') {
       if (force) {
         window.__familyYearScheduleCache = null
@@ -4853,6 +4909,7 @@
       return Promise.resolve([])
     }
     return loadCalendarScheduleCache(force).then(function (items) {
+      if (getActiveCalendarMode && getActiveCalendarMode() !== requestMode) return []
       var grouped = {}
       ;(items || []).forEach(function (item) {
         var key = String(item.scheduleDate || '')
@@ -5345,6 +5402,30 @@
 
   function todayText() {
     return formatDate(new Date())
+  }
+
+  function currentTimeText() {
+    var now = new Date()
+    return String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
+  }
+
+  function resetScheduleCreateFieldsForDate(date) {
+    var form = document.querySelector('.schedule-form-card')
+    if (!form || form.dataset.editingScheduleId) return
+    setInputValueByLabel(form, '\uC77C\uC815\uBA85', '')
+    setInputValueByLabel(form, '\uC2DC\uAC04', currentTimeText())
+    setInputValueByLabel(form, '\uBA54\uBAA8', '')
+    var inputs = Array.from(form.querySelectorAll('input')).filter(function (input) {
+      return input.type !== 'hidden' && input.type !== 'file'
+    })
+    if (inputs[0]) setNativeInputValue(inputs[0], '')
+    var timeInput = form.querySelector('input[type="time"]') || inputs.find(function (input) {
+      return /time|\d{2}:\d{2}/i.test(String(input.name || '') + ' ' + String(input.value || ''))
+    })
+    if (timeInput) setNativeInputValue(timeInput, currentTimeText())
+    var memo = form.querySelector('textarea')
+    if (memo) setNativeInputValue(memo, '')
+    if (date) updateScheduleFormVisibleDate(date)
   }
 
   function getFieldValue(root, selector) {
@@ -6036,7 +6117,7 @@
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    renderJumpDatepicker(getScheduleFormVisibleDate() || getFocusedDate())
+    renderJumpDatepicker(getCalendarModeDate(getActiveCalendarMode()) || getFocusedDate())
   }
 
   document.addEventListener('click', handleCalendarTitleJumpEvent, true)
@@ -6069,10 +6150,12 @@
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
 
     markCalendarSelection(target, selectedDate)
+    setCalendarModeDate(getActiveCalendarMode(), selectedDate)
     updateJumpInput(selectedDate)
     updateScheduleFormVisibleDate(selectedDate)
     updateSelectedDayPanel(selectedDate, target)
     fetchSchedules(formatDate(selectedDate), formatDate(selectedDate)).then(function (items) {
+      if (!items || !items.length) resetScheduleCreateFieldsForDate(selectedDate)
       if (!openCalendarApiDayPopup(selectedDate, items)) {
         openCalendarDaySchedulePopup(selectedDate, collectScheduleTextsFromCalendarNode(target))
       }
