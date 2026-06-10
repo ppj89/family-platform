@@ -542,6 +542,7 @@
   function parseAuthError(error) {
     var text = String(error && error.message ? error.message : error || '')
     if (text.indexOf('nickname is already registered') >= 0) return '\uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uB2C9\uB124\uC784\uC785\uB2C8\uB2E4. \uB2E4\uB978 \uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.'
+    if (text.indexOf('daily mail request limit exceeded') >= 0 || text.indexOf('429') >= 0) return '\uC624\uB298 \uC694\uCCAD \uAC00\uB2A5\uD55C \uD69F\uC218\uB97C \uCD08\uACFC\uD588\uC2B5\uB2C8\uB2E4. \uB0B4\uC77C \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.'
     if (text.indexOf('locked') >= 0 || text.indexOf('423') >= 0) {
       var seconds = Number((text.match(/(\d+)\s*seconds/i) || [])[1] || 0)
       var minutes = seconds ? Math.ceil(seconds / 60) : 5
@@ -791,8 +792,8 @@
           apiJson('/auth/recovery/inquiry', payload).then(function () {
             panel.hidden = true
             showPatchToast('\uAD00\uB9AC\uC790 \uBB38\uC758\uAC00 \uC811\uC218\uB418\uC5C8\uC2B5\uB2C8\uB2E4.')
-          }).catch(function () {
-            showPatchToast('\uBB38\uC758 \uC811\uC218 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.')
+          }).catch(function (error) {
+            showPatchToast(parseAuthError(error))
           })
         })
         var contact = panel.querySelector('[data-recovery-contact]')
@@ -839,8 +840,8 @@
             showPatchToast('\uBE44\uBC00\uBC88\uD638 \uC7AC\uC124\uC815 \uBA54\uC77C\uC744 \uBCF4\uB0C8\uC2B5\uB2C8\uB2E4.')
           })
         }
-        request.catch(function () {
-          showPatchToast('\uACC4\uC815 \uCC3E\uAE30 \uCC98\uB9AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.')
+        request.catch(function (error) {
+          showPatchToast(parseAuthError(error))
         })
       })
       input.focus()

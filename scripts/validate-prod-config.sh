@@ -123,12 +123,16 @@ esac
 
 case "$email_verification_required" in
   true|1|yes|on)
+    require_key APP_BREVO_API_KEY
+    require_key APP_MAIL_FROM_EMAIL
     require_key APP_SMTP_HOST
     require_key APP_SMTP_PORT
     require_key APP_SMTP_FROM
-    [ -n "$(value_of APP_SMTP_HOST)" ] || fail "APP_SMTP_HOST is required when APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true"
-    [ -n "$(value_of APP_SMTP_PORT)" ] || fail "APP_SMTP_PORT is required when APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true"
-    [ -n "$(value_of APP_SMTP_FROM)" ] || fail "APP_SMTP_FROM is required when APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true"
+    if [ -z "$(value_of APP_BREVO_API_KEY)" ] || [ -z "$(value_of APP_MAIL_FROM_EMAIL)" ]; then
+      [ -n "$(value_of APP_SMTP_HOST)" ] || fail "APP_BREVO_API_KEY/APP_MAIL_FROM_EMAIL or APP_SMTP_HOST is required when APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true"
+      [ -n "$(value_of APP_SMTP_PORT)" ] || fail "APP_SMTP_PORT is required when APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true"
+      [ -n "$(value_of APP_SMTP_FROM)" ] || fail "APP_SMTP_FROM is required when APP_AUTH_EMAIL_VERIFICATION_REQUIRED=true"
+    fi
     ;;
   false|0|no|off)
     ;;
