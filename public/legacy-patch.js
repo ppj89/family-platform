@@ -767,21 +767,19 @@
       flushApiQueue()
       loadScheduleNotifications()
     }).catch(function (error) {
-      forceClearStoredAuth()
       showPatchToast(parseAuthError(error))
-      window.setTimeout(function () {
-        window.location.reload()
-      }, 1200)
     }).finally(function () {
       delete submit.dataset.authApiSync
     })
   }
 
   function shouldAllowLegacyLogin(card, submit) {
+    if (document.querySelector('.app-shell')) return false
     var mode = getAuthMode(card)
     if (mode !== 'login') return false
     var payload = getAuthPayload(card)
     if (!payload.email || !payload.password || payload.password.length < 8) {
+      if (submit.dataset.authSkipApiSync === 'true') return true
       focusEmptyAuthField(card, payload, mode)
       showPatchToast('\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
       return false
@@ -790,7 +788,7 @@
     window.setTimeout(function () {
       delete submit.dataset.authBypass
     }, 1200)
-    syncLoginSessionInBackground(payload, submit)
+    if (submit.dataset.authSkipApiSync !== 'true') syncLoginSessionInBackground(payload, submit)
     return true
   }
 
@@ -987,7 +985,11 @@
     }) || inputs[1]
     setNativeInputValue(emailInput, user && user.email ? user.email : 'admin@family.test')
     if (passwordInput && !passwordInput.value) setNativeInputValue(passwordInput, 'family1234')
+    button.dataset.authSkipApiSync = 'true'
     button.dataset.authBypass = 'true'
+    window.setTimeout(function () {
+      delete button.dataset.authSkipApiSync
+    }, 5000)
     window.setTimeout(function () {
       submitLegacyAuthForm(button)
     }, 0)
@@ -1260,6 +1262,7 @@
 
     submit.addEventListener('click', function (event) {
       if (submit.dataset.authBypass === 'true') return
+      if (document.querySelector('.app-shell')) return
       if (shouldAllowLegacyLogin(card, submit)) return
       event.preventDefault()
       event.stopPropagation()
@@ -1284,6 +1287,7 @@
 
   function submitAuthViaApi(card, submit) {
     if (!card || !submit || submit.dataset.authBypass === 'true' || submit.dataset.authBusy === 'true') return
+    if (document.querySelector('.app-shell')) return
     if (shouldAllowLegacyLogin(card, submit)) return
 
     var activeTab = card.querySelector('.auth-tabs button.active')
@@ -2917,6 +2921,7 @@
   function handleAuthSubmitEvent(event) {
     var submit = event.target && event.target.closest && event.target.closest('.auth-submit')
     if (!submit || submit.dataset.authBypass === 'true') return false
+    if (document.querySelector('.app-shell')) return false
     var card = submit.closest('.auth-card')
     if (!card) return false
     if (shouldAllowLegacyLogin(card, submit)) return false
@@ -2933,6 +2938,7 @@
   function handleAuthFormSubmitEvent(event) {
     var card = event.target && event.target.closest && event.target.closest('.auth-card')
     if (!card) return false
+    if (document.querySelector('.app-shell')) return false
     var submit = card.querySelector('.auth-submit')
     if (!submit || submit.dataset.authBypass === 'true') return false
     if (shouldAllowLegacyLogin(card, submit)) return false
