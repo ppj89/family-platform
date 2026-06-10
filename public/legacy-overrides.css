@@ -661,6 +661,38 @@ body.api-loading-blocked::before {
   cursor: pointer;
 }
 
+.auth-recovery-guide {
+  margin: 0;
+  color: #6b7684;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.auth-recovery-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.auth-recovery-panel textarea {
+  width: 100%;
+  border: 1px solid #e5e8eb;
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: #fff;
+  color: #191f28;
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+}
+
+@media (max-width: 520px) {
+  .auth-recovery-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .auth-recovery-submit {
   min-height: 46px;
   border: 0;
@@ -704,6 +736,16 @@ body.api-loading-blocked::before {
 .theme-dark .auth-recovery-header button {
   background: #2a3038;
   color: #d1d6db;
+}
+
+.theme-dark .auth-recovery-guide {
+  color: #aeb7c2;
+}
+
+.theme-dark .auth-recovery-panel textarea {
+  border-color: #454d58;
+  background: #333942;
+  color: #f2f4f6;
 }
 
 .theme-dark .auth-copy h1,

@@ -752,14 +752,57 @@
     function renderPanel(mode) {
       var isFindEmail = mode === 'find-email'
       var isResetPassword = mode === 'reset-password'
-      var title = isFindEmail ? '\uC544\uC774\uB514 \uCC3E\uAE30' : (isResetPassword ? '\uC0C8 \uBE44\uBC00\uBC88\uD638 \uC124\uC815' : '\uBE44\uBC00\uBC88\uD638 \uCC3E\uAE30')
+      var isInquiry = mode === 'inquiry'
+      var title = isFindEmail ? '\uC544\uC774\uB514 \uCC3E\uAE30' : (isResetPassword ? '\uC0C8 \uBE44\uBC00\uBC88\uD638 \uC124\uC815' : (isInquiry ? '\uAD00\uB9AC\uC790 \uBB38\uC758' : '\uBE44\uBC00\uBC88\uD638 \uCC3E\uAE30'))
       var label = isFindEmail ? '\uB2C9\uB124\uC784' : (isResetPassword ? '\uC0C8 \uBE44\uBC00\uBC88\uD638' : '\uC774\uBA54\uC77C')
       var placeholder = isFindEmail ? '\uB2C9\uB124\uC784' : (isResetPassword ? '8\uC790 \uC774\uC0C1' : 'email@example.com')
       var inputType = isResetPassword ? 'password' : (isFindEmail ? 'text' : 'email')
       panel.hidden = false
       panel.dataset.mode = mode
+      if (isInquiry) {
+        panel.innerHTML = [
+          '<div class="auth-recovery-header"><strong>' + title + '</strong><button type="button" data-auth-recovery-close>X</button></div>',
+          '<p class="auth-recovery-guide">\uC774\uBA54\uC77C\uC774\uB098 \uB2C9\uB124\uC784\uC774 \uAE30\uC5B5\uB098\uC9C0 \uC54A\uC744 \uB54C \uAD00\uB9AC\uC790\uC5D0\uAC8C \uACC4\uC815 \uD655\uC778\uC744 \uC694\uCCAD\uD569\uB2C8\uB2E4.</p>',
+          '<div class="auth-recovery-grid">',
+          '<label><span>\uC774\uBA54\uC77C</span><input data-recovery-email type="email" placeholder="email@example.com" /></label>',
+          '<label><span>\uB2C9\uB124\uC784</span><input data-recovery-nickname type="text" placeholder="\uB2C9\uB124\uC784" /></label>',
+          '</div>',
+          '<label><span>\uC5F0\uB77D\uBC1B\uC744 \uC815\uBCF4</span><input data-recovery-contact type="text" placeholder="\uD68C\uC2E0\uBC1B\uC744 \uC774\uBA54\uC77C\uC774\uB098 \uC5F0\uB77D\uCC98" /></label>',
+          '<label><span>\uBB38\uC758 \uB0B4\uC6A9</span><textarea data-recovery-message rows="4" placeholder="\uAE30\uC5B5\uB098\uB294 \uACC4\uC815 \uC815\uBCF4\uB098 \uC0C1\uD669\uC744 \uC801\uC5B4\uC8FC\uC138\uC694."></textarea></label>',
+          '<button class="auth-recovery-submit" type="button">' + title + '</button>'
+        ].join('')
+        panel.querySelector('[data-auth-recovery-close]').addEventListener('click', function () {
+          panel.hidden = true
+        })
+        panel.querySelector('.auth-recovery-submit').addEventListener('click', function () {
+          var contactInput = panel.querySelector('[data-recovery-contact]')
+          var payload = {
+            email: String((panel.querySelector('[data-recovery-email]') || {}).value || '').trim(),
+            nickname: String((panel.querySelector('[data-recovery-nickname]') || {}).value || '').trim(),
+            contact: String((contactInput || {}).value || '').trim(),
+            recoveryType: '\uAD00\uB9AC\uC790 \uACC4\uC815 \uBCF5\uAD6C \uBB38\uC758',
+            message: String((panel.querySelector('[data-recovery-message]') || {}).value || '').trim()
+          }
+          if (!payload.email && !payload.contact) {
+            if (contactInput) contactInput.focus()
+            showPatchToast('\uD68C\uC2E0\uBC1B\uC744 \uC774\uBA54\uC77C\uC774\uB098 \uC5F0\uB77D\uCC98\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+            return
+          }
+          apiJson('/auth/recovery/inquiry', payload).then(function () {
+            panel.hidden = true
+            showPatchToast('\uAD00\uB9AC\uC790 \uBB38\uC758\uAC00 \uC811\uC218\uB418\uC5C8\uC2B5\uB2C8\uB2E4.')
+          }).catch(function () {
+            showPatchToast('\uBB38\uC758 \uC811\uC218 \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.')
+          })
+        })
+        var contact = panel.querySelector('[data-recovery-contact]')
+        if (contact) contact.focus()
+        panel.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        return
+      }
       panel.innerHTML = [
         '<div class="auth-recovery-header"><strong>' + title + '</strong><button type="button" data-auth-recovery-close>X</button></div>',
+        '<p class="auth-recovery-guide">\uC18C\uC15C \uACC4\uC815\uC73C\uB85C \uAC00\uC785\uD588\uB2E4\uBA74 \uC544\uB798 \uB124\uC774\uBC84, \uAD6C\uAE00, \uCE74\uCE74\uC624 \uB85C\uADF8\uC778\uC744 \uBA3C\uC800 \uC774\uC6A9\uD574\uC8FC\uC138\uC694.</p>',
         '<label><span>' + label + '</span><input data-auth-recovery-input type="' + inputType + '" placeholder="' + placeholder + '" /></label>',
         '<button class="auth-recovery-submit" type="button">' + title + '</button>'
       ].join('')
@@ -822,6 +865,9 @@
 
     var resetButton = recoveryButton('\uBE44\uBC00\uBC88\uD638 \uCC3E\uAE30')
     resetButton.onclick = function () { renderPanel('reset-request') }
+
+    var inquiryButton = recoveryButton('\uAD00\uB9AC\uC790 \uBB38\uC758')
+    inquiryButton.onclick = function () { renderPanel('inquiry') }
 
     if (new URLSearchParams(window.location.search).get('resetToken')) {
       renderPanel('reset-password')
