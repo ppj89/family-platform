@@ -4,7 +4,7 @@ set -euo pipefail
 usage() {
   cat >&2 <<'USAGE'
 Usage:
-  APP_BREVO_API_KEY=... APP_MAIL_FROM_EMAIL=sender@example.com [APP_MAIL_FROM_NAME="Family Platform"] scripts/set-prod-brevo.sh
+  APP_BREVO_API_KEY=... APP_MAIL_FROM_EMAIL=sender@example.com [APP_MAIL_FROM_NAME=FamilyPlatform] scripts/set-prod-brevo.sh
 
 Run this on the production server from /opt/family-platform.
 Do not commit Brevo API keys. Pass them only as environment variables.
@@ -14,7 +14,7 @@ USAGE
 
 brevo_api_key="${APP_BREVO_API_KEY:-}"
 mail_from_email="${APP_MAIL_FROM_EMAIL:-}"
-mail_from_name="${APP_MAIL_FROM_NAME:-Family Platform}"
+mail_from_name="${APP_MAIL_FROM_NAME:-FamilyPlatform}"
 mail_daily_limit="${APP_MAIL_DAILY_LIMIT_PER_IDENTIFIER:-3}"
 email_verification_required="${APP_AUTH_EMAIL_VERIFICATION_REQUIRED:-false}"
 env_file="${ENV_FILE:-.env.production}"
