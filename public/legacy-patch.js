@@ -668,18 +668,8 @@
   }
 
   function completeAuth(button, response) {
-    var storedUser = {
-      id: response.userId,
-      email: response.email,
-      nickname: response.nickname,
-      platformAdmin: response.platformAdmin
-    }
-    protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
-    protectedAuthSnapshot = { token: response.accessToken, user: storedUser }
-    function persist() {
-      if (response.accessToken) localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.accessToken)
-      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(storedUser))
-    }
+    var storedUser = storeAuthResponse(response)
+    function persist() { storeAuthResponse(response) }
     persist()
     activateLegacyAuthScreen(button, storedUser)
     window.setTimeout(function () {
@@ -694,6 +684,20 @@
     ;[300, 800, 1500, 3000, 5000, 7500].forEach(function (delay) {
       window.setTimeout(persist, delay)
     })
+  }
+
+  function storeAuthResponse(response) {
+    var storedUser = {
+      id: response.userId,
+      email: response.email,
+      nickname: response.nickname,
+      platformAdmin: response.platformAdmin
+    }
+    protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
+    protectedAuthSnapshot = { token: response.accessToken, user: storedUser }
+    if (response.accessToken) localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.accessToken)
+    localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(storedUser))
+    return storedUser
   }
 
   function isActiveSessionError(error) {
@@ -749,6 +753,45 @@
       }).finally(function () {
         setAuthSubmitBusy(submit, mode, false)
       })
+  }
+
+  function syncLoginSessionInBackground(payload, submit) {
+    if (!submit || submit.dataset.authApiSync === 'true') return
+    submit.dataset.authApiSync = 'true'
+    apiJson('/auth/login', {
+      email: payload.email,
+      password: payload.password,
+      forceLogin: true
+    }).then(function (response) {
+      storeAuthResponse(response)
+      flushApiQueue()
+      loadScheduleNotifications()
+    }).catch(function (error) {
+      forceClearStoredAuth()
+      showPatchToast(parseAuthError(error))
+      window.setTimeout(function () {
+        window.location.reload()
+      }, 1200)
+    }).finally(function () {
+      delete submit.dataset.authApiSync
+    })
+  }
+
+  function shouldAllowLegacyLogin(card, submit) {
+    var mode = getAuthMode(card)
+    if (mode !== 'login') return false
+    var payload = getAuthPayload(card)
+    if (!payload.email || !payload.password || payload.password.length < 8) {
+      focusEmptyAuthField(card, payload, mode)
+      showPatchToast('\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+      return false
+    }
+    submit.dataset.authBypass = 'true'
+    window.setTimeout(function () {
+      delete submit.dataset.authBypass
+    }, 1200)
+    syncLoginSessionInBackground(payload, submit)
+    return true
   }
 
   function ensureAccountRecoveryActions(card) {
@@ -1217,6 +1260,7 @@
 
     submit.addEventListener('click', function (event) {
       if (submit.dataset.authBypass === 'true') return
+      if (shouldAllowLegacyLogin(card, submit)) return
       event.preventDefault()
       event.stopPropagation()
       if (event.stopImmediatePropagation) event.stopImmediatePropagation()
@@ -1240,6 +1284,7 @@
 
   function submitAuthViaApi(card, submit) {
     if (!card || !submit || submit.dataset.authBypass === 'true' || submit.dataset.authBusy === 'true') return
+    if (shouldAllowLegacyLogin(card, submit)) return
 
     var activeTab = card.querySelector('.auth-tabs button.active')
     var activeText = getCleanText(activeTab)
@@ -2874,6 +2919,7 @@
     if (!submit || submit.dataset.authBypass === 'true') return false
     var card = submit.closest('.auth-card')
     if (!card) return false
+    if (shouldAllowLegacyLogin(card, submit)) return false
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
@@ -2889,6 +2935,7 @@
     if (!card) return false
     var submit = card.querySelector('.auth-submit')
     if (!submit || submit.dataset.authBypass === 'true') return false
+    if (shouldAllowLegacyLogin(card, submit)) return false
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
