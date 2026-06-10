@@ -688,6 +688,7 @@
       delete button.dataset.authBypass
       flushApiQueue()
       loadScheduleNotifications()
+      window.location.reload()
     }, 100)
     ;[300, 800, 1500, 3000, 5000, 7500].forEach(function (delay) {
       window.setTimeout(persist, delay)
@@ -883,6 +884,29 @@
 
     if (new URLSearchParams(window.location.search).get('resetToken')) {
       renderPanel('reset-password')
+    }
+  }
+
+  function normalizeAuthLanding() {
+    var visual = document.querySelector('.auth-visual')
+    if (!visual || visual.dataset.authLandingReady === 'true') return
+    visual.dataset.authLandingReady = 'true'
+
+    var copy = visual.querySelector('.auth-copy')
+    if (copy) {
+      copy.innerHTML = [
+        '<h1>\uC6B0\uB9AC \uAC00\uC871\uC758 \uC77C\uC815\uACFC \uAE30\uB85D\uC744 \uD55C\uACF3\uC5D0\uC11C \uAD00\uB9AC\uD574\uC694</h1>',
+        '<p>\uCE98\uB9B0\uB354, \uAC00\uACC4\uBD80, \uC5EC\uD589, \uC721\uC544, \uC77C\uAE30, \uCEE4\uBBA4\uB2C8\uD2F0\uAE4C\uC9C0 \uAC00\uC871\uBCC4 \uAD8C\uD55C\uC73C\uB85C \uC548\uC804\uD558\uAC8C \uC5F0\uACB0\uB418\uB294 \uAC00\uC871 \uC6B4\uC601 \uC6CC\uD06C\uC2A4\uD398\uC774\uC2A4\uC785\uB2C8\uB2E4.</p>'
+      ].join('')
+    }
+
+    var preview = visual.querySelector('.auth-preview')
+    if (preview) {
+      preview.innerHTML = [
+        '<div><strong>\uC624\uB298\uC758 \uC77C\uC815</strong><span>09:00 \uBCD1\uC6D0 \uC608\uC57D\uACFC \uAC00\uC871 \uAE30\uB150\uC77C\uC744 \uB85C\uADF8\uC778 \uD6C4 \uBC14\uB85C \uD655\uC778\uD569\uB2C8\uB2E4.</span></div>',
+        '<div><strong>\uC774\uBC88 \uB2EC \uAC00\uACC4\uBD80</strong><span>\uCE74\uB4DC \uB0B4\uC5ED\uACFC \uC9C0\uCD9C \uD569\uACC4\uB97C \uAC00\uC871\uBCC4\uB85C \uBD84\uB9AC\uD574 \uBCF4\uC5EC\uC90D\uB2C8\uB2E4.</span></div>',
+        '<div><strong>\uC721\uC544 \uAE30\uB85D</strong><span>\uC218\uC720, \uBC30\uBCC0, \uD0A4, \uBAB8\uBB34\uAC8C \uD750\uB984\uC744 \uC790\uB3D9\uC73C\uB85C \uBAA8\uC544 \uBCF4\uACE0 \uBD84\uC11D\uD569\uB2C8\uB2E4.</span></div>'
+      ].join('')
     }
   }
 
@@ -2765,6 +2789,7 @@
     syncScheduleBasisLayout()
     refreshLabelCleanup()
     ensureAuthRegisterFields()
+    normalizeAuthLanding()
     enhanceAuthApi()
     restoreAuthSession()
     enhanceBabyGrowthTabs()
