@@ -652,6 +652,97 @@
       })
   }
 
+  function ensureAccountRecoveryActions(card) {
+    if (!card || card.dataset.accountRecoveryReady) return
+    card.dataset.accountRecoveryReady = 'true'
+    var helper = card.querySelector('.auth-helper')
+    var submit = card.querySelector('.auth-submit')
+    if (!helper || !submit) return
+
+    var panel = document.createElement('div')
+    panel.className = 'auth-recovery-panel'
+    panel.hidden = true
+    submit.insertAdjacentElement('beforebegin', panel)
+
+    function renderPanel(mode) {
+      var isFindEmail = mode === 'find-email'
+      var isResetPassword = mode === 'reset-password'
+      var title = isFindEmail ? '\uC544\uC774\uB514 \uCC3E\uAE30' : (isResetPassword ? '\uC0C8 \uBE44\uBC00\uBC88\uD638 \uC124\uC815' : '\uBE44\uBC00\uBC88\uD638 \uCC3E\uAE30')
+      var label = isFindEmail ? '\uB2C9\uB124\uC784' : (isResetPassword ? '\uC0C8 \uBE44\uBC00\uBC88\uD638' : '\uC774\uBA54\uC77C')
+      var placeholder = isFindEmail ? '\uB2C9\uB124\uC784' : (isResetPassword ? '8\uC790 \uC774\uC0C1' : 'email@example.com')
+      var inputType = isResetPassword ? 'password' : (isFindEmail ? 'text' : 'email')
+      panel.hidden = false
+      panel.dataset.mode = mode
+      panel.innerHTML = [
+        '<div class="auth-recovery-header"><strong>' + title + '</strong><button type="button" data-auth-recovery-close>X</button></div>',
+        '<label><span>' + label + '</span><input data-auth-recovery-input type="' + inputType + '" placeholder="' + placeholder + '" /></label>',
+        '<button class="auth-recovery-submit" type="button">' + title + '</button>'
+      ].join('')
+      var input = panel.querySelector('[data-auth-recovery-input]')
+      if (isResetPassword) input.minLength = 8
+      panel.querySelector('[data-auth-recovery-close]').addEventListener('click', function () {
+        panel.hidden = true
+      })
+      panel.querySelector('.auth-recovery-submit').addEventListener('click', function () {
+        var value = String(input.value || '').trim()
+        if (!value || (isResetPassword && value.length < 8)) {
+          input.focus()
+          showPatchToast(isResetPassword ? '\uBE44\uBC00\uBC88\uD638\uB294 8\uC790 \uC774\uC0C1 \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uD544\uC218\uAC12\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+          return
+        }
+        var request
+        if (isFindEmail) {
+          request = apiJson('/auth/recovery/find-email', { nickname: value }).then(function (response) {
+            var emails = response && response.emails ? response.emails : []
+            showPatchToast(emails.length ? '\uAC00\uC785 \uC774\uBA54\uC77C: ' + emails.join(', ') : '\uC77C\uCE58\uD558\uB294 \uACC4\uC815\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
+          })
+        } else if (isResetPassword) {
+          request = apiJson('/auth/recovery/password/reset', {
+            token: new URLSearchParams(window.location.search).get('resetToken') || '',
+            password: value
+          }).then(function () {
+            window.history.replaceState({}, document.title, window.location.pathname)
+            panel.hidden = true
+            showPatchToast('\uBE44\uBC00\uBC88\uD638\uAC00 \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4.')
+          })
+        } else {
+          request = apiJson('/auth/recovery/password/request', { email: value }).then(function () {
+            panel.hidden = true
+            showPatchToast('\uBE44\uBC00\uBC88\uD638 \uC7AC\uC124\uC815 \uBA54\uC77C\uC744 \uBCF4\uB0C8\uC2B5\uB2C8\uB2E4.')
+          })
+        }
+        request.catch(function () {
+          showPatchToast('\uACC4\uC815 \uCC3E\uAE30 \uCC98\uB9AC \uC911 \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4.')
+        })
+      })
+      input.focus()
+      panel.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+
+    function recoveryButton(label) {
+      var matches = Array.from(helper.querySelectorAll('button')).filter(function (button) {
+        return getCleanText(button) === label
+      })
+      matches.slice(1).forEach(function (button) { button.remove() })
+      if (matches[0]) return matches[0]
+      var button = document.createElement('button')
+      button.type = 'button'
+      button.textContent = label
+      helper.appendChild(button)
+      return button
+    }
+
+    var findButton = recoveryButton('\uC544\uC774\uB514 \uCC3E\uAE30')
+    findButton.onclick = function () { renderPanel('find-email') }
+
+    var resetButton = recoveryButton('\uBE44\uBC00\uBC88\uD638 \uCC3E\uAE30')
+    resetButton.onclick = function () { renderPanel('reset-request') }
+
+    if (new URLSearchParams(window.location.search).get('resetToken')) {
+      renderPanel('reset-password')
+    }
+  }
+
   function submitLegacyAuthForm(button) {
     if (!button) return
     var wasDisabled = button.disabled
@@ -768,6 +859,7 @@
         setMode('register')
       })
     }
+    ensureAccountRecoveryActions(card)
   }
 
   function setNativeInputValue(input, value) {
@@ -1550,7 +1642,8 @@
       await new Promise(function (resolve) { window.setTimeout(resolve, 0) })
     }
 
-    window.setTimeout(function () {
+    await new Promise(function (resolve) {
+      window.setTimeout(function () {
       if (getActiveCalendarMode() === 'year') {
         clickVisibleMonth(target)
         updateScheduleFormVisibleDate(new Date(target.getFullYear(), target.getMonth(), 1))
@@ -1560,7 +1653,9 @@
       }
       updateJumpInput(target)
       document.documentElement.classList.remove('calendar-silent-moving')
-    }, 120)
+        resolve()
+      }, 120)
+    })
   }
 
   function ensureCalendarJumpControl() {
@@ -1733,24 +1828,27 @@
     window.setTimeout(function () {
       var mode = getActiveCalendarMode()
       var today = new Date()
-      var focused = getFocusedDate()
       var selected = getCalendarModeDate(mode) || today
       window.__familySuppressCalendarPopupUntil = Date.now() + 2500
       if (mode === 'year') {
         var monthStart = new Date(selected.getFullYear(), selected.getMonth(), 1)
         setCalendarModeDate(mode, monthStart)
-        clickVisibleMonth(monthStart)
-        updateJumpInput(monthStart)
-        updateScheduleFormVisibleDate(monthStart)
-      } else {
-        setCalendarModeDate(mode, selected)
-        clickVisibleDay(selected)
-        updateJumpInput(selected)
-        updateScheduleFormVisibleDate(selected)
-        updateSelectedDayPanel(selected)
+        selected = monthStart
       }
-      calendarScheduleCache.key = ''
-      renderCalendarApiSchedules(true)
+      moveCalendarTo(selected).then(function () {
+        if (getActiveCalendarMode() !== mode) return
+        if (mode === 'year') {
+          clickVisibleMonth(selected)
+          updateScheduleFormVisibleDate(selected)
+        } else {
+          clickVisibleDay(selected)
+          updateScheduleFormVisibleDate(selected)
+          updateSelectedDayPanel(selected)
+        }
+        updateJumpInput(selected)
+        calendarScheduleCache.key = ''
+        renderCalendarApiSchedules(true)
+      })
     }, 140)
   }
 
@@ -1806,7 +1904,6 @@
       button.dataset.patchWired = 'true'
       button.addEventListener('click', function () {
         normalizeSelectedDateAfterViewChange()
-        normalizeTodayForDayAndWeek()
       })
     })
 

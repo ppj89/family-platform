@@ -547,6 +547,54 @@
   cursor: pointer;
 }
 
+.auth-recovery-panel {
+  display: grid;
+  gap: 14px;
+  margin: 4px 0 16px;
+  border: 1px solid rgba(49, 130, 246, 0.16);
+  border-radius: 18px;
+  padding: 16px;
+  background: #f7fbff;
+}
+
+.auth-recovery-panel[hidden] {
+  display: none;
+}
+
+.auth-recovery-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.auth-recovery-header strong {
+  color: #191f28;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.auth-recovery-header button {
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  color: #4e5968;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.auth-recovery-submit {
+  min-height: 46px;
+  border: 0;
+  border-radius: 14px;
+  background: #3182f6;
+  color: #fff;
+  font-weight: 900;
+  cursor: pointer;
+}
+
 .auth-helper .auth-resend-verification,
 .auth-resend-verification {
   min-height: 34px !important;
@@ -566,6 +614,20 @@
 .theme-dark .auth-preview div {
   background: #333942;
   box-shadow: inset 0 0 0 1px #454d58;
+}
+
+.theme-dark .auth-recovery-panel {
+  border-color: rgba(255, 255, 255, 0.12);
+  background: #20252d;
+}
+
+.theme-dark .auth-recovery-header strong {
+  color: #f2f4f6;
+}
+
+.theme-dark .auth-recovery-header button {
+  background: #2a3038;
+  color: #d1d6db;
 }
 
 .theme-dark .auth-copy h1,

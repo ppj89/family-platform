@@ -20,6 +20,10 @@ export type RegisterPayload = LoginPayload & {
   nickname: string
 }
 
+export type FindEmailResponse = {
+  emails: string[]
+}
+
 export async function register(payload: RegisterPayload) {
   const response = await apiRequest<AuthResponse>('/auth/register', {
     method: 'POST',
@@ -60,6 +64,27 @@ export async function resendVerificationEmail(email: string) {
   return apiRequest<{ message: string }>('/auth/verification/resend', {
     method: 'POST',
     body: { email },
+  })
+}
+
+export async function findAccountEmail(nickname: string) {
+  return apiRequest<FindEmailResponse>('/auth/recovery/find-email', {
+    method: 'POST',
+    body: { nickname },
+  })
+}
+
+export async function requestPasswordReset(email: string) {
+  return apiRequest<{ message: string }>('/auth/recovery/password/request', {
+    method: 'POST',
+    body: { email },
+  })
+}
+
+export async function resetPassword(token: string, password: string) {
+  return apiRequest<{ message: string }>('/auth/recovery/password/reset', {
+    method: 'POST',
+    body: { token, password },
   })
 }
 

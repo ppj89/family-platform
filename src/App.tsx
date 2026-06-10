@@ -2,11 +2,11 @@ import { FormEvent, useEffect, useState } from 'react'
 import { Baby, CalendarDays, FileText, Home, MapPinned, MessageSquareText, Moon, Settings, Sun, Users, WalletCards } from 'lucide-react'
 import FamilyCalendar from './components/FamilyCalendar'
 import { ApiError, authToken } from './api/client'
-import { AuthResponse, login, logout, me, register, requestLogout } from './api/auth'
+import { AuthResponse, findAccountEmail, login, logout, me, register, requestLogout, requestPasswordReset, resetPassword } from './api/auth'
 import './App.css'
 
 type MenuKey = 'dashboard' | 'calendar' | 'ledger' | 'travel' | 'baby' | 'diary' | 'family' | 'restaurant' | 'community' | 'admin'
-type AuthMode = 'login' | 'register'
+type AuthMode = 'login' | 'register' | 'find-email' | 'reset-request' | 'reset-password'
 
 const menus: Array<{ key: MenuKey; label: string; caption: string; icon: typeof Home }> = [
   { key: 'dashboard', label: '홈', caption: '오늘의 가족 기록', icon: Home },
@@ -25,6 +25,7 @@ const initialAuthForm = {
   email: '',
   nickname: '',
   password: '',
+  resetToken: '',
 }
 
 function authMessage(error: unknown) {
@@ -61,6 +62,14 @@ export default function App() {
   const current = menus.find((menu) => menu.key === activeMenu) ?? menus[0]
 
   useEffect(() => {
+    const resetToken = new URLSearchParams(window.location.search).get('resetToken')
+    if (resetToken) {
+      setAuthMode('reset-password')
+      setAuthForm((prev) => ({ ...prev, resetToken }))
+    }
+  }, [])
+
+  useEffect(() => {
     if (!authToken()) {
       setIsAuthChecking(false)
       return
@@ -85,6 +94,71 @@ export default function App() {
     const email = authForm.email.trim()
     const nickname = authForm.nickname.trim()
     const password = authForm.password
+    const resetToken = authForm.resetToken.trim()
+
+    if (authMode === 'find-email') {
+      if (!nickname) {
+        setAuthError('닉네임을 입력해주세요.')
+        return
+      }
+      setIsAuthSubmitting(true)
+      setAuthError('')
+      setAuthNotice('')
+      try {
+        const response = await findAccountEmail(nickname)
+        setAuthNotice(response.emails.length ? `가입 이메일: ${response.emails.join(', ')}` : '일치하는 계정을 찾지 못했습니다.')
+      } catch (error) {
+        setAuthError(authMessage(error))
+      } finally {
+        setIsAuthSubmitting(false)
+      }
+      return
+    }
+
+    if (authMode === 'reset-request') {
+      if (!email) {
+        setAuthError('이메일을 입력해주세요.')
+        return
+      }
+      setIsAuthSubmitting(true)
+      setAuthError('')
+      setAuthNotice('')
+      try {
+        await requestPasswordReset(email)
+        setAuthNotice('비밀번호 재설정 메일을 보냈습니다. 메일함을 확인해주세요.')
+      } catch (error) {
+        setAuthError(authMessage(error))
+      } finally {
+        setIsAuthSubmitting(false)
+      }
+      return
+    }
+
+    if (authMode === 'reset-password') {
+      if (!resetToken) {
+        setAuthError('비밀번호 재설정 토큰이 없습니다.')
+        return
+      }
+      if (password.length < 8) {
+        setAuthError('비밀번호는 8자 이상 입력해주세요.')
+        return
+      }
+      setIsAuthSubmitting(true)
+      setAuthError('')
+      setAuthNotice('')
+      try {
+        await resetPassword(resetToken, password)
+        window.history.replaceState({}, document.title, window.location.pathname)
+        setAuthMode('login')
+        setAuthForm(initialAuthForm)
+        setAuthNotice('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.')
+      } catch (error) {
+        setAuthError(authMessage(error))
+      } finally {
+        setIsAuthSubmitting(false)
+      }
+      return
+    }
 
     if (!email) {
       setAuthError('이메일을 입력해주세요.')
@@ -148,6 +222,39 @@ export default function App() {
     setAuthMode('login')
   }
 
+  const authTitle =
+    authMode === 'find-email'
+      ? '아이디 찾기'
+      : authMode === 'reset-request'
+        ? '비밀번호 찾기'
+        : authMode === 'reset-password'
+          ? '새 비밀번호 설정'
+          : authMode === 'login'
+            ? '로그인'
+            : '회원가입'
+  const authDescription =
+    authMode === 'find-email'
+      ? '닉네임으로 가입 이메일을 확인합니다.'
+      : authMode === 'reset-request'
+        ? '가입 이메일로 비밀번호 재설정 링크를 보냅니다.'
+        : authMode === 'reset-password'
+          ? '새 비밀번호는 8자 이상 입력해주세요.'
+          : authMode === 'login'
+            ? '가입한 이메일과 비밀번호로 접속합니다.'
+            : '닉네임은 게시글과 가족 기록에 표시됩니다.'
+  const authSubmitLabel =
+    authMode === 'find-email'
+      ? '아이디 찾기'
+      : authMode === 'reset-request'
+        ? '재설정 메일 보내기'
+        : authMode === 'reset-password'
+          ? '비밀번호 변경'
+          : authMode === 'login'
+            ? '로그인'
+            : '회원가입'
+  const showEmailField = authMode === 'login' || authMode === 'register' || authMode === 'reset-request'
+  const showPasswordField = authMode === 'login' || authMode === 'register' || authMode === 'reset-password'
+
   if (isAuthChecking) {
     return <div className="legacy-loading">로그인 상태를 확인하는 중입니다.</div>
   }
@@ -197,37 +304,47 @@ export default function App() {
             </div>
 
             <div className="auth-heading">
-              <strong>{authMode === 'login' ? '로그인' : '회원가입'}</strong>
-              <p>{authMode === 'login' ? '가입한 이메일과 비밀번호로 접속합니다.' : '닉네임은 게시글과 가족 기록에 표시됩니다.'}</p>
+              <strong>{authTitle}</strong>
+              <p>{authDescription}</p>
             </div>
 
-            <label>
-              <span>이메일</span>
-              <input autoComplete="email" inputMode="email" placeholder="email@example.com" value={authForm.email} onChange={(event) => updateAuthField('email', event.target.value)} />
-            </label>
+            {showEmailField && (
+              <label>
+                <span>이메일</span>
+                <input autoComplete="email" inputMode="email" placeholder="email@example.com" value={authForm.email} onChange={(event) => updateAuthField('email', event.target.value)} />
+              </label>
+            )}
 
-            {authMode === 'register' && (
+            {(authMode === 'register' || authMode === 'find-email') && (
               <label>
                 <span>닉네임</span>
                 <input autoComplete="nickname" maxLength={30} placeholder="닉네임" value={authForm.nickname} onChange={(event) => updateAuthField('nickname', event.target.value)} />
               </label>
             )}
 
-            <label>
-              <span>비밀번호</span>
-              <input autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} minLength={8} placeholder="8자 이상" type="password" value={authForm.password} onChange={(event) => updateAuthField('password', event.target.value)} />
-            </label>
+            {showPasswordField && (
+              <label>
+                <span>비밀번호</span>
+                <input autoComplete={authMode === 'login' ? 'current-password' : 'new-password'} minLength={8} placeholder="8자 이상" type="password" value={authForm.password} onChange={(event) => updateAuthField('password', event.target.value)} />
+              </label>
+            )}
 
             {authError && <p className="auth-message error">{authError}</p>}
             {authNotice && <p className="auth-message success">{authNotice}</p>}
 
             <button className="auth-submit" disabled={isAuthSubmitting} type="submit">
-              {isAuthSubmitting ? '처리 중' : authMode === 'login' ? '로그인' : '회원가입'}
+              {isAuthSubmitting ? '처리 중' : authSubmitLabel}
             </button>
 
             <div className="auth-helper">
               <button type="button" onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}>
-                {authMode === 'login' ? '처음이면 회원가입' : '이미 계정이 있으면 로그인'}
+                {authMode === 'login' ? '처음이면 회원가입' : '로그인으로 돌아가기'}
+              </button>
+              <button type="button" onClick={() => setAuthMode('find-email')}>
+                아이디 찾기
+              </button>
+              <button type="button" onClick={() => setAuthMode('reset-request')}>
+                비밀번호 찾기
               </button>
             </div>
           </form>

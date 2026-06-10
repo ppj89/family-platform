@@ -251,6 +251,9 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("GET /api/auth/me", a.requireAuth(a.me))
 	mux.HandleFunc("GET /api/auth/verify-email", a.verifyEmail)
 	mux.HandleFunc("POST /api/auth/verification/resend", a.resendVerificationEmail)
+	mux.HandleFunc("POST /api/auth/recovery/find-email", a.findEmail)
+	mux.HandleFunc("POST /api/auth/recovery/password/request", a.requestPasswordReset)
+	mux.HandleFunc("POST /api/auth/recovery/password/reset", a.resetPassword)
 	mux.HandleFunc("GET /api/auth/oauth/providers", a.oauthProviders)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/start", a.oauthStart)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", a.oauthCallback)
@@ -710,6 +713,137 @@ func (a *app) resendVerificationEmail(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusAccepted, map[string]string{"message": "verification email accepted"})
+}
+
+func (a *app) findEmail(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Nickname string `json:"nickname"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	nickname := strings.TrimSpace(req.Nickname)
+	if nickname == "" {
+		writeError(w, http.StatusBadRequest, "nickname is required")
+		return
+	}
+	rows, err := a.db.Query(r.Context(), `
+		select email
+		from app_users
+		where lower(nickname) = lower($1)
+		order by created_at desc
+		limit 5
+	`, nickname)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	defer rows.Close()
+	emails := []string{}
+	for rows.Next() {
+		var email string
+		if err := rows.Scan(&email); err != nil {
+			writeError(w, http.StatusInternalServerError, "database read failed")
+			return
+		}
+		emails = append(emails, maskEmail(email))
+	}
+	if rows.Err() != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"emails": emails})
+}
+
+func (a *app) requestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Email string `json:"email"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	email := normalizeEmail(req.Email)
+	if email == "" {
+		writeJSON(w, http.StatusAccepted, map[string]string{"message": "password reset accepted"})
+		return
+	}
+	var userID int64
+	var nickname string
+	err := a.db.QueryRow(r.Context(), "select id, nickname from app_users where email = $1", email).Scan(&userID, &nickname)
+	if err == nil {
+		if sendErr := a.createAndSendPasswordReset(r.Context(), userID, email, nickname); sendErr != nil {
+			a.log.Error("password reset dispatch failed", "email", email, "error", sendErr)
+		}
+		a.recordLoginHistory(r.Context(), &userID, email, "password", "PASSWORD_RESET_REQUEST", "SUCCESS", "")
+	} else if !errors.Is(err, pgx.ErrNoRows) {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	writeJSON(w, http.StatusAccepted, map[string]string{"message": "password reset accepted"})
+}
+
+func (a *app) resetPassword(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Token    string `json:"token"`
+		Password string `json:"password"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	token := strings.TrimSpace(req.Token)
+	if token == "" || len(req.Password) < 8 {
+		writeError(w, http.StatusBadRequest, "token and password length >= 8 are required")
+		return
+	}
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "password hashing failed")
+		return
+	}
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database transaction failed")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var tokenID, userID int64
+	var email string
+	err = tx.QueryRow(r.Context(), `
+		select t.id, u.id, u.email
+		from password_reset_tokens t
+		join app_users u on u.id = t.user_id
+		where t.token_hash = $1 and t.used_at is null and t.expires_at > now()
+		for update
+	`, verificationTokenHash(token)).Scan(&tokenID, &userID, &email)
+	if err != nil {
+		a.recordLoginHistory(r.Context(), nil, "", "password", "PASSWORD_RESET", "FAIL", "invalid or expired token")
+		writeError(w, http.StatusBadRequest, "invalid or expired password reset token")
+		return
+	}
+	if _, err := tx.Exec(r.Context(), `
+		update app_users
+		set password_hash = $1,
+		    active_session_id = null,
+		    failed_login_attempts = 0,
+		    locked_until = null,
+		    email_verified_at = coalesce(email_verified_at, now()),
+		    email_verification_required = false
+		where id = $2
+	`, string(passwordHash), userID); err != nil {
+		writeError(w, http.StatusInternalServerError, "password reset failed")
+		return
+	}
+	if _, err := tx.Exec(r.Context(), "update password_reset_tokens set used_at = now() where id = $1", tokenID); err != nil {
+		writeError(w, http.StatusInternalServerError, "password reset failed")
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "database commit failed")
+		return
+	}
+	a.recordLoginHistory(r.Context(), &userID, email, "password", "PASSWORD_RESET", "SUCCESS", "")
+	writeJSON(w, http.StatusOK, map[string]string{"message": "password reset completed"})
 }
 
 func (a *app) listFamilies(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -2590,6 +2724,16 @@ create table if not exists email_verification_tokens (
 );
 create index if not exists idx_email_verification_tokens_user on email_verification_tokens (user_id, created_at desc);
 create index if not exists idx_email_verification_tokens_expires on email_verification_tokens (expires_at);
+create table if not exists password_reset_tokens (
+  id bigint generated by default as identity primary key,
+  user_id bigint not null references app_users(id) on delete cascade,
+  token_hash varchar(255) not null unique,
+  created_at timestamp with time zone not null,
+  expires_at timestamp with time zone not null,
+  used_at timestamp with time zone
+);
+create index if not exists idx_password_reset_tokens_user on password_reset_tokens (user_id, created_at desc);
+create index if not exists idx_password_reset_tokens_expires on password_reset_tokens (expires_at);
 create table if not exists oauth_login_states (
   state varchar(255) primary key,
   provider varchar(255) not null,
@@ -2901,6 +3045,20 @@ func (a *app) createAndSendEmailVerification(ctx context.Context, userID int64, 
 	return a.sendVerificationEmail(email, nickname, verifyURL)
 }
 
+func (a *app) createAndSendPasswordReset(ctx context.Context, userID int64, email, nickname string) error {
+	token := newSessionID()
+	tokenHash := verificationTokenHash(token)
+	_, err := a.db.Exec(ctx, `
+		insert into password_reset_tokens (user_id, token_hash, created_at, expires_at)
+		values ($1, $2, now(), now() + interval '30 minutes')
+	`, userID, tokenHash)
+	if err != nil {
+		return err
+	}
+	resetURL := strings.TrimRight(a.cfg.publicBaseURL, "/") + "/?resetToken=" + url.QueryEscape(token)
+	return a.sendPasswordResetEmail(email, nickname, resetURL)
+}
+
 func (a *app) sendVerificationEmail(email, nickname, verifyURL string) error {
 	if strings.TrimSpace(a.cfg.smtpHost) == "" || strings.TrimSpace(a.cfg.smtpFrom) == "" {
 		return fmt.Errorf("SMTP is not configured")
@@ -2927,6 +3085,47 @@ func (a *app) sendVerificationEmail(email, nickname, verifyURL string) error {
 		auth = smtp.PlainAuth("", a.cfg.smtpUsername, a.cfg.smtpPassword, a.cfg.smtpHost)
 	}
 	return smtp.SendMail(addr, auth, from, []string{email}, []byte(message))
+}
+
+func (a *app) sendPasswordResetEmail(email, nickname, resetURL string) error {
+	if strings.TrimSpace(a.cfg.smtpHost) == "" || strings.TrimSpace(a.cfg.smtpFrom) == "" {
+		return fmt.Errorf("SMTP is not configured")
+	}
+	from := a.cfg.smtpFrom
+	subject := "Family Platform password reset"
+	displayName := strings.TrimSpace(nickname)
+	if displayName == "" {
+		displayName = "member"
+	}
+	body := fmt.Sprintf("%s, use the link below to reset your password.\n\n%s\n\nThis link is valid for 30 minutes. If you did not request this, ignore this email.", displayName, resetURL)
+	message := strings.Join([]string{
+		"From: " + from,
+		"To: " + email,
+		"Subject: " + mimeHeader(subject),
+		"MIME-Version: 1.0",
+		"Content-Type: text/plain; charset=UTF-8",
+		"",
+		body,
+	}, "\r\n")
+	addr := a.cfg.smtpHost + ":" + a.cfg.smtpPort
+	var auth smtp.Auth
+	if strings.TrimSpace(a.cfg.smtpUsername) != "" || strings.TrimSpace(a.cfg.smtpPassword) != "" {
+		auth = smtp.PlainAuth("", a.cfg.smtpUsername, a.cfg.smtpPassword, a.cfg.smtpHost)
+	}
+	return smtp.SendMail(addr, auth, from, []string{email}, []byte(message))
+}
+
+func maskEmail(email string) string {
+	email = normalizeEmail(email)
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 || parts[0] == "" {
+		return email
+	}
+	local := []rune(parts[0])
+	if len(local) <= 2 {
+		return string(local[0]) + "***@" + parts[1]
+	}
+	return string(local[0]) + "***" + string(local[len(local)-1]) + "@" + parts[1]
 }
 
 func mimeHeader(value string) string {
