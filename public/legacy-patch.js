@@ -1214,6 +1214,8 @@
     var editButton = document.createElement('button')
     editButton.type = 'button'
     editButton.className = 'edit-button'
+    editButton.dataset.scheduleDetailEdit = 'true'
+    editButton.dataset.scheduleId = resolveScheduleItemId(item)
     editButton.textContent = '\uC218\uC815'
     editButton.addEventListener('click', function (event) {
       event.preventDefault()
@@ -1224,6 +1226,8 @@
     var deleteButton = document.createElement('button')
     deleteButton.type = 'button'
     deleteButton.className = 'danger-button'
+    deleteButton.dataset.scheduleDetailDelete = 'true'
+    deleteButton.dataset.scheduleId = resolveScheduleItemId(item)
     deleteButton.textContent = '\uC0AD\uC81C'
     deleteButton.addEventListener('click', function (event) {
       event.preventDefault()
@@ -1976,6 +1980,44 @@
     })
   }
 
+  function findScheduleItemById(id) {
+    if (!id) return null
+    var maps = [
+      window.__familyYearScheduleItemsById || {},
+      window.__familyScheduleItemsById || {}
+    ]
+    for (var index = 0; index < maps.length; index += 1) {
+      if (maps[index][String(id)]) return maps[index][String(id)]
+    }
+    return null
+  }
+
+  function ensureScheduleActionDelegates() {
+    if (window.__familyScheduleActionDelegatesReady) return
+    window.__familyScheduleActionDelegatesReady = true
+    document.addEventListener('click', function (event) {
+      var editButton = event.target && event.target.closest && event.target.closest('[data-schedule-detail-edit], .schedule-row-actions .edit-button')
+      var deleteButton = event.target && event.target.closest && event.target.closest('[data-schedule-detail-delete], .schedule-row-actions .danger-button')
+      var actionButton = editButton || deleteButton
+      if (!actionButton) return
+      var row = actionButton.closest('.api-schedule-row, .server-year-schedule-row')
+      var id = actionButton.dataset.scheduleId || (row && row.getAttribute('data-api-schedule-id'))
+      var item = findScheduleItemById(id)
+      if (!item) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      if (editButton) {
+        document.querySelectorAll('.schedule-item-patch-backdrop').forEach(function (node) { node.remove() })
+        startScheduleApiEdit(item)
+      } else {
+        deleteScheduleApiItem(item, function () {
+          document.querySelectorAll('.schedule-detail-patch-backdrop').forEach(function (node) { node.remove() })
+        })
+      }
+    }, true)
+  }
+
   function renderYearSelectedMonthList(monthDate, force) {
     if (!monthDate || getActiveCalendarMode() !== 'year') return
     var card = document.querySelector('.schedule-list-card')
@@ -2386,6 +2428,7 @@
     ensureCalendarJumpControl()
     ensureCommunityMenu()
     ensureYearMonthClickGuard()
+    ensureScheduleActionDelegates()
     wireCalendarInteractions()
     cleanupCalendarChrome()
     syncCalendarEntryToToday()
@@ -4748,6 +4791,10 @@
     var schedules = (items || []).slice().sort(function (a, b) {
       return String(a.scheduleDate || '').localeCompare(String(b.scheduleDate || '')) ||
         String(a.scheduleTime || '').localeCompare(String(b.scheduleTime || ''))
+    })
+    window.__familyScheduleItemsById = window.__familyScheduleItemsById || {}
+    schedules.forEach(function (item) {
+      window.__familyScheduleItemsById[String(item.id)] = item
     })
     setScheduleListContext(label || '\uC77C\uC815\uD45C', schedules.length + '\uAC74')
     if (!schedules.length) {
