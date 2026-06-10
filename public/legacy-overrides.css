@@ -428,6 +428,20 @@
   transition: opacity 0.18s ease, transform 0.18s ease;
 }
 
+body.api-loading-blocked {
+  cursor: progress;
+}
+
+body.api-loading-blocked::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 999998;
+  background: rgba(15, 23, 42, 0.08);
+  pointer-events: auto;
+  touch-action: none;
+}
+
 .global-api-loading.active {
   opacity: 1;
   transform: translate(-50%, 0);

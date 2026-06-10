@@ -336,6 +336,15 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "email, nickname and password length >= 8 are required")
 		return
 	}
+	var nicknameExists bool
+	if err := a.db.QueryRow(r.Context(), "select exists(select 1 from app_users where lower(nickname) = lower($1))", nickname).Scan(&nicknameExists); err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	if nicknameExists {
+		writeError(w, http.StatusConflict, "nickname is already registered")
+		return
+	}
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "password hashing failed")

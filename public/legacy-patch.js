@@ -435,7 +435,7 @@
     if (bar) return bar
     bar = document.createElement('div')
     bar.className = 'global-api-loading'
-    bar.innerHTML = '<div class="global-api-loading-track"><span></span></div><strong>데이터 불러오는 중</strong>'
+    bar.innerHTML = '<div class="global-api-loading-track"><span></span></div><strong>\uB370\uC774\uD130 \uBD88\uB7EC\uC624\uB294 \uC911</strong>'
     document.body.appendChild(bar)
     return bar
   }
@@ -443,6 +443,7 @@
   function setApiLoadingVisible(visible) {
     var bar = ensureApiLoadingBar()
     bar.classList.toggle('active', !!visible)
+    document.body.classList.toggle('api-loading-blocked', !!visible)
   }
 
   function beginApiLoading() {
@@ -493,6 +494,15 @@
         if (tracked) endApiLoading()
       })
     }
+    ;['click', 'submit', 'keydown', 'touchstart', 'pointerdown'].forEach(function (type) {
+      document.addEventListener(type, function (event) {
+        if (!document.body.classList.contains('api-loading-blocked')) return
+        if (event.target && event.target.closest && event.target.closest('.global-api-loading')) return
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      }, true)
+    })
   }
 
   installApiLoadingInterceptor()
@@ -531,6 +541,7 @@
 
   function parseAuthError(error) {
     var text = String(error && error.message ? error.message : error || '')
+    if (text.indexOf('nickname is already registered') >= 0) return '\uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uB2C9\uB124\uC784\uC785\uB2C8\uB2E4. \uB2E4\uB978 \uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.'
     if (text.indexOf('locked') >= 0 || text.indexOf('423') >= 0) {
       var seconds = Number((text.match(/(\d+)\s*seconds/i) || [])[1] || 0)
       var minutes = seconds ? Math.ceil(seconds / 60) : 5
