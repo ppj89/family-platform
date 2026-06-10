@@ -746,7 +746,12 @@
 
   function setNativeInputValue(input, value) {
     if (!input) return
-    var descriptor = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')
+    var prototype = input instanceof window.HTMLTextAreaElement
+      ? window.HTMLTextAreaElement.prototype
+      : input instanceof window.HTMLSelectElement
+        ? window.HTMLSelectElement.prototype
+        : window.HTMLInputElement.prototype
+    var descriptor = Object.getOwnPropertyDescriptor(prototype, 'value')
     if (descriptor && descriptor.set) descriptor.set.call(input, value)
     else input.value = value
     input.dispatchEvent(new Event('input', { bubbles: true }))
@@ -2001,7 +2006,10 @@
       var actionButton = editButton || deleteButton
       if (!actionButton) return
       var row = actionButton.closest('.api-schedule-row, .server-year-schedule-row')
-      var id = actionButton.dataset.scheduleId || (row && row.getAttribute('data-api-schedule-id'))
+      var id = actionButton.dataset.scheduleId ||
+        actionButton.dataset.scheduleDetailEdit ||
+        actionButton.dataset.scheduleDetailDelete ||
+        (row && row.getAttribute('data-api-schedule-id'))
       var item = findScheduleItemById(id)
       if (!item) return
       event.preventDefault()
@@ -5413,6 +5421,68 @@
     }
   }
 
+  function setScheduleTextInputAt(form, index, value) {
+    var inputs = Array.from(form.querySelectorAll('input')).filter(function (input) {
+      return input.type !== 'hidden' && input.type !== 'file'
+    })
+    var input = inputs[index]
+    if (input) setNativeInputValue(input, value == null ? '' : String(value))
+    return input
+  }
+
+  function getScheduleTextInputAt(form, index) {
+    var inputs = Array.from(form.querySelectorAll('input, textarea')).filter(function (input) {
+      return input.type !== 'hidden' && input.type !== 'file'
+    })
+    return inputs[index] ? String(inputs[index].value || '').trim() : ''
+  }
+
+  function setScheduleSelectTextAt(form, index, value) {
+    var triggers = Array.from(form.querySelectorAll('.custom-select-trigger span'))
+    if (triggers[index]) triggers[index].textContent = value || ''
+  }
+
+  function getScheduleSelectTextAt(form, index) {
+    var triggers = Array.from(form.querySelectorAll('.custom-select-trigger span'))
+    return triggers[index] ? String(triggers[index].textContent || '').trim() : ''
+  }
+
+  function fillScheduleEditForm(form, item) {
+    var titleInput = setInputValueByLabel(form, '\uC77C\uC815\uBA85', item.title || '') || setScheduleTextInputAt(form, 0, item.title || '')
+    if (titleInput) setNativeInputValue(titleInput, item.title || '')
+    var date = parseDate(item.scheduleDate)
+    if (date) {
+      updateScheduleFormVisibleDate(date)
+      updateJumpInput(date)
+    }
+    var timeText = item.scheduleTime ? String(item.scheduleTime).slice(0, 5) : ''
+    var timeInput = setInputValueByLabel(form, '\uC2DC\uAC04', timeText)
+    if (!timeInput) {
+      var inputs = Array.from(form.querySelectorAll('input')).filter(function (input) {
+        return input !== titleInput && input.type !== 'hidden' && input.type !== 'file'
+      })
+      timeInput = inputs.find(function (input) {
+        return input.type === 'time' || /time|\d{2}:\d{2}/i.test(String(input.name || '') + ' ' + String(input.value || ''))
+      }) || inputs[1]
+      if (timeInput) setNativeInputValue(timeInput, timeText)
+    }
+    var memoInput = setInputValueByLabel(form, '\uBA54\uBAA8', item.memo || '') || form.querySelector('textarea')
+    if (memoInput) setNativeInputValue(memoInput, item.memo || '')
+
+    var basisText = item.calendarBasis === 'lunar' ? '\uC74C\uB825' : '\uC591\uB825'
+    var repeatText = item.repeatRule === 'weekly' ? '\uB9E4\uC8FC' : item.repeatRule === 'monthly' ? '\uB9E4\uC6D4' : item.repeatRule === 'yearly' ? '\uB9E4\uB144' : '\uBC18\uBCF5 \uC5C6\uC74C'
+    setCustomSelectValueByLabel(form, '\uAE30\uC900', basisText)
+    setCustomSelectValueByLabel(form, '\uAD6C\uBD84', item.category || '\uC77C\uC815')
+    setCustomSelectValueByLabel(form, '\uAC00\uC871', item.memberName || '')
+    setCustomSelectValueByLabel(form, '\uBC18\uBCF5', repeatText)
+    setScheduleSelectTextAt(form, 0, basisText)
+    setScheduleSelectTextAt(form, 1, item.category || '\uC77C\uC815')
+    setScheduleSelectTextAt(form, 2, item.memberName || '')
+    setScheduleSelectTextAt(form, 3, repeatText)
+
+    return titleInput || form.querySelector('input, textarea, .date-picker-trigger, .custom-select-trigger')
+  }
+
   function setScheduleFormEditMode(form, item) {
     var scheduleId = resolveScheduleItemId(item)
     form.dataset.editingScheduleId = scheduleId == null ? '' : String(scheduleId)
@@ -5456,29 +5526,11 @@
     var form = document.querySelector('.schedule-form-card')
     if (!form || !item) return
     setScheduleFormEditMode(form, item)
-    var titleInput = setInputValueByLabel(form, '\uC77C\uC815\uBA85', item.title || '') || form.querySelector('input')
-    if (titleInput) setNativeInputValue(titleInput, item.title || '')
-    var timeInput = setInputValueByLabel(form, '\uC2DC\uAC04', item.scheduleTime ? String(item.scheduleTime).slice(0, 5) : '')
-    if (!timeInput) {
-      var inputs = Array.from(form.querySelectorAll('input'))
-      var fallbackTime = inputs.find(function (input) {
-        return input !== titleInput && /time|\d{2}:\d{2}/i.test(String(input.type || '') + ' ' + String(input.value || ''))
-      })
-      if (fallbackTime) setNativeInputValue(fallbackTime, item.scheduleTime ? String(item.scheduleTime).slice(0, 5) : '')
-    }
-    var memoInput = setInputValueByLabel(form, '\uBA54\uBAA8', item.memo || '') || form.querySelector('textarea')
-    if (memoInput) setNativeInputValue(memoInput, item.memo || '')
-    setCustomSelectValueByLabel(form, '\uAE30\uC900', item.calendarBasis === 'lunar' ? '\uC74C\uB825' : '\uC591\uB825')
-    setCustomSelectValueByLabel(form, '\uAD6C\uBD84', item.category || '\uC77C\uC815')
-    setCustomSelectValueByLabel(form, '\uAC00\uC871', item.memberName || '')
-    var repeat = item.repeatRule === 'weekly' ? '\uB9E4\uC8FC' : item.repeatRule === 'monthly' ? '\uB9E4\uC6D4' : item.repeatRule === 'yearly' ? '\uB9E4\uB144' : '\uBC18\uBCF5 \uC5C6\uC74C'
-    setCustomSelectValueByLabel(form, '\uBC18\uBCF5', repeat)
-    var date = parseDate(item.scheduleDate)
-    if (date) {
-      updateScheduleFormVisibleDate(date)
-      updateJumpInput(date)
-    }
+    var focusTarget = fillScheduleEditForm(form, item)
     form.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.setTimeout(function () {
+      if (focusTarget && focusTarget.focus) focusTarget.focus()
+    }, 250)
   }
 
   function firstInputValue(root) {
@@ -5512,17 +5564,18 @@
   function buildSchedulePayloadFromForm(form) {
     var title = getInputValueByLabel(form, '\uC77C\uC815\uBA85') || firstInputValue(form)
     if (!title) return null
-    var timeValue = getInputValueByLabel(form, '\uC2DC\uAC04')
+    var timeValue = getInputValueByLabel(form, '\uC2DC\uAC04') || getScheduleTextInputAt(form, 1)
     if (timeValue && !/^\d{2}:\d{2}$/.test(timeValue)) timeValue = null
+    var memoValue = getInputValueByLabel(form, '\uBA54\uBAA8') || (form.querySelector('textarea') ? String(form.querySelector('textarea').value || '').trim() : '')
     return {
       title: title,
-      calendarBasis: normalizeScheduleBasis(getCustomSelectValue('\uAE30\uC900')),
+      calendarBasis: normalizeScheduleBasis(getCustomSelectValue('\uAE30\uC900') || getScheduleSelectTextAt(form, 0)),
       scheduleDate: getScheduleFormDateValue(form),
       scheduleTime: timeValue || null,
-      category: getCustomSelectValue('\uAD6C\uBD84') || '\uC77C\uC815',
-      memberName: getCustomSelectValue('\uAC00\uC871') || null,
-      repeatRule: normalizeScheduleRepeat(getCustomSelectValue('\uBC18\uBCF5')),
-      memo: getInputValueByLabel(form, '\uBA54\uBAA8') || ''
+      category: getCustomSelectValue('\uAD6C\uBD84') || getScheduleSelectTextAt(form, 1) || '\uC77C\uC815',
+      memberName: getCustomSelectValue('\uAC00\uC871') || getScheduleSelectTextAt(form, 2) || null,
+      repeatRule: normalizeScheduleRepeat(getCustomSelectValue('\uBC18\uBCF5') || getScheduleSelectTextAt(form, 3)),
+      memo: memoValue
     }
   }
 
@@ -5534,6 +5587,13 @@
     if (!payload) {
       if (titleInput) titleInput.focus()
       showPatchToast('\uC77C\uC815\uBA85\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+      return
+    }
+    if (editingId && form.dataset.scheduleEditConfirmed !== 'true') {
+      showPatchConfirm('\uC77C\uC815\uC744 \uC800\uC7A5\uD560\uAE4C\uC694?', function () {
+        form.dataset.scheduleEditConfirmed = 'true'
+        submitScheduleFormDirect(form)
+      })
       return
     }
     form.dataset.scheduleSubmitting = 'true'
@@ -5574,6 +5634,7 @@
       showPatchToast(editingId ? '\uC77C\uC815 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.' : '\uC77C\uC815 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
     }).finally(function () {
       delete form.dataset.scheduleSubmitting
+      delete form.dataset.scheduleEditConfirmed
     })
   }
 
@@ -5922,6 +5983,17 @@
 
   document.addEventListener('submit', function (event) {
     var form = event.target && event.target.closest && event.target.closest('.schedule-form-card')
+    if (!form) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitScheduleFormDirect(form)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var button = event.target && event.target.closest && event.target.closest('.schedule-form-card button[type="submit"]')
+    if (!button) return
+    var form = button.closest('.schedule-form-card')
     if (!form) return
     event.preventDefault()
     event.stopPropagation()
