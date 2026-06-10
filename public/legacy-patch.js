@@ -1225,7 +1225,7 @@
     editButton.addEventListener('click', function (event) {
       event.preventDefault()
       event.stopPropagation()
-      backdrop.remove()
+      closeScheduleEditPopups()
       startScheduleApiEdit(item)
     })
     var deleteButton = document.createElement('button')
@@ -2016,7 +2016,7 @@
       event.stopPropagation()
       if (event.stopImmediatePropagation) event.stopImmediatePropagation()
       if (editButton) {
-        document.querySelectorAll('.schedule-item-patch-backdrop').forEach(function (node) { node.remove() })
+        closeScheduleEditPopups()
         startScheduleApiEdit(item)
       } else {
         deleteScheduleApiItem(item, function () {
@@ -5521,16 +5521,36 @@
     if (cancel) cancel.remove()
   }
 
+  function closeScheduleEditPopups() {
+    document.querySelectorAll('.schedule-detail-patch-backdrop, .schedule-day-patch-backdrop, .schedule-item-patch-backdrop').forEach(function (node) {
+      node.remove()
+    })
+  }
+
+  function focusScheduleEditTarget(target, form) {
+    var focusTarget = target && target.focus ? target : form.querySelector('input:not([type="hidden"]):not([type="file"]), textarea')
+    if (!focusTarget) return
+    function focusNow() {
+      focusTarget.focus({ preventScroll: true })
+      if (document.activeElement !== focusTarget) focusTarget.focus()
+      if (focusTarget.select) focusTarget.select()
+    }
+    focusNow()
+    window.requestAnimationFrame(function () {
+      focusNow()
+      window.setTimeout(focusNow, 220)
+    })
+  }
+
   function startScheduleApiEdit(item) {
     item = resolveFullScheduleItem(item)
     var form = document.querySelector('.schedule-form-card')
     if (!form || !item) return
+    closeScheduleEditPopups()
     setScheduleFormEditMode(form, item)
     var focusTarget = fillScheduleEditForm(form, item)
-    form.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    window.setTimeout(function () {
-      if (focusTarget && focusTarget.focus) focusTarget.focus()
-    }, 250)
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    focusScheduleEditTarget(focusTarget, form)
   }
 
   function firstInputValue(root) {
