@@ -543,6 +543,7 @@
     var text = String(error && error.message ? error.message : error || '')
     if (text.indexOf('nickname is already registered') >= 0) return '\uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uB2C9\uB124\uC784\uC785\uB2C8\uB2E4. \uB2E4\uB978 \uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.'
     if (text.indexOf('daily mail request limit exceeded') >= 0 || text.indexOf('429') >= 0) return '\uC624\uB298 \uC694\uCCAD \uAC00\uB2A5\uD55C \uD69F\uC218\uB97C \uCD08\uACFC\uD588\uC2B5\uB2C8\uB2E4. \uB0B4\uC77C \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.'
+    if (text.indexOf('oauth email consent required') >= 0) return '\uC911\uBCF5 \uAC00\uC785 \uBC29\uC9C0\uB97C \uC704\uD574 \uC774\uBA54\uC77C \uC81C\uACF5 \uD544\uC218 \uB3D9\uC758\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4.'
     if (text.indexOf('locked') >= 0 || text.indexOf('423') >= 0) {
       var seconds = Number((text.match(/(\d+)\s*seconds/i) || [])[1] || 0)
       var minutes = seconds ? Math.ceil(seconds / 60) : 5
@@ -632,6 +633,11 @@
     }
   }
 
+  function isRequiredConsentChecked(card) {
+    var checkbox = card && card.querySelector('[data-field="auth-required-consent"]')
+    return !checkbox || checkbox.checked
+  }
+
   function focusEmptyAuthField(card, payload, mode) {
     var inputs = Array.from(card.querySelectorAll('input'))
     var target = null
@@ -641,6 +647,11 @@
     if (target) {
       target.focus()
       target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      return
+    }
+    if (mode === 'register' && !isRequiredConsentChecked(card)) {
+      var consent = card.querySelector('.auth-required-consent')
+      if (consent) consent.scrollIntoView({ behavior: 'smooth', block: 'center' })
     }
   }
 
@@ -961,11 +972,21 @@
       else card.appendChild(nicknameField)
     }
 
+    var consentField = card.querySelector('.auth-required-consent')
+    if (!consentField) {
+      consentField = document.createElement('label')
+      consentField.className = 'auth-required-consent'
+      consentField.innerHTML = '<input data-field="auth-required-consent" type="checkbox" /><span><strong>\uD544\uC218 \uB3D9\uC758</strong> \uD68C\uC6D0\uAC00\uC785 \uBC0F \uC911\uBCF5 \uAC00\uC785 \uBC29\uC9C0\uB97C \uC704\uD574 \uC774\uBA54\uC77C, \uB2C9\uB124\uC784 \uC815\uBCF4\uB97C \uCC98\uB9AC\uD569\uB2C8\uB2E4.</span>'
+      if (submit) submit.insertAdjacentElement('beforebegin', consentField)
+      else card.appendChild(consentField)
+    }
+
     function setMode(mode) {
       card.dataset.authMode = mode
       loginTab.classList.toggle('active', mode === 'login')
       registerTab.classList.toggle('active', mode === 'register')
       nicknameField.style.display = mode === 'register' ? '' : 'none'
+      consentField.style.display = mode === 'register' ? '' : 'none'
       var resendButton = card.querySelector('[data-auth-resend-verification]')
       if (resendButton) resendButton.hidden = true
       if (passwordInput) passwordInput.autocomplete = mode === 'register' ? 'new-password' : 'current-password'
@@ -1149,6 +1170,11 @@
         showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
         return
       }
+      if (mode === 'register' && !isRequiredConsentChecked(card)) {
+        focusEmptyAuthField(card, payload, mode)
+        showPatchToast('\uD544\uC218 \uB3D9\uC758 \uD6C4 \uD68C\uC6D0\uAC00\uC785\uC744 \uC9C4\uD589\uD574\uC8FC\uC138\uC694.')
+        return
+      }
 
       submitAuthRequest(mode, payload, submit, false)
     }, true)
@@ -1164,6 +1190,11 @@
     if (!payload.email || !payload.password || payload.password.length < 8 || (mode === 'register' && !payload.nickname)) {
       focusEmptyAuthField(card, payload, mode)
       showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+      return
+    }
+    if (mode === 'register' && !isRequiredConsentChecked(card)) {
+      focusEmptyAuthField(card, payload, mode)
+      showPatchToast('\uD544\uC218 \uB3D9\uC758 \uD6C4 \uD68C\uC6D0\uAC00\uC785\uC744 \uC9C4\uD589\uD574\uC8FC\uC138\uC694.')
       return
     }
 

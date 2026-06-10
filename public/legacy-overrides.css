@@ -703,6 +703,34 @@ body.api-loading-blocked::before {
   cursor: pointer;
 }
 
+.auth-required-consent {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 14px;
+  border: 1px solid #e5e8eb;
+  border-radius: 14px;
+  padding: 13px 14px;
+  background: #fff;
+  color: #4e5968;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.auth-required-consent input {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  accent-color: #3182f6;
+  flex: 0 0 auto;
+}
+
+.auth-required-consent strong {
+  color: #191f28;
+  font-weight: 900;
+}
+
 .auth-helper .auth-resend-verification,
 .auth-resend-verification {
   min-height: 34px !important;
@@ -745,6 +773,16 @@ body.api-loading-blocked::before {
 .theme-dark .auth-recovery-panel textarea {
   border-color: #454d58;
   background: #333942;
+  color: #f2f4f6;
+}
+
+.theme-dark .auth-required-consent {
+  border-color: #454d58;
+  background: #333942;
+  color: #c3cad3;
+}
+
+.theme-dark .auth-required-consent strong {
   color: #f2f4f6;
 }
 

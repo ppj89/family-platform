@@ -113,6 +113,7 @@ type oauthProfile struct {
 }
 
 var errActiveSessionExists = errors.New("active session exists")
+var errOAuthEmailRequired = errors.New("oauth email consent is required")
 
 func main() {
 	logger := slog.New(slog.NewTextHandler(os.Stdout, nil))
@@ -238,7 +239,7 @@ func loadOAuthProviders() map[string]oauthProviderConfig {
 			authURL:      "https://kauth.kakao.com/oauth/authorize",
 			tokenURL:     "https://kauth.kakao.com/oauth/token",
 			userInfoURL:  "https://kapi.kakao.com/v2/user/me",
-			scopes:       []string{"profile_nickname"},
+			scopes:       []string{"profile_nickname", "account_email"},
 		},
 	}
 }
@@ -641,6 +642,11 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	if errors.Is(err, errActiveSessionExists) {
 		a.recordLoginHistory(r.Context(), nil, profile.Email, providerName, "SSO_LOGIN", "ACTIVE_SESSION", "active session exists")
 		writeOAuthCallbackHTML(w, http.StatusConflict, a.cfg.publicBaseURL, "", nil, "active session exists")
+		return
+	}
+	if errors.Is(err, errOAuthEmailRequired) {
+		a.recordLoginHistory(r.Context(), nil, profile.Email, providerName, "SSO_LOGIN", "EMAIL_REQUIRED", "email consent is required")
+		writeOAuthCallbackHTML(w, http.StatusForbidden, a.cfg.publicBaseURL, "", nil, "oauth email consent required")
 		return
 	}
 	if err != nil {
@@ -2563,7 +2569,7 @@ func (a *app) fetchOAuthProfile(ctx context.Context, providerName string, provid
 func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauthProfile, forceLogin bool) (authResponse, error) {
 	email := profile.Email
 	if email == "" {
-		email = provider + "-" + profile.ProviderUserID + "@oauth.local"
+		return authResponse{}, errOAuthEmailRequired
 	}
 	nickname := strings.TrimSpace(profile.Nickname)
 	if nickname == "" {
