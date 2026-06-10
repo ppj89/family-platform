@@ -2568,9 +2568,6 @@ func (a *app) fetchOAuthProfile(ctx context.Context, providerName string, provid
 
 func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauthProfile, forceLogin bool) (authResponse, error) {
 	email := profile.Email
-	if email == "" {
-		return authResponse{}, errOAuthEmailRequired
-	}
 	nickname := strings.TrimSpace(profile.Nickname)
 	if nickname == "" {
 		nickname = provider + " user"
@@ -2605,6 +2602,9 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 		}
 	}
 	if errors.Is(err, pgx.ErrNoRows) {
+		if email == "" {
+			return authResponse{}, errOAuthEmailRequired
+		}
 		created, err := a.findOrCreateOAuthUser(ctx, tx, provider, profile.ProviderUserID, email, nickname, &userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID)
 		if err != nil {
 			return authResponse{}, err
@@ -3533,12 +3533,15 @@ func writeOAuthCallbackHTML(w http.ResponseWriter, status int, publicBaseURL str
         document.getElementById('title').textContent = 'SSO 로그인이 필요합니다';
         document.getElementById('message').textContent = error === 'active session exists'
           ? '이미 로그인된 세션이 있습니다. 이메일 로그인으로 접속 후 기존 로그인을 교체해주세요.'
-          : 'SSO 로그인 처리 중 문제가 발생했습니다.';
+          : (error === 'oauth email consent required'
+            ? '중복 가입 방지를 위해 이메일 제공 필수 동의가 필요합니다.'
+            : 'SSO 로그인 처리 중 문제가 발생했습니다.');
         window.setTimeout(function () { window.location.replace(redirect); }, 1800);
         return;
       }
       localStorage.setItem('family-platform-access-token', token);
       localStorage.setItem('family-platform-user', JSON.stringify(user));
+      localStorage.setItem('family-platform-sso-complete', String(Date.now()));
       document.getElementById('title').textContent = '로그인되었습니다';
       document.getElementById('message').textContent = '가족 플랫폼으로 이동합니다.';
       window.setTimeout(function () { window.location.replace(redirect); }, 350);
