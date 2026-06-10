@@ -942,6 +942,7 @@
   }
 
   function getScheduleFormDateValue(form) {
+    if (form && form.dataset.editingScheduleId && form.dataset.editingScheduleDate) return form.dataset.editingScheduleDate
     var trigger = form && form.querySelector('.date-picker-trigger')
     if (trigger && trigger.dataset.solarDate) return trigger.dataset.solarDate
     var visibleDate = getScheduleFormVisibleDate()
@@ -954,14 +955,16 @@
   function updateScheduleFormVisibleDate(date) {
     var trigger = document.querySelector('.schedule-form-card .date-picker-trigger')
     var triggerText = trigger && trigger.querySelector('span')
-    if (!triggerText) return
     if (trigger) trigger.dataset.solarDate = formatDate(date)
     document.documentElement.dataset.calendarSelectedDate = formatDate(date)
+    var form = document.querySelector('.schedule-form-card')
+    if (form && form.dataset.editingScheduleId) form.dataset.editingScheduleDate = formatDate(date)
     document.querySelectorAll('.schedule-form-card input[type="date"], .schedule-form-card input[name*="date" i]').forEach(function (input) {
       input.value = formatDate(date)
       input.dispatchEvent(new Event('input', { bubbles: true }))
       input.dispatchEvent(new Event('change', { bubbles: true }))
     })
+    if (!triggerText) return
     triggerText.textContent = isScheduleBasisLunar() ? getLunarText(date) : formatDisplayDate(date)
   }
 
@@ -1206,11 +1209,42 @@
     memo.className = 'schedule-detail-patch-memo'
     memo.textContent = item.memo || '\uB4F1\uB85D\uB41C \uBA54\uBAA8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.'
 
+    var actions = document.createElement('div')
+    actions.className = 'schedule-detail-patch-actions'
+    var editButton = document.createElement('button')
+    editButton.type = 'button'
+    editButton.className = 'edit-button'
+    editButton.textContent = '\uC218\uC815'
+    editButton.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      backdrop.remove()
+      startScheduleApiEdit(item)
+    })
+    var deleteButton = document.createElement('button')
+    deleteButton.type = 'button'
+    deleteButton.className = 'danger-button'
+    deleteButton.textContent = '\uC0AD\uC81C'
+    deleteButton.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      deleteScheduleApiItem(item, function () {
+        backdrop.remove()
+        if (!options.keepParent) {
+          var dayPopup = document.querySelector('.schedule-day-patch-backdrop')
+          if (dayPopup) dayPopup.remove()
+        }
+      })
+    })
+    actions.appendChild(editButton)
+    actions.appendChild(deleteButton)
+
     dialog.appendChild(close)
     dialog.appendChild(date)
     dialog.appendChild(heading)
     dialog.appendChild(meta)
     dialog.appendChild(memo)
+    dialog.appendChild(actions)
     backdrop.appendChild(dialog)
     backdrop.addEventListener('click', function (event) {
       event.stopPropagation()
@@ -1802,6 +1836,7 @@
       button.classList.toggle('active', button.dataset.yearMode === mode)
     })
     decorateYearCalendar()
+    renderYearSelectedMonthList(getYearSelectedMonthDate(), true)
   }
 
   function buildMiniMonth(year, month, eventDays) {
@@ -5187,6 +5222,65 @@
     })
   }
 
+  function putJson(path, body) {
+    return apiRequest(path, {
+      method: 'PUT',
+      body: JSON.stringify(body)
+    })
+  }
+
+  function updateScheduleApiItem(id, payload) {
+    return putJson('/schedules/' + encodeURIComponent(id), payload)
+  }
+
+  function resolveScheduleItemId(item) {
+    if (!item) return ''
+    var direct = item.id != null ? item.id : (item.scheduleId != null ? item.scheduleId : item.serverId)
+    if (direct != null && String(direct)) return String(direct)
+    var map = window.__familyYearScheduleItemsById || {}
+    var foundKey = Object.keys(map).find(function (key) {
+      var candidate = map[key] || {}
+      return String(candidate.title || '') === String(item.title || '') &&
+        String(candidate.scheduleDate || '') === String(item.scheduleDate || '')
+    })
+    return foundKey || ''
+  }
+
+  function resolveFullScheduleItem(item) {
+    if (!item) return item
+    var map = window.__familyYearScheduleItemsById || {}
+    var itemId = resolveScheduleItemId(item)
+    if (itemId && map[itemId]) return map[itemId]
+    var foundKey = Object.keys(map).find(function (key) {
+      var candidate = map[key] || {}
+      return String(candidate.title || '') === String(item.title || '') &&
+        (!item.scheduleDate || String(candidate.scheduleDate || '') === String(item.scheduleDate || ''))
+    })
+    return foundKey ? map[foundKey] : item
+  }
+
+  function deleteScheduleApiItem(item, afterDelete) {
+    item = resolveFullScheduleItem(item)
+    var itemId = resolveScheduleItemId(item)
+    if (!itemId) return
+    showPatchConfirm('\uC77C\uC815\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
+      apiRequest('/schedules/' + encodeURIComponent(itemId), { method: 'DELETE' }).then(function () {
+        calendarScheduleCache.key = ''
+        calendarScheduleCache.items = []
+        calendarScheduleCache.loadedAt = 0
+        window.__familyYearScheduleCache = null
+        window.__familyYearMonthListState = null
+        showPatchToast('\uC77C\uC815\uC774 \uC0AD\uC81C\uB418\uC5C8\uC2B5\uB2C8\uB2E4.')
+        refreshServerDataViews(true)
+        renderCalendarApiSchedules(true)
+        loadScheduleNotifications(true)
+        if (afterDelete) afterDelete()
+      }).catch(function () {
+        showPatchToast('\uC77C\uC815 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+      })
+    })
+  }
+
   function parseApiDate(value) {
     if (!value) return null
     var match = String(value).match(/(\d{4})[.\-/년\s]+(\d{1,2})[.\-/월\s]+(\d{1,2})/)
@@ -5247,6 +5341,99 @@
     return input ? String(input.value || '').trim() : ''
   }
 
+  function setInputValueByLabel(root, labelText, value) {
+    var labels = Array.from(root.querySelectorAll('label'))
+    var target = labels.find(function (item) {
+      return getCleanText(item.querySelector('span')) === labelText
+    })
+    var input = target && target.querySelector('input, textarea')
+    if (input) setNativeInputValue(input, value == null ? '' : String(value))
+    return input
+  }
+
+  function setCustomSelectValueByLabel(root, labelText, value) {
+    var labels = Array.from(root.querySelectorAll('label'))
+    var target = labels.find(function (item) {
+      return getCleanText(item.querySelector('span')) === labelText
+    })
+    if (!target) return
+    var text = target.querySelector('.custom-select-trigger span')
+    if (text) text.textContent = value || ''
+    var native = target.querySelector('select')
+    if (native) {
+      native.value = value || ''
+      native.dispatchEvent(new Event('change', { bubbles: true }))
+    }
+  }
+
+  function setScheduleFormEditMode(form, item) {
+    var scheduleId = resolveScheduleItemId(item)
+    form.dataset.editingScheduleId = scheduleId == null ? '' : String(scheduleId)
+    window.__familyEditingScheduleId = form.dataset.editingScheduleId
+    form.dataset.editingScheduleDate = item.scheduleDate || ''
+    form.dataset.editingScheduleOriginalDate = item.scheduleDate || ''
+    var heading = form.querySelector('h2, h3')
+    if (heading) heading.textContent = '\uC77C\uC815 \uC218\uC815'
+    var submit = form.querySelector('button[type="submit"], .submit-action, .fc-submit')
+    if (submit) submit.textContent = '\uC800\uC7A5'
+    var cancel = form.querySelector('[data-schedule-edit-cancel]')
+    if (!cancel && submit && submit.parentElement) {
+      cancel = document.createElement('button')
+      cancel.type = 'button'
+      cancel.className = 'cancel-button'
+      cancel.dataset.scheduleEditCancel = 'true'
+      cancel.textContent = '\uCDE8\uC18C'
+      cancel.addEventListener('click', function () {
+        clearScheduleFormEditMode(form)
+      })
+      submit.parentElement.insertBefore(cancel, submit)
+    }
+  }
+
+  function clearScheduleFormEditMode(form) {
+    if (!form) return
+    delete form.dataset.editingScheduleId
+    delete form.dataset.editingScheduleDate
+    delete form.dataset.editingScheduleOriginalDate
+    window.__familyEditingScheduleId = ''
+    var heading = form.querySelector('h2, h3')
+    if (heading) heading.textContent = '\uC77C\uC815 \uCD94\uAC00'
+    var submit = form.querySelector('button[type="submit"], .submit-action, .fc-submit')
+    if (submit) submit.textContent = '\uCD94\uAC00'
+    var cancel = form.querySelector('[data-schedule-edit-cancel]')
+    if (cancel) cancel.remove()
+  }
+
+  function startScheduleApiEdit(item) {
+    item = resolveFullScheduleItem(item)
+    var form = document.querySelector('.schedule-form-card')
+    if (!form || !item) return
+    setScheduleFormEditMode(form, item)
+    var titleInput = setInputValueByLabel(form, '\uC77C\uC815\uBA85', item.title || '') || form.querySelector('input')
+    if (titleInput) setNativeInputValue(titleInput, item.title || '')
+    var timeInput = setInputValueByLabel(form, '\uC2DC\uAC04', item.scheduleTime ? String(item.scheduleTime).slice(0, 5) : '')
+    if (!timeInput) {
+      var inputs = Array.from(form.querySelectorAll('input'))
+      var fallbackTime = inputs.find(function (input) {
+        return input !== titleInput && /time|\d{2}:\d{2}/i.test(String(input.type || '') + ' ' + String(input.value || ''))
+      })
+      if (fallbackTime) setNativeInputValue(fallbackTime, item.scheduleTime ? String(item.scheduleTime).slice(0, 5) : '')
+    }
+    var memoInput = setInputValueByLabel(form, '\uBA54\uBAA8', item.memo || '') || form.querySelector('textarea')
+    if (memoInput) setNativeInputValue(memoInput, item.memo || '')
+    setCustomSelectValueByLabel(form, '\uAE30\uC900', item.calendarBasis === 'lunar' ? '\uC74C\uB825' : '\uC591\uB825')
+    setCustomSelectValueByLabel(form, '\uAD6C\uBD84', item.category || '\uC77C\uC815')
+    setCustomSelectValueByLabel(form, '\uAC00\uC871', item.memberName || '')
+    var repeat = item.repeatRule === 'weekly' ? '\uB9E4\uC8FC' : item.repeatRule === 'monthly' ? '\uB9E4\uC6D4' : item.repeatRule === 'yearly' ? '\uB9E4\uB144' : '\uBC18\uBCF5 \uC5C6\uC74C'
+    setCustomSelectValueByLabel(form, '\uBC18\uBCF5', repeat)
+    var date = parseDate(item.scheduleDate)
+    if (date) {
+      updateScheduleFormVisibleDate(date)
+      updateJumpInput(date)
+    }
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   function firstInputValue(root) {
     var input = root.querySelector('input')
     return input ? String(input.value || '').trim() : ''
@@ -5296,13 +5483,18 @@
     if (!form || form.dataset.scheduleSubmitting === 'true') return
     var payload = buildSchedulePayloadFromForm(form)
     var titleInput = form.querySelector('input')
+    var editingId = form.dataset.editingScheduleId || window.__familyEditingScheduleId || ''
     if (!payload) {
       if (titleInput) titleInput.focus()
       showPatchToast('\uC77C\uC815\uBA85\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
       return
     }
     form.dataset.scheduleSubmitting = 'true'
-    return postScheduleWithFreshFamily(payload, false).catch(function (error) {
+    var request = editingId
+      ? updateScheduleApiItem(editingId, payload)
+      : postScheduleWithFreshFamily(payload, false)
+    return request.catch(function (error) {
+      if (editingId) throw error
       localStorage.removeItem(API_FAMILY_ID_KEY)
       return postScheduleWithFreshFamily(payload, true).catch(function (retryError) {
         retryError.__firstScheduleError = error
@@ -5313,7 +5505,8 @@
       calendarScheduleCache.items = []
       calendarScheduleCache.loadedAt = 0
       window.__familyYearScheduleCache = null
-      showPatchToast('\uC77C\uC815\uC774 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.')
+      window.__familyYearMonthListState = null
+      showPatchToast(editingId ? '\uC77C\uC815\uC774 \uC218\uC815\uB418\uC5C8\uC2B5\uB2C8\uB2E4.' : '\uC77C\uC815\uC774 \uCD94\uAC00\uB418\uC5C8\uC2B5\uB2C8\uB2E4.')
       var date = parseDate(payload.scheduleDate)
       if (date) {
         updateScheduleFormVisibleDate(date)
@@ -5327,10 +5520,11 @@
         titleInput.value = ''
         titleInput.dispatchEvent(new Event('input', { bubbles: true }))
       }
+      clearScheduleFormEditMode(form)
     }).catch(function (error) {
       window.__familyLastScheduleSaveError = String(error && error.message ? error.message : error)
       if (window.console && console.warn) console.warn('schedule save failed', error)
-      showPatchToast('\uC77C\uC815 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+      showPatchToast(editingId ? '\uC77C\uC815 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.' : '\uC77C\uC815 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
     }).finally(function () {
       delete form.dataset.scheduleSubmitting
     })
