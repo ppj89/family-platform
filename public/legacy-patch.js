@@ -7,6 +7,7 @@
   var AUTH_FAMILY_STORAGE_KEY = 'family-platform-current-family-id'
   var AUTH_TRIP_STORAGE_KEY = 'family-platform-api-default-trip-id'
   var AUTH_REMEMBER_EMAIL_STORAGE_KEY = 'family-platform-remember-email'
+  var AUTH_REMEMBER_EMAIL_ENABLED_STORAGE_KEY = 'family-platform-remember-email-enabled'
   var AUTH_AUTO_LOGIN_STORAGE_KEY = 'family-platform-auto-login'
   var protectedAuthUntil = 0
   var protectedAuthSnapshot = null
@@ -646,6 +647,11 @@
     return localStorage.getItem(AUTH_AUTO_LOGIN_STORAGE_KEY) !== 'false'
   }
 
+  function isRememberEmailEnabled() {
+    return localStorage.getItem(AUTH_REMEMBER_EMAIL_ENABLED_STORAGE_KEY) === 'true'
+      || !!localStorage.getItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY)
+  }
+
   function ensureLoginPreferenceControls(card, submit) {
     if (!card || card.querySelector('.auth-login-preferences')) return card && card.querySelector('.auth-login-preferences')
     var wrap = document.createElement('div')
@@ -664,7 +670,7 @@
     var remember = card.querySelector('[data-field="auth-remember-email"]')
     var autoLogin = card.querySelector('[data-field="auth-auto-login"]')
     var savedEmail = localStorage.getItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY) || ''
-    if (remember) remember.checked = !!savedEmail
+    if (remember) remember.checked = isRememberEmailEnabled()
     if (autoLogin) autoLogin.checked = isAutoLoginEnabled()
     if (savedEmail && emailInput && !emailInput.value) {
       setNativeInputValue(emailInput, savedEmail)
@@ -676,12 +682,30 @@
     var remember = card.querySelector('[data-field="auth-remember-email"]')
     var autoLogin = card.querySelector('[data-field="auth-auto-login"]')
     var normalizedEmail = String(email || '').trim()
-    if (remember && remember.checked && normalizedEmail) {
-      localStorage.setItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY, normalizedEmail)
+    if (remember && remember.checked) {
+      localStorage.setItem(AUTH_REMEMBER_EMAIL_ENABLED_STORAGE_KEY, 'true')
+      if (normalizedEmail) localStorage.setItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY, normalizedEmail)
     } else {
+      localStorage.setItem(AUTH_REMEMBER_EMAIL_ENABLED_STORAGE_KEY, 'false')
       localStorage.removeItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY)
     }
     localStorage.setItem(AUTH_AUTO_LOGIN_STORAGE_KEY, autoLogin && autoLogin.checked ? 'true' : 'false')
+  }
+
+  function bindLoginPreferenceControls(card, emailInput) {
+    var controls = card && card.querySelector('.auth-login-preferences')
+    if (!controls || controls.dataset.preferenceReady === 'true') return
+    controls.dataset.preferenceReady = 'true'
+    controls.addEventListener('change', function () {
+      persistLoginPreferences(card, emailInput && emailInput.value)
+    })
+    if (emailInput) {
+      emailInput.addEventListener('input', function () {
+        if (card.querySelector('[data-field="auth-remember-email"]') && card.querySelector('[data-field="auth-remember-email"]').checked) {
+          persistLoginPreferences(card, emailInput.value)
+        }
+      })
+    }
   }
 
   function focusEmptyAuthField(card, payload, mode) {
@@ -1119,6 +1143,7 @@
     }
     var loginPreferences = ensureLoginPreferenceControls(card, submit)
     applyLoginPreferences(card, emailInput)
+    bindLoginPreferenceControls(card, emailInput)
 
     function setMode(mode) {
       card.dataset.authMode = mode
