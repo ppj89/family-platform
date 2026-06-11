@@ -983,8 +983,8 @@
     var passwordInput = card.querySelector('[data-field="auth-password"]') || inputs.find(function (input) {
       return input.type === 'password'
     }) || inputs[1]
-    setNativeInputValue(emailInput, user && user.email ? user.email : 'admin@family.test')
-    if (passwordInput && !passwordInput.value) setNativeInputValue(passwordInput, 'family1234')
+    setNativeInputValue(emailInput, 'admin@family.test')
+    if (passwordInput) setNativeInputValue(passwordInput, 'family1234')
     button.dataset.authSkipApiSync = 'true'
     button.dataset.authBypass = 'true'
     window.setTimeout(function () {
