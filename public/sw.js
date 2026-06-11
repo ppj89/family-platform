@@ -1,5 +1,5 @@
-const CACHE_NAME = 'family-platform-v3'
-const APP_SHELL = ['/', '/legacy/index.html', '/manifest.webmanifest', '/fp-icon.svg']
+const CACHE_NAME = 'family-platform-v4'
+const APP_SHELL = ['/manifest.webmanifest', '/fp-icon.svg']
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -19,6 +19,11 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
   if (url.pathname.startsWith('/api/')) return
   if (event.request.method !== 'GET') return
+  if (event.request.mode === 'navigate' ||
+    ['document', 'script', 'style'].includes(event.request.destination)) {
+    event.respondWith(fetch(event.request))
+    return
+  }
 
   event.respondWith(
     fetch(event.request).then((response) => {
