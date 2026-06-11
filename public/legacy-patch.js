@@ -5150,6 +5150,19 @@
     })
   }
 
+  function fetchLedgerSummary(startDate, endDate) {
+    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve({ expense: 0, income: 0, total: 0 })
+    return getCurrentFamilyId().then(function (familyId) {
+      return apiRequest('/ledger-entries/summary?familyId=' + encodeURIComponent(familyId) +
+        '&startDate=' + encodeURIComponent(startDate) +
+        '&endDate=' + encodeURIComponent(endDate))
+    }).then(function (summary) {
+      return summary || { expense: 0, income: 0, total: 0 }
+    }).catch(function () {
+      return { expense: 0, income: 0, total: 0 }
+    })
+  }
+
   function moneyText(value, type) {
     var amount = Number(value || 0).toLocaleString('ko-KR')
     return (type === 'income' ? '+' : '-') + amount + '\uC6D0'
@@ -5392,17 +5405,99 @@
     })
   }
 
+  function emptyRow(message, detail) {
+    return '<div class="api-empty-row"><strong>' + escapeHtml(message) + '</strong>' +
+      (detail ? '<small>' + escapeHtml(detail) + '</small>' : '') + '</div>'
+  }
+
+  function setMetricValue(metric, value) {
+    if (!metric) return
+    var strong = metric.querySelector('strong')
+    if (strong) strong.textContent = value
+  }
+
+  function resetHomeMetrics(metrics) {
+    setMetricValue(metrics[0], '0\uC6D0')
+    setMetricValue(metrics[1], '0\uC6D0')
+    setMetricValue(metrics[2], '0\uAC1C')
+    setMetricValue(metrics[3], '0\uBA85')
+  }
+
+  function fetchFamilyMembers() {
+    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    return getCurrentFamilyId().then(function (familyId) {
+      return apiRequest('/families/' + encodeURIComponent(familyId) + '/members')
+    }).then(function (items) {
+      return Array.isArray(items) ? items : []
+    }).catch(function () {
+      return []
+    })
+  }
+
+  function calculateTripTotal(trips) {
+    return Promise.all((trips || []).slice(0, 30).map(function (trip) {
+      return fetchTripRecords(trip.id).then(function (records) {
+        return records.reduce(function (sum, item) {
+          return sum + Number(item.amount || 0)
+        }, 0)
+      })
+    })).then(function (totals) {
+      return totals.reduce(function (sum, value) { return sum + value }, 0)
+    })
+  }
+
+  function countBabyRecords(babies) {
+    var range = monthRangeFor(todayText())
+    return Promise.all((babies || []).slice(0, 20).map(function (baby) {
+      return fetchBabyRecords(baby.id, range.start, range.end).then(function (records) {
+        return records.length
+      })
+    })).then(function (counts) {
+      return counts.reduce(function (sum, value) { return sum + value }, 0)
+    })
+  }
+
+  function renderHomeMetricsFromApi(force) {
+    var metrics = Array.from(document.querySelectorAll('.metric-grid .metric'))
+    if (!metrics.length || (!force && document.documentElement.dataset.homeMetricsApiBacked === 'true')) return
+    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) {
+      resetHomeMetrics(metrics)
+      return
+    }
+    document.documentElement.dataset.homeMetricsApiBacked = 'true'
+    var range = monthRangeFor(todayText())
+    fetchLedgerSummary(range.start, range.end).then(function (summary) {
+      setMetricValue(metrics[0], Number(summary.expense || 0).toLocaleString('ko-KR') + '\uC6D0')
+    })
+    fetchTrips().then(calculateTripTotal).then(function (total) {
+      setMetricValue(metrics[1], Number(total || 0).toLocaleString('ko-KR') + '\uC6D0')
+    })
+    fetchBabies().then(function (babies) {
+      setMetricValue(metrics[2], '0\uAC1C')
+      return countBabyRecords(babies)
+    }).then(function (count) {
+      setMetricValue(metrics[2], Number(count || 0).toLocaleString('ko-KR') + '\uAC1C')
+    })
+    fetchFamilyMembers().then(function (members) {
+      setMetricValue(metrics[3], Number(members.length || 0).toLocaleString('ko-KR') + '\uBA85')
+    })
+  }
+
   function renderHomeLedgerFromApi(force) {
     var table = document.querySelector('.content-grid .panel.wide .ledger-table')
     if (!table || table.dataset.apiLoading === 'true') return
     if (!force && table.dataset.apiBacked === 'true') return
     table.dataset.apiLoading = 'true'
+    table.innerHTML = emptyRow('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.', '')
 
     var range = monthRangeFor(todayText())
     fetchLedgerEntries(range.start, range.end).then(function (items) {
       table.dataset.apiLoading = 'false'
       table.dataset.apiBacked = 'true'
-      if (!items.length) return
+      if (!items.length) {
+        table.innerHTML = emptyRow('\uCD5C\uADFC \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '\uC0C8 \uAE30\uB85D\uC744 \uCD94\uAC00\uD558\uBA74 \uC5EC\uAE30\uC5D0 \uBCF4\uC5EC\uC9D1\uB2C8\uB2E4.')
+        return
+      }
       table.innerHTML = items.slice(0, 5).map(function (item) {
         return '<div class="ledger-row api-ledger-row" data-api-ledger-id="' + item.id + '">' +
           '<div><strong>' + escapeHtml(item.title) + '</strong><span>' +
@@ -5410,6 +5505,94 @@
           '</span></div><span>' + escapeHtml(item.paymentMethod || '-') + '</span><b class="' + escapeHtml(item.entryType || 'expense') + '">' +
           escapeHtml(moneyText(item.amount, item.entryType)) + '</b></div>'
       }).join('')
+    })
+  }
+
+  function formatLedgerDateLabel(dateText) {
+    if (!dateText) return '\uB0A0\uC9DC \uBBF8\uC815'
+    return new Date(dateText + 'T00:00:00').toLocaleDateString('ko-KR', {
+      month: 'long',
+      day: 'numeric',
+      weekday: 'short'
+    })
+  }
+
+  function getLedgerPageRange() {
+    var text = getCleanText(document.querySelector('.filter-panel'))
+    var monthMatch = text.match(/(\d{4})\uB144\s*(\d{1,2})\uC6D4/)
+    if (monthMatch) {
+      var monthDate = monthMatch[1] + '-' + String(Number(monthMatch[2])).padStart(2, '0') + '-01'
+      return monthRangeFor(monthDate)
+    }
+    return monthRangeFor(todayText())
+  }
+
+  function pageHeadingIs(label) {
+    return Array.from(document.querySelectorAll('h1')).some(function (heading) {
+      return getCleanText(heading) === label
+    })
+  }
+
+  function renderLedgerPageFromApi(force) {
+    if (!pageHeadingIs('\uAC00\uACC4\uBD80')) return
+    var summary = document.querySelector('.ledger-summary')
+    var daily = document.querySelector('.daily-ledger')
+    if (!summary && !daily) return
+    var range = getLedgerPageRange()
+    var key = range.start + ':' + range.end
+    if (!force && daily && daily.dataset.apiRangeKey === key) return
+    if (daily) daily.dataset.apiRangeKey = key
+
+    fetchLedgerSummary(range.start, range.end).then(function (values) {
+      var cards = summary ? Array.from(summary.querySelectorAll('.metric strong')) : []
+      setMetricValue(cards[0] && cards[0].closest('.metric'), Number(values.expense || 0).toLocaleString('ko-KR') + '\uC6D0')
+      setMetricValue(cards[1] && cards[1].closest('.metric'), Number(values.income || 0).toLocaleString('ko-KR') + '\uC6D0')
+      setMetricValue(cards[2] && cards[2].closest('.metric'), Number(values.total || 0).toLocaleString('ko-KR') + '\uC6D0')
+    })
+
+    if (!daily) return
+    daily.innerHTML = emptyRow('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.', '')
+    fetchLedgerEntries(range.start, range.end).then(function (items) {
+      if (!items.length) {
+        daily.innerHTML = emptyRow('\uD574\uB2F9 \uAE30\uAC04\uC758 \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '\uB4F1\uB85D\uD55C \uB370\uC774\uD130\uB9CC \uC5EC\uAE30\uC5D0 \uD45C\uC2DC\uB429\uB2C8\uB2E4.')
+        return
+      }
+      var groups = items.reduce(function (map, item) {
+        var date = item.transactionDate || item.txDate || ''
+        map[date] = map[date] || []
+        map[date].push(item)
+        return map
+      }, {})
+      daily.innerHTML = Object.keys(groups).sort().reverse().map(function (date) {
+        var rows = groups[date].slice().sort(function (a, b) {
+          return String(b.createdAt || '').localeCompare(String(a.createdAt || ''))
+        })
+        var expense = rows.filter(function (item) { return item.entryType !== 'income' }).reduce(function (sum, item) { return sum + Number(item.amount || 0) }, 0)
+        var income = rows.filter(function (item) { return item.entryType === 'income' }).reduce(function (sum, item) { return sum + Number(item.amount || 0) }, 0)
+        return '<section class="api-ledger-day">' +
+          '<header><strong>' + escapeHtml(formatLedgerDateLabel(date)) + '</strong><span>\uC9C0\uCD9C ' + expense.toLocaleString('ko-KR') + '\uC6D0 \u00B7 \uC218\uC785 ' + income.toLocaleString('ko-KR') + '\uC6D0</span></header>' +
+          rows.map(function (item) {
+            return '<div class="ledger-row api-ledger-row" data-api-ledger-id="' + item.id + '">' +
+              '<div><strong>' + escapeHtml(item.title || '') + '</strong><span>' +
+              escapeHtml((item.category || '-') + ' \u00B7 ' + (item.memberName || '-') + ' \u00B7 ' + (item.paymentMethod || '-')) +
+              '</span></div><b class="' + escapeHtml(item.entryType || 'expense') + '">' +
+              escapeHtml(moneyText(item.amount, item.entryType)) + '</b></div>'
+          }).join('') +
+          '</section>'
+      }).join('')
+    })
+  }
+
+  function renderTravelPageFromApi(force) {
+    if (!pageHeadingIs('\uC5EC\uD589')) return
+    var panel = document.querySelector('.trip-manager')
+    var headerAction = document.querySelector('.panel-header .passive-header-chip, .panel.wide.full-span .panel-header button')
+    if (!panel && !headerAction) return
+    if (!force && panel && panel.dataset.apiBacked === 'true') return
+    if (panel) panel.dataset.apiBacked = 'true'
+    fetchTrips().then(function (trips) {
+      if (headerAction) headerAction.textContent = Number(trips.length || 0).toLocaleString('ko-KR') + '\uAC1C'
+      removeHardcodedDemoData()
     })
   }
 
@@ -5701,12 +5884,113 @@
     })
   }
 
+  var HARDCODED_DEMO_PATTERNS = [
+    '\uC774\uB9C8\uD2B8 \uD2B8\uB808\uC774\uB354\uC2A4',
+    '\uC721\uC544\uC6A9\uD488 \uC815\uAE30\uBC30\uC1A1',
+    '\uBCD1\uC6D0\uBE44',
+    '\uC6D4\uAE09',
+    '\uC81C\uC8FC \uACF5\uD56D \uB3C4\uCC29',
+    '\uC81C\uC8FC\uB3C4 \uC5EC\uD589',
+    '\uAC00\uC871 \uC81C\uC8FC 3\uBC15 4\uC77C',
+    '\uAC15\uB989 \uC5EC\uD589',
+    '\uBC14\uB2E4 \uBCF4\uB7EC \uAC00\uB294 \uC8FC\uB9D0 \uC5EC\uD589',
+    '\uD611\uC7AC \uD574\uBCC0',
+    '\uC219\uC18C \uCCB4\uD06C\uC778',
+    '\uC81C\uC8FC\uAD6D\uC81C\uACF5\uD56D',
+    '\uC0AC\uC9C4 12\uC7A5',
+    '\uC544\uAE30 \uCE68\uB300 \uC694\uCCAD \uC644\uB8CC',
+    '\uB0AE\uC7A0 \uB9AC\uB4EC \uCCB4\uD06C \uC911',
+    '\uC218\uC720\uB7C9\uACFC \uBC30\uBCC0 \uAE30\uB85D \uC9D1\uC911',
+    '89cm',
+    '12.8kg',
+    '62cm',
+    '6.4kg',
+    '\uC18C\uC544\uACFC \uC815\uAE30\uAC80\uC9C4',
+    '\uC5C4\uB9C8 \uC0DD\uC77C',
+    '147,820\uC6D0',
+    '842,500\uC6D0',
+    '28\uAC1C',
+    '4\uBA85'
+  ]
+
+  function hasHardcodedDemoText(text) {
+    return HARDCODED_DEMO_PATTERNS.some(function (pattern) {
+      return text.indexOf(pattern) >= 0
+    })
+  }
+
+  function findDemoDataContainer(node) {
+    if (!node || node.nodeType !== Node.ELEMENT_NODE) return null
+    if (node.closest('[data-api-ledger-id], [data-api-schedule-id], [data-api-trip-id], [data-api-baby-id], [data-api-diary-id]')) return null
+    return node.closest([
+      '.ledger-row',
+      '.task-list li',
+      '.trip-list article',
+      '.trip-card',
+      '.trip-list-card',
+      '.travel-record-card',
+      '.travel-card',
+      '.route-sequence-item',
+      '.route-item',
+      '.baby-card',
+      '.baby-record-row',
+      '.baby-list article',
+      '.diary-card',
+      '.diary-entry',
+      '.timeline-row',
+      '.timeline-item',
+      '.schedule-pill',
+      '.calendar-event-pill'
+    ].join(','))
+  }
+
+  function removeHardcodedDemoData() {
+    Array.from(document.querySelectorAll([
+      '.ledger-row',
+      '.task-list li',
+      '.trip-list article',
+      '.trip-card',
+      '.trip-list-card',
+      '.travel-record-card',
+      '.travel-card',
+      '.route-sequence-item',
+      '.route-item',
+      '.baby-card',
+      '.baby-record-row',
+      '.baby-list article',
+      '.diary-card',
+      '.diary-entry',
+      '.timeline-row',
+      '.timeline-item',
+      '.schedule-pill',
+    '.calendar-event-pill'
+    ].join(','))).forEach(function (node) {
+      if (hasHardcodedDemoText(getCleanText(node))) {
+        var container = findDemoDataContainer(node)
+        if (container) container.remove()
+      }
+    })
+  }
+
   function refreshServerDataViews(force) {
     removeDeveloperServerPanels()
+    removeHardcodedDemoData()
+    renderHomeMetricsFromApi(force)
+    renderLedgerPageFromApi(force)
+    renderTravelPageFromApi(force)
     if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return
     renderHomeSchedulesFromApi(force)
     renderHomeLedgerFromApi(force)
+    window.setTimeout(removeHardcodedDemoData, 50)
   }
+
+  document.addEventListener('click', function (event) {
+    var nav = event.target && event.target.closest && event.target.closest('.nav-item')
+    if (!nav) return
+    window.setTimeout(function () {
+      refreshServerDataViews(true)
+    }, 700)
+  }, true)
 
   function getCurrentFamilyId(forceRefresh) {
     var cachedId = Number(localStorage.getItem(API_FAMILY_ID_KEY) || '')
