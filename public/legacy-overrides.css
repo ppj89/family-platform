@@ -683,62 +683,85 @@ body.api-loading-blocked::before {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px 14px;
-  margin-top: -4px;
+  justify-content: flex-start;
+  gap: 8px;
+  margin-top: -3px;
 }
 
 .auth-card .auth-login-preferences label {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 28px;
+  min-height: 36px;
+  border: 1px solid #e5e8eb;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #f7f8fa;
   color: #4e5968;
   font-size: 13px;
   font-weight: 800;
   cursor: pointer;
+  transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
+}
+
+.auth-card .auth-login-preferences label.is-checked {
+  border-color: rgba(49, 130, 246, 0.3);
+  background: #edf6ff;
+  color: #1b64da;
+  box-shadow: 0 8px 18px rgba(49, 130, 246, 0.1);
 }
 
 .auth-card .auth-login-preferences input {
-  appearance: none;
-  position: relative;
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
+  position: absolute;
+  width: 1px;
+  height: 1px;
   margin: 0;
   padding: 0;
-  border: 1px solid #d1d6db;
-  border-radius: 7px;
-  background: #ffffff;
-  box-shadow: inset 0 0 0 1px rgba(229, 232, 235, 0.6);
-  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.auth-card .auth-login-preferences input:checked {
+.auth-card .auth-login-preferences label:focus-within {
+  border-color: rgba(49, 130, 246, 0.45);
+  box-shadow: 0 0 0 4px rgba(49, 130, 246, 0.12);
+}
+
+.auth-card .auth-login-preferences span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.auth-card .auth-login-preferences span::before {
+  content: "";
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid #cfd6df;
+  border-radius: 50%;
+  background: #ffffff;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
+  transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
+}
+
+.auth-card .auth-login-preferences label.is-checked span::before {
+  content: "\2713";
   border-color: #3182f6;
   background: #3182f6;
-  box-shadow: 0 8px 18px rgba(49, 130, 246, 0.18);
 }
 
-.auth-card .auth-login-preferences input:checked::after {
-  content: "";
-  position: absolute;
-  left: 5px;
-  top: 2px;
-  width: 5px;
-  height: 9px;
-  border: solid #ffffff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
+.auth-card .auth-login-preferences label:active span::before {
+  transform: scale(0.92);
 }
 
 .auth-card .auth-login-preferences input:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 4px rgba(49, 130, 246, 0.14);
-}
-
-.auth-card .auth-login-preferences span {
-  white-space: nowrap;
 }
 
 .auth-card label span {
@@ -1105,13 +1128,23 @@ body.api-loading-blocked::before {
   color: #c3cad3;
 }
 
-.theme-dark .auth-card .auth-login-preferences input {
-  border-color: #58616f;
+.theme-dark .auth-card .auth-login-preferences label {
+  border-color: #454d58;
   background: #2a3038;
-  box-shadow: inset 0 0 0 1px #454d58;
 }
 
-.theme-dark .auth-card .auth-login-preferences input:checked {
+.theme-dark .auth-card .auth-login-preferences label.is-checked {
+  border-color: rgba(90, 162, 255, 0.45);
+  background: rgba(49, 130, 246, 0.16);
+  color: #9dccff;
+}
+
+.theme-dark .auth-card .auth-login-preferences span::before {
+  border-color: #58616f;
+  background: #20252d;
+}
+
+.theme-dark .auth-card .auth-login-preferences label.is-checked span::before {
   border-color: #5aa2ff;
   background: #3182f6;
 }
@@ -9708,17 +9741,14 @@ html.calendar-jump-open body:has(.family-calendar-panel) .family-calendar-panel 
 }
 
 .auth-card .auth-login-preferences input[type="checkbox"] {
-  width: 18px !important;
-  height: 18px !important;
-  min-width: 18px !important;
-  min-height: 18px !important;
-  border-radius: 7px !important;
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  min-width: 1px !important;
+  min-height: 1px !important;
   padding: 0 !important;
-  background-clip: padding-box !important;
-}
-
-.auth-card .auth-login-preferences input[type="checkbox"]:checked {
-  background: #3182f6 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
 
 .theme-dark .auth-card .auth-nickname-field span {

@@ -672,6 +672,7 @@
     var savedEmail = localStorage.getItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY) || ''
     if (remember) remember.checked = isRememberEmailEnabled()
     if (autoLogin) autoLogin.checked = isAutoLoginEnabled()
+    syncLoginPreferenceClasses(card)
     if (savedEmail && emailInput && !emailInput.value) {
       setNativeInputValue(emailInput, savedEmail)
     }
@@ -690,6 +691,15 @@
       localStorage.removeItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY)
     }
     localStorage.setItem(AUTH_AUTO_LOGIN_STORAGE_KEY, autoLogin && autoLogin.checked ? 'true' : 'false')
+    syncLoginPreferenceClasses(card)
+  }
+
+  function syncLoginPreferenceClasses(card) {
+    if (!card) return
+    Array.from(card.querySelectorAll('.auth-login-preferences label')).forEach(function (label) {
+      var input = label.querySelector('input')
+      label.classList.toggle('is-checked', !!(input && input.checked))
+    })
   }
 
   function bindLoginPreferenceControls(card, emailInput) {
