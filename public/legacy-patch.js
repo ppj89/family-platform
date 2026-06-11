@@ -3201,23 +3201,81 @@
     return permissions.length ? permissions.join('/') : '권한 없음'
   }
 
+  function roleText(role) {
+    if (role === 'FAMILY_ADMIN') return '가족관리자'
+    return '가족구성원'
+  }
+
   function renderFamilyManagePage(root, family, members) {
     var rows = members.length ? members.map(function (member) {
-      return '<article><div><strong>' + escapeHtml(member.role || 'MEMBER') + '</strong><span>사용자 ID ' + escapeHtml(member.userId) + ' · ' + escapeHtml(permissionText(member)) + '</span></div><b>' + escapeHtml(member.role === 'FAMILY_ADMIN' ? '가족관리자' : '구성원') + '</b></article>'
+      return '<article><div><strong>' + escapeHtml(roleText(member.role)) + '</strong><span>사용자 ID ' + escapeHtml(member.userId) + ' · ' + escapeHtml(permissionText(member)) + '</span></div><b>' + escapeHtml(member.role || 'MEMBER') + '</b></article>'
     }).join('') : '<div class="api-empty-row"><strong>등록된 구성원이 없습니다.</strong><small>가족관리자가 구성원 초대와 권한 부여를 진행합니다.</small></div>'
     root.innerHTML = [
       '<section class="panel wide family-group-panel">',
-      '<header class="panel-header"><h2>가족그룹</h2><button type="button">실제 데이터</button></header>',
+      '<header class="panel-header"><h2>가족그룹</h2></header>',
       '<div class="family-group-summary">',
       '<article><span>현재 가족</span><strong>' + escapeHtml(family.name || '-') + '</strong><small>가족 ID ' + escapeHtml(family.id) + '</small></article>',
       '<article><span>구성원</span><strong>' + members.length + '명</strong><small>읽기/작성/수정/삭제 권한 관리</small></article>',
-      '<article><span>다음 작업</span><strong>초대/권한</strong><small>구성원 추가 후 CRUD 권한 부여</small></article>',
       '</div>',
+      '<form class="code-form invite-form family-invite-form">',
+      '<div class="form-row">',
+      '<label><span>사용자 ID</span><input data-invite-user-id inputmode="numeric" placeholder="예: 2" /></label>',
+      '<label><span>역할</span><select data-invite-role><option value="MEMBER">가족구성원</option><option value="FAMILY_ADMIN">가족관리자</option></select></label>',
+      '</div>',
+      '<div class="permission-chips">',
+      '<button type="button" class="active" data-invite-permission="canRead">읽기</button>',
+      '<button type="button" data-invite-permission="canCreate">작성</button>',
+      '<button type="button" data-invite-permission="canUpdate">수정</button>',
+      '<button type="button" data-invite-permission="canDelete">삭제</button>',
+      '</div>',
+      '<button class="submit-action" type="submit">구성원 초대</button>',
+      '</form>',
       '<div class="family-group-list">',
       rows,
       '</div>',
       '</section>'
     ].join('')
+    bindFamilyInviteForm(root, family)
+  }
+
+  function bindFamilyInviteForm(root, family) {
+    var form = root.querySelector('.family-invite-form')
+    if (!form || !family || !family.id) return
+    var permissions = { canRead: true, canCreate: false, canUpdate: false, canDelete: false }
+    form.querySelectorAll('[data-invite-permission]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var key = button.dataset.invitePermission
+        permissions[key] = !permissions[key]
+        button.classList.toggle('active', !!permissions[key])
+      })
+    })
+    form.addEventListener('submit', function (event) {
+      event.preventDefault()
+      var input = form.querySelector('[data-invite-user-id]')
+      var userId = Number((input && input.value || '').trim())
+      if (!userId || userId <= 0) {
+        showPatchToast('초대할 사용자 ID를 입력해주세요.')
+        if (input) input.focus()
+        return
+      }
+      var role = (form.querySelector('[data-invite-role]') || {}).value || 'MEMBER'
+      var payload = Object.assign({ userId: userId, role: role }, permissions)
+      var submit = form.querySelector('button[type="submit"]')
+      if (submit) {
+        submit.disabled = true
+        submit.textContent = '초대 중'
+      }
+      postJson('/families/' + encodeURIComponent(family.id) + '/members', payload).then(function () {
+        showPatchToast('구성원을 추가했습니다.')
+        loadFamilyGroupPage(root)
+      }).catch(function () {
+        showPatchToast('구성원 추가에 실패했습니다. 사용자 ID와 권한을 확인해주세요.')
+        if (submit) {
+          submit.disabled = false
+          submit.textContent = '구성원 초대'
+        }
+      })
+    })
   }
 
   function ensureAdminBatchSaveButton() {
@@ -5953,7 +6011,7 @@
     daily.innerHTML = emptyRow('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.', '')
     fetchLedgerEntries(range.start, range.end).then(function (items) {
       if (!items.length) {
-        daily.innerHTML = emptyRow('\uD574\uB2F9 \uAE30\uAC04\uC758 \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '\uB4F1\uB85D\uD55C \uB370\uC774\uD130\uB9CC \uC5EC\uAE30\uC5D0 \uD45C\uC2DC\uB429\uB2C8\uB2E4.')
+        daily.innerHTML = emptyRow('\uD574\uB2F9 \uAE30\uAC04\uC758 \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
         return
       }
       var groups = items.reduce(function (map, item) {
@@ -5980,6 +6038,16 @@
           '</section>'
       }).join('')
     })
+  }
+
+  function renderRestaurantPageFromApi() {
+    if (!pageHeadingIs('\uB9DB\uC9D1')) return
+    var hero = document.querySelector('.restaurant-hero')
+    if (hero) hero.remove()
+    var grid = document.querySelector('.restaurant-grid')
+    if (!grid || grid.dataset.apiBacked === 'true') return
+    grid.dataset.apiBacked = 'true'
+    grid.innerHTML = emptyRow('\uB4F1\uB85D\uB41C \uB9DB\uC9D1\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
   }
 
   function renderTravelPageFromApi(force) {
@@ -6339,6 +6407,7 @@
       '.timeline-row',
       '.timeline-item',
       '.schedule-pill',
+      '.restaurant-card',
       '.calendar-event-pill'
     ].join(','))
   }
@@ -6362,6 +6431,7 @@
       '.timeline-row',
       '.timeline-item',
       '.schedule-pill',
+      '.restaurant-card',
     '.calendar-event-pill'
     ].join(','))).forEach(function (node) {
       if (hasHardcodedDemoText(getCleanText(node))) {
@@ -6376,6 +6446,7 @@
     removeHardcodedDemoData()
     renderHomeMetricsFromApi(force)
     renderLedgerPageFromApi(force)
+    renderRestaurantPageFromApi()
     renderTravelPageFromApi(force)
     if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return
     renderHomeSchedulesFromApi(force)
