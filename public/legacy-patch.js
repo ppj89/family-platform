@@ -1132,14 +1132,10 @@
     var card = button.closest('.auth-card') || document.querySelector('.auth-card')
     if (!card) return
     var inputs = Array.from(card.querySelectorAll('input'))
-    var emailInput = card.querySelector('[data-field="auth-email"]') || inputs.find(function (input) {
-      return input.type === 'email' || /@/.test(input.value || '')
-    }) || inputs[0]
     var passwordInput = card.querySelector('[data-field="auth-password"]') || inputs.find(function (input) {
       return input.type === 'password'
     }) || inputs[1]
-    setNativeInputValue(emailInput, 'admin@family.test')
-    if (passwordInput) setNativeInputValue(passwordInput, 'family1234')
+    if (passwordInput && !passwordInput.value) setNativeInputValue(passwordInput, 'authenticated-session')
     button.dataset.authSkipApiSync = 'true'
     button.dataset.authBypass = 'true'
     window.setTimeout(function () {
@@ -1147,7 +1143,10 @@
     }, 5000)
     window.setTimeout(function () {
       submitLegacyAuthForm(button)
-    }, 0)
+    }, 80)
+    window.setTimeout(function () {
+      if (document.querySelector('.auth-card')) submitLegacyAuthForm(button)
+    }, 260)
   }
 
   function ensureAuthRegisterFields() {
@@ -1391,7 +1390,7 @@
       var emailInput = card.querySelector('[data-field="login-email"]') || card.querySelector('input')
       var passwordInput = card.querySelector('[data-field="login-password"]') || card.querySelector('input[type="password"]')
       setNativeInputValue(emailInput, response.email || storedUser.email)
-      if (passwordInput && !passwordInput.value) setNativeInputValue(passwordInput, 'family1234')
+      if (passwordInput && !passwordInput.value) setNativeInputValue(passwordInput, 'authenticated-session')
       var submit = card.querySelector('.auth-submit')
       if (submit) {
         activateLegacyAuthScreen(submit, storedUser)
