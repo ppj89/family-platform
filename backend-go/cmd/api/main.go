@@ -23,6 +23,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -336,6 +337,28 @@ func (a *app) health(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "UP", "runtime": "go"})
 }
 
+func isValidNickname(nickname string) bool {
+	if nickname == "" || utf8.RuneCountInString(nickname) > 12 {
+		return false
+	}
+	for _, r := range nickname {
+		if r >= '0' && r <= '9' {
+			continue
+		}
+		if r >= 'A' && r <= 'Z' {
+			continue
+		}
+		if r >= 'a' && r <= 'z' {
+			continue
+		}
+		if r >= '가' && r <= '힣' {
+			continue
+		}
+		return false
+	}
+	return true
+}
+
 func (a *app) checkNickname(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Nickname string `json:"nickname"`
@@ -346,6 +369,10 @@ func (a *app) checkNickname(w http.ResponseWriter, r *http.Request) {
 	nickname := strings.TrimSpace(req.Nickname)
 	if nickname == "" {
 		writeError(w, http.StatusBadRequest, "nickname is required")
+		return
+	}
+	if !isValidNickname(nickname) {
+		writeError(w, http.StatusBadRequest, "nickname format invalid")
 		return
 	}
 	var exists bool
@@ -372,6 +399,10 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 	nickname := strings.TrimSpace(req.Nickname)
 	if email == "" || nickname == "" || len(req.Password) < 8 {
 		writeError(w, http.StatusBadRequest, "email, nickname and password length >= 8 are required")
+		return
+	}
+	if !isValidNickname(nickname) {
+		writeError(w, http.StatusBadRequest, "nickname format invalid")
 		return
 	}
 	var nicknameExists bool

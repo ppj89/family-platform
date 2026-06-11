@@ -545,6 +545,7 @@
   function parseAuthError(error) {
     var text = String(error && error.message ? error.message : error || '')
     if (text.indexOf('nickname is already registered') >= 0) return '\uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uB2C9\uB124\uC784\uC785\uB2C8\uB2E4. \uB2E4\uB978 \uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.'
+    if (text.indexOf('nickname format invalid') >= 0) return '\uB2C9\uB124\uC784\uC740 \uD55C\uAE00, \uC601\uBB38, \uC22B\uC790\uB9CC 12\uC790\uAE4C\uC9C0 \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.'
     if (text.indexOf('daily mail request limit exceeded') >= 0 || text.indexOf('429') >= 0) return '\uC624\uB298 \uC694\uCCAD \uAC00\uB2A5\uD55C \uD69F\uC218\uB97C \uCD08\uACFC\uD588\uC2B5\uB2C8\uB2E4. \uB0B4\uC77C \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.'
     if (text.indexOf('oauth email consent required') >= 0) return '\uC911\uBCF5 \uAC00\uC785 \uBC29\uC9C0\uB97C \uC704\uD574 \uC774\uBA54\uC77C \uC81C\uACF5 \uD544\uC218 \uB3D9\uC758\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4.'
     if (text.indexOf('current password is invalid') >= 0) return '\uD604\uC7AC \uBE44\uBC00\uBC88\uD638\uAC00 \uB9DE\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.'
@@ -647,6 +648,14 @@
     return card && card.querySelector('[data-field="auth-nickname"]')
   }
 
+  function nicknameRuleMessage() {
+    return '\uB2C9\uB124\uC784\uC740 \uD55C\uAE00, \uC601\uBB38, \uC22B\uC790\uB9CC 12\uC790\uAE4C\uC9C0 \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.'
+  }
+
+  function isValidNicknameValue(nickname) {
+    return /^[\uAC00-\uD7A3A-Za-z0-9]{1,12}$/.test(String(nickname || '').trim())
+  }
+
   function setNicknameCheckState(card, state, message) {
     var status = card && card.querySelector('[data-auth-nickname-status]')
     var input = nicknameInputOf(card)
@@ -667,6 +676,9 @@
   function ensureNicknameCheckControls(card, nicknameField) {
     var input = nicknameInputOf(card)
     if (!card || !nicknameField || !input) return
+    input.maxLength = 12
+    input.pattern = '[\uAC00-\uD7A3A-Za-z0-9]{1,12}'
+    input.title = nicknameRuleMessage()
     var row = nicknameField.querySelector('.auth-nickname-row')
     if (!row) {
       row = document.createElement('div')
@@ -702,6 +714,12 @@
         input.focus()
         setNicknameCheckState(card, 'error', '\uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
         showPatchToast('\uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+        return
+      }
+      if (!isValidNicknameValue(nickname)) {
+        input.focus()
+        setNicknameCheckState(card, 'error', nicknameRuleMessage())
+        showPatchToast(nicknameRuleMessage())
         return
       }
       button.disabled = true
@@ -1218,7 +1236,7 @@
     if (!nicknameField) {
       nicknameField = document.createElement('label')
       nicknameField.className = 'auth-nickname-field'
-      nicknameField.innerHTML = '<span>닉네임</span><input data-field="auth-nickname" autocomplete="nickname" maxlength="30" placeholder="닉네임" />'
+      nicknameField.innerHTML = '<span>닉네임</span><input data-field="auth-nickname" autocomplete="nickname" maxlength="12" placeholder="닉네임" />'
       var passwordLabel = passwordInput && passwordInput.closest('label')
       if (passwordLabel) passwordLabel.insertAdjacentElement('beforebegin', nicknameField)
       else if (submit) submit.insertAdjacentElement('beforebegin', nicknameField)
@@ -1534,6 +1552,12 @@
         showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
         return
       }
+      if (mode === 'register' && !isValidNicknameValue(payload.nickname)) {
+        focusEmptyAuthField(card, payload, mode)
+        setNicknameCheckState(card, 'error', nicknameRuleMessage())
+        showPatchToast(nicknameRuleMessage())
+        return
+      }
       if (mode === 'register' && isNicknameUnavailable(card, payload.nickname)) {
         focusEmptyAuthField(card, payload, mode)
         showPatchToast('\uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uB2C9\uB124\uC784\uC785\uB2C8\uB2E4. \uB2E4\uB978 \uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
@@ -1561,6 +1585,12 @@
     if (!payload.email || !payload.password || payload.password.length < 8 || (mode === 'register' && !payload.nickname)) {
       focusEmptyAuthField(card, payload, mode)
       showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+      return
+    }
+    if (mode === 'register' && !isValidNicknameValue(payload.nickname)) {
+      focusEmptyAuthField(card, payload, mode)
+      setNicknameCheckState(card, 'error', nicknameRuleMessage())
+      showPatchToast(nicknameRuleMessage())
       return
     }
     if (mode === 'register' && isNicknameUnavailable(card, payload.nickname)) {
