@@ -6056,16 +6056,31 @@
     var grid = document.querySelector('.restaurant-grid')
     var badge = grid && grid.closest('.panel') && grid.closest('.panel').querySelector('.passive-header-chip')
     if (badge) badge.textContent = '0\uACF3'
-    var visitDateInput = Array.from(document.querySelectorAll('.restaurant-form label')).find(function (label) {
+    normalizeRestaurantVisitDate()
+    window.setTimeout(normalizeRestaurantVisitDate, 200)
+    window.setTimeout(normalizeRestaurantVisitDate, 800)
+    if (!grid || grid.dataset.apiBacked === 'true') return
+    grid.dataset.apiBacked = 'true'
+    grid.innerHTML = emptyRow('\uB4F1\uB85D\uB41C \uB9DB\uC9D1\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
+  }
+
+  function normalizeRestaurantVisitDate() {
+    if (!pageHeadingIs('\uB9DB\uC9D1')) return
+    var visitDateInput = Array.from(document.querySelectorAll('.restaurant-form label, .entry-panel label')).find(function (label) {
       return label.textContent.indexOf('\uBC29\uBB38\uC77C') !== -1
     })
     visitDateInput = visitDateInput && visitDateInput.querySelector('input')
     if (visitDateInput && (!visitDateInput.value || visitDateInput.value === '2026.06.03')) {
-      visitDateInput.value = formatDotDate(new Date())
+      setInputValue(visitDateInput, formatDotDate(new Date()))
     }
-    if (!grid || grid.dataset.apiBacked === 'true') return
-    grid.dataset.apiBacked = 'true'
-    grid.innerHTML = emptyRow('\uB4F1\uB85D\uB41C \uB9DB\uC9D1\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
+  }
+
+  function setInputValue(input, value) {
+    var setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value')
+    if (setter && setter.set) setter.set.call(input, value)
+    else input.value = value
+    input.dispatchEvent(new Event('input', { bubbles: true }))
+    input.dispatchEvent(new Event('change', { bubbles: true }))
   }
 
   function renderTravelPageFromApi(force) {
