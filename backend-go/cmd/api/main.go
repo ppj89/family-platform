@@ -274,6 +274,7 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/start", a.oauthStart)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", a.oauthCallback)
 	mux.HandleFunc("GET /api/families", a.requireAuth(a.listFamilies))
+	mux.HandleFunc("POST /api/families", a.requireAuth(a.createFamily))
 	mux.HandleFunc("GET /api/families/{familyId}/members", a.requireAuth(a.listFamilyMembers))
 	mux.HandleFunc("POST /api/families/{familyId}/members", a.requireAuth(a.addFamilyMember))
 	mux.HandleFunc("PUT /api/families/{familyId}/members/{memberId}", a.requireAuth(a.updateFamilyMember))
@@ -445,19 +446,6 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 	`, email, nickname, userCount == 0, string(passwordHash), sessionID, requiresEmailVerification).Scan(&userID)
 	if err != nil {
 		writeError(w, http.StatusConflict, "email is already registered")
-		return
-	}
-	var familyID int64
-	if err := tx.QueryRow(r.Context(), "insert into family_groups (created_at, name) values (now(), $1) returning id", nickname+" 가족").Scan(&familyID); err != nil {
-		writeError(w, http.StatusInternalServerError, "family creation failed")
-		return
-	}
-	_, err = tx.Exec(r.Context(), `
-		insert into family_members (family_id, user_id, role, joined_at, can_read, can_create, can_update, can_delete)
-		values ($1, $2, 'FAMILY_ADMIN', now(), true, true, true, true)
-	`, familyID, userID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "family membership creation failed")
 		return
 	}
 	if err := tx.Commit(r.Context()); err != nil {
@@ -1075,6 +1063,68 @@ func (a *app) listFamilies(w http.ResponseWriter, r *http.Request, user authUser
 		families = append(families, item)
 	}
 	writeJSON(w, http.StatusOK, families)
+}
+
+func (a *app) createFamily(w http.ResponseWriter, r *http.Request, user authUser) {
+	var req struct {
+		Name string `json:"name"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	name := strings.TrimSpace(req.Name)
+	if name == "" {
+		var nickname string
+		if err := a.db.QueryRow(r.Context(), "select nickname from app_users where id = $1", user.ID).Scan(&nickname); err != nil {
+			writeError(w, http.StatusInternalServerError, "database read failed")
+			return
+		}
+		name = nickname + " 가족"
+	}
+
+	var memberCount int
+	if err := a.db.QueryRow(r.Context(), "select count(1) from family_members where user_id = $1", user.ID).Scan(&memberCount); err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	if memberCount > 0 {
+		writeError(w, http.StatusConflict, "user already belongs to a family")
+		return
+	}
+
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database transaction failed")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var familyID int64
+	var createdAt time.Time
+	if err := tx.QueryRow(r.Context(), `
+		insert into family_groups (created_at, name)
+		values (now(), $1)
+		returning id, created_at
+	`, name).Scan(&familyID, &createdAt); err != nil {
+		writeError(w, http.StatusInternalServerError, "family creation failed")
+		return
+	}
+	if _, err := tx.Exec(r.Context(), `
+		insert into family_members (family_id, user_id, role, joined_at, can_read, can_create, can_update, can_delete)
+		values ($1, $2, 'FAMILY_ADMIN', now(), true, true, true, true)
+	`, familyID, user.ID); err != nil {
+		writeError(w, http.StatusInternalServerError, "family membership creation failed")
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "database commit failed")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{
+		"id":        familyID,
+		"createdAt": createdAt,
+		"name":      name,
+	})
 }
 
 type familyMember struct {
@@ -2711,17 +2761,7 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 			return authResponse{}, err
 		}
 		if created {
-			var familyID int64
-			if err := tx.QueryRow(ctx, "insert into family_groups (created_at, name) values (now(), $1) returning id", currentNickname+" family").Scan(&familyID); err != nil {
-				return authResponse{}, err
-			}
-			_, err = tx.Exec(ctx, `
-				insert into family_members (family_id, user_id, role, joined_at, can_read, can_create, can_update, can_delete)
-				values ($1, $2, 'FAMILY_ADMIN', now(), true, true, true, true)
-			`, familyID, userID)
-			if err != nil {
-				return authResponse{}, err
-			}
+			a.log.Info("oauth user created without automatic family assignment", "provider", provider, "userId", userID)
 		}
 	} else if err != nil {
 		return authResponse{}, err
