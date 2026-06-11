@@ -6050,6 +6050,8 @@
     var hero = document.querySelector('.restaurant-hero')
     if (hero) hero.remove()
     var grid = document.querySelector('.restaurant-grid')
+    var badge = grid && grid.closest('.panel') && grid.closest('.panel').querySelector('.passive-header-chip')
+    if (badge) badge.textContent = '0\uACF3'
     if (!grid || grid.dataset.apiBacked === 'true') return
     grid.dataset.apiBacked = 'true'
     grid.innerHTML = emptyRow('\uB4F1\uB85D\uB41C \uB9DB\uC9D1\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
