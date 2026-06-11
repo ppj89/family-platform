@@ -4568,21 +4568,26 @@
     submit.insertAdjacentElement('afterend', block)
   }
 
+  function hideReactOwnedElement(element) {
+    if (!element) return
+    hidePatchElement(element)
+  }
+
   function enhanceHomeDashboard() {
     var content = document.querySelector('.content-grid')
     if (!content) return
     document.querySelectorAll('.sync-panel').forEach(function (panel) {
-      panel.remove()
+      hideReactOwnedElement(panel)
     })
     document.querySelectorAll('.topbar .custom-select, .topbar .user-chip').forEach(function (item) {
-      item.remove()
+      hideReactOwnedElement(item)
     })
 
     Array.from(content.querySelectorAll('.summary-band')).forEach(function (panel) {
-      panel.remove()
+      hideReactOwnedElement(panel)
     })
     Array.from(content.querySelectorAll('.panel')).forEach(function (panel) {
-      if (getCleanText(panel).indexOf('\uAC00\uC871 \uC0DD\uD65C \uB370\uC774\uD130') >= 0) panel.remove()
+      if (getCleanText(panel).indexOf('\uAC00\uC871 \uC0DD\uD65C \uB370\uC774\uD130') >= 0) hideReactOwnedElement(panel)
     })
 
     var panels = Array.from(content.querySelectorAll('.panel'))
