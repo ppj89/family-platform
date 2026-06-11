@@ -679,6 +679,41 @@ body.api-loading-blocked::before {
   color: #191f28;
 }
 
+.auth-login-preferences {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 14px;
+  margin-top: -4px;
+}
+
+.auth-login-preferences label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 28px;
+  color: #4e5968;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.auth-login-preferences input {
+  width: 18px;
+  height: 18px;
+  min-width: 18px;
+  margin: 0;
+  padding: 0;
+  border-radius: 6px;
+  accent-color: #3182f6;
+  box-shadow: none;
+}
+
+.auth-login-preferences span {
+  white-space: nowrap;
+}
+
 .auth-card label span {
   color: #4e5968;
   font-size: 13px;
@@ -1036,6 +1071,11 @@ body.api-loading-blocked::before {
 
 .theme-dark .auth-required-consent strong {
   color: #f2f4f6;
+}
+
+.theme-dark .auth-login-preferences label,
+.theme-dark .auth-login-preferences span {
+  color: #c3cad3;
 }
 
 .theme-dark .auth-copy h1,

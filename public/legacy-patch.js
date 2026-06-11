@@ -6,6 +6,8 @@
   var AUTH_USER_STORAGE_KEY = 'family-platform-user'
   var AUTH_FAMILY_STORAGE_KEY = 'family-platform-current-family-id'
   var AUTH_TRIP_STORAGE_KEY = 'family-platform-api-default-trip-id'
+  var AUTH_REMEMBER_EMAIL_STORAGE_KEY = 'family-platform-remember-email'
+  var AUTH_AUTO_LOGIN_STORAGE_KEY = 'family-platform-auto-login'
   var protectedAuthUntil = 0
   var protectedAuthSnapshot = null
 
@@ -640,6 +642,48 @@
     return !checkbox || checkbox.checked
   }
 
+  function isAutoLoginEnabled() {
+    return localStorage.getItem(AUTH_AUTO_LOGIN_STORAGE_KEY) !== 'false'
+  }
+
+  function ensureLoginPreferenceControls(card, submit) {
+    if (!card || card.querySelector('.auth-login-preferences')) return card && card.querySelector('.auth-login-preferences')
+    var wrap = document.createElement('div')
+    wrap.className = 'auth-login-preferences'
+    wrap.innerHTML = [
+      '<label><input data-field="auth-remember-email" type="checkbox" /><span>\uC544\uC774\uB514 \uC800\uC7A5</span></label>',
+      '<label><input data-field="auth-auto-login" type="checkbox" /><span>\uC790\uB3D9 \uB85C\uADF8\uC778</span></label>'
+    ].join('')
+    if (submit) submit.insertAdjacentElement('beforebegin', wrap)
+    else card.appendChild(wrap)
+    return wrap
+  }
+
+  function applyLoginPreferences(card, emailInput) {
+    if (!card) return
+    var remember = card.querySelector('[data-field="auth-remember-email"]')
+    var autoLogin = card.querySelector('[data-field="auth-auto-login"]')
+    var savedEmail = localStorage.getItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY) || ''
+    if (remember) remember.checked = !!savedEmail
+    if (autoLogin) autoLogin.checked = isAutoLoginEnabled()
+    if (savedEmail && emailInput && !emailInput.value) {
+      setNativeInputValue(emailInput, savedEmail)
+    }
+  }
+
+  function persistLoginPreferences(card, email) {
+    if (!card) return
+    var remember = card.querySelector('[data-field="auth-remember-email"]')
+    var autoLogin = card.querySelector('[data-field="auth-auto-login"]')
+    var normalizedEmail = String(email || '').trim()
+    if (remember && remember.checked && normalizedEmail) {
+      localStorage.setItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY, normalizedEmail)
+    } else {
+      localStorage.removeItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY)
+    }
+    localStorage.setItem(AUTH_AUTO_LOGIN_STORAGE_KEY, autoLogin && autoLogin.checked ? 'true' : 'false')
+  }
+
   function focusEmptyAuthField(card, payload, mode) {
     var inputs = Array.from(card.querySelectorAll('input'))
     var target = null
@@ -740,6 +784,7 @@
           return
         }
         showPatchToast(mode === 'register' ? '\uD68C\uC6D0\uAC00\uC785\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.' : '\uB85C\uADF8\uC778\uB418\uC5C8\uC2B5\uB2C8\uB2E4.')
+        if (mode === 'login') persistLoginPreferences(submit && submit.closest('.auth-card'), response.email || payload.email)
         completeAuth(submit, response)
       }).catch(function (error) {
         if (mode === 'login' && isActiveSessionError(error) && !forceLogin) {
@@ -1072,6 +1117,8 @@
       if (submit) submit.insertAdjacentElement('beforebegin', consentField)
       else card.appendChild(consentField)
     }
+    var loginPreferences = ensureLoginPreferenceControls(card, submit)
+    applyLoginPreferences(card, emailInput)
 
     function setMode(mode) {
       card.dataset.authMode = mode
@@ -1079,6 +1126,7 @@
       registerTab.classList.toggle('active', mode === 'register')
       nicknameField.style.display = mode === 'register' ? '' : 'none'
       consentField.style.display = mode === 'register' ? '' : 'none'
+      if (loginPreferences) loginPreferences.style.display = mode === 'login' ? '' : 'none'
       var resendButton = card.querySelector('[data-auth-resend-verification]')
       if (resendButton) resendButton.hidden = true
       if (passwordInput) passwordInput.autocomplete = mode === 'register' ? 'new-password' : 'current-password'
@@ -1193,6 +1241,7 @@
   function restoreAuthSession() {
     var card = document.querySelector('.auth-card')
     if (!card || card.dataset.sessionRestoreReady === 'true') return
+    if (!isAutoLoginEnabled()) return
     var token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
     var storedUser = readStoredAuthUser()
     if (!token || !storedUser || !storedUser.email) return
