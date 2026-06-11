@@ -939,21 +939,10 @@
     visual.dataset.authLandingReady = 'true'
 
     var copy = visual.querySelector('.auth-copy')
-    if (copy) {
-      copy.innerHTML = [
-        '<h1>\uC6B0\uB9AC \uAC00\uC871\uC758 \uC77C\uC815\uACFC \uAE30\uB85D\uC744 \uD55C\uACF3\uC5D0\uC11C \uAD00\uB9AC\uD574\uC694</h1>',
-        '<p>\uCE98\uB9B0\uB354, \uAC00\uACC4\uBD80, \uC5EC\uD589, \uC721\uC544, \uC77C\uAE30, \uCEE4\uBBA4\uB2C8\uD2F0\uAE4C\uC9C0 \uAC00\uC871\uBCC4 \uAD8C\uD55C\uC73C\uB85C \uC548\uC804\uD558\uAC8C \uC5F0\uACB0\uB418\uB294 \uAC00\uC871 \uC6B4\uC601 \uC6CC\uD06C\uC2A4\uD398\uC774\uC2A4\uC785\uB2C8\uB2E4.</p>'
-      ].join('')
-    }
+    if (copy) copy.remove()
 
     var preview = visual.querySelector('.auth-preview')
-    if (preview) {
-      preview.innerHTML = [
-        '<div><strong>\uC624\uB298\uC758 \uC77C\uC815</strong><span>09:00 \uBCD1\uC6D0 \uC608\uC57D\uACFC \uAC00\uC871 \uAE30\uB150\uC77C\uC744 \uB85C\uADF8\uC778 \uD6C4 \uBC14\uB85C \uD655\uC778\uD569\uB2C8\uB2E4.</span></div>',
-        '<div><strong>\uC774\uBC88 \uB2EC \uAC00\uACC4\uBD80</strong><span>\uCE74\uB4DC \uB0B4\uC5ED\uACFC \uC9C0\uCD9C \uD569\uACC4\uB97C \uAC00\uC871\uBCC4\uB85C \uBD84\uB9AC\uD574 \uBCF4\uC5EC\uC90D\uB2C8\uB2E4.</span></div>',
-        '<div><strong>\uC721\uC544 \uAE30\uB85D</strong><span>\uC218\uC720, \uBC30\uBCC0, \uD0A4, \uBAB8\uBB34\uAC8C \uD750\uB984\uC744 \uC790\uB3D9\uC73C\uB85C \uBAA8\uC544 \uBCF4\uACE0 \uBD84\uC11D\uD569\uB2C8\uB2E4.</span></div>'
-      ].join('')
-    }
+    if (preview) preview.remove()
   }
 
   function cleanupAuthActions() {
@@ -4583,10 +4572,11 @@
     var content = document.querySelector('.content-grid')
     if (!content) return
 
-    Array.from(content.querySelectorAll('.summary-band, .panel')).forEach(function (panel) {
-      if (getCleanText(panel).indexOf('\uAC00\uC871 \uC0DD\uD65C \uB370\uC774\uD130') >= 0) {
-        hidePatchElement(panel)
-      }
+    Array.from(content.querySelectorAll('.summary-band')).forEach(function (panel) {
+      panel.remove()
+    })
+    Array.from(content.querySelectorAll('.panel')).forEach(function (panel) {
+      if (getCleanText(panel).indexOf('\uAC00\uC871 \uC0DD\uD65C \uB370\uC774\uD130') >= 0) panel.remove()
     })
 
     var panels = Array.from(content.querySelectorAll('.panel'))
@@ -4612,11 +4602,7 @@
       var list = todayPanel.querySelector('.task-list')
       if (list && !todayPanel.dataset.scheduleReady) {
         todayPanel.dataset.scheduleReady = 'true'
-        list.innerHTML = [
-          '<li><span></span><strong>09:00 \uC5C4\uB9C8 \uC0DD\uC77C</strong><small>\uC0DD\uC77C · \uAC00\uC871</small></li>',
-          '<li><span></span><strong>14:30 \uC18C\uC544\uACFC \uC815\uAE30\uAC80\uC9C4</strong><small>\uBCD1\uC6D0 · \uCCAB\uC9F8</small></li>',
-          '<li><span></span><strong>19:00 \uAC00\uC871 \uC800\uB141</strong><small>\uC77C\uBC18 · \uC678\uC2DD</small></li>'
-        ].join('')
+        list.innerHTML = ''
       }
 
       todayPanel.style.order = '-10'
