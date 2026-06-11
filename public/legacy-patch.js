@@ -955,22 +955,7 @@
   }
 
   function shouldAllowLegacyLogin(card, submit) {
-    if (document.querySelector('.app-shell')) return false
-    var mode = getAuthMode(card)
-    if (mode !== 'login') return false
-    var payload = getAuthPayload(card)
-    if (!payload.email || !payload.password || payload.password.length < 8) {
-      if (submit.dataset.authSkipApiSync === 'true') return true
-      focusEmptyAuthField(card, payload, mode)
-      showPatchToast('\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
-      return false
-    }
-    submit.dataset.authBypass = 'true'
-    window.setTimeout(function () {
-      delete submit.dataset.authBypass
-    }, 1200)
-    if (submit.dataset.authSkipApiSync !== 'true') syncLoginSessionInBackground(payload, submit)
-    return true
+    return !!(submit && submit.dataset.authSkipApiSync === 'true')
   }
 
   function ensureAccountRecoveryActions(card) {
@@ -3123,25 +3108,130 @@
       root.className = 'patch-family-group-root community-grid'
       workspace.appendChild(root)
     }
+    root.innerHTML = '<section class="panel wide family-group-panel"><div class="api-empty-row"><strong>가족 정보를 불러오는 중입니다.</strong></div></section>'
+    loadFamilyGroupPage(root)
+    resumePatchObserver()
+  }
+
+  function loadFamilyGroupPage(root) {
+    apiRequest('/families').then(function (families) {
+      var list = Array.isArray(families) ? families : []
+      if (!list.length) {
+        renderFamilyCreatePage(root)
+        return
+      }
+      var family = list[0]
+      localStorage.setItem(AUTH_FAMILY_STORAGE_KEY, String(family.id))
+      return apiRequest('/families/' + encodeURIComponent(family.id) + '/members').then(function (members) {
+        renderFamilyManagePage(root, family, Array.isArray(members) ? members : [])
+      }).catch(function () {
+        renderFamilyManagePage(root, family, [])
+      })
+    }).catch(function () {
+      root.innerHTML = '<section class="panel wide family-group-panel">' + emptyRow('가족 정보를 불러오지 못했습니다.', '다시 로그인 후 확인해주세요.') + '</section>'
+    })
+  }
+
+  function renderFamilyCreatePage(root) {
     root.innerHTML = [
       '<section class="panel wide family-group-panel">',
-      '<div class="community-hero family-group-hero">',
-      '<div><span>Family Group</span><h2>\uAC00\uC871\uBCC4 \uAD8C\uD55C\uACFC \uCD08\uB300\uB97C \uAD00\uB9AC\uD569\uB2C8\uB2E4</h2><p>\uCD1D\uAD04\uAD00\uB9AC\uC790\uB294 \uC804\uCCB4 \uD655\uC778, \uAC00\uC871\uAD00\uB9AC\uC790\uB294 \uAD6C\uC131\uC6D0 \uCD08\uB300\uC640 CRUD \uAD8C\uD55C\uC744 \uAD00\uB9AC\uD558\uB294 \uD654\uBA74\uC785\uB2C8\uB2E4.</p></div>',
-      '<strong>\uC6B4\uC601 \uC900\uBE44<br><b>\uAD8C\uD55C \uC5F0\uACB0</b></strong>',
-      '</div>',
+      '<header class="panel-header"><h2>가족 생성</h2><button type="button">처음 설정</button></header>',
+      '<form class="code-form family-create-form">',
+      '<label><span>가족명</span><input data-family-name maxlength="40" placeholder="예: 우리 가족" /></label>',
+      '<button class="submit-action" type="submit">가족 생성</button>',
+      '</form>',
+      '<div class="api-empty-row"><strong>아직 연결된 가족그룹이 없습니다.</strong><small>총괄관리자 계정으로 가족을 먼저 생성한 뒤 구성원을 초대하고 권한을 부여합니다.</small></div>',
+      '</section>'
+    ].join('')
+    var form = root.querySelector('.family-create-form')
+    var input = root.querySelector('[data-family-name]')
+    if (input) input.focus()
+    if (!form) return
+    form.addEventListener('submit', function (event) {
+      event.preventDefault()
+      var name = String((input || {}).value || '').trim()
+      if (!name) {
+        showPatchToast('가족명을 입력해주세요.')
+        if (input) input.focus()
+        return
+      }
+      var submit = form.querySelector('button[type="submit"]')
+      if (submit) {
+        submit.disabled = true
+        submit.textContent = '생성 중'
+      }
+      postJson('/families', { name: name }).then(function (family) {
+        localStorage.setItem(AUTH_FAMILY_STORAGE_KEY, String(family.id))
+        showPatchToast('가족그룹을 생성했습니다.')
+        loadFamilyGroupPage(root)
+      }).catch(function (error) {
+        showPatchToast(error && error.status === 409 ? '이미 가족그룹에 속해 있습니다.' : '가족 생성에 실패했습니다.')
+        if (submit) {
+          submit.disabled = false
+          submit.textContent = '가족 생성'
+        }
+      })
+    })
+  }
+
+  function permissionText(member) {
+    var permissions = []
+    if (member.canRead) permissions.push('읽기')
+    if (member.canCreate) permissions.push('작성')
+    if (member.canUpdate) permissions.push('수정')
+    if (member.canDelete) permissions.push('삭제')
+    return permissions.length ? permissions.join('/') : '권한 없음'
+  }
+
+  function renderFamilyManagePage(root, family, members) {
+    var rows = members.length ? members.map(function (member) {
+      return '<article><div><strong>' + escapeHtml(member.role || 'MEMBER') + '</strong><span>사용자 ID ' + escapeHtml(member.userId) + ' · ' + escapeHtml(permissionText(member)) + '</span></div><b>' + escapeHtml(member.role === 'FAMILY_ADMIN' ? '가족관리자' : '구성원') + '</b></article>'
+    }).join('') : '<div class="api-empty-row"><strong>등록된 구성원이 없습니다.</strong><small>가족관리자가 구성원 초대와 권한 부여를 진행합니다.</small></div>'
+    root.innerHTML = [
+      '<section class="panel wide family-group-panel">',
+      '<header class="panel-header"><h2>가족그룹</h2><button type="button">실제 데이터</button></header>',
       '<div class="family-group-summary">',
-      '<article><span>\uD604\uC7AC \uAC00\uC871</span><strong>\uAE30\uBCF8 \uAC00\uC871</strong><small>\uAC00\uC871 ID 1</small></article>',
-      '<article><span>\uB0B4 \uC5ED\uD560</span><strong>\uAC00\uC871\uAD00\uB9AC\uC790</strong><small>\uC77D\uAE30/\uC791\uC131/\uC218\uC815/\uC0AD\uC81C</small></article>',
-      '<article><span>\uB2E4\uC74C \uC791\uC5C5</span><strong>\uCD08\uB300\uCF54\uB4DC</strong><small>\uAD8C\uD55C \uBCC4 \uC811\uADFC \uC5F0\uACB0</small></article>',
+      '<article><span>현재 가족</span><strong>' + escapeHtml(family.name || '-') + '</strong><small>가족 ID ' + escapeHtml(family.id) + '</small></article>',
+      '<article><span>구성원</span><strong>' + members.length + '명</strong><small>읽기/작성/수정/삭제 권한 관리</small></article>',
+      '<article><span>다음 작업</span><strong>초대/권한</strong><small>구성원 추가 후 CRUD 권한 부여</small></article>',
       '</div>',
       '<div class="family-group-list">',
-      '<article><div><strong>\uCD1D\uAD04\uAD00\uB9AC\uC790</strong><span>admin@family.test</span></div><b>\uC804\uCCB4 \uD655\uC778</b></article>',
-      '<article><div><strong>\uC5C4\uB9C8</strong><span>\uC77D\uAE30/\uC791\uC131/\uC218\uC815</span></div><b>\uAC00\uC871\uAD00\uB9AC\uC790</b></article>',
-      '<article><div><strong>\uC544\uBE60</strong><span>\uC77D\uAE30/\uC791\uC131</span></div><b>\uAD6C\uC131\uC6D0</b></article>',
+      rows,
       '</div>',
       '</section>'
     ].join('')
-    resumePatchObserver()
+  }
+
+  function ensureAdminBatchSaveButton() {
+    var title = getCleanText(document.querySelector('.topbar h1'))
+    if (title.indexOf('관리자') < 0) return
+    var panels = Array.from(document.querySelectorAll('.panel, .entry-panel')).filter(function (panel) {
+      var text = getCleanText(panel)
+      return text.indexOf('총괄관리자') >= 0 && text.indexOf('가족관리자') >= 0 && text.indexOf('가족구성원') >= 0
+    })
+    panels.forEach(function (panel) {
+      if (panel.querySelector('.batch-role-save-button')) return
+      var button = document.createElement('button')
+      button.type = 'button'
+      button.className = 'save-button batch-role-save-button'
+      button.textContent = '전체 저장'
+      button.addEventListener('click', function () {
+        var saveButtons = Array.from(panel.querySelectorAll('button.save-button')).filter(function (item) {
+          return item !== button && !item.disabled
+        })
+        if (!saveButtons.length) {
+          showPatchToast('저장할 수정 항목이 없습니다.')
+          return
+        }
+        showPatchConfirm('수정 중인 권한을 한 번에 저장할까요?', function () {
+          saveButtons.forEach(function (item) { item.click() })
+          showPatchToast('권한 변경을 저장했습니다.')
+        })
+      })
+      var header = panel.querySelector('.panel-header')
+      if (header) header.appendChild(button)
+      else panel.insertBefore(button, panel.firstChild)
+    })
   }
 
   function refreshCalendarPatch() {
@@ -7047,7 +7137,9 @@
   }, 60000)
   window.setInterval(function () {
     refreshServerDataViews(true)
+    ensureAdminBatchSaveButton()
   }, 120000)
+  window.setInterval(ensureAdminBatchSaveButton, 1000)
 
   document.addEventListener('submit', function (event) {
     var form = event.target && event.target.closest && event.target.closest('.schedule-form-card')
