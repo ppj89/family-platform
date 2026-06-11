@@ -864,6 +864,9 @@
     ;[300, 800, 1500, 3000, 5000, 7500].forEach(function (delay) {
       window.setTimeout(persist, delay)
     })
+    window.setTimeout(function () {
+      if (document.querySelector('.auth-card') && localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)) window.location.reload()
+    }, 900)
   }
 
   function storeAuthResponse(response) {
@@ -1446,6 +1449,9 @@
       protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
       protectedAuthSnapshot = { token: token, user: user }
       window.history.replaceState({}, document.title, window.location.pathname + window.location.search)
+      window.setTimeout(function () {
+        if (document.querySelector('.auth-card')) window.location.reload()
+      }, 200)
       return true
     } catch (error) {
       return false
