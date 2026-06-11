@@ -13,19 +13,22 @@
   var protectedAuthSnapshot = null
 
   window.setInterval(function () {
-    var existingToken = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    var existingToken = getStoredAuthToken()
     var existingUser = readStoredAuthUser()
     if (existingToken && existingUser && existingUser.email) {
       if (!protectedAuthSnapshot || protectedAuthSnapshot.token !== existingToken) {
-        protectedAuthSnapshot = { token: existingToken, user: existingUser }
+        protectedAuthSnapshot = {
+          token: existingToken,
+          user: existingUser,
+          persistent: shouldPersistAuthSession() && !!localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+        }
         protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
       }
       return
     }
     if (!protectedAuthSnapshot || !protectedAuthSnapshot.token) return
     if (Date.now() > protectedAuthUntil) return
-    localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, protectedAuthSnapshot.token)
-    localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(protectedAuthSnapshot.user))
+    writeAuthSession(protectedAuthSnapshot.token, protectedAuthSnapshot.user, protectedAuthSnapshot.persistent)
   }, 500)
   var MEDIA_MAX_FILES = 6
   var MEDIA_MAX_IMAGE_BYTES = 8 * 1024 * 1024
@@ -161,7 +164,7 @@
     }
 
     function currentToken() {
-      return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+      return getStoredAuthToken()
     }
 
     function apiGet(path) {
@@ -748,12 +751,51 @@
   }
 
   function isAutoLoginEnabled() {
-    return localStorage.getItem(AUTH_AUTO_LOGIN_STORAGE_KEY) !== 'false'
+    return localStorage.getItem(AUTH_AUTO_LOGIN_STORAGE_KEY) === 'true'
   }
 
   function isRememberEmailEnabled() {
-    return localStorage.getItem(AUTH_REMEMBER_EMAIL_ENABLED_STORAGE_KEY) === 'true'
-      || !!localStorage.getItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY)
+    var enabled = localStorage.getItem(AUTH_REMEMBER_EMAIL_ENABLED_STORAGE_KEY)
+    if (enabled !== null) return enabled === 'true'
+    return !!localStorage.getItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY)
+  }
+
+  function isAppRuntime() {
+    var userAgent = String(navigator.userAgent || '')
+    var standalone = false
+    try {
+      standalone = !!(window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+    } catch (error) {}
+    return standalone || !!navigator.standalone || /FamilyPlatformApp|Capacitor|Cordova|\bwv\)/i.test(userAgent)
+  }
+
+  function shouldPersistAuthSession() {
+    return isAutoLoginEnabled() || isAppRuntime()
+  }
+
+  function getStoredAuthToken() {
+    return sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+      || (shouldPersistAuthSession() ? localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) : null)
+  }
+
+  function readStoredAuthUser() {
+    try {
+      return JSON.parse(sessionStorage.getItem(AUTH_USER_STORAGE_KEY)
+        || (shouldPersistAuthSession() ? localStorage.getItem(AUTH_USER_STORAGE_KEY) : null)
+        || 'null')
+    } catch (error) {
+      return null
+    }
+  }
+
+  function writeAuthSession(token, user, persistent) {
+    var target = persistent ? localStorage : sessionStorage
+    var other = persistent ? sessionStorage : localStorage
+    if (token) target.setItem(AUTH_TOKEN_STORAGE_KEY, token)
+    else target.removeItem(AUTH_TOKEN_STORAGE_KEY)
+    target.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user))
+    other.removeItem(AUTH_TOKEN_STORAGE_KEY)
+    other.removeItem(AUTH_USER_STORAGE_KEY)
   }
 
   function ensureLoginPreferenceControls(card, submit) {
@@ -777,7 +819,7 @@
     if (remember) remember.checked = isRememberEmailEnabled()
     if (autoLogin) autoLogin.checked = isAutoLoginEnabled()
     syncLoginPreferenceClasses(card)
-    if (savedEmail && emailInput && !emailInput.value) {
+    if (isRememberEmailEnabled() && savedEmail && emailInput && !emailInput.value) {
       setNativeInputValue(emailInput, savedEmail)
     }
   }
@@ -852,8 +894,9 @@
   }
 
   function completeAuth(button, response) {
-    var storedUser = storeAuthResponse(response)
-    function persist() { storeAuthResponse(response) }
+    var persistent = shouldPersistAuthSession()
+    var storedUser = storeAuthResponse(response, persistent)
+    function persist() { storeAuthResponse(response, persistent) }
     persist()
     activateLegacyAuthScreen(button, storedUser)
     window.setTimeout(function () {
@@ -869,21 +912,22 @@
       window.setTimeout(persist, delay)
     })
     window.setTimeout(function () {
-      if (document.querySelector('.auth-card') && localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)) window.location.reload()
+      if (document.querySelector('.auth-card') && getStoredAuthToken()) window.location.reload()
     }, 900)
   }
 
-  function storeAuthResponse(response) {
+  function storeAuthResponse(response, persistent) {
     var storedUser = {
       id: response.userId,
       email: response.email,
       nickname: response.nickname,
       platformAdmin: response.platformAdmin
     }
+    var shouldPersist = persistent === undefined ? shouldPersistAuthSession() : !!persistent
+    var token = response.accessToken || getStoredAuthToken()
     protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
-    protectedAuthSnapshot = { token: response.accessToken, user: storedUser }
-    if (response.accessToken) localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.accessToken)
-    localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(storedUser))
+    protectedAuthSnapshot = { token: token, user: storedUser, persistent: shouldPersist }
+    writeAuthSession(token, storedUser, shouldPersist)
     return storedUser
   }
 
@@ -1297,26 +1341,19 @@
     input.dispatchEvent(new Event('change', { bubbles: true }))
   }
 
-  function readStoredAuthUser() {
-    try {
-      return JSON.parse(localStorage.getItem(AUTH_USER_STORAGE_KEY) || 'null')
-    } catch (error) {
-      return null
-    }
-  }
-
   function apiBaseUrlForAuth() {
     return window.FAMILY_PLATFORM_API_BASE_URL || localStorage.getItem('family-platform-api-base-url') || '/api'
   }
 
   function clearStoredAuth() {
     if (protectedAuthSnapshot && Date.now() < protectedAuthUntil) {
-      if (protectedAuthSnapshot.token) localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, protectedAuthSnapshot.token)
-      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(protectedAuthSnapshot.user))
+      writeAuthSession(protectedAuthSnapshot.token, protectedAuthSnapshot.user, protectedAuthSnapshot.persistent)
       return
     }
     localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
     localStorage.removeItem(AUTH_USER_STORAGE_KEY)
+    sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+    sessionStorage.removeItem(AUTH_USER_STORAGE_KEY)
     localStorage.removeItem(AUTH_FAMILY_STORAGE_KEY)
     localStorage.removeItem(AUTH_TRIP_STORAGE_KEY)
   }
@@ -1326,6 +1363,8 @@
     protectedAuthSnapshot = null
     localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
     localStorage.removeItem(AUTH_USER_STORAGE_KEY)
+    sessionStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+    sessionStorage.removeItem(AUTH_USER_STORAGE_KEY)
     localStorage.removeItem(AUTH_FAMILY_STORAGE_KEY)
     localStorage.removeItem(AUTH_TRIP_STORAGE_KEY)
   }
@@ -1338,7 +1377,7 @@
     lastLogoutRequestAt = now
     protectedAuthUntil = 0
     protectedAuthSnapshot = null
-    var token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    var token = getStoredAuthToken()
     if (!token) return
     fetch(apiBaseUrlForAuth() + '/auth/logout', {
       method: 'POST',
@@ -1369,8 +1408,9 @@
   function restoreAuthSession() {
     var card = document.querySelector('.auth-card')
     if (!card || card.dataset.sessionRestoreReady === 'true') return
-    if (!isAutoLoginEnabled()) return
-    var token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    var token = getStoredAuthToken()
+    var hasSessionToken = !!sessionStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    if (!isAutoLoginEnabled() && !hasSessionToken && !isAppRuntime()) return
     var storedUser = readStoredAuthUser()
     if (!token || !storedUser || !storedUser.email) return
 
@@ -1387,11 +1427,12 @@
         nickname: response.nickname,
         platformAdmin: response.platformAdmin
       }
-    protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
-      protectedAuthSnapshot = { token: response.accessToken, user: storedUser }
+      var persistent = isAppRuntime()
+        || (isAutoLoginEnabled() && !!localStorage.getItem(AUTH_TOKEN_STORAGE_KEY))
+      protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
+      protectedAuthSnapshot = { token: response.accessToken || token, user: storedUser, persistent: persistent }
       function persist() {
-        if (response.accessToken) localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, response.accessToken)
-        localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(storedUser))
+        writeAuthSession(response.accessToken || token, storedUser, persistent)
       }
       persist()
       var emailInput = card.querySelector('[data-field="login-email"]') || card.querySelector('input')
@@ -1421,7 +1462,7 @@
   }
 
   function validateStoredAuthSession() {
-    var token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    var token = getStoredAuthToken()
     if (!token) return
     fetch(apiBaseUrlForAuth() + '/auth/me', {
       headers: { Authorization: 'Bearer ' + token }
@@ -1447,11 +1488,11 @@
     if (!token || !userText) return false
     try {
       var user = JSON.parse(userText)
-      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token)
-      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user))
+      var persistent = shouldPersistAuthSession()
+      writeAuthSession(token, user, persistent)
       localStorage.setItem('family-platform-sso-complete', String(Date.now()))
       protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
-      protectedAuthSnapshot = { token: token, user: user }
+      protectedAuthSnapshot = { token: token, user: user, persistent: persistent }
       window.history.replaceState({}, document.title, window.location.pathname + window.location.search)
       window.setTimeout(function () {
         if (document.querySelector('.auth-card')) window.location.reload()
@@ -1501,7 +1542,7 @@
         showPatchToast('\uC0C8 \uBE44\uBC00\uBC88\uD638 \uD655\uC778\uC774 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.')
         return
       }
-      if (!localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)) {
+      if (!getStoredAuthToken()) {
         showPatchToast('\uB2E4\uC2DC \uB85C\uADF8\uC778 \uD6C4 \uBCC0\uACBD\uD574\uC8FC\uC138\uC694.')
         return
       }
@@ -2618,7 +2659,7 @@
   }
 
   function fetchSchedulesDirect(startDate, endDate) {
-    var token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    var token = getStoredAuthToken()
     if (!token) return Promise.resolve([])
     var headers = { Authorization: 'Bearer ' + token }
     return fetch('/api/families', { headers: headers }).then(function (response) {
@@ -2641,7 +2682,7 @@
 
   function ensureYearScheduleCache(year) {
     var cache = window.__familyYearScheduleCache
-    var cacheToken = (localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || '').slice(-24)
+    var cacheToken = (getStoredAuthToken() || '').slice(-24)
     var cacheFamily = localStorage.getItem(AUTH_FAMILY_STORAGE_KEY) || ''
     if (cache && cache.year === year && cache.token === cacheToken && cache.family === cacheFamily && (cache.loaded || cache.loading)) return
     window.__familyYearScheduleCache = { year: year, token: cacheToken, family: cacheFamily, loading: true, loaded: false, months: {} }
