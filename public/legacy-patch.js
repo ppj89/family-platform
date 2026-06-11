@@ -643,6 +643,88 @@
     return !checkbox || checkbox.checked
   }
 
+  function nicknameInputOf(card) {
+    return card && card.querySelector('[data-field="auth-nickname"]')
+  }
+
+  function setNicknameCheckState(card, state, message) {
+    var status = card && card.querySelector('[data-auth-nickname-status]')
+    var input = nicknameInputOf(card)
+    if (!status) return
+    status.dataset.state = state || 'idle'
+    status.textContent = message || ''
+    if (input) {
+      input.dataset.nicknameCheckValue = state === 'available' || state === 'unavailable' ? String(input.value || '').trim() : ''
+      input.dataset.nicknameAvailable = state === 'available' ? 'true' : state === 'unavailable' ? 'false' : ''
+    }
+  }
+
+  function isNicknameUnavailable(card, nickname) {
+    var input = nicknameInputOf(card)
+    return !!(input && input.dataset.nicknameAvailable === 'false' && input.dataset.nicknameCheckValue === String(nickname || '').trim())
+  }
+
+  function ensureNicknameCheckControls(card, nicknameField) {
+    var input = nicknameInputOf(card)
+    if (!card || !nicknameField || !input) return
+    var row = nicknameField.querySelector('.auth-nickname-row')
+    if (!row) {
+      row = document.createElement('div')
+      row.className = 'auth-nickname-row'
+      input.insertAdjacentElement('beforebegin', row)
+      row.appendChild(input)
+    }
+    var button = row.querySelector('[data-auth-nickname-check]')
+    if (!button) {
+      button = document.createElement('button')
+      button.type = 'button'
+      button.dataset.authNicknameCheck = 'true'
+      button.textContent = '\uD655\uC778'
+      row.appendChild(button)
+    }
+    var status = nicknameField.querySelector('[data-auth-nickname-status]')
+    if (!status) {
+      status = document.createElement('p')
+      status.dataset.authNicknameStatus = 'true'
+      status.dataset.state = 'idle'
+      nicknameField.appendChild(status)
+    }
+    if (nicknameField.dataset.nicknameCheckReady === 'true') return
+    nicknameField.dataset.nicknameCheckReady = 'true'
+    input.addEventListener('input', function () {
+      setNicknameCheckState(card, 'idle', '')
+    })
+    button.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      var nickname = String(input.value || '').trim()
+      if (!nickname) {
+        input.focus()
+        setNicknameCheckState(card, 'error', '\uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+        showPatchToast('\uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+        return
+      }
+      button.disabled = true
+      button.textContent = '\uD655\uC778 \uC911'
+      setNicknameCheckState(card, 'checking', '\uB2C9\uB124\uC784\uC744 \uD655\uC778\uD558\uB294 \uC911\uC785\uB2C8\uB2E4.')
+      apiJson('/auth/nickname/check', { nickname: nickname })
+        .then(function (response) {
+          if (response && response.available) {
+            setNicknameCheckState(card, 'available', '\uC0AC\uC6A9 \uAC00\uB2A5\uD55C \uB2C9\uB124\uC784\uC785\uB2C8\uB2E4.')
+          } else {
+            setNicknameCheckState(card, 'unavailable', '\uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uB2C9\uB124\uC784\uC785\uB2C8\uB2E4.')
+          }
+        })
+        .catch(function (error) {
+          setNicknameCheckState(card, 'error', parseAuthError(error))
+        })
+        .finally(function () {
+          button.disabled = false
+          button.textContent = '\uD655\uC778'
+        })
+    })
+  }
+
   function isAutoLoginEnabled() {
     return localStorage.getItem(AUTH_AUTO_LOGIN_STORAGE_KEY) !== 'false'
   }
@@ -1142,6 +1224,7 @@
       else if (submit) submit.insertAdjacentElement('beforebegin', nicknameField)
       else card.appendChild(nicknameField)
     }
+    ensureNicknameCheckControls(card, nicknameField)
 
     var consentField = card.querySelector('.auth-required-consent')
     if (!consentField) {
@@ -1451,6 +1534,11 @@
         showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
         return
       }
+      if (mode === 'register' && isNicknameUnavailable(card, payload.nickname)) {
+        focusEmptyAuthField(card, payload, mode)
+        showPatchToast('\uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uB2C9\uB124\uC784\uC785\uB2C8\uB2E4. \uB2E4\uB978 \uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+        return
+      }
       if (mode === 'register' && !isRequiredConsentChecked(card)) {
         focusEmptyAuthField(card, payload, mode)
         showPatchToast('\uD544\uC218 \uB3D9\uC758 \uD6C4 \uD68C\uC6D0\uAC00\uC785\uC744 \uC9C4\uD589\uD574\uC8FC\uC138\uC694.')
@@ -1473,6 +1561,11 @@
     if (!payload.email || !payload.password || payload.password.length < 8 || (mode === 'register' && !payload.nickname)) {
       focusEmptyAuthField(card, payload, mode)
       showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+      return
+    }
+    if (mode === 'register' && isNicknameUnavailable(card, payload.nickname)) {
+      focusEmptyAuthField(card, payload, mode)
+      showPatchToast('\uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uB2C9\uB124\uC784\uC785\uB2C8\uB2E4. \uB2E4\uB978 \uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
       return
     }
     if (mode === 'register' && !isRequiredConsentChecked(card)) {

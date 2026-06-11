@@ -258,6 +258,7 @@ func (a *app) routes() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /api/health", a.health)
 	mux.HandleFunc("POST /api/auth/register", a.register)
+	mux.HandleFunc("POST /api/auth/nickname/check", a.checkNickname)
 	mux.HandleFunc("POST /api/auth/login", a.login)
 	mux.HandleFunc("POST /api/auth/logout", a.requireAuth(a.logout))
 	mux.HandleFunc("GET /api/auth/me", a.requireAuth(a.me))
@@ -333,6 +334,29 @@ func (a *app) routes() http.Handler {
 
 func (a *app) health(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "UP", "runtime": "go"})
+}
+
+func (a *app) checkNickname(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		Nickname string `json:"nickname"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	nickname := strings.TrimSpace(req.Nickname)
+	if nickname == "" {
+		writeError(w, http.StatusBadRequest, "nickname is required")
+		return
+	}
+	var exists bool
+	if err := a.db.QueryRow(r.Context(), "select exists(select 1 from app_users where lower(nickname) = lower($1))", nickname).Scan(&exists); err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"available": !exists,
+		"nickname":  nickname,
+	})
 }
 
 func (a *app) register(w http.ResponseWriter, r *http.Request) {

@@ -9725,6 +9725,12 @@ html.calendar-jump-open body:has(.family-calendar-panel) .family-calendar-panel 
   font-weight: 800;
 }
 
+.auth-card .auth-nickname-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 76px;
+  gap: 8px;
+}
+
 .auth-card .auth-nickname-field input {
   height: 52px;
   border: 0;
@@ -9738,6 +9744,44 @@ html.calendar-jump-open body:has(.family-calendar-panel) .family-calendar-panel 
 
 .auth-card .auth-nickname-field input:focus {
   box-shadow: inset 0 0 0 2px #3182f6;
+}
+
+.auth-card .auth-nickname-row button {
+  height: 52px;
+  border: 0;
+  border-radius: 14px;
+  background: #edf6ff;
+  color: #1b64da;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.auth-card .auth-nickname-row button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.auth-card [data-auth-nickname-status] {
+  min-height: 18px;
+  margin: -2px 2px 0;
+  color: #8b95a1;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.auth-card [data-auth-nickname-status][data-state="available"] {
+  color: #0ca678;
+}
+
+.auth-card [data-auth-nickname-status][data-state="unavailable"],
+.auth-card [data-auth-nickname-status][data-state="error"] {
+  color: #e5484d;
+}
+
+.auth-card [data-auth-nickname-status][data-state="checking"] {
+  color: #3182f6;
 }
 
 .auth-card .auth-login-preferences input[type="checkbox"] {
@@ -9759,6 +9803,28 @@ html.calendar-jump-open body:has(.family-calendar-panel) .family-calendar-panel 
   background: #3b424c;
   color: #f3f5f7;
   box-shadow: inset 0 0 0 1px #525b66;
+}
+
+.theme-dark .auth-card .auth-nickname-row button {
+  background: rgba(49, 130, 246, 0.16);
+  color: #9dccff;
+}
+
+.theme-dark .auth-card [data-auth-nickname-status] {
+  color: #aeb7c2;
+}
+
+.theme-dark .auth-card [data-auth-nickname-status][data-state="available"] {
+  color: #63e6be;
+}
+
+.theme-dark .auth-card [data-auth-nickname-status][data-state="unavailable"],
+.theme-dark .auth-card [data-auth-nickname-status][data-state="error"] {
+  color: #ff8a8a;
+}
+
+.theme-dark .auth-card [data-auth-nickname-status][data-state="checking"] {
+  color: #9dccff;
 }
 
 @media (max-width: 640px) {
