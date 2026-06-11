@@ -261,6 +261,7 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("POST /api/auth/login", a.login)
 	mux.HandleFunc("POST /api/auth/logout", a.requireAuth(a.logout))
 	mux.HandleFunc("GET /api/auth/me", a.requireAuth(a.me))
+	mux.HandleFunc("POST /api/auth/password/change", a.requireAuth(a.changePassword))
 	mux.HandleFunc("GET /api/auth/verify-email", a.verifyEmail)
 	mux.HandleFunc("POST /api/auth/verification/resend", a.resendVerificationEmail)
 	mux.HandleFunc("POST /api/auth/recovery/find-email", a.findEmail)
@@ -529,6 +530,51 @@ func (a *app) me(w http.ResponseWriter, r *http.Request, user authUser) {
 		Nickname:      nickname,
 		PlatformAdmin: user.PlatformAdmin,
 	})
+}
+
+func (a *app) changePassword(w http.ResponseWriter, r *http.Request, user authUser) {
+	var req struct {
+		CurrentPassword string `json:"currentPassword"`
+		NewPassword     string `json:"newPassword"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	if len(req.NewPassword) < 8 {
+		writeError(w, http.StatusBadRequest, "new password length >= 8 is required")
+		return
+	}
+	var currentHash string
+	err := a.db.QueryRow(r.Context(), "select coalesce(password_hash, '') from app_users where id = $1", user.ID).Scan(&currentHash)
+	if err != nil {
+		writeError(w, http.StatusUnauthorized, "invalid session")
+		return
+	}
+	if currentHash != "" && bcrypt.CompareHashAndPassword([]byte(currentHash), []byte(req.CurrentPassword)) != nil {
+		a.recordLoginHistory(r.Context(), &user.ID, user.Email, "password", "PASSWORD_CHANGE", "FAIL", "invalid current password")
+		writeError(w, http.StatusUnauthorized, "current password is invalid")
+		return
+	}
+	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcrypt.DefaultCost)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "password hashing failed")
+		return
+	}
+	_, err = a.db.Exec(r.Context(), `
+		update app_users
+		set password_hash = $1,
+		    failed_login_attempts = 0,
+		    locked_until = null,
+		    email_verified_at = coalesce(email_verified_at, now()),
+		    email_verification_required = false
+		where id = $2
+	`, string(passwordHash), user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "password change failed")
+		return
+	}
+	a.recordLoginHistory(r.Context(), &user.ID, user.Email, "password", "PASSWORD_CHANGE", "SUCCESS", "")
+	writeJSON(w, http.StatusOK, map[string]string{"message": "password changed"})
 }
 
 func (a *app) oauthProviders(w http.ResponseWriter, r *http.Request) {

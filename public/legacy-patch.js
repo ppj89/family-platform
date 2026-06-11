@@ -544,6 +544,8 @@
     if (text.indexOf('nickname is already registered') >= 0) return '\uC774\uBBF8 \uC0AC\uC6A9 \uC911\uC778 \uB2C9\uB124\uC784\uC785\uB2C8\uB2E4. \uB2E4\uB978 \uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.'
     if (text.indexOf('daily mail request limit exceeded') >= 0 || text.indexOf('429') >= 0) return '\uC624\uB298 \uC694\uCCAD \uAC00\uB2A5\uD55C \uD69F\uC218\uB97C \uCD08\uACFC\uD588\uC2B5\uB2C8\uB2E4. \uB0B4\uC77C \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.'
     if (text.indexOf('oauth email consent required') >= 0) return '\uC911\uBCF5 \uAC00\uC785 \uBC29\uC9C0\uB97C \uC704\uD574 \uC774\uBA54\uC77C \uC81C\uACF5 \uD544\uC218 \uB3D9\uC758\uAC00 \uD544\uC694\uD569\uB2C8\uB2E4.'
+    if (text.indexOf('current password is invalid') >= 0) return '\uD604\uC7AC \uBE44\uBC00\uBC88\uD638\uAC00 \uB9DE\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.'
+    if (text.indexOf('password changed') >= 0) return '\uBE44\uBC00\uBC88\uD638\uAC00 \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4.'
     if (text.indexOf('locked') >= 0 || text.indexOf('423') >= 0) {
       var seconds = Number((text.match(/(\d+)\s*seconds/i) || [])[1] || 0)
       var minutes = seconds ? Math.ceil(seconds / 60) : 5
@@ -1260,6 +1262,86 @@
     } catch (error) {
       return false
     }
+  }
+
+  function closePasswordChangeDialog() {
+    var dialog = document.querySelector('.account-password-backdrop')
+    if (dialog) dialog.remove()
+  }
+
+  function openPasswordChangeDialog() {
+    closePasswordChangeDialog()
+    var backdrop = document.createElement('div')
+    backdrop.className = 'account-password-backdrop'
+    backdrop.innerHTML = [
+      '<section class="account-password-dialog" role="dialog" aria-modal="true" aria-label="\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD">',
+      '<div class="account-password-header"><strong>\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD</strong><button type="button" data-password-dialog-close>X</button></div>',
+      '<p>\uD604\uC7AC \uBE44\uBC00\uBC88\uD638\uB97C \uD655\uC778\uD55C \uB4A4 \uC0C8 \uBE44\uBC00\uBC88\uD638\uB85C \uBCC0\uACBD\uD569\uB2C8\uB2E4. \uC18C\uC15C \uACC4\uC815\uC740 \uD604\uC7AC \uBE44\uBC00\uBC88\uD638\uB97C \uBE44\uC6CC\uB450\uACE0 \uC124\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.</p>',
+      '<label><span>\uD604\uC7AC \uBE44\uBC00\uBC88\uD638</span><input data-current-password type="password" autocomplete="current-password" placeholder="\uD604\uC7AC \uBE44\uBC00\uBC88\uD638" /></label>',
+      '<label><span>\uC0C8 \uBE44\uBC00\uBC88\uD638</span><input data-new-password type="password" autocomplete="new-password" placeholder="8\uC790 \uC774\uC0C1" minlength="8" /></label>',
+      '<label><span>\uC0C8 \uBE44\uBC00\uBC88\uD638 \uD655\uC778</span><input data-confirm-password type="password" autocomplete="new-password" placeholder="\uB2E4\uC2DC \uC785\uB825" minlength="8" /></label>',
+      '<div class="account-password-actions"><button type="button" class="cancel-button" data-password-dialog-close>\uCDE8\uC18C</button><button type="button" class="save-button" data-password-change-submit>\uBCC0\uACBD</button></div>',
+      '</section>'
+    ].join('')
+    backdrop.addEventListener('click', function (event) {
+      if (event.target === backdrop || (event.target.closest && event.target.closest('[data-password-dialog-close]'))) {
+        closePasswordChangeDialog()
+      }
+    })
+    var submit = backdrop.querySelector('[data-password-change-submit]')
+    submit.addEventListener('click', function () {
+      var current = String((backdrop.querySelector('[data-current-password]') || {}).value || '')
+      var next = String((backdrop.querySelector('[data-new-password]') || {}).value || '')
+      var confirm = String((backdrop.querySelector('[data-confirm-password]') || {}).value || '')
+      if (next.length < 8) {
+        backdrop.querySelector('[data-new-password]').focus()
+        showPatchToast('\uC0C8 \uBE44\uBC00\uBC88\uD638\uB294 8\uC790 \uC774\uC0C1 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+        return
+      }
+      if (next !== confirm) {
+        backdrop.querySelector('[data-confirm-password]').focus()
+        showPatchToast('\uC0C8 \uBE44\uBC00\uBC88\uD638 \uD655\uC778\uC774 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.')
+        return
+      }
+      if (!localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)) {
+        showPatchToast('\uB2E4\uC2DC \uB85C\uADF8\uC778 \uD6C4 \uBCC0\uACBD\uD574\uC8FC\uC138\uC694.')
+        return
+      }
+      submit.disabled = true
+      submit.textContent = '\uBCC0\uACBD \uC911'
+      apiRequest('/auth/password/change', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword: current, newPassword: next })
+      }).then(function () {
+        closePasswordChangeDialog()
+        showPatchToast('\uBE44\uBC00\uBC88\uD638\uAC00 \uBCC0\uACBD\uB418\uC5C8\uC2B5\uB2C8\uB2E4.')
+      }).catch(function (error) {
+        submit.disabled = false
+        submit.textContent = '\uBCC0\uACBD'
+        showPatchToast(parseAuthError(error))
+      })
+    })
+    document.body.appendChild(backdrop)
+    var firstInput = backdrop.querySelector('[data-current-password]')
+    if (firstInput) firstInput.focus()
+  }
+
+  function ensurePasswordChangeAction() {
+    if (document.querySelector('.auth-card')) return
+    var actions = document.querySelector('.top-actions')
+    if (!actions || actions.querySelector('[data-account-password-change]')) return
+    var logout = Array.from(actions.querySelectorAll('button')).find(function (button) {
+      return getCleanText(button).replace(/\s+/g, '') === '\uB85C\uADF8\uC544\uC6C3'
+    })
+    if (!logout) return
+    var button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'secondary-action account-password-change'
+    button.dataset.accountPasswordChange = 'true'
+    button.textContent = '\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD'
+    button.addEventListener('click', openPasswordChangeDialog)
+    if (logout) actions.insertBefore(button, logout)
+    else actions.appendChild(button)
   }
 
   function enhanceAuthApi() {
@@ -2887,6 +2969,7 @@
     enhanceAuthApi()
     consumeSsoFragment()
     restoreAuthSession()
+    ensurePasswordChangeAction()
     enhanceBabyGrowthTabs()
     enhanceAuthSso()
     enhanceHomeDashboard()

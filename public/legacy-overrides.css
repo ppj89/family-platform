@@ -820,6 +820,141 @@ body.api-loading-blocked::before {
   cursor: pointer;
 }
 
+.account-password-change {
+  white-space: nowrap;
+}
+
+.account-password-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.46);
+  backdrop-filter: blur(8px);
+}
+
+.account-password-dialog {
+  display: grid;
+  gap: 14px;
+  width: min(460px, 100%);
+  border-radius: 24px;
+  padding: 24px;
+  background: #ffffff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.24);
+}
+
+.account-password-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.account-password-header strong {
+  color: #191f28;
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.account-password-header button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 14px;
+  background: #f2f4f6;
+  color: #191f28;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.account-password-dialog p {
+  margin: 0;
+  color: #6b7684;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.account-password-dialog label {
+  display: grid;
+  gap: 8px;
+  color: #4e5968;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.account-password-dialog input {
+  width: 100%;
+  height: 52px;
+  border: 1px solid #dfe3e8;
+  border-radius: 16px;
+  padding: 0 15px;
+  background: #ffffff;
+  color: #191f28;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 800;
+  outline: none;
+}
+
+.account-password-dialog input:focus {
+  border-color: #3182f6;
+  box-shadow: 0 0 0 4px rgba(49, 130, 246, 0.12);
+}
+
+.account-password-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.account-password-actions button {
+  min-height: 50px;
+  border: 0;
+  border-radius: 16px;
+  font: inherit;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.account-password-actions .cancel-button {
+  background: #fff1f2;
+  color: #e5484d;
+}
+
+.account-password-actions .save-button {
+  background: #3182f6;
+  color: #ffffff;
+}
+
+.theme-dark .account-password-dialog {
+  background: #202632;
+}
+
+.theme-dark .account-password-header strong,
+.theme-dark .account-password-header button,
+.theme-dark .account-password-dialog input {
+  color: #f8fafc;
+}
+
+.theme-dark .account-password-header button {
+  background: #2b3442;
+}
+
+.theme-dark .account-password-dialog p,
+.theme-dark .account-password-dialog label {
+  color: #cbd5e1;
+}
+
+.theme-dark .account-password-dialog input {
+  border-color: #3a4658;
+  background: #111827;
+}
+
 .auth-required-consent {
   display: flex;
   align-items: flex-start;
