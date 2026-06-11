@@ -6066,10 +6066,14 @@
 
   function normalizeRestaurantVisitDate() {
     if (!pageHeadingIs('\uB9DB\uC9D1')) return
-    var visitDateInput = Array.from(document.querySelectorAll('.restaurant-form label, .entry-panel label')).find(function (label) {
+    var visitDateField = Array.from(document.querySelectorAll('.date-picker-field, .restaurant-form label, .entry-panel label')).find(function (label) {
       return label.textContent.indexOf('\uBC29\uBB38\uC77C') !== -1
     })
-    visitDateInput = visitDateInput && visitDateInput.querySelector('input')
+    var triggerText = visitDateField && visitDateField.querySelector('.date-picker-trigger span')
+    if (triggerText && (!triggerText.textContent || triggerText.textContent.trim() === '2026.06.03')) {
+      triggerText.textContent = formatDotDate(new Date())
+    }
+    var visitDateInput = visitDateField && visitDateField.querySelector('input')
     if (visitDateInput && (!visitDateInput.value || visitDateInput.value === '2026.06.03')) {
       setInputValue(visitDateInput, formatDotDate(new Date()))
     }
