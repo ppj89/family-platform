@@ -55,10 +55,10 @@ type config struct {
 	maxImageBytes             int64
 	maxVideoBytes             int64
 	emailVerificationRequired bool
-	mailDailyLimit           int
-	brevoAPIKey              string
-	mailFromEmail            string
-	mailFromName             string
+	mailDailyLimit            int
+	brevoAPIKey               string
+	mailFromEmail             string
+	mailFromName              string
 	smtpHost                  string
 	smtpPort                  string
 	smtpUsername              string
@@ -197,10 +197,10 @@ func loadConfig() (config, error) {
 		maxImageBytes:             parseSize(getenv("APP_MEDIA_MAX_IMAGE_SIZE", "8MB"), 8*1024*1024),
 		maxVideoBytes:             parseSize(getenv("APP_MEDIA_MAX_VIDEO_SIZE", "30MB"), 30*1024*1024),
 		emailVerificationRequired: envBool("APP_AUTH_EMAIL_VERIFICATION_REQUIRED", false),
-		mailDailyLimit:           envInt("APP_MAIL_DAILY_LIMIT_PER_IDENTIFIER", 3),
-		brevoAPIKey:              getenv("APP_BREVO_API_KEY", ""),
-		mailFromEmail:            getenv("APP_MAIL_FROM_EMAIL", ""),
-		mailFromName:             getenv("APP_MAIL_FROM_NAME", "Family Platform"),
+		mailDailyLimit:            envInt("APP_MAIL_DAILY_LIMIT_PER_IDENTIFIER", 3),
+		brevoAPIKey:               getenv("APP_BREVO_API_KEY", ""),
+		mailFromEmail:             getenv("APP_MAIL_FROM_EMAIL", ""),
+		mailFromName:              getenv("APP_MAIL_FROM_NAME", "Family Platform"),
 		smtpHost:                  getenv("APP_SMTP_HOST", ""),
 		smtpPort:                  getenv("APP_SMTP_PORT", "587"),
 		smtpUsername:              getenv("APP_SMTP_USERNAME", ""),
