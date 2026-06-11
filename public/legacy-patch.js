@@ -557,7 +557,7 @@
     }
     if (text.indexOf('email verification') >= 0 || text.indexOf('403') >= 0) return '\uC774\uBA54\uC77C \uC778\uC99D \uD6C4 \uB85C\uADF8\uC778\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uBC1B\uC740 \uBA54\uC77C\uC758 \uC778\uC99D \uB9C1\uD06C\uB97C \uD655\uC778\uD574\uC8FC\uC138\uC694.'
     if (text.indexOf('already registered') >= 0 || text.indexOf('email is already registered') >= 0) return '이미 가입된 이메일입니다. 1인당 1개 계정만 사용할 수 있습니다.'
-    if (text.indexOf('Invalid email or password') >= 0) return '이메일 또는 비밀번호를 확인해주세요.'
+    if (text.indexOf('Invalid email or password') >= 0) return '이메일/관리자 아이디 또는 비밀번호를 확인해주세요.'
     if (text.indexOf('length >= 8') >= 0 || text.indexOf('invalid') >= 0 || text.indexOf('400') >= 0) return '이메일, 닉네임, 8자 이상 비밀번호를 확인해주세요.'
     return '로그인 처리 중 오류가 발생했습니다.'
   }
@@ -843,7 +843,7 @@
     if (description) {
       description.textContent = mode === 'register'
         ? '\uB2C9\uB124\uC784\uC740 \uAC8C\uC2DC\uAE00\uACFC \uAC00\uC871 \uAE30\uB85D\uC5D0 \uD45C\uC2DC\uB429\uB2C8\uB2E4.'
-        : '\uAC00\uC785\uD55C \uC774\uBA54\uC77C\uACFC \uBE44\uBC00\uBC88\uD638\uB85C \uC811\uC18D\uD569\uB2C8\uB2E4.'
+        : '\uAC00\uC785\uD55C \uC774\uBA54\uC77C \uB610\uB294 \uAD00\uB9AC\uC790 \uC544\uC774\uB514\uB85C \uC811\uC18D\uD569\uB2C8\uB2E4.'
     }
   }
 
@@ -1180,9 +1180,10 @@
 
     if (emailInput) {
       emailInput.dataset.field = 'auth-email'
-      emailInput.type = 'email'
-      emailInput.autocomplete = 'email'
-      if (!emailInput.placeholder || getCleanText(emailInput).indexOf('email') < 0) emailInput.placeholder = 'email@example.com'
+      emailInput.type = 'text'
+      emailInput.autocomplete = 'username'
+      emailInput.inputMode = 'email'
+      emailInput.placeholder = '이메일 또는 관리자 아이디'
     }
     if (passwordInput) {
       passwordInput.dataset.field = 'auth-password'

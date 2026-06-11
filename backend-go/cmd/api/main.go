@@ -484,9 +484,11 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 	if !readJSON(w, r, &req) {
 		return
 	}
-	email := normalizeEmail(req.Email)
+	identifier := strings.TrimSpace(req.Email)
+	email := normalizeEmail(identifier)
+	loginID := normalizeLoginID(identifier)
 	var userID int64
-	var nickname, passwordHash string
+	var nickname, passwordHash, accountEmail, accountLoginID string
 	var platformAdmin bool
 	var activeSessionID sql.NullString
 	var lockedUntil sql.NullTime
@@ -494,16 +496,21 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 	var emailVerificationRequired bool
 	var failedAttempts int
 	err := a.db.QueryRow(r.Context(), `
-		select id, nickname, platform_admin, coalesce(password_hash, ''), active_session_id, locked_until, coalesce(failed_login_attempts, 0), email_verified_at, coalesce(email_verification_required, false)
-		from app_users where email = $1
-	`, email).Scan(&userID, &nickname, &platformAdmin, &passwordHash, &activeSessionID, &lockedUntil, &failedAttempts, &emailVerifiedAt, &emailVerificationRequired)
+		select id, coalesce(email, ''), coalesce(login_id, ''), nickname, platform_admin, coalesce(password_hash, ''), active_session_id, locked_until, coalesce(failed_login_attempts, 0), email_verified_at, coalesce(email_verification_required, false)
+		from app_users
+		where lower(email) = lower($1)
+		   or (platform_admin = true and lower(login_id) = lower($2))
+		order by case when lower(email) = lower($1) then 0 else 1 end
+		limit 1
+	`, email, loginID).Scan(&userID, &accountEmail, &accountLoginID, &nickname, &platformAdmin, &passwordHash, &activeSessionID, &lockedUntil, &failedAttempts, &emailVerifiedAt, &emailVerificationRequired)
+	loginName := firstNonEmpty(accountEmail, accountLoginID, identifier)
 	if err != nil {
-		a.recordLoginHistory(r.Context(), nil, email, "password", "LOGIN", "FAIL", "invalid email")
+		a.recordLoginHistory(r.Context(), nil, identifier, "password", "LOGIN", "FAIL", "invalid identifier")
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
 	if lockedUntil.Valid && lockedUntil.Time.After(time.Now()) {
-		a.recordLoginHistory(r.Context(), &userID, email, "password", "LOGIN", "LOCKED", "account is locked")
+		a.recordLoginHistory(r.Context(), &userID, loginName, "password", "LOGIN", "LOCKED", "account is locked")
 		writeError(w, http.StatusLocked, "account is locked")
 		return
 	}
@@ -518,17 +525,17 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 		} else {
 			_, _ = a.db.Exec(r.Context(), "update app_users set failed_login_attempts = $1 where id = $2", failedAttempts, userID)
 		}
-		a.recordLoginHistory(r.Context(), &userID, email, "password", "LOGIN", "FAIL", "invalid password")
+		a.recordLoginHistory(r.Context(), &userID, loginName, "password", "LOGIN", "FAIL", "invalid password")
 		writeError(w, http.StatusUnauthorized, "invalid email or password")
 		return
 	}
 	if emailVerificationRequired && !emailVerifiedAt.Valid {
-		a.recordLoginHistory(r.Context(), &userID, email, "password", "LOGIN", "VERIFY_REQUIRED", "email verification required")
+		a.recordLoginHistory(r.Context(), &userID, loginName, "password", "LOGIN", "VERIFY_REQUIRED", "email verification required")
 		writeError(w, http.StatusForbidden, "email verification required")
 		return
 	}
 	if activeSessionID.Valid && activeSessionID.String != "" && !req.ForceLogin {
-		a.recordLoginHistory(r.Context(), &userID, email, "password", "LOGIN", "ACTIVE_SESSION", "active session exists")
+		a.recordLoginHistory(r.Context(), &userID, loginName, "password", "LOGIN", "ACTIVE_SESSION", "active session exists")
 		writeError(w, http.StatusConflict, "active session exists")
 		return
 	}
@@ -542,12 +549,12 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "login failed")
 		return
 	}
-	a.recordLoginHistory(r.Context(), &userID, email, "password", "LOGIN", "SUCCESS", "")
-	user := authUser{ID: userID, Email: email, PlatformAdmin: platformAdmin, SessionID: sessionID}
+	a.recordLoginHistory(r.Context(), &userID, loginName, "password", "LOGIN", "SUCCESS", "")
+	user := authUser{ID: userID, Email: loginName, PlatformAdmin: platformAdmin, SessionID: sessionID}
 	writeJSON(w, http.StatusOK, authResponse{
 		AccessToken:   a.issueToken(user),
 		UserID:        userID,
-		Email:         email,
+		Email:         loginName,
 		Nickname:      nickname,
 		PlatformAdmin: platformAdmin,
 	})
@@ -560,16 +567,19 @@ func (a *app) logout(w http.ResponseWriter, r *http.Request, user authUser) {
 }
 
 func (a *app) me(w http.ResponseWriter, r *http.Request, user authUser) {
-	var nickname string
-	err := a.db.QueryRow(r.Context(), "select nickname from app_users where id = $1", user.ID).Scan(&nickname)
+	var nickname, loginName string
+	err := a.db.QueryRow(r.Context(), "select nickname, coalesce(email, login_id, '') from app_users where id = $1", user.ID).Scan(&nickname, &loginName)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "invalid session")
 		return
 	}
+	if loginName == "" {
+		loginName = user.Email
+	}
 	writeJSON(w, http.StatusOK, authResponse{
 		AccessToken:   a.issueToken(user),
 		UserID:        user.ID,
-		Email:         user.Email,
+		Email:         loginName,
 		Nickname:      nickname,
 		PlatformAdmin: user.PlatformAdmin,
 	})
@@ -2951,6 +2961,7 @@ create table if not exists app_users (
   id bigint generated by default as identity primary key,
   created_at timestamp with time zone,
   email varchar(255) unique,
+  login_id varchar(64),
   nickname varchar(255),
   platform_admin boolean not null default false,
   provider varchar(255),
@@ -2964,9 +2975,11 @@ create table if not exists app_users (
 );
 alter table if exists app_users add column if not exists provider varchar(255);
 alter table if exists app_users add column if not exists provider_user_id varchar(255);
+alter table if exists app_users add column if not exists login_id varchar(64);
 alter table if exists app_users add column if not exists email_verified_at timestamp with time zone;
 alter table if exists app_users add column if not exists email_verification_required boolean not null default false;
 create unique index if not exists idx_app_users_email_lower on app_users (lower(email)) where email is not null;
+create unique index if not exists idx_app_users_login_id_lower on app_users (lower(login_id)) where login_id is not null;
 create unique index if not exists idx_app_users_provider_subject on app_users (provider, provider_user_id) where provider is not null and provider_user_id is not null;
 create table if not exists login_histories (
   id bigint generated by default as identity primary key,
@@ -3745,6 +3758,10 @@ func redirectOAuthSuccess(w http.ResponseWriter, r *http.Request, publicBaseURL 
 
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func normalizeLoginID(loginID string) string {
+	return strings.ToLower(strings.TrimSpace(loginID))
 }
 
 func firstNonEmpty(values ...string) string {
