@@ -4571,6 +4571,12 @@
   function enhanceHomeDashboard() {
     var content = document.querySelector('.content-grid')
     if (!content) return
+    document.querySelectorAll('.sync-panel').forEach(function (panel) {
+      panel.remove()
+    })
+    document.querySelectorAll('.topbar .custom-select, .topbar .user-chip').forEach(function (item) {
+      item.remove()
+    })
 
     Array.from(content.querySelectorAll('.summary-band')).forEach(function (panel) {
       panel.remove()
