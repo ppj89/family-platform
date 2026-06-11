@@ -524,40 +524,6 @@ body.api-loading-blocked::before {
   min-height: 620px !important;
 }
 
-.auth-shell .auth-copy,
-.auth-shell .auth-preview {
-  display: grid !important;
-}
-
-.auth-shell .auth-copy h1 {
-  max-width: 700px;
-  font-size: clamp(42px, 5.4vw, 68px);
-  line-height: 1.08;
-}
-
-.auth-shell .auth-copy p {
-  max-width: 560px;
-  font-size: 17px;
-}
-
-.auth-shell .auth-preview {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  max-width: 620px;
-}
-
-.auth-shell .auth-preview div {
-  min-height: 124px;
-  border-radius: 22px;
-  padding: 20px;
-  box-shadow: 0 16px 44px rgba(25, 31, 40, 0.06), inset 0 0 0 1px #e5e8eb;
-}
-
-.auth-shell .auth-preview div:first-child {
-  grid-column: 1 / -1;
-  min-height: 116px;
-  background: linear-gradient(135deg, #ffffff, #eef6ff);
-}
-
 .auth-shell .auth-brand {
   width: fit-content;
   border-radius: 18px;
@@ -582,10 +548,6 @@ body.api-loading-blocked::before {
   background: rgba(51, 57, 66, 0.82);
 }
 
-.theme-dark.auth-shell .auth-preview div:first-child {
-  background: linear-gradient(135deg, #333942, #263447);
-}
-
 @media (max-width: 980px) {
   .auth-shell .auth-layout {
     grid-template-columns: 1fr;
@@ -599,10 +561,6 @@ body.api-loading-blocked::before {
     gap: 16px;
   }
 
-  .auth-shell .auth-copy,
-  .auth-shell .auth-preview {
-    display: none !important;
-  }
 }
 
 .auth-card {
