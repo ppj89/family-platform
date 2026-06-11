@@ -662,7 +662,7 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		"nickname":      response.Nickname,
 		"platformAdmin": response.PlatformAdmin,
 	}
-	redirectOAuthSuccess(w, r, a.cfg.publicBaseURL, response.AccessToken, userPayload)
+	writeOAuthCallbackHTML(w, http.StatusOK, a.cfg.publicBaseURL, response.AccessToken, userPayload, "")
 }
 
 func (a *app) verifyEmail(w http.ResponseWriter, r *http.Request) {
