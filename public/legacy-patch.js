@@ -1252,6 +1252,27 @@
     })
   }
 
+  function consumeSsoFragment() {
+    var hash = String(window.location.hash || '')
+    if (hash.indexOf('sso_token=') < 0) return false
+    var params = new URLSearchParams(hash.replace(/^#/, ''))
+    var token = params.get('sso_token')
+    var userText = params.get('sso_user')
+    if (!token || !userText) return false
+    try {
+      var user = JSON.parse(userText)
+      localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token)
+      localStorage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user))
+      localStorage.setItem('family-platform-sso-complete', String(Date.now()))
+      protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
+      protectedAuthSnapshot = { token: token, user: user }
+      window.history.replaceState({}, document.title, window.location.pathname + window.location.search)
+      return true
+    } catch (error) {
+      return false
+    }
+  }
+
   function enhanceAuthApi() {
     var card = document.querySelector('.auth-card')
     if (!card || card.dataset.authApiReady) return
@@ -2875,6 +2896,7 @@
     normalizeAuthLanding()
     cleanupAuthActions()
     enhanceAuthApi()
+    consumeSsoFragment()
     restoreAuthSession()
     enhanceBabyGrowthTabs()
     enhanceAuthSso()

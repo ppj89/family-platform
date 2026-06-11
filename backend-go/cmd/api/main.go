@@ -662,7 +662,7 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		"nickname":      response.Nickname,
 		"platformAdmin": response.PlatformAdmin,
 	}
-	writeOAuthCallbackHTML(w, http.StatusOK, a.cfg.publicBaseURL, response.AccessToken, userPayload, "")
+	redirectOAuthSuccess(w, r, a.cfg.publicBaseURL, response.AccessToken, userPayload)
 }
 
 func (a *app) verifyEmail(w http.ResponseWriter, r *http.Request) {
@@ -3555,6 +3555,15 @@ func writeOAuthCallbackHTML(w http.ResponseWriter, status int, publicBaseURL str
   </script>
 </body>
 </html>`, tokenJSON, userJSON, errorJSON, redirectJSON)
+}
+
+func redirectOAuthSuccess(w http.ResponseWriter, r *http.Request, publicBaseURL string, accessToken string, userPayload map[string]any) {
+	redirectURL := strings.TrimRight(publicBaseURL, "/") + "/"
+	userJSON, _ := json.Marshal(userPayload)
+	fragment := url.Values{}
+	fragment.Set("sso_token", accessToken)
+	fragment.Set("sso_user", string(userJSON))
+	http.Redirect(w, r, redirectURL+"#"+fragment.Encode(), http.StatusFound)
 }
 
 func normalizeEmail(email string) string {
