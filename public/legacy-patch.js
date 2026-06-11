@@ -1414,6 +1414,24 @@
     })
   }
 
+  function validateStoredAuthSession() {
+    var token = localStorage.getItem(AUTH_TOKEN_STORAGE_KEY)
+    if (!token) return
+    fetch(apiBaseUrlForAuth() + '/auth/me', {
+      headers: { Authorization: 'Bearer ' + token }
+    }).then(function (response) {
+      if (response.ok) return response.json()
+      throw new Error('invalid session')
+    }).then(function (response) {
+      if (response && response.accessToken) {
+        storeAuthResponse(response)
+      }
+    }).catch(function () {
+      forceClearStoredAuth()
+      if (document.querySelector('.app-shell')) window.location.reload()
+    })
+  }
+
   function consumeSsoFragment() {
     var hash = String(window.location.hash || '')
     if (hash.indexOf('sso_token=') < 0) return false
@@ -7132,6 +7150,7 @@
   }, true)
 
   window.setInterval(flushApiQueue, 15000)
+  window.setTimeout(validateStoredAuthSession, 500)
   window.setInterval(function () {
     loadScheduleNotifications(true)
   }, 60000)
