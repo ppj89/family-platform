@@ -3372,6 +3372,7 @@
   function familyActionErrorMessage(error, fallback) {
     if (error && error.status === 403) return '권한이 없어 저장이 불가합니다.'
     if (error && error.status === 401) return '로그인이 필요합니다.'
+    if (error && error.status === 409 && String(error.message || '').indexOf('family admin') >= 0) return '가족관리자는 최소 1명 필요합니다.'
     return fallback || '처리에 실패했습니다.'
   }
 
@@ -3460,7 +3461,7 @@
       '<header class="panel-header"><h2>가족그룹</h2></header>',
       renderFamilyInvitationList(invitations || []),
       '<div class="family-group-summary">',
-      '<article><span>현재 가족</span><strong>' + escapeHtml(family.name || '-') + '</strong><small>가족 ID ' + escapeHtml(family.id) + '</small></article>',
+      '<article><strong>' + escapeHtml(family.name || '-') + '</strong></article>',
       '<article><span>구성원</span><strong>' + members.length + '명</strong><small>읽기/작성/수정/삭제 권한 관리</small></article>',
       '</div>',
       inviteForm,
@@ -3563,6 +3564,13 @@
         var editor = root.querySelector('[data-family-member-editor="' + memberId + '"]')
         if (!member || !editor) return
         var role = (editor.querySelector('[data-family-edit-role]') || {}).value || 'MEMBER'
+        var adminCount = (Array.isArray(window.__familyLastMembers) ? window.__familyLastMembers : []).filter(function (item) {
+          return item.role === 'FAMILY_ADMIN'
+        }).length
+        if (member.role === 'FAMILY_ADMIN' && role !== 'FAMILY_ADMIN' && adminCount <= 1) {
+          showPatchToast('가족관리자는 최소 1명 필요합니다.')
+          return
+        }
         var payload = {
           userId: member.userId,
           role: role,
@@ -3598,7 +3606,7 @@
       '<label><span>가족명</span><input data-family-name maxlength="40" placeholder="예: 우리 가족" /></label>',
       '<button class="submit-action" type="submit">가족그룹 생성</button>',
       '</form>',
-      '<div class="api-empty-row"><strong>연결된 가족그룹이 없습니다.</strong><small>초대를 수락하거나 새 가족그룹을 생성해주세요.</small></div>',
+      '<div class="api-empty-row"><strong>연결된 가족그룹이 없습니다.</strong></div>',
       '</section>'
     ].join('')
     bindFamilyInvitationActions(root)

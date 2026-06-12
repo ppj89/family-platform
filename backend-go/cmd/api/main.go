@@ -1284,13 +1284,29 @@ func (a *app) updateFamilyMember(w http.ResponseWriter, r *http.Request, user au
 	if !readJSON(w, r, &req) || req.UserID <= 0 {
 		return
 	}
+	nextRole := emptyDefault(req.Role, "MEMBER")
+	var currentRole string
+	var familyAdminCount int
+	if err := a.db.QueryRow(r.Context(), `
+		select role,
+		       (select count(1) from family_members where family_id = $1 and role = 'FAMILY_ADMIN')
+		from family_members
+		where id = $2 and family_id = $1
+	`, familyID, memberID).Scan(&currentRole, &familyAdminCount); err != nil {
+		writeError(w, http.StatusNotFound, "family member not found")
+		return
+	}
+	if currentRole == "FAMILY_ADMIN" && nextRole != "FAMILY_ADMIN" && familyAdminCount <= 1 {
+		writeError(w, http.StatusConflict, "at least one family admin required")
+		return
+	}
 	var item familyMember
 	var joinedAt time.Time
 	err := a.db.QueryRow(r.Context(), `
 		update family_members set user_id = $1, role = $2, can_read = $3, can_create = $4, can_update = $5, can_delete = $6
 		where id = $7 and family_id = $8
 		returning id, family_id, user_id, role, can_read, can_create, can_update, can_delete, joined_at
-	`, req.UserID, emptyDefault(req.Role, "MEMBER"), req.CanRead, req.CanCreate, req.CanUpdate, req.CanDelete, memberID, familyID).
+	`, req.UserID, nextRole, req.CanRead, req.CanCreate, req.CanUpdate, req.CanDelete, memberID, familyID).
 		Scan(&item.ID, &item.FamilyID, &item.UserID, &item.Role, &item.CanRead, &item.CanCreate, &item.CanUpdate, &item.CanDelete, &joinedAt)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "family member not found")
