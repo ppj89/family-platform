@@ -4387,7 +4387,7 @@
         closeDialog()
         showPatchToast('\uC544\uC774\uB97C \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
         goMenu('\uC721\uC544')
-        window.setTimeout(function () { refreshServerDataViews(true) }, 400)
+        window.setTimeout(function () { renderBabyApiCards(true); refreshServerDataViews(true) }, 400)
       }).catch(function (error) {
         save.disabled = false
         save.textContent = '\uC800\uC7A5'
@@ -7262,6 +7262,43 @@
     anchor.parentElement.insertBefore(panel, anchor.nextSibling)
   }
 
+  function renderBabyApiCards(force) {
+    if (getCleanText(document.querySelector('.topbar h1')) !== '\uC721\uC544') return
+    if (document.querySelector('.baby-detail')) return
+    var grid = document.querySelector('.baby-list-grid')
+    if (!grid) {
+      var panel = Array.from(document.querySelectorAll('.panel')).find(function (item) {
+        return getCleanText(item.querySelector('.panel-header h2, h2')).indexOf('\uC721\uC544') >= 0
+      })
+      if (!panel) return
+      grid = document.createElement('div')
+      grid.className = 'baby-list-grid'
+      panel.appendChild(grid)
+    }
+    if (!force && grid.dataset.apiLoaded === 'true') return
+    grid.dataset.apiLoaded = 'true'
+    fetchBabies().then(function (babies) {
+      if (!babies.length) {
+        grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>\uB4F1\uB85D\uB41C \uC544\uC774\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</strong></div>'
+        return
+      }
+      grid.innerHTML = babies.map(function (baby) {
+        var growth = [baby.latestHeightCm ? baby.latestHeightCm + 'cm' : '', baby.latestWeightKg ? baby.latestWeightKg + 'kg' : ''].filter(Boolean).join(' \u00B7 ')
+        return [
+          '<button type="button" class="baby-card" data-api-baby-id="' + escapeHtml(baby.id) + '">',
+          '<div><span class="baby-card-avatar">\uC544\uC774</span></div>',
+          '<div><strong>' + escapeHtml(baby.name || '-') + '</strong>',
+          '<span>' + escapeHtml([baby.gender || '', baby.birthDate || ''].filter(Boolean).join(' \u00B7 ')) + '</span>',
+          '<p>' + escapeHtml(baby.memo || '') + '</p>',
+          '<small>' + escapeHtml(growth || '\uC131\uC7A5 \uAE30\uB85D \uC5C6\uC74C') + '</small>',
+          '</div></button>'
+        ].join('')
+      }).join('')
+    }).catch(function (error) {
+      grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>' + escapeHtml(apiActionErrorMessage(error, '\uC544\uC774 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</strong></div>'
+    })
+  }
+
   function renderBabyServerEntries(force) {
     removeDeveloperServerPanels()
     return
@@ -7386,6 +7423,7 @@
     renderRestaurantPageFromApi()
     renderDiaryPageFromApi(force)
     renderTravelPageFromApi(force)
+    renderBabyApiCards(force)
     if (!getStoredAuthToken()) return
     renderHomeSchedulesFromApi(force)
     renderHomeLedgerFromApi(force)
