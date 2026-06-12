@@ -37,7 +37,7 @@ function authMessage(error: unknown) {
       if (error.message.includes('active session')) {
         return '이미 로그인되어 있는 계정입니다.'
       }
-      return '이미 가입된 이메일입니다. 1인당 1개 계정만 사용할 수 있습니다.'
+      return '이미 가입된 이메일입니다.'
     }
     if (error.status === 423) {
       return '비밀번호를 5회 틀려 5분 동안 잠겼습니다.'
