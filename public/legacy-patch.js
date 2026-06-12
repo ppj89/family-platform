@@ -3303,6 +3303,14 @@
     resumePatchObserver()
   }
 
+  function queueOpenFamilyGroupPage() {
+    window.clearTimeout(window.__familyGroupOpenTimer)
+    window.__familyGroupOpenTimer = window.setTimeout(function () {
+      openFamilyGroupPage()
+      window.setTimeout(openFamilyGroupPage, 140)
+    }, 30)
+  }
+
   function loadFamilyGroupPage(root) {
     Promise.all([
       apiRequest('/families'),
@@ -3361,6 +3369,12 @@
     return !!(member && member.role === 'FAMILY_ADMIN')
   }
 
+  function familyActionErrorMessage(error, fallback) {
+    if (error && error.status === 403) return '권한이 없어 저장이 불가합니다.'
+    if (error && error.status === 401) return '로그인이 필요합니다.'
+    return fallback || '처리에 실패했습니다.'
+  }
+
   function renderFamilyInvitationList(invitations) {
     if (!invitations || !invitations.length) return ''
     return [
@@ -3399,24 +3413,37 @@
   function renderFamilyManagePage(root, family, members, invitations) {
     var currentUser = readStoredAuthUser() || {}
     var canManage = canManageFamily(members)
+    window.__familyLastMembers = members || []
     var rows = members.length ? members.map(function (member) {
       var displayName = member.nickname || member.email || ('ID ' + member.userId)
       var isMe = String(member.userId) === String(currentUser.id || '')
-      var action = ''
-      if (isMe) action = '<button type="button" class="danger-button" data-family-leave="' + escapeHtml(member.id) + '">가족그룹 나가기</button>'
-      else if (canManage) action = '<button type="button" class="danger-button" data-family-remove-member="' + escapeHtml(member.id) + '">내보내기</button>'
+      var action = canManage ? '<button type="button" data-family-edit-member="' + escapeHtml(member.id) + '">수정</button>' : ''
+      if (isMe) action += '<button type="button" class="danger-button" data-family-leave="' + escapeHtml(member.id) + '">가족그룹 나가기</button>'
+      else if (canManage) action += '<button type="button" class="danger-button" data-family-remove-member="' + escapeHtml(member.id) + '">내보내기</button>'
       return [
         '<article data-family-member-id="' + escapeHtml(member.id) + '">',
         '<div><strong>' + escapeHtml(displayName) + (isMe ? ' <em>나</em>' : '') + '</strong>',
         '<span>' + escapeHtml(roleText(member.role)) + ' · ' + escapeHtml(permissionText(member)) + (member.email ? ' · ' + escapeHtml(member.email) : '') + '</span></div>',
         '<div class="member-actions">' + action + '</div>',
+        canManage ? [
+          '<div class="family-member-edit" data-family-member-editor="' + escapeHtml(member.id) + '" hidden>',
+          '<label><span>역할</span><select data-family-edit-role><option value="MEMBER"' + (member.role === 'MEMBER' ? ' selected' : '') + '>가족구성원</option><option value="FAMILY_ADMIN"' + (member.role === 'FAMILY_ADMIN' ? ' selected' : '') + '>가족관리자</option></select></label>',
+          '<div class="permission-chips">',
+          '<button type="button" class="' + (member.canRead ? 'active' : '') + '" data-family-edit-permission="canRead">읽기</button>',
+          '<button type="button" class="' + (member.canCreate ? 'active' : '') + '" data-family-edit-permission="canCreate">작성</button>',
+          '<button type="button" class="' + (member.canUpdate ? 'active' : '') + '" data-family-edit-permission="canUpdate">수정</button>',
+          '<button type="button" class="' + (member.canDelete ? 'active' : '') + '" data-family-edit-permission="canDelete">삭제</button>',
+          '</div>',
+          '<div class="member-actions"><button type="button" class="save-button" data-family-save-member="' + escapeHtml(member.id) + '">저장</button><button type="button" class="cancel-button" data-family-cancel-member="' + escapeHtml(member.id) + '">취소</button></div>',
+          '</div>'
+        ].join('') : '',
         '</article>'
       ].join('')
     }).join('') : '<div class="api-empty-row"><strong>등록된 구성원이 없습니다.</strong></div>'
     var inviteForm = canManage ? [
       '<form class="code-form invite-form family-invite-form">',
       '<div class="form-row">',
-      '<label><span>초대할 사용자</span><input data-invite-user placeholder="이메일, 닉네임, 관리자 아이디" /></label>',
+      '<label><span>초대할 사용자</span><input data-invite-user placeholder="이메일 또는 닉네임" /></label>',
       '<label><span>역할</span><select data-invite-role><option value="MEMBER">가족구성원</option><option value="FAMILY_ADMIN">가족관리자</option></select></label>',
       '</div>',
       '<div class="permission-chips">',
@@ -3448,46 +3475,48 @@
 
   function bindFamilyInviteForm(root, family, canManage) {
     var form = root.querySelector('.family-invite-form')
-    if (!form || !family || !family.id || !canManage) return
-    var permissions = { canRead: true, canCreate: false, canUpdate: false, canDelete: false }
-    form.querySelectorAll('[data-invite-permission]').forEach(function (button) {
-      button.addEventListener('click', function () {
-        var key = button.dataset.invitePermission
-        permissions[key] = !permissions[key]
-        button.classList.toggle('active', !!permissions[key])
+    if (form && family && family.id && canManage) {
+      var permissions = { canRead: true, canCreate: false, canUpdate: false, canDelete: false }
+      form.querySelectorAll('[data-invite-permission]').forEach(function (button) {
+        button.addEventListener('click', function () {
+          var key = button.dataset.invitePermission
+          permissions[key] = !permissions[key]
+          button.classList.toggle('active', !!permissions[key])
+        })
       })
-    })
-    form.addEventListener('submit', function (event) {
-      event.preventDefault()
-      var input = form.querySelector('[data-invite-user]')
-      var invite = String((input && input.value || '').trim())
-      if (!invite) {
-        showPatchToast('초대할 사용자의 이메일이나 닉네임을 입력해주세요.')
-        if (input) input.focus()
-        return
-      }
-      var role = (form.querySelector('[data-invite-role]') || {}).value || 'MEMBER'
-      var payload = Object.assign({ invite: invite, role: role }, permissions)
-      var submit = form.querySelector('button[type="submit"]')
-      if (submit) {
-        submit.disabled = true
-        submit.textContent = '초대 중'
-      }
-      postJson('/families/' + encodeURIComponent(family.id) + '/invitations', payload).then(function () {
-        showPatchToast('초대를 보냈습니다. 상대방이 수락하면 구성원으로 추가됩니다.')
-        if (input) input.value = ''
-      }).catch(function (error) {
-        var message = '초대에 실패했습니다.'
-        if (error && error.status === 404) message = '사용자를 찾지 못했습니다.'
-        if (error && error.status === 409) message = '이미 가족에 속했거나 대기 중인 초대가 있습니다.'
-        showPatchToast(message)
-      }).finally(function () {
-        if (submit) {
-          submit.disabled = false
-          submit.textContent = '초대 보내기'
+      form.addEventListener('submit', function (event) {
+        event.preventDefault()
+        var input = form.querySelector('[data-invite-user]')
+        var invite = String((input && input.value || '').trim())
+        if (!invite) {
+          showPatchToast('초대할 사용자의 이메일이나 닉네임을 입력해주세요.')
+          if (input) input.focus()
+          return
         }
+        var role = (form.querySelector('[data-invite-role]') || {}).value || 'MEMBER'
+        var payload = Object.assign({ invite: invite, role: role }, permissions)
+        var submit = form.querySelector('button[type="submit"]')
+        if (submit) {
+          submit.disabled = true
+          submit.textContent = '초대 중'
+        }
+        postJson('/families/' + encodeURIComponent(family.id) + '/invitations', payload).then(function () {
+          showPatchToast('초대를 보냈습니다. 상대방이 수락하면 구성원으로 추가됩니다.')
+          if (input) input.value = ''
+        }).catch(function (error) {
+          var message = '초대에 실패했습니다.'
+          if (error && error.status === 403) message = '권한이 없어 초대를 보낼 수 없습니다.'
+          if (error && error.status === 404) message = '사용자를 찾지 못했습니다.'
+          if (error && error.status === 409) message = '이미 가족에 속했거나 대기 중인 초대가 있습니다.'
+          showPatchToast(message)
+        }).finally(function () {
+          if (submit) {
+            submit.disabled = false
+            submit.textContent = '초대 보내기'
+          }
+        })
       })
-    })
+    }
     root.querySelectorAll('[data-family-leave], [data-family-remove-member]').forEach(function (button) {
       button.addEventListener('click', function () {
         var memberId = button.dataset.familyLeave || button.dataset.familyRemoveMember
@@ -3497,8 +3526,63 @@
             if (leaving) localStorage.removeItem(AUTH_FAMILY_STORAGE_KEY)
             showPatchToast(leaving ? '가족그룹에서 나갔습니다.' : '구성원을 내보냈습니다.')
             loadFamilyGroupPage(root)
-          }).catch(function () {
-            showPatchToast('처리에 실패했습니다.')
+          }).catch(function (error) {
+            showPatchToast(familyActionErrorMessage(error, '처리에 실패했습니다.'))
+          })
+        })
+      })
+    })
+    root.querySelectorAll('[data-family-edit-member]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var editor = root.querySelector('[data-family-member-editor="' + button.dataset.familyEditMember + '"]')
+        if (!editor) return
+        root.querySelectorAll('.family-member-edit').forEach(function (item) {
+          if (item !== editor) item.hidden = true
+        })
+        editor.hidden = false
+        editor.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+      })
+    })
+    root.querySelectorAll('[data-family-cancel-member]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var editor = root.querySelector('[data-family-member-editor="' + button.dataset.familyCancelMember + '"]')
+        if (editor) editor.hidden = true
+      })
+    })
+    root.querySelectorAll('[data-family-edit-permission]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        button.classList.toggle('active')
+      })
+    })
+    root.querySelectorAll('[data-family-save-member]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var memberId = button.dataset.familySaveMember
+        var member = (Array.isArray(window.__familyLastMembers) ? window.__familyLastMembers : []).find(function (item) {
+          return String(item.id) === String(memberId)
+        })
+        var editor = root.querySelector('[data-family-member-editor="' + memberId + '"]')
+        if (!member || !editor) return
+        var role = (editor.querySelector('[data-family-edit-role]') || {}).value || 'MEMBER'
+        var payload = {
+          userId: member.userId,
+          role: role,
+          canRead: !!editor.querySelector('[data-family-edit-permission="canRead"].active'),
+          canCreate: !!editor.querySelector('[data-family-edit-permission="canCreate"].active'),
+          canUpdate: !!editor.querySelector('[data-family-edit-permission="canUpdate"].active'),
+          canDelete: !!editor.querySelector('[data-family-edit-permission="canDelete"].active')
+        }
+        showPatchConfirm('구성원 권한을 저장할까요?', function () {
+          button.disabled = true
+          apiRequest('/families/' + encodeURIComponent(family.id) + '/members/' + encodeURIComponent(memberId), {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          }).then(function () {
+            showPatchToast('권한을 저장했습니다.')
+            loadFamilyGroupPage(root)
+          }).catch(function (error) {
+            showPatchToast(familyActionErrorMessage(error, '권한 저장에 실패했습니다.'))
+          }).finally(function () {
+            button.disabled = false
           })
         })
       })
@@ -4391,7 +4475,7 @@
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    openFamilyGroupPage()
+    queueOpenFamilyGroupPage()
   }, true)
 
   function openCommunityPage(force) {

@@ -8694,10 +8694,70 @@ select {
   box-shadow: inset 0 0 0 1px #bfdcff !important;
 }
 
+.family-group-list article {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
 .family-group-list .member-actions {
   display: flex !important;
   justify-content: flex-end !important;
+  gap: 8px !important;
   min-width: 126px !important;
+}
+
+.family-member-edit {
+  display: grid !important;
+  grid-column: 1 / -1 !important;
+  gap: 12px !important;
+  border-radius: 16px !important;
+  margin-top: 4px !important;
+  padding: 14px !important;
+  background: #f7f9fc !important;
+  box-shadow: inset 0 0 0 1px #e5e8eb !important;
+}
+
+.family-member-edit[hidden] {
+  display: none !important;
+}
+
+.family-member-edit label {
+  display: grid !important;
+  gap: 7px !important;
+  margin: 0 !important;
+}
+
+.family-member-edit label span {
+  color: #6b7684 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+.family-member-edit select {
+  width: 100% !important;
+  min-height: 42px !important;
+  border: 1px solid #d7dce3 !important;
+  border-radius: 13px !important;
+  padding: 0 13px !important;
+  background: #ffffff !important;
+  color: #191f28 !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+}
+
+.family-group-list .member-actions button:not(.danger-button):not(.cancel-button):not(.save-button) {
+  min-height: 38px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  padding: 0 14px !important;
+  background: #e8f3ff !important;
+  color: #1b64da !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
 }
 
 .family-invitation-panel {
