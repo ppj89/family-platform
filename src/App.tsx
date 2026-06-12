@@ -28,6 +28,13 @@ const initialAuthForm = {
   resetToken: '',
 }
 
+function clearLoggedOutQuery() {
+  if (!window.location.search.includes('loggedOut=')) return
+  const url = new URL(window.location.href)
+  url.searchParams.delete('loggedOut')
+  window.history.replaceState({}, document.title, `${url.pathname}${url.search}${url.hash}`)
+}
+
 function authMessage(error: unknown) {
   if (error instanceof ApiError) {
     if (error.status === 403 && error.message.includes('email verification')) {
@@ -62,6 +69,7 @@ export default function App() {
   const current = menus.find((menu) => menu.key === activeMenu) ?? menus[0]
 
   useEffect(() => {
+    clearLoggedOutQuery()
     const resetToken = new URLSearchParams(window.location.search).get('resetToken')
     if (resetToken) {
       setAuthMode('reset-password')
@@ -187,6 +195,7 @@ export default function App() {
         setAuthNotice('회원가입되었습니다. 이메일 인증 링크를 확인한 뒤 로그인해주세요.')
         return
       }
+      clearLoggedOutQuery()
       setCurrentUser(response)
       setAuthForm(initialAuthForm)
       setAuthNotice(authMode === 'register' ? '회원가입되었습니다.' : '로그인되었습니다.')
@@ -196,6 +205,7 @@ export default function App() {
         if (shouldForceLogin) {
           try {
             const response = await login({ email, password, forceLogin: true })
+            clearLoggedOutQuery()
             setCurrentUser(response)
             setAuthForm(initialAuthForm)
             setAuthNotice('기존 로그인을 종료하고 로그인되었습니다.')
@@ -220,6 +230,7 @@ export default function App() {
     }
     setCurrentUser(null)
     setAuthMode('login')
+    clearLoggedOutQuery()
   }
 
   const authTitle =

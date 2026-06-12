@@ -788,6 +788,17 @@
     return standalone || !!navigator.standalone || /FamilyPlatformApp|Capacitor|Cordova|\bwv\)/i.test(userAgent)
   }
 
+  function clearLoggedOutQuery() {
+    if (!window.history || !window.location || window.location.search.indexOf('loggedOut=') < 0) return
+    try {
+      var url = new URL(window.location.href)
+      url.searchParams.delete('loggedOut')
+      window.history.replaceState({}, document.title, url.pathname + url.search + url.hash)
+    } catch (error) {
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }
+
   function shouldPersistAuthSession() {
     return isAutoLoginEnabled() || isAppRuntime()
   }
@@ -915,6 +926,7 @@
   function completeAuth(button, response) {
     var persistent = shouldPersistAuthSession()
     var storedUser = storeAuthResponse(response, persistent)
+    clearLoggedOutQuery()
     function persist() { storeAuthResponse(response, persistent) }
     persist()
     activateLegacyAuthScreen(button, storedUser)
@@ -1612,6 +1624,7 @@
       localStorage.setItem('family-platform-sso-complete', String(Date.now()))
       protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
       protectedAuthSnapshot = { token: token, user: user, persistent: persistent }
+      clearLoggedOutQuery()
       window.history.replaceState({}, document.title, window.location.pathname + window.location.search)
       window.setTimeout(function () {
         if (document.querySelector('.auth-card')) window.location.reload()
@@ -3382,7 +3395,7 @@
   function permissionText(member) {
     var permissions = []
     if (member.canRead) permissions.push('읽기')
-    if (member.canCreate) permissions.push('작성')
+    if (member.canCreate) permissions.push('쓰기')
     if (member.canUpdate) permissions.push('수정')
     if (member.canDelete) permissions.push('삭제')
     return permissions.length ? permissions.join('/') : '권한 없음'
@@ -3464,8 +3477,9 @@
           '<div class="family-member-edit" data-family-member-editor="' + escapeHtml(member.id) + '" hidden>',
           '<label><span>역할</span><select data-family-edit-role><option value="MEMBER"' + (member.role === 'MEMBER' ? ' selected' : '') + '>가족구성원</option><option value="FAMILY_ADMIN"' + (member.role === 'FAMILY_ADMIN' ? ' selected' : '') + '>가족관리자</option></select></label>',
           '<div class="permission-chips">',
+          '<button type="button" class="' + (member.canRead && member.canCreate && member.canUpdate && member.canDelete ? 'active' : '') + '" data-family-edit-permission-all>전체</button>',
           '<button type="button" class="' + (member.canRead ? 'active' : '') + '" data-family-edit-permission="canRead">읽기</button>',
-          '<button type="button" class="' + (member.canCreate ? 'active' : '') + '" data-family-edit-permission="canCreate">작성</button>',
+          '<button type="button" class="' + (member.canCreate ? 'active' : '') + '" data-family-edit-permission="canCreate">쓰기</button>',
           '<button type="button" class="' + (member.canUpdate ? 'active' : '') + '" data-family-edit-permission="canUpdate">수정</button>',
           '<button type="button" class="' + (member.canDelete ? 'active' : '') + '" data-family-edit-permission="canDelete">삭제</button>',
           '</div>',
@@ -3482,8 +3496,9 @@
       '<label><span>역할</span><select data-invite-role><option value="MEMBER">가족구성원</option><option value="FAMILY_ADMIN">가족관리자</option></select></label>',
       '</div>',
       '<div class="permission-chips">',
+      '<button type="button" data-invite-permission-all>전체</button>',
       '<button type="button" class="active" data-invite-permission="canRead">읽기</button>',
-      '<button type="button" data-invite-permission="canCreate">작성</button>',
+      '<button type="button" data-invite-permission="canCreate">쓰기</button>',
       '<button type="button" data-invite-permission="canUpdate">수정</button>',
       '<button type="button" data-invite-permission="canDelete">삭제</button>',
       '</div>',
@@ -3496,7 +3511,7 @@
       renderFamilyInvitationList(invitations || []),
       '<div class="family-group-summary">',
       '<article><strong>' + escapeHtml(family.name || '-') + '</strong></article>',
-      '<article><span>구성원</span><strong>' + members.length + '명</strong><small>읽기/작성/수정/삭제 권한 관리</small></article>',
+      '<article><span>구성원</span><strong>' + members.length + '명</strong><small>읽기/쓰기/수정/삭제 권한 관리</small></article>',
       '</div>',
       inviteForm,
       '<div class="family-group-list">',
@@ -3508,17 +3523,44 @@
     bindFamilyInvitationActions(root)
   }
 
+  function syncFamilyPermissionAll(chips) {
+    if (!chips) return
+    var allButton = chips.querySelector('[data-family-edit-permission-all]')
+    if (!allButton) return
+    var permissionButtons = Array.from(chips.querySelectorAll('[data-family-edit-permission]'))
+    allButton.classList.toggle('active', permissionButtons.length > 0 && permissionButtons.every(function (item) {
+      return item.classList.contains('active')
+    }))
+  }
+
   function bindFamilyInviteForm(root, family, canManage) {
     var form = root.querySelector('.family-invite-form')
     if (form && family && family.id && canManage) {
       var permissions = { canRead: true, canCreate: false, canUpdate: false, canDelete: false }
+      var inviteAllButton = form.querySelector('[data-invite-permission-all]')
+      function syncInviteAllButton() {
+        if (!inviteAllButton) return
+        inviteAllButton.classList.toggle('active', permissions.canRead && permissions.canCreate && permissions.canUpdate && permissions.canDelete)
+      }
       form.querySelectorAll('[data-invite-permission]').forEach(function (button) {
         button.addEventListener('click', function () {
           var key = button.dataset.invitePermission
           permissions[key] = !permissions[key]
           button.classList.toggle('active', !!permissions[key])
+          syncInviteAllButton()
         })
       })
+      if (inviteAllButton) {
+        inviteAllButton.addEventListener('click', function () {
+          var next = !(permissions.canRead && permissions.canCreate && permissions.canUpdate && permissions.canDelete)
+          Object.keys(permissions).forEach(function (key) { permissions[key] = next })
+          form.querySelectorAll('[data-invite-permission]').forEach(function (button) {
+            button.classList.toggle('active', !!permissions[button.dataset.invitePermission])
+          })
+          syncInviteAllButton()
+        })
+        syncInviteAllButton()
+      }
       form.addEventListener('submit', function (event) {
         event.preventDefault()
         var input = form.querySelector('[data-invite-user]')
@@ -3583,8 +3625,20 @@
     root.querySelectorAll('[data-family-edit-permission]').forEach(function (button) {
       button.addEventListener('click', function () {
         button.classList.toggle('active')
+        syncFamilyPermissionAll(button.closest('.permission-chips'))
       })
     })
+    root.querySelectorAll('[data-family-edit-permission-all]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var chips = button.closest('.permission-chips')
+        if (!chips) return
+        var permissionButtons = Array.from(chips.querySelectorAll('[data-family-edit-permission]'))
+        var next = !permissionButtons.every(function (item) { return item.classList.contains('active') })
+        permissionButtons.forEach(function (item) { item.classList.toggle('active', next) })
+        syncFamilyPermissionAll(chips)
+      })
+    })
+    root.querySelectorAll('.permission-chips').forEach(syncFamilyPermissionAll)
     root.querySelectorAll('[data-family-save-member]').forEach(function (button) {
       button.addEventListener('click', function () {
         var memberId = button.dataset.familySaveMember
@@ -3836,7 +3890,7 @@
     logoutCurrentSession()
     forceClearStoredAuth()
     window.setTimeout(function () {
-      window.location.replace('/?loggedOut=' + Date.now())
+      window.location.replace('/')
     }, 80)
   }, true)
 
@@ -4280,9 +4334,9 @@
     dialog.innerHTML = [
       '<button type="button" class="dialog-close">x</button>',
       '<h2>\uC544\uC774 \uCD94\uAC00</h2>',
-      '<label><span>\uC774\uB984 <em class="required-mark">*</em></span><input data-baby-create-name maxlength="30" /></label>',
-      '<label><span>\uC131\uBCC4 <em class="required-mark">*</em></span><select data-baby-create-gender><option value="">\uC120\uD0DD</option><option value="\uB0A8">\uB0A8</option><option value="\uC5EC">\uC5EC</option></select></label>',
-      '<label class="baby-create-date-field"><span>\uC0DD\uC77C</span><input data-baby-create-birth type="text" readonly value="' + todayText() + '" /></label>',
+      '<label><span>\uC774\uB984 <em class="required-mark">*</em></span><input data-baby-create-name maxlength="30" /><small class="field-error" data-baby-create-error="name" hidden></small></label>',
+      '<label><span>\uC131\uBCC4 <em class="required-mark">*</em></span><input data-baby-create-gender type="hidden" /><div class="custom-select baby-create-gender-select" data-baby-create-gender-select><button type="button" class="custom-select-trigger" data-baby-create-gender-trigger>\uC120\uD0DD</button><div class="custom-select-list" hidden><button type="button" data-baby-create-gender-value="\uB0A8">\uB0A8</button><button type="button" data-baby-create-gender-value="\uC5EC">\uC5EC</button></div></div><small class="field-error" data-baby-create-error="gender" hidden></small></label>',
+      '<label class="baby-create-date-field"><span>\uC0DD\uC77C</span><input data-baby-create-birth type="hidden" value="' + todayText() + '" /><button type="button" class="date-picker-trigger baby-create-date-button" data-baby-create-birth-trigger><span>' + todayText().replace(/-/g, '.') + '</span><b>\uD83D\uDCC5</b></button></label>',
       '<label><span>\uBA54\uBAA8</span><input data-baby-create-memo /></label>',
       '<label><span>\uD0A4(cm)</span><input data-baby-create-height inputmode="decimal" /></label>',
       '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input data-baby-create-weight inputmode="decimal" /></label>',
@@ -4295,18 +4349,25 @@
     var closeDialog = function () { backdrop.remove() }
     dialog.querySelector('.dialog-close').addEventListener('click', closeDialog)
     dialog.querySelector('.cancel-button').addEventListener('click', closeDialog)
-    var birthInput = dialog.querySelector('[data-baby-create-birth]')
-    if (birthInput) {
-      birthInput.addEventListener('click', function () { openBabyDatePopover(birthInput) })
-      birthInput.addEventListener('focus', function () { openBabyDatePopover(birthInput) })
+    if (nameInput) {
+      nameInput.addEventListener('input', function () {
+        if (String(nameInput.value || '').trim()) hideBabyCreateError(dialog, 'name')
+      })
     }
+    var birthInput = dialog.querySelector('[data-baby-create-birth]')
+    bindBabyCreateGender(dialog)
+    bindBabyCreateBirthDate(dialog)
     dialog.querySelector('.save-button').addEventListener('click', function () {
       var name = String(nameInput.value || '').trim()
       var genderInput = dialog.querySelector('[data-baby-create-gender]')
       var gender = String((genderInput && genderInput.value) || '').trim()
+      clearBabyCreateErrors(dialog)
       if (!name || !gender) {
-        showPatchToast('\uC774\uB984, \uC131\uBCC4\uC740 \uD544\uC218\uC785\uB2C8\uB2E4.')
-        ;(!name ? nameInput : genderInput).focus()
+        if (!name) setBabyCreateError(dialog, 'name', '\uC774\uB984\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+        if (!gender) setBabyCreateError(dialog, 'gender', '\uC131\uBCC4\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+        var focusTarget = !name ? nameInput : dialog.querySelector('[data-baby-create-gender-trigger]')
+        showPatchToast(!name ? '\uC774\uB984\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.' : '\uC131\uBCC4\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+        if (focusTarget) focusTarget.focus()
         return
       }
       var save = dialog.querySelector('.save-button')
@@ -4346,14 +4407,66 @@
     if (birthInput && !birthInput.value) setInputValue(birthInput, todayText())
   }
 
-  function openBabyDatePopover(input) {
-    if (!input) return
-    var old = document.querySelector('.baby-date-popover')
+  function clearBabyCreateErrors(dialog) {
+    if (!dialog) return
+    dialog.querySelectorAll('[data-baby-create-error]').forEach(function (item) {
+      item.hidden = true
+      item.textContent = ''
+    })
+  }
+
+  function setBabyCreateError(dialog, key, message) {
+    var item = dialog && dialog.querySelector('[data-baby-create-error="' + key + '"]')
+    if (!item) return
+    item.textContent = message
+    item.hidden = false
+  }
+
+  function hideBabyCreateError(dialog, key) {
+    var item = dialog && dialog.querySelector('[data-baby-create-error="' + key + '"]')
+    if (!item) return
+    item.textContent = ''
+    item.hidden = true
+  }
+
+  function bindBabyCreateGender(dialog) {
+    var wrap = dialog && dialog.querySelector('[data-baby-create-gender-select]')
+    if (!wrap) return
+    var trigger = wrap.querySelector('[data-baby-create-gender-trigger]')
+    var list = wrap.querySelector('.custom-select-list')
+    var input = dialog.querySelector('[data-baby-create-gender]')
+    if (!trigger || !list || !input) return
+    trigger.addEventListener('click', function () {
+      list.hidden = !list.hidden
+      wrap.classList.toggle('open', !list.hidden)
+    })
+    list.querySelectorAll('[data-baby-create-gender-value]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        input.value = button.dataset.babyCreateGenderValue || ''
+        trigger.textContent = input.value || '\uC120\uD0DD'
+        list.hidden = true
+        wrap.classList.remove('open')
+        hideBabyCreateError(dialog, 'gender')
+      })
+    })
+  }
+
+  function bindBabyCreateBirthDate(dialog) {
+    var input = dialog && dialog.querySelector('[data-baby-create-birth]')
+    var trigger = dialog && dialog.querySelector('[data-baby-create-birth-trigger]')
+    if (!input || !trigger) return
+    trigger.addEventListener('click', function () {
+      openCommonBirthDatePopover(input, trigger)
+    })
+  }
+
+  function openCommonBirthDatePopover(input, trigger) {
+    var old = document.querySelector('.baby-create-dialog .calendar-popover')
     if (old) old.remove()
     var selected = parseApiDate(input.value) || todayText()
     var view = new Date(selected + 'T00:00:00')
     var popover = document.createElement('div')
-    popover.className = 'calendar-popover baby-date-popover'
+    popover.className = 'calendar-popover'
 
     function draw() {
       var year = view.getFullYear()
@@ -4373,57 +4486,50 @@
         if (iso === selected) classes.push('selected')
         html += '<button type="button" class="' + classes.join(' ') + '" data-baby-date="' + iso + '">' + day + '</button>'
       }
-      html += '</div>'
-      popover.innerHTML = html
-    }
-
-    function position() {
-      var rect = input.getBoundingClientRect()
-      var width = Math.min(330, window.innerWidth - 28)
-      popover.style.position = 'fixed'
-      popover.style.width = width + 'px'
-      popover.style.left = Math.max(14, Math.min(window.innerWidth - width - 14, rect.left)) + 'px'
-      popover.style.top = Math.min(window.innerHeight - 20, rect.bottom + 8) + 'px'
-      popover.style.transform = 'none'
+      popover.innerHTML = html + '</div>'
     }
 
     draw()
-    document.body.appendChild(popover)
-    position()
+    trigger.insertAdjacentElement('afterend', popover)
     popover.addEventListener('click', function (event) {
       var target = event.target
       if (!target || !target.closest) return
       if (target.closest('[data-baby-date-prev]')) {
         view.setMonth(view.getMonth() - 1)
         draw()
-        position()
         return
       }
       if (target.closest('[data-baby-date-next]')) {
         view.setMonth(view.getMonth() + 1)
         draw()
-        position()
         return
       }
       if (target.closest('[data-baby-date-today]')) {
         selected = todayText()
-        setInputValue(input, selected)
-        popover.remove()
-        return
       }
       var dayButton = target.closest('[data-baby-date]')
-      if (dayButton) {
-        selected = dayButton.dataset.babyDate
+      if (dayButton) selected = dayButton.dataset.babyDate
+      if (target.closest('[data-baby-date-today]') || dayButton) {
         setInputValue(input, selected)
+        var label = trigger.querySelector('span')
+        if (label) label.textContent = selected.replace(/-/g, '.')
         popover.remove()
       }
     })
   }
 
   document.addEventListener('pointerdown', function (event) {
-    var popover = document.querySelector('.baby-date-popover')
+    var dialog = document.querySelector('.baby-create-dialog')
+    if (!dialog) return
+    var gender = dialog.querySelector('[data-baby-create-gender-select]')
+    if (gender && event.target && !event.target.closest('[data-baby-create-gender-select]')) {
+      var list = gender.querySelector('.custom-select-list')
+      if (list) list.hidden = true
+      gender.classList.remove('open')
+    }
+    var popover = dialog.querySelector('.calendar-popover')
     if (!popover) return
-    if (event.target && event.target.closest && event.target.closest('.baby-date-popover, [data-baby-create-birth]')) return
+    if (event.target && event.target.closest && event.target.closest('.calendar-popover, [data-baby-create-birth-trigger]')) return
     popover.remove()
   }, true)
 
@@ -6275,10 +6381,10 @@
 
   function fetchSchedules(startDate, endDate) {
     if (!getStoredAuthToken()) return Promise.resolve([])
-    return getReadableFamilyId().then(function (familyId) {
-      return apiRequest('/schedules?familyId=' + encodeURIComponent(familyId) +
+    return readWithReadableFamily(function (familyId) {
+      return '/schedules?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
-        '&endDate=' + encodeURIComponent(endDate))
+        '&endDate=' + encodeURIComponent(endDate)
     }).then(function (items) {
       return Array.isArray(items) ? items : []
     }).catch(function () {
@@ -6288,10 +6394,10 @@
 
   function fetchLedgerEntries(startDate, endDate) {
     if (!getStoredAuthToken()) return Promise.resolve([])
-    return getReadableFamilyId().then(function (familyId) {
-      return apiRequest('/ledger-entries?familyId=' + encodeURIComponent(familyId) +
+    return readWithReadableFamily(function (familyId) {
+      return '/ledger-entries?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
-        '&endDate=' + encodeURIComponent(endDate))
+        '&endDate=' + encodeURIComponent(endDate)
     }).then(function (items) {
       return Array.isArray(items) ? items : []
     }).catch(function () {
@@ -6301,10 +6407,10 @@
 
   function fetchLedgerSummary(startDate, endDate) {
     if (!getStoredAuthToken()) return Promise.resolve({ expense: 0, income: 0, total: 0 })
-    return getReadableFamilyId().then(function (familyId) {
-      return apiRequest('/ledger-entries/summary?familyId=' + encodeURIComponent(familyId) +
+    return readWithReadableFamily(function (familyId) {
+      return '/ledger-entries/summary?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
-        '&endDate=' + encodeURIComponent(endDate))
+        '&endDate=' + encodeURIComponent(endDate)
     }).then(function (summary) {
       return summary || { expense: 0, income: 0, total: 0 }
     }).catch(function () {
@@ -6977,8 +7083,8 @@
 
   function fetchTrips() {
     if (!getStoredAuthToken()) return Promise.resolve([])
-    return getReadableFamilyId().then(function (familyId) {
-      return apiRequest('/trips?familyId=' + encodeURIComponent(familyId))
+    return readWithReadableFamily(function (familyId) {
+      return '/trips?familyId=' + encodeURIComponent(familyId)
     }).then(function (items) {
       return Array.isArray(items) ? items : []
     }).catch(function () {
@@ -6997,10 +7103,10 @@
 
   function fetchDiaries(startDate, endDate) {
     if (!getStoredAuthToken()) return Promise.resolve([])
-    return getReadableFamilyId().then(function (familyId) {
-      return apiRequest('/diaries?familyId=' + encodeURIComponent(familyId) +
+    return readWithReadableFamily(function (familyId) {
+      return '/diaries?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
-        '&endDate=' + encodeURIComponent(endDate))
+        '&endDate=' + encodeURIComponent(endDate)
     }).then(function (items) {
       return Array.isArray(items) ? items : []
     }).catch(function () {
@@ -7010,8 +7116,8 @@
 
   function fetchBabies() {
     if (!getStoredAuthToken()) return Promise.resolve([])
-    return getReadableFamilyId().then(function (familyId) {
-      return apiRequest('/babies?familyId=' + encodeURIComponent(familyId))
+    return readWithReadableFamily(function (familyId) {
+      return '/babies?familyId=' + encodeURIComponent(familyId)
     }).then(function (items) {
       return Array.isArray(items) ? items : []
     }).catch(function () {
@@ -7278,7 +7384,10 @@
 
     return apiRequest('/families').then(function (families) {
       var family = Array.isArray(families) ? families[0] : null
-      if (!family || !family.id) throw new Error('No family group available')
+      if (!family || !family.id) {
+        localStorage.removeItem(API_FAMILY_ID_KEY)
+        throw new Error('No family group available')
+      }
       localStorage.setItem(API_FAMILY_ID_KEY, String(family.id))
       return family.id
     })
@@ -7287,6 +7396,18 @@
   function getReadableFamilyId(forceRefresh) {
     return getCurrentFamilyId(forceRefresh).catch(function () {
       return 0
+    })
+  }
+
+  function readWithReadableFamily(pathFactory) {
+    return getReadableFamilyId().then(function (familyId) {
+      return apiRequest(pathFactory(familyId)).catch(function (error) {
+        if (familyId > 0 && error && (error.status === 403 || error.status === 404)) {
+          localStorage.removeItem(API_FAMILY_ID_KEY)
+          return apiRequest(pathFactory(0))
+        }
+        throw error
+      })
     })
   }
 
