@@ -3322,135 +3322,7 @@
     })
   }
 
-  function renderFamilyCreatePage(root) {
-    root.innerHTML = [
-      '<section class="panel wide family-group-panel">',
-      '<header class="panel-header"><h2>가족 생성</h2><button type="button">처음 설정</button></header>',
-      '<form class="code-form family-create-form">',
-      '<label><span>가족명</span><input data-family-name maxlength="40" placeholder="예: 우리 가족" /></label>',
-      '<button class="submit-action" type="submit">가족 생성</button>',
-      '</form>',
-      '<div class="api-empty-row"><strong>아직 연결된 가족그룹이 없습니다.</strong><small>총괄관리자 계정으로 가족을 먼저 생성한 뒤 구성원을 초대하고 권한을 부여합니다.</small></div>',
-      '</section>'
-    ].join('')
-    var form = root.querySelector('.family-create-form')
-    var input = root.querySelector('[data-family-name]')
-    if (input) input.focus()
-    if (!form) return
-    form.addEventListener('submit', function (event) {
-      event.preventDefault()
-      var name = String((input || {}).value || '').trim()
-      if (!name) {
-        showPatchToast('가족명을 입력해주세요.')
-        if (input) input.focus()
-        return
-      }
-      var submit = form.querySelector('button[type="submit"]')
-      if (submit) {
-        submit.disabled = true
-        submit.textContent = '생성 중'
-      }
-      postJson('/families', { name: name }).then(function (family) {
-        localStorage.setItem(AUTH_FAMILY_STORAGE_KEY, String(family.id))
-        showPatchToast('가족그룹을 생성했습니다.')
-        loadFamilyGroupPage(root)
-      }).catch(function (error) {
-        showPatchToast(error && error.status === 409 ? '이미 가족그룹에 속해 있습니다.' : '가족 생성에 실패했습니다.')
-        if (submit) {
-          submit.disabled = false
-          submit.textContent = '가족 생성'
-        }
-      })
-    })
-  }
-
   function permissionText(member) {
-    var permissions = []
-    if (member.canRead) permissions.push('읽기')
-    if (member.canCreate) permissions.push('작성')
-    if (member.canUpdate) permissions.push('수정')
-    if (member.canDelete) permissions.push('삭제')
-    return permissions.length ? permissions.join('/') : '권한 없음'
-  }
-
-  function roleText(role) {
-    if (role === 'FAMILY_ADMIN') return '가족관리자'
-    return '가족구성원'
-  }
-
-  function renderFamilyManagePage(root, family, members) {
-    var rows = members.length ? members.map(function (member) {
-      return '<article><div><strong>' + escapeHtml(roleText(member.role)) + '</strong><span>사용자 ID ' + escapeHtml(member.userId) + ' · ' + escapeHtml(permissionText(member)) + '</span></div><b>' + escapeHtml(member.role || 'MEMBER') + '</b></article>'
-    }).join('') : '<div class="api-empty-row"><strong>등록된 구성원이 없습니다.</strong><small>가족관리자가 구성원 초대와 권한 부여를 진행합니다.</small></div>'
-    root.innerHTML = [
-      '<section class="panel wide family-group-panel">',
-      '<header class="panel-header"><h2>가족그룹</h2></header>',
-      '<div class="family-group-summary">',
-      '<article><span>현재 가족</span><strong>' + escapeHtml(family.name || '-') + '</strong><small>가족 ID ' + escapeHtml(family.id) + '</small></article>',
-      '<article><span>구성원</span><strong>' + members.length + '명</strong><small>읽기/작성/수정/삭제 권한 관리</small></article>',
-      '</div>',
-      '<form class="code-form invite-form family-invite-form">',
-      '<div class="form-row">',
-      '<label><span>사용자 ID</span><input data-invite-user-id inputmode="numeric" placeholder="예: 2" /></label>',
-      '<label><span>역할</span><select data-invite-role><option value="MEMBER">가족구성원</option><option value="FAMILY_ADMIN">가족관리자</option></select></label>',
-      '</div>',
-      '<div class="permission-chips">',
-      '<button type="button" class="active" data-invite-permission="canRead">읽기</button>',
-      '<button type="button" data-invite-permission="canCreate">작성</button>',
-      '<button type="button" data-invite-permission="canUpdate">수정</button>',
-      '<button type="button" data-invite-permission="canDelete">삭제</button>',
-      '</div>',
-      '<button class="submit-action" type="submit">구성원 초대</button>',
-      '</form>',
-      '<div class="family-group-list">',
-      rows,
-      '</div>',
-      '</section>'
-    ].join('')
-    bindFamilyInviteForm(root, family)
-  }
-
-  function bindFamilyInviteForm(root, family) {
-    var form = root.querySelector('.family-invite-form')
-    if (!form || !family || !family.id) return
-    var permissions = { canRead: true, canCreate: false, canUpdate: false, canDelete: false }
-    form.querySelectorAll('[data-invite-permission]').forEach(function (button) {
-      button.addEventListener('click', function () {
-        var key = button.dataset.invitePermission
-        permissions[key] = !permissions[key]
-        button.classList.toggle('active', !!permissions[key])
-      })
-    })
-    form.addEventListener('submit', function (event) {
-      event.preventDefault()
-      var input = form.querySelector('[data-invite-user-id]')
-      var userId = Number((input && input.value || '').trim())
-      if (!userId || userId <= 0) {
-        showPatchToast('초대할 사용자 ID를 입력해주세요.')
-        if (input) input.focus()
-        return
-      }
-      var role = (form.querySelector('[data-invite-role]') || {}).value || 'MEMBER'
-      var payload = Object.assign({ userId: userId, role: role }, permissions)
-      var submit = form.querySelector('button[type="submit"]')
-      if (submit) {
-        submit.disabled = true
-        submit.textContent = '초대 중'
-      }
-      postJson('/families/' + encodeURIComponent(family.id) + '/members', payload).then(function () {
-        showPatchToast('구성원을 추가했습니다.')
-        loadFamilyGroupPage(root)
-      }).catch(function () {
-        showPatchToast('구성원 추가에 실패했습니다. 사용자 ID와 권한을 확인해주세요.')
-        if (submit) {
-          submit.disabled = false
-          submit.textContent = '구성원 초대'
-        }
-      })
-    })
-  }
-
-  function permissionTextClean(member) {
     var permissions = []
     if (member.canRead) permissions.push('\uC77D\uAE30')
     if (member.canCreate) permissions.push('\uC791\uC131')
@@ -3458,13 +3330,11 @@
     if (member.canDelete) permissions.push('\uC0AD\uC81C')
     return permissions.length ? permissions.join('/') : '\uAD8C\uD55C \uC5C6\uC74C'
   }
-
-  permissionText = permissionTextClean
-  roleText = function (role) {
+  function roleText(role) {
     return role === 'FAMILY_ADMIN' ? '\uAC00\uC871\uAD00\uB9AC\uC790' : '\uAC00\uC871\uAD6C\uC131\uC6D0'
   }
 
-  renderFamilyManagePage = function (root, family, members) {
+  function renderFamilyManagePage(root, family, members) {
     var currentUser = readStoredAuthUser() || {}
     var rows = members.length ? members.map(function (member) {
       var displayName = member.nickname || member.email || ('ID ' + member.userId)
@@ -3507,7 +3377,7 @@
     bindFamilyInviteForm(root, family)
   }
 
-  bindFamilyInviteForm = function (root, family) {
+  function bindFamilyInviteForm(root, family) {
     var form = root.querySelector('.family-invite-form')
     if (!form || !family || !family.id) return
     var permissions = { canRead: true, canCreate: false, canUpdate: false, canDelete: false }
@@ -3562,7 +3432,7 @@
     })
   }
 
-  renderFamilyCreatePage = function (root) {
+  function renderFamilyCreatePage(root) {
     root.innerHTML = [
       '<section class="panel wide family-group-panel">',
       '<header class="panel-header"><h2>\uAC00\uC871\uADF8\uB8F9 \uC0DD\uC131</h2></header>',
