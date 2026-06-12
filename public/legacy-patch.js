@@ -1314,16 +1314,20 @@
     function saveAuthModeValues(mode) {
       if (!mode) return
       var state = authModeState(mode)
-      if (emailInput) state.email = emailInput.value || ''
-      if (passwordInput) state.password = passwordInput.value || ''
+      var emailField = card.querySelector('[data-field="auth-email"]') || emailInput
+      var passwordField = card.querySelector('[data-field="auth-password"]') || passwordInput
+      if (emailField) state.email = emailField.value || ''
+      if (passwordField) state.password = passwordField.value || ''
       var nicknameInput = card.querySelector('[data-field="auth-nickname"]')
       if (nicknameInput) state.nickname = nicknameInput.value || ''
     }
 
     function restoreAuthModeValues(mode) {
       var state = authModeState(mode)
-      if (emailInput) setNativeInputValue(emailInput, state.email || '')
-      if (passwordInput) setNativeInputValue(passwordInput, state.password || '')
+      var emailField = card.querySelector('[data-field="auth-email"]') || emailInput
+      var passwordField = card.querySelector('[data-field="auth-password"]') || passwordInput
+      if (emailField) setNativeInputValue(emailField, state.email || '')
+      if (passwordField) setNativeInputValue(passwordField, state.password || '')
       var nicknameInput = card.querySelector('[data-field="auth-nickname"]')
       if (nicknameInput) setNativeInputValue(nicknameInput, mode === 'register' ? (state.nickname || '') : '')
     }
@@ -1332,13 +1336,16 @@
       card.dataset.authModeValueReady = 'true'
       card.addEventListener('input', function (event) {
         if (!event.target || !event.target.matches('[data-field="auth-email"], [data-field="auth-password"], [data-field="auth-nickname"]')) return
+        if (card.__familyAuthModeSwitchingUntil && Date.now() < card.__familyAuthModeSwitchingUntil) return
         saveAuthModeValues(card.dataset.authMode || 'login')
       }, true)
     }
 
     function setMode(mode) {
       var previousMode = card.dataset.authMode
-      if (previousMode && previousMode !== mode) saveAuthModeValues(previousMode)
+      var modeChanged = previousMode !== mode
+      if (previousMode && modeChanged) saveAuthModeValues(previousMode)
+      if (modeChanged) card.__familyAuthModeSwitchingUntil = Date.now() + 650
       card.dataset.authMode = mode
       loginTab.classList.toggle('active', mode === 'login')
       registerTab.classList.toggle('active', mode === 'register')
@@ -1349,7 +1356,15 @@
       if (resendButton) resendButton.hidden = true
       if (passwordInput) passwordInput.autocomplete = mode === 'register' ? 'new-password' : 'current-password'
       if (submit && submit.dataset.authBusy !== 'true') submit.textContent = mode === 'register' ? '회원가입' : '로그인'
-      restoreAuthModeValues(mode)
+      if (modeChanged) {
+        restoreAuthModeValues(mode)
+        window.clearTimeout(card.__familyAuthModeRestoreTimer)
+        ;[80, 240, 520].forEach(function (delay) {
+          window.setTimeout(function () {
+            if (card.dataset.authMode === mode) restoreAuthModeValues(mode)
+          }, delay)
+        })
+      }
       normalizeAuthCopy(card, mode)
     }
 
