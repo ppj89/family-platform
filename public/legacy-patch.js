@@ -5832,13 +5832,19 @@
 
   function apiActionErrorMessage(error, fallback) {
     var text = apiErrorText(error)
-    if ((error && error.status === 403) || text.indexOf('permission denied') >= 0) return '권한이 없어 저장이 불가합니다.'
-    if ((error && error.status === 401) || text.indexOf('invalid session') >= 0) return '로그인이 필요합니다.'
-    if (text.indexOf('family admin') >= 0) return '가족관리자는 최소 1명 필요합니다.'
-    if (text.indexOf('nickname is ambiguous') >= 0) return '닉네임이 중복됩니다. 이메일로 초대해주세요.'
-    if (text.indexOf('user not found') >= 0) return '사용자를 찾을 수 없습니다.'
-    if (text.indexOf('already belongs') >= 0) return '이미 가족그룹에 속해 있습니다.'
-    if (text.indexOf('invitation already exists') >= 0) return '이미 초대가 진행 중입니다.'
+    var status = error && error.status
+    if (status === 401 || text.indexOf('invalid session') >= 0) return '\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.'
+    if (status === 403 || text.indexOf('permission denied') >= 0 || text.indexOf('permission required') >= 0) return '\uAD8C\uD55C\uC774 \uC5C6\uC5B4 \uCC98\uB9AC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.'
+    if (text.indexOf('family admin') >= 0) return '\uAC00\uC871\uAD00\uB9AC\uC790\uB294 \uCD5C\uC18C 1\uBA85 \uD544\uC694\uD569\uB2C8\uB2E4.'
+    if (text.indexOf('nickname is ambiguous') >= 0) return '\uB2C9\uB124\uC784\uC774 \uC911\uBCF5\uB429\uB2C8\uB2E4. \uC774\uBA54\uC77C\uB85C \uCD08\uB300\uD574\uC8FC\uC138\uC694.'
+    if (text.indexOf('user not found') >= 0) return '\uC0AC\uC6A9\uC790\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.'
+    if (text.indexOf('resource not found') >= 0 || text.indexOf('not found') >= 0 || status === 404) return '\uB300\uC0C1 \uB370\uC774\uD130\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.'
+    if (text.indexOf('already belongs') >= 0) return '\uC774\uBBF8 \uAC00\uC871\uADF8\uB8F9\uC5D0 \uC18D\uD574 \uC788\uC2B5\uB2C8\uB2E4.'
+    if (text.indexOf('invitation already exists') >= 0) return '\uC774\uBBF8 \uCD08\uB300\uAC00 \uC9C4\uD589 \uC911\uC785\uB2C8\uB2E4.'
+    if (status === 400 || text.indexOf('required') >= 0 || text.indexOf('invalid') >= 0 || text.indexOf('cannot be before') >= 0) return '\uC785\uB825\uAC12\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.'
+    if (status === 409) return '\uC774\uBBF8 \uCC98\uB9AC\uB41C \uB370\uC774\uD130\uC774\uAC70\uB098 \uC0C1\uD0DC\uAC00 \uCDA9\uB3CC\uD569\uB2C8\uB2E4.'
+    if (status >= 500 || text.indexOf('database') >= 0 || text.indexOf('save failed') >= 0) return '\uC2DC\uC2A4\uD15C \uBB38\uC81C\uB85C \uCC98\uB9AC\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574\uC8FC\uC138\uC694.'
+    if (text.indexOf('Failed to fetch') >= 0 || text.indexOf('NetworkError') >= 0) return '\uB124\uD2B8\uC6CC\uD06C\uAC00 \uC548\uC815\uC801\uC774\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC5F0\uACB0\uC744 \uD655\uC778\uD574\uC8FC\uC138\uC694.'
     return fallback || '처리에 실패했습니다.'
   }
 
