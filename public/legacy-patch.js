@@ -3317,11 +3317,18 @@
       }).catch(function () {
         renderFamilyManagePage(root, family, [])
       })
-    }).catch(function () {
-      root.innerHTML = '<section class="panel wide family-group-panel">' + emptyRow('가족 정보를 불러오지 못했습니다.', '') + '</section>'
+    }).catch(function (error) {
+      var message = error && error.status === 401 ? '로그인 세션이 필요합니다.' : '가족 정보를 불러오지 못했습니다.'
+      root.innerHTML = [
+        '<section class="panel wide family-group-panel">',
+        '<div class="api-empty-row"><strong>' + message + '</strong><small>로그인 상태를 확인한 뒤 다시 시도해주세요.</small></div>',
+        '<button class="submit-action" type="button" data-family-retry>다시 불러오기</button>',
+        '</section>'
+      ].join('')
+      var retry = root.querySelector('[data-family-retry]')
+      if (retry) retry.addEventListener('click', function () { loadFamilyGroupPage(root) })
     })
   }
-
   function permissionText(member) {
     var permissions = []
     if (member.canRead) permissions.push('\uC77D\uAE30')
@@ -5631,7 +5638,7 @@
   }
 
   function apiRequest(path, options) {
-    var token = localStorage.getItem(API_AUTH_TOKEN_KEY)
+    var token = getStoredAuthToken()
     var headers = { 'Content-Type': 'application/json' }
     if (token) headers.Authorization = 'Bearer ' + token
     return fetch(API_BASE_URL + path, Object.assign({
