@@ -279,6 +279,10 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("POST /api/families/{familyId}/members", a.requireAuth(a.addFamilyMember))
 	mux.HandleFunc("PUT /api/families/{familyId}/members/{memberId}", a.requireAuth(a.updateFamilyMember))
 	mux.HandleFunc("DELETE /api/families/{familyId}/members/{memberId}", a.requireAuth(a.deleteFamilyMember))
+	mux.HandleFunc("GET /api/family-invitations", a.requireAuth(a.listFamilyInvitations))
+	mux.HandleFunc("POST /api/families/{familyId}/invitations", a.requireAuth(a.createFamilyInvitation))
+	mux.HandleFunc("POST /api/family-invitations/{invitationId}/accept", a.requireAuth(a.acceptFamilyInvitation))
+	mux.HandleFunc("POST /api/family-invitations/{invitationId}/reject", a.requireAuth(a.rejectFamilyInvitation))
 	mux.HandleFunc("GET /api/ledger-entries", a.requireAuth(a.listLedgerEntries))
 	mux.HandleFunc("GET /api/ledger-entries/summary", a.requireAuth(a.ledgerSummary))
 	mux.HandleFunc("POST /api/ledger-entries", a.requireAuth(a.createLedgerEntry))
@@ -1151,6 +1155,25 @@ type familyMember struct {
 	JoinedAt  string `json:"joinedAt"`
 }
 
+type familyInvitation struct {
+	ID             int64  `json:"id"`
+	FamilyID       int64  `json:"familyId"`
+	FamilyName     string `json:"familyName"`
+	InviterUserID  int64  `json:"inviterUserId"`
+	InviterName    string `json:"inviterName,omitempty"`
+	InviteeUserID  int64  `json:"inviteeUserId"`
+	InviteeEmail   string `json:"inviteeEmail,omitempty"`
+	InviteeName    string `json:"inviteeName,omitempty"`
+	Role           string `json:"role"`
+	CanRead        bool   `json:"canRead"`
+	CanCreate      bool   `json:"canCreate"`
+	CanUpdate      bool   `json:"canUpdate"`
+	CanDelete      bool   `json:"canDelete"`
+	Status         string `json:"status"`
+	CreatedAt      string `json:"createdAt"`
+	RespondedAt    string `json:"respondedAt,omitempty"`
+}
+
 func (a *app) listFamilyMembers(w http.ResponseWriter, r *http.Request, user authUser) {
 	familyID, ok := pathID(w, r, "familyId")
 	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
@@ -1184,7 +1207,7 @@ func (a *app) listFamilyMembers(w http.ResponseWriter, r *http.Request, user aut
 
 func (a *app) addFamilyMember(w http.ResponseWriter, r *http.Request, user authUser) {
 	familyID, ok := pathID(w, r, "familyId")
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+	if !ok || !a.requireFamilyAdmin(w, r.Context(), user, familyID) {
 		return
 	}
 	var req struct {
@@ -1247,7 +1270,7 @@ func (a *app) addFamilyMember(w http.ResponseWriter, r *http.Request, user authU
 func (a *app) updateFamilyMember(w http.ResponseWriter, r *http.Request, user authUser) {
 	familyID, ok := pathID(w, r, "familyId")
 	memberID, ok2 := pathID(w, r, "memberId")
-	if !ok || !ok2 || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+	if !ok || !ok2 || !a.requireFamilyAdmin(w, r.Context(), user, familyID) {
 		return
 	}
 	var req struct {
@@ -1289,7 +1312,7 @@ func (a *app) deleteFamilyMember(w http.ResponseWriter, r *http.Request, user au
 		writeError(w, http.StatusNotFound, "family member not found")
 		return
 	}
-	if memberUserID != user.ID && !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+	if memberUserID != user.ID && !a.requireFamilyAdmin(w, r.Context(), user, familyID) {
 		return
 	}
 	tag, err := a.db.Exec(r.Context(), "delete from family_members where id = $1 and family_id = $2", memberID, familyID)
@@ -1298,6 +1321,171 @@ func (a *app) deleteFamilyMember(w http.ResponseWriter, r *http.Request, user au
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *app) listFamilyInvitations(w http.ResponseWriter, r *http.Request, user authUser) {
+	rows, err := a.db.Query(r.Context(), `
+		select i.id, i.family_id, coalesce(f.name, ''), i.inviter_user_id, coalesce(inviter.nickname, ''), i.invitee_user_id,
+		       coalesce(invitee.email, ''), coalesce(invitee.nickname, ''), i.role, i.can_read, i.can_create, i.can_update, i.can_delete,
+		       i.status, i.created_at, i.responded_at
+		from family_invitations i
+		left join family_groups f on f.id = i.family_id
+		left join app_users inviter on inviter.id = i.inviter_user_id
+		left join app_users invitee on invitee.id = i.invitee_user_id
+		where i.invitee_user_id = $1 and i.status = 'PENDING'
+		order by i.created_at desc
+	`, user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	defer rows.Close()
+	items := []familyInvitation{}
+	for rows.Next() {
+		item, ok := scanFamilyInvitation(w, rows)
+		if !ok {
+			return
+		}
+		items = append(items, item)
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (a *app) createFamilyInvitation(w http.ResponseWriter, r *http.Request, user authUser) {
+	familyID, ok := pathID(w, r, "familyId")
+	if !ok || !a.requireFamilyAdmin(w, r.Context(), user, familyID) {
+		return
+	}
+	var req struct {
+		Invite    string `json:"invite"`
+		Role      string `json:"role"`
+		CanRead   bool   `json:"canRead"`
+		CanCreate bool   `json:"canCreate"`
+		CanUpdate bool   `json:"canUpdate"`
+		CanDelete bool   `json:"canDelete"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	invite := strings.TrimSpace(req.Invite)
+	if invite == "" {
+		writeError(w, http.StatusBadRequest, "invitee is required")
+		return
+	}
+	var inviteeID int64
+	err := a.db.QueryRow(r.Context(), `
+		select id from app_users
+		where lower(coalesce(email, '')) = lower($1)
+		   or lower(coalesce(nickname, '')) = lower($1)
+		   or lower(coalesce(login_id, '')) = lower($1)
+		order by id asc
+		limit 1
+	`, invite).Scan(&inviteeID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "user not found")
+		return
+	}
+	if inviteeID == user.ID {
+		writeError(w, http.StatusBadRequest, "cannot invite yourself")
+		return
+	}
+	var memberCount int
+	if err := a.db.QueryRow(r.Context(), "select count(1) from family_members where user_id = $1", inviteeID).Scan(&memberCount); err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	if memberCount > 0 {
+		writeError(w, http.StatusConflict, "user already belongs to a family")
+		return
+	}
+	var pendingCount int
+	if err := a.db.QueryRow(r.Context(), "select count(1) from family_invitations where family_id = $1 and invitee_user_id = $2 and status = 'PENDING'", familyID, inviteeID).Scan(&pendingCount); err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	if pendingCount > 0 {
+		writeError(w, http.StatusConflict, "invitation already exists")
+		return
+	}
+	row := a.db.QueryRow(r.Context(), `
+		insert into family_invitations (family_id, inviter_user_id, invitee_user_id, role, can_read, can_create, can_update, can_delete, status, created_at)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING', now())
+		returning id, family_id, '', inviter_user_id, '', invitee_user_id, '', '', role, can_read, can_create, can_update, can_delete, status, created_at, responded_at
+	`, familyID, user.ID, inviteeID, emptyDefault(req.Role, "MEMBER"), req.CanRead, req.CanCreate, req.CanUpdate, req.CanDelete)
+	item, ok := scanFamilyInvitation(w, row)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusCreated, item)
+}
+
+func (a *app) acceptFamilyInvitation(w http.ResponseWriter, r *http.Request, user authUser) {
+	invitationID, ok := pathID(w, r, "invitationId")
+	if !ok {
+		return
+	}
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database transaction failed")
+		return
+	}
+	defer tx.Rollback(r.Context())
+
+	var familyID int64
+	var role string
+	var canRead, canCreate, canUpdate, canDelete bool
+	err = tx.QueryRow(r.Context(), `
+		select family_id, role, can_read, can_create, can_update, can_delete
+		from family_invitations
+		where id = $1 and invitee_user_id = $2 and status = 'PENDING'
+		for update
+	`, invitationID, user.ID).Scan(&familyID, &role, &canRead, &canCreate, &canUpdate, &canDelete)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "invitation not found")
+		return
+	}
+	var memberCount int
+	if err := tx.QueryRow(r.Context(), "select count(1) from family_members where user_id = $1", user.ID).Scan(&memberCount); err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	if memberCount > 0 {
+		writeError(w, http.StatusConflict, "user already belongs to a family")
+		return
+	}
+	if _, err := tx.Exec(r.Context(), `
+		insert into family_members (family_id, user_id, role, joined_at, can_read, can_create, can_update, can_delete)
+		values ($1, $2, $3, now(), $4, $5, $6, $7)
+	`, familyID, user.ID, emptyDefault(role, "MEMBER"), canRead, canCreate, canUpdate, canDelete); err != nil {
+		writeError(w, http.StatusInternalServerError, "family membership creation failed")
+		return
+	}
+	if _, err := tx.Exec(r.Context(), "update family_invitations set status = 'ACCEPTED', responded_at = now() where id = $1", invitationID); err != nil {
+		writeError(w, http.StatusInternalServerError, "invitation update failed")
+		return
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "database commit failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"familyId": familyID, "status": "ACCEPTED"})
+}
+
+func (a *app) rejectFamilyInvitation(w http.ResponseWriter, r *http.Request, user authUser) {
+	invitationID, ok := pathID(w, r, "invitationId")
+	if !ok {
+		return
+	}
+	tag, err := a.db.Exec(r.Context(), `
+		update family_invitations
+		set status = 'REJECTED', responded_at = now()
+		where id = $1 and invitee_user_id = $2 and status = 'PENDING'
+	`, invitationID, user.ID)
+	if err != nil || tag.RowsAffected() == 0 {
+		writeError(w, http.StatusNotFound, "invitation not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "REJECTED"})
 }
 
 type ledgerEntry struct {
@@ -3111,6 +3299,22 @@ create table if not exists family_members (
 );
 create index if not exists idx_family_members_user on family_members (user_id);
 create index if not exists idx_family_members_family on family_members (family_id);
+create table if not exists family_invitations (
+  id bigint generated by default as identity primary key,
+  family_id bigint not null,
+  inviter_user_id bigint not null,
+  invitee_user_id bigint not null,
+  role varchar(255) not null default 'MEMBER',
+  can_read boolean not null default true,
+  can_create boolean not null default false,
+  can_update boolean not null default false,
+  can_delete boolean not null default false,
+  status varchar(64) not null default 'PENDING',
+  created_at timestamp with time zone not null,
+  responded_at timestamp with time zone
+);
+create index if not exists idx_family_invitations_invitee on family_invitations (invitee_user_id, status, created_at desc);
+create index if not exists idx_family_invitations_family on family_invitations (family_id, status, created_at desc);
 create table if not exists family_schedules (
   id bigint generated by default as identity primary key,
   calendar_basis varchar(255),
@@ -3975,6 +4179,39 @@ func emptyDefault(value, fallback string) string {
 	return value
 }
 
+func scanFamilyInvitation(w http.ResponseWriter, scanner interface{ Scan(...any) error }) (familyInvitation, bool) {
+	var item familyInvitation
+	var createdAt time.Time
+	var respondedAt sql.NullTime
+	err := scanner.Scan(
+		&item.ID,
+		&item.FamilyID,
+		&item.FamilyName,
+		&item.InviterUserID,
+		&item.InviterName,
+		&item.InviteeUserID,
+		&item.InviteeEmail,
+		&item.InviteeName,
+		&item.Role,
+		&item.CanRead,
+		&item.CanCreate,
+		&item.CanUpdate,
+		&item.CanDelete,
+		&item.Status,
+		&createdAt,
+		&respondedAt,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database scan failed")
+		return item, false
+	}
+	item.CreatedAt = formatTime(createdAt)
+	if respondedAt.Valid {
+		item.RespondedAt = formatTime(respondedAt.Time)
+	}
+	return item, true
+}
+
 func (a *app) requireFamilyPermission(w http.ResponseWriter, ctx context.Context, user authUser, familyID int64, permission string) bool {
 	if user.PlatformAdmin {
 		return true
@@ -3993,6 +4230,24 @@ func (a *app) requireFamilyPermission(w http.ResponseWriter, ctx context.Context
 	query := fmt.Sprintf("select exists(select 1 from family_members where family_id = $1 and user_id = $2 and %s = true)", column)
 	if err := a.db.QueryRow(ctx, query, familyID, user.ID).Scan(&allowed); err != nil || !allowed {
 		writeError(w, http.StatusForbidden, "permission denied")
+		return false
+	}
+	return true
+}
+
+func (a *app) requireFamilyAdmin(w http.ResponseWriter, ctx context.Context, user authUser, familyID int64) bool {
+	if user.PlatformAdmin {
+		return true
+	}
+	var allowed bool
+	err := a.db.QueryRow(ctx, `
+		select exists(
+			select 1 from family_members
+			where family_id = $1 and user_id = $2 and role = 'FAMILY_ADMIN'
+		)
+	`, familyID, user.ID).Scan(&allowed)
+	if err != nil || !allowed {
+		writeError(w, http.StatusForbidden, "family admin permission required")
 		return false
 	}
 	return true

@@ -2655,7 +2655,7 @@
           updateSelectedDayPanel(selectedDate)
           loadCalendarScheduleCache(false).then(function () {
             if (!openCalendarApiDayPopup(selectedDate)) {
-              if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) openCalendarDaySchedulePopup(selectedDate, collectScheduleTextsFromCalendarNode(card))
+              if (!getStoredAuthToken()) openCalendarDaySchedulePopup(selectedDate, collectScheduleTextsFromCalendarNode(card))
             }
           })
         }
@@ -2676,7 +2676,7 @@
           updateSelectedDayPanel(selectedDate)
           loadCalendarScheduleCache(false).then(function () {
             if (!openCalendarApiDayPopup(selectedDate)) {
-              if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) openCalendarDaySchedulePopup(selectedDate, collectScheduleTextsFromCalendarNode(card))
+              if (!getStoredAuthToken()) openCalendarDaySchedulePopup(selectedDate, collectScheduleTextsFromCalendarNode(card))
             }
           })
         }
@@ -2698,7 +2698,7 @@
           updateSelectedDayPanel(selectedDate, column)
           loadCalendarScheduleCache(false).then(function () {
             if (!openCalendarApiDayPopup(selectedDate)) {
-              if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) openCalendarDaySchedulePopup(selectedDate, collectScheduleTextsFromCalendarNode(column))
+              if (!getStoredAuthToken()) openCalendarDaySchedulePopup(selectedDate, collectScheduleTextsFromCalendarNode(column))
             }
           })
           document.querySelectorAll('.agenda-day-column.active').forEach(function (item) {
@@ -3304,18 +3304,22 @@
   }
 
   function loadFamilyGroupPage(root) {
-    apiRequest('/families').then(function (families) {
-      var list = Array.isArray(families) ? families : []
+    Promise.all([
+      apiRequest('/families'),
+      apiRequest('/family-invitations').catch(function () { return [] })
+    ]).then(function (results) {
+      var list = Array.isArray(results[0]) ? results[0] : []
+      var invitations = Array.isArray(results[1]) ? results[1] : []
       if (!list.length) {
-        renderFamilyCreatePage(root)
+        renderFamilyCreatePage(root, invitations)
         return
       }
       var family = list[0]
       localStorage.setItem(AUTH_FAMILY_STORAGE_KEY, String(family.id))
       return apiRequest('/families/' + encodeURIComponent(family.id) + '/members').then(function (members) {
-        renderFamilyManagePage(root, family, Array.isArray(members) ? members : [])
+        renderFamilyManagePage(root, family, Array.isArray(members) ? members : [], invitations)
       }).catch(function () {
-        renderFamilyManagePage(root, family, [])
+        renderFamilyManagePage(root, family, [], invitations)
       })
     }).catch(function (error) {
       var message = error && error.status === 401 ? '로그인 세션이 필요합니다.' : '가족 정보를 불러오지 못했습니다.'
@@ -3329,64 +3333,122 @@
       if (retry) retry.addEventListener('click', function () { loadFamilyGroupPage(root) })
     })
   }
+
   function permissionText(member) {
     var permissions = []
-    if (member.canRead) permissions.push('\uC77D\uAE30')
-    if (member.canCreate) permissions.push('\uC791\uC131')
-    if (member.canUpdate) permissions.push('\uC218\uC815')
-    if (member.canDelete) permissions.push('\uC0AD\uC81C')
-    return permissions.length ? permissions.join('/') : '\uAD8C\uD55C \uC5C6\uC74C'
-  }
-  function roleText(role) {
-    return role === 'FAMILY_ADMIN' ? '\uAC00\uC871\uAD00\uB9AC\uC790' : '\uAC00\uC871\uAD6C\uC131\uC6D0'
+    if (member.canRead) permissions.push('읽기')
+    if (member.canCreate) permissions.push('작성')
+    if (member.canUpdate) permissions.push('수정')
+    if (member.canDelete) permissions.push('삭제')
+    return permissions.length ? permissions.join('/') : '권한 없음'
   }
 
-  function renderFamilyManagePage(root, family, members) {
+  function roleText(role) {
+    return role === 'FAMILY_ADMIN' ? '가족관리자' : '가족구성원'
+  }
+
+  function currentFamilyMember(members) {
     var currentUser = readStoredAuthUser() || {}
+    return (members || []).find(function (member) {
+      return String(member.userId) === String(currentUser.id || '')
+    }) || null
+  }
+
+  function canManageFamily(members) {
+    var currentUser = readStoredAuthUser() || {}
+    if (currentUser.platformAdmin) return true
+    var member = currentFamilyMember(members)
+    return !!(member && member.role === 'FAMILY_ADMIN')
+  }
+
+  function renderFamilyInvitationList(invitations) {
+    if (!invitations || !invitations.length) return ''
+    return [
+      '<section class="family-invitation-panel">',
+      '<header><strong>받은 가족 초대</strong><span>' + invitations.length + '건</span></header>',
+      invitations.map(function (item) {
+        return [
+          '<article data-family-invitation-id="' + escapeHtml(item.id) + '">',
+          '<div><strong>' + escapeHtml(item.familyName || '가족그룹') + '</strong>',
+          '<span>' + escapeHtml(item.inviterName || '초대자') + ' · ' + escapeHtml(roleText(item.role)) + ' · ' + escapeHtml(permissionText(item)) + '</span></div>',
+          '<div class="member-actions"><button type="button" data-family-invite-accept="' + escapeHtml(item.id) + '">수락</button><button type="button" class="danger-button" data-family-invite-reject="' + escapeHtml(item.id) + '">거절</button></div>',
+          '</article>'
+        ].join('')
+      }).join(''),
+      '</section>'
+    ].join('')
+  }
+
+  function bindFamilyInvitationActions(root) {
+    root.querySelectorAll('[data-family-invite-accept], [data-family-invite-reject]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var id = button.dataset.familyInviteAccept || button.dataset.familyInviteReject
+        var accept = !!button.dataset.familyInviteAccept
+        showPatchConfirm(accept ? '가족 초대를 수락할까요?' : '가족 초대를 거절할까요?', function () {
+          apiRequest('/family-invitations/' + encodeURIComponent(id) + '/' + (accept ? 'accept' : 'reject'), { method: 'POST' }).then(function () {
+            showPatchToast(accept ? '가족그룹에 참여했습니다.' : '초대를 거절했습니다.')
+            loadFamilyGroupPage(root)
+          }).catch(function (error) {
+            showPatchToast(error && error.status === 409 ? '이미 다른 가족그룹에 속해 있습니다.' : '초대 처리에 실패했습니다.')
+          })
+        })
+      })
+    })
+  }
+
+  function renderFamilyManagePage(root, family, members, invitations) {
+    var currentUser = readStoredAuthUser() || {}
+    var canManage = canManageFamily(members)
     var rows = members.length ? members.map(function (member) {
       var displayName = member.nickname || member.email || ('ID ' + member.userId)
       var isMe = String(member.userId) === String(currentUser.id || '')
+      var action = ''
+      if (isMe) action = '<button type="button" class="danger-button" data-family-leave="' + escapeHtml(member.id) + '">가족그룹 나가기</button>'
+      else if (canManage) action = '<button type="button" class="danger-button" data-family-remove-member="' + escapeHtml(member.id) + '">내보내기</button>'
       return [
         '<article data-family-member-id="' + escapeHtml(member.id) + '">',
-        '<div><strong>' + escapeHtml(displayName) + (isMe ? ' <em>\uB098</em>' : '') + '</strong>',
-        '<span>' + escapeHtml(roleText(member.role)) + ' \u00B7 ' + escapeHtml(permissionText(member)) + (member.email ? ' \u00B7 ' + escapeHtml(member.email) : '') + '</span></div>',
-        '<div class="member-actions">',
-        isMe ? '<button type="button" class="danger-button" data-family-leave="' + escapeHtml(member.id) + '">\uAC00\uC871\uADF8\uB8F9 \uB098\uAC00\uAE30</button>' : '<button type="button" class="danger-button" data-family-remove-member="' + escapeHtml(member.id) + '">\uB0B4\uBCF4\uB0B4\uAE30</button>',
-        '</div>',
+        '<div><strong>' + escapeHtml(displayName) + (isMe ? ' <em>나</em>' : '') + '</strong>',
+        '<span>' + escapeHtml(roleText(member.role)) + ' · ' + escapeHtml(permissionText(member)) + (member.email ? ' · ' + escapeHtml(member.email) : '') + '</span></div>',
+        '<div class="member-actions">' + action + '</div>',
         '</article>'
       ].join('')
-    }).join('') : '<div class="api-empty-row"><strong>\uB4F1\uB85D\uB41C \uAD6C\uC131\uC6D0\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</strong></div>'
-    root.innerHTML = [
-      '<section class="panel wide family-group-panel">',
-      '<header class="panel-header"><h2>\uAC00\uC871\uADF8\uB8F9</h2></header>',
-      '<div class="family-group-summary">',
-      '<article><span>\uD604\uC7AC \uAC00\uC871</span><strong>' + escapeHtml(family.name || '-') + '</strong><small>\uAC00\uC871 ID ' + escapeHtml(family.id) + '</small></article>',
-      '<article><span>\uAD6C\uC131\uC6D0</span><strong>' + members.length + '\uBA85</strong><small>\uC77D\uAE30/\uC791\uC131/\uC218\uC815/\uC0AD\uC81C \uAD8C\uD55C \uAD00\uB9AC</small></article>',
-      '</div>',
+    }).join('') : '<div class="api-empty-row"><strong>등록된 구성원이 없습니다.</strong></div>'
+    var inviteForm = canManage ? [
       '<form class="code-form invite-form family-invite-form">',
       '<div class="form-row">',
-      '<label><span>\uCD94\uAC00\uD560 \uC0AC\uC6A9\uC790</span><input data-invite-user placeholder="\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, \uAD00\uB9AC\uC790 \uC544\uC774\uB514" /></label>',
-      '<label><span>\uC5ED\uD560</span><select data-invite-role><option value="MEMBER">\uAC00\uC871\uAD6C\uC131\uC6D0</option><option value="FAMILY_ADMIN">\uAC00\uC871\uAD00\uB9AC\uC790</option></select></label>',
+      '<label><span>초대할 사용자</span><input data-invite-user placeholder="이메일, 닉네임, 관리자 아이디" /></label>',
+      '<label><span>역할</span><select data-invite-role><option value="MEMBER">가족구성원</option><option value="FAMILY_ADMIN">가족관리자</option></select></label>',
       '</div>',
       '<div class="permission-chips">',
-      '<button type="button" class="active" data-invite-permission="canRead">\uC77D\uAE30</button>',
-      '<button type="button" data-invite-permission="canCreate">\uC791\uC131</button>',
-      '<button type="button" data-invite-permission="canUpdate">\uC218\uC815</button>',
-      '<button type="button" data-invite-permission="canDelete">\uC0AD\uC81C</button>',
+      '<button type="button" class="active" data-invite-permission="canRead">읽기</button>',
+      '<button type="button" data-invite-permission="canCreate">작성</button>',
+      '<button type="button" data-invite-permission="canUpdate">수정</button>',
+      '<button type="button" data-invite-permission="canDelete">삭제</button>',
       '</div>',
-      '<button class="submit-action" type="submit">\uAD6C\uC131\uC6D0 \uCD94\uAC00</button>',
-      '</form>',
+      '<button class="submit-action" type="submit">초대 보내기</button>',
+      '</form>'
+    ].join('') : '<div class="api-empty-row family-member-readonly"><strong>가족구성원은 구성원 초대와 내보내기를 할 수 없습니다.</strong></div>'
+    root.innerHTML = [
+      '<section class="panel wide family-group-panel">',
+      '<header class="panel-header"><h2>가족그룹</h2></header>',
+      renderFamilyInvitationList(invitations || []),
+      '<div class="family-group-summary">',
+      '<article><span>현재 가족</span><strong>' + escapeHtml(family.name || '-') + '</strong><small>가족 ID ' + escapeHtml(family.id) + '</small></article>',
+      '<article><span>구성원</span><strong>' + members.length + '명</strong><small>읽기/작성/수정/삭제 권한 관리</small></article>',
+      '</div>',
+      inviteForm,
       '<div class="family-group-list">',
       rows,
       '</div>',
       '</section>'
     ].join('')
-    bindFamilyInviteForm(root, family)
+    bindFamilyInviteForm(root, family, canManage)
+    bindFamilyInvitationActions(root)
   }
 
-  function bindFamilyInviteForm(root, family) {
+  function bindFamilyInviteForm(root, family, canManage) {
     var form = root.querySelector('.family-invite-form')
-    if (!form || !family || !family.id) return
+    if (!form || !family || !family.id || !canManage) return
     var permissions = { canRead: true, canCreate: false, canUpdate: false, canDelete: false }
     form.querySelectorAll('[data-invite-permission]').forEach(function (button) {
       button.addEventListener('click', function () {
@@ -3400,7 +3462,7 @@
       var input = form.querySelector('[data-invite-user]')
       var invite = String((input && input.value || '').trim())
       if (!invite) {
-        showPatchToast('\uCD94\uAC00\uD560 \uC0AC\uC6A9\uC790\uC758 \uC774\uBA54\uC77C\uC774\uB098 \uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+        showPatchToast('초대할 사용자의 이메일이나 닉네임을 입력해주세요.')
         if (input) input.focus()
         return
       }
@@ -3409,16 +3471,20 @@
       var submit = form.querySelector('button[type="submit"]')
       if (submit) {
         submit.disabled = true
-        submit.textContent = '\uCD94\uAC00 \uC911'
+        submit.textContent = '초대 중'
       }
-      postJson('/families/' + encodeURIComponent(family.id) + '/members', payload).then(function () {
-        showPatchToast('\uAD6C\uC131\uC6D0\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
-        loadFamilyGroupPage(root)
+      postJson('/families/' + encodeURIComponent(family.id) + '/invitations', payload).then(function () {
+        showPatchToast('초대를 보냈습니다. 상대방이 수락하면 구성원으로 추가됩니다.')
+        if (input) input.value = ''
       }).catch(function (error) {
-        showPatchToast(error && error.status === 404 ? '\uC0AC\uC6A9\uC790\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.' : '\uAD6C\uC131\uC6D0 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+        var message = '초대에 실패했습니다.'
+        if (error && error.status === 404) message = '사용자를 찾지 못했습니다.'
+        if (error && error.status === 409) message = '이미 가족에 속했거나 대기 중인 초대가 있습니다.'
+        showPatchToast(message)
+      }).finally(function () {
         if (submit) {
           submit.disabled = false
-          submit.textContent = '\uAD6C\uC131\uC6D0 \uCD94\uAC00'
+          submit.textContent = '초대 보내기'
         }
       })
     })
@@ -3426,30 +3492,32 @@
       button.addEventListener('click', function () {
         var memberId = button.dataset.familyLeave || button.dataset.familyRemoveMember
         var leaving = !!button.dataset.familyLeave
-        showPatchConfirm(leaving ? '\uAC00\uC871\uADF8\uB8F9\uC5D0\uC11C \uB098\uAC08\uAE4C\uC694?' : '\uAD6C\uC131\uC6D0\uC744 \uB0B4\uBCF4\uB0BC\uAE4C\uC694?', function () {
+        showPatchConfirm(leaving ? '가족그룹에서 나갈까요?' : '구성원을 내보낼까요?', function () {
           apiRequest('/families/' + encodeURIComponent(family.id) + '/members/' + encodeURIComponent(memberId), { method: 'DELETE' }).then(function () {
             if (leaving) localStorage.removeItem(AUTH_FAMILY_STORAGE_KEY)
-            showPatchToast(leaving ? '\uAC00\uC871\uADF8\uB8F9\uC5D0\uC11C \uB098\uAC14\uC2B5\uB2C8\uB2E4.' : '\uAD6C\uC131\uC6D0\uC744 \uB0B4\uBCF4\uB0C8\uC2B5\uB2C8\uB2E4.')
+            showPatchToast(leaving ? '가족그룹에서 나갔습니다.' : '구성원을 내보냈습니다.')
             loadFamilyGroupPage(root)
           }).catch(function () {
-            showPatchToast('\uCC98\uB9AC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+            showPatchToast('처리에 실패했습니다.')
           })
         })
       })
     })
   }
 
-  function renderFamilyCreatePage(root) {
+  function renderFamilyCreatePage(root, invitations) {
     root.innerHTML = [
       '<section class="panel wide family-group-panel">',
-      '<header class="panel-header"><h2>\uAC00\uC871\uADF8\uB8F9 \uC0DD\uC131</h2></header>',
+      '<header class="panel-header"><h2>가족그룹 생성</h2></header>',
+      renderFamilyInvitationList(invitations || []),
       '<form class="code-form family-create-form">',
-      '<label><span>\uAC00\uC871\uBA85</span><input data-family-name maxlength="40" placeholder="\uC608: \uC6B0\uB9AC \uAC00\uC871" /></label>',
-      '<button class="submit-action" type="submit">\uAC00\uC871\uADF8\uB8F9 \uC0DD\uC131</button>',
+      '<label><span>가족명</span><input data-family-name maxlength="40" placeholder="예: 우리 가족" /></label>',
+      '<button class="submit-action" type="submit">가족그룹 생성</button>',
       '</form>',
-      '<div class="api-empty-row"><strong>\uC5F0\uACB0\uB41C \uAC00\uC871\uADF8\uB8F9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</strong><small>\uAC00\uC871\uADF8\uB8F9\uC744 \uBA3C\uC800 \uC0DD\uC131\uD55C \uB4A4 \uAD6C\uC131\uC6D0\uC744 \uCD94\uAC00\uD558\uACE0 \uAD8C\uD55C\uC744 \uC124\uC815\uD569\uB2C8\uB2E4.</small></div>',
+      '<div class="api-empty-row"><strong>연결된 가족그룹이 없습니다.</strong><small>초대를 수락하거나 새 가족그룹을 생성해주세요.</small></div>',
       '</section>'
     ].join('')
+    bindFamilyInvitationActions(root)
     var form = root.querySelector('.family-create-form')
     var input = root.querySelector('[data-family-name]')
     if (input) input.focus()
@@ -3458,24 +3526,24 @@
       event.preventDefault()
       var name = String((input || {}).value || '').trim()
       if (!name) {
-        showPatchToast('\uAC00\uC871\uBA85\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+        showPatchToast('가족명을 입력해주세요.')
         if (input) input.focus()
         return
       }
       var submit = form.querySelector('button[type="submit"]')
       if (submit) {
         submit.disabled = true
-        submit.textContent = '\uC0DD\uC131 \uC911'
+        submit.textContent = '생성 중'
       }
       postJson('/families', { name: name }).then(function (family) {
         localStorage.setItem(AUTH_FAMILY_STORAGE_KEY, String(family.id))
-        showPatchToast('\uAC00\uC871\uADF8\uB8F9\uC744 \uC0DD\uC131\uD588\uC2B5\uB2C8\uB2E4.')
+        showPatchToast('가족그룹을 생성했습니다.')
         loadFamilyGroupPage(root)
       }).catch(function (error) {
-        showPatchToast(error && error.status === 409 ? '\uC774\uBBF8 \uAC00\uC871\uADF8\uB8F9\uC5D0 \uC18D\uD574 \uC788\uC2B5\uB2C8\uB2E4.' : '\uAC00\uC871\uADF8\uB8F9 \uC0DD\uC131\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+        showPatchToast(error && error.status === 409 ? '이미 가족그룹에 속해 있습니다.' : '가족그룹 생성에 실패했습니다.')
         if (submit) {
           submit.disabled = false
-          submit.textContent = '\uAC00\uC871\uADF8\uB8F9 \uC0DD\uC131'
+          submit.textContent = '가족그룹 생성'
         }
       })
     })
@@ -3635,6 +3703,9 @@
     if (!findLogoutClickTarget(event.target)) return
     logoutCurrentSession()
     clearStoredAuth()
+    window.setTimeout(function () {
+      window.location.assign('/')
+    }, 80)
   }, true)
 
   document.addEventListener('click', function (event) {
@@ -4397,7 +4468,7 @@
   }
 
   function loadCommunityList(tab, force) {
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    if (!getStoredAuthToken()) return Promise.resolve([])
     if (!force && communityState.loadedTabs[tab]) return Promise.resolve(communityItems(tab))
     if (communityState.loadingTabs[tab]) return communityState.loadingTabs[tab]
     var path = '/community/posts?boardType=' + encodeURIComponent(tab)
@@ -4429,7 +4500,7 @@
   }
 
   function loadCommunityBestPosts(force) {
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve(communityState.best)
+    if (!getStoredAuthToken()) return Promise.resolve(communityState.best)
     if (communityState.bestLoading) return Promise.resolve(communityState.best)
     if (!force && communityState.bestLoadedAt && Date.now() - communityState.bestLoadedAt < 30000) {
       return Promise.resolve(communityState.best)
@@ -4545,7 +4616,7 @@
   }
 
   function uploadMediaFile(file, familyId) {
-    var token = localStorage.getItem(API_AUTH_TOKEN_KEY || AUTH_TOKEN_STORAGE_KEY)
+    var token = getStoredAuthToken()
     if (!token) return Promise.reject(new Error('LOGIN_REQUIRED'))
 
     var formData = new FormData()
@@ -5674,7 +5745,7 @@
   }
 
   function ensureNotificationBell() {
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return null
+    if (!getStoredAuthToken()) return null
     var existing = document.querySelector('.schedule-notification-bell')
     if (existing) return existing
 
@@ -5775,7 +5846,7 @@
   }
 
   function loadScheduleNotifications(force) {
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    if (!getStoredAuthToken()) return Promise.resolve([])
     if (!force && Date.now() - notificationState.loadedAt < 30000) {
       renderNotificationBell()
       return Promise.resolve(notificationState.items)
@@ -5832,7 +5903,7 @@
   }
 
   function fetchSchedules(startDate, endDate) {
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    if (!getStoredAuthToken()) return Promise.resolve([])
     return getCurrentFamilyId().then(function (familyId) {
       return apiRequest('/schedules?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
@@ -5845,7 +5916,7 @@
   }
 
   function fetchLedgerEntries(startDate, endDate) {
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    if (!getStoredAuthToken()) return Promise.resolve([])
     return getCurrentFamilyId().then(function (familyId) {
       return apiRequest('/ledger-entries?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
@@ -5858,7 +5929,7 @@
   }
 
   function fetchLedgerSummary(startDate, endDate) {
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve({ expense: 0, income: 0, total: 0 })
+    if (!getStoredAuthToken()) return Promise.resolve({ expense: 0, income: 0, total: 0 })
     return getCurrentFamilyId().then(function (familyId) {
       return apiRequest('/ledger-entries/summary?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
@@ -6016,7 +6087,7 @@
       card.removeAttribute('data-api-chip-title')
       card.removeAttribute('data-api-chip-count')
     })
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) {
+    if (!getStoredAuthToken()) {
       renderScheduleRowsFromApi([], label)
       return Promise.resolve([])
     }
@@ -6131,7 +6202,7 @@
   }
 
   function fetchFamilyMembers() {
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    if (!getStoredAuthToken()) return Promise.resolve([])
     return getCurrentFamilyId().then(function (familyId) {
       return apiRequest('/families/' + encodeURIComponent(familyId) + '/members')
     }).then(function (items) {
@@ -6167,7 +6238,7 @@
   function renderHomeMetricsFromApi(force) {
     var metrics = Array.from(document.querySelectorAll('.metric-grid .metric'))
     if (!metrics.length || (!force && document.documentElement.dataset.homeMetricsApiBacked === 'true')) return
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) {
+    if (!getStoredAuthToken()) {
       resetHomeMetrics(metrics)
       return
     }
@@ -6422,7 +6493,7 @@
   }
 
   function fetchTrips() {
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    if (!getStoredAuthToken()) return Promise.resolve([])
     return getCurrentFamilyId().then(function (familyId) {
       return apiRequest('/trips?familyId=' + encodeURIComponent(familyId))
     }).then(function (items) {
@@ -6433,7 +6504,7 @@
   }
 
   function fetchTripRecords(tripId) {
-    if (!tripId || !localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    if (!tripId || !getStoredAuthToken()) return Promise.resolve([])
     return apiRequest('/trips/' + encodeURIComponent(tripId) + '/records').then(function (items) {
       return Array.isArray(items) ? items : []
     }).catch(function () {
@@ -6442,7 +6513,7 @@
   }
 
   function fetchDiaries(startDate, endDate) {
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    if (!getStoredAuthToken()) return Promise.resolve([])
     return getCurrentFamilyId().then(function (familyId) {
       return apiRequest('/diaries?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
@@ -6455,7 +6526,7 @@
   }
 
   function fetchBabies() {
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    if (!getStoredAuthToken()) return Promise.resolve([])
     return getCurrentFamilyId().then(function (familyId) {
       return apiRequest('/babies?familyId=' + encodeURIComponent(familyId))
     }).then(function (items) {
@@ -6466,7 +6537,7 @@
   }
 
   function fetchBabyRecords(babyId, startDate, endDate) {
-    if (!babyId || !localStorage.getItem(API_AUTH_TOKEN_KEY)) return Promise.resolve([])
+    if (!babyId || !getStoredAuthToken()) return Promise.resolve([])
     return apiRequest('/babies/' + encodeURIComponent(babyId) + '/records' +
       '?startDate=' + encodeURIComponent(startDate) +
       '&endDate=' + encodeURIComponent(endDate)).then(function (items) {
@@ -6726,7 +6797,7 @@
     renderLedgerPageFromApi(force)
     renderRestaurantPageFromApi()
     renderTravelPageFromApi(force)
-    if (!localStorage.getItem(API_AUTH_TOKEN_KEY)) return
+    if (!getStoredAuthToken()) return
     renderHomeSchedulesFromApi(force)
     renderHomeLedgerFromApi(force)
     window.setTimeout(removeHardcodedDemoData, 50)
