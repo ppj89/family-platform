@@ -3701,10 +3701,13 @@
 
   document.addEventListener('click', function (event) {
     if (!findLogoutClickTarget(event.target)) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     logoutCurrentSession()
-    clearStoredAuth()
+    forceClearStoredAuth()
     window.setTimeout(function () {
-      window.location.assign('/')
+      window.location.replace('/legacy/?loggedOut=' + Date.now())
     }, 80)
   }, true)
 
