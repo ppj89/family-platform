@@ -3701,6 +3701,8 @@
     ensureScheduleDefaultTime()
     normalizeLedgerEntryForm()
     normalizeTravelEntryForm()
+    normalizeDiaryEntryForm()
+    normalizeBabyEntryForms()
     wireScheduleDetailRows()
     hideSelectedDayPanels()
     refreshScheduleListCount()
@@ -6686,6 +6688,59 @@
     })
   }
 
+  function normalizeDiaryEntryForm() {
+    if (!pageHeadingIs('\uC77C\uAE30')) return
+    document.querySelectorAll('.diary-form, .entry-panel, form').forEach(function (form) {
+      var text = getCleanText(form)
+      if (text.indexOf('\uC81C\uBAA9') < 0 && text.indexOf('\uB0B4\uC6A9') < 0) return
+      removePlaceholdersIn(form, ['\uC81C\uBAA9', '\uCD5C\uC800 \uC628\uB3C4', '\uCD5C\uACE0 \uC628\uB3C4', '\uB0B4\uC6A9'])
+      setDateFieldToToday(form, ['\uB0A0\uC9DC'])
+    })
+  }
+
+  function normalizeBabyEntryForms() {
+    if (!pageHeadingIs('\uC721\uC544')) return
+    document.querySelectorAll('.baby-form, .baby-create-form, .entry-panel, form').forEach(function (form) {
+      var text = getCleanText(form)
+      if (text.indexOf('\uC544\uC774') < 0 && text.indexOf('\uC721\uC544') < 0 && text.indexOf('\uD0A4') < 0) return
+      removePlaceholdersIn(form, ['\uC544\uC774 \uC774\uB984', '\uC774\uB984', '\uC131\uBCC4', '\uBA54\uBAA8', '\uD0A4', '\uBAB8\uBB34\uAC8C'])
+      setDateFieldToToday(form, ['\uC0DD\uC77C', '\uB0A0\uC9DC'])
+    })
+  }
+
+  function renderDiaryPageFromApi(force) {
+    if (!pageHeadingIs('\uC77C\uAE30')) return
+    var section = document.querySelector('.diary-section')
+    var list = section && section.querySelector('.diary-list')
+    if (!section || !list) return
+    var range = monthRangeFor(todayText())
+    var key = range.start + ':' + range.end
+    if (!force && list.dataset.apiRangeKey === key) return
+    list.dataset.apiRangeKey = key
+    var badge = section.querySelector('.passive-header-chip')
+    if (badge) badge.textContent = '0\uAC1C'
+    list.innerHTML = emptyRow('\uC77C\uAE30\uB97C \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.', '')
+    fetchDiaries(range.start, range.end).then(function (items) {
+      if (badge) badge.textContent = Number(items.length || 0).toLocaleString('ko-KR') + '\uAC1C'
+      if (!items.length) {
+        list.innerHTML = emptyRow('\uB4F1\uB85D\uB41C \uC77C\uAE30\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
+        return
+      }
+      list.innerHTML = items.map(function (item) {
+        var date = item.diaryDate || item.date || ''
+        var temp = item.minTemperature || item.maxTemperature
+          ? (item.minTemperature || '-') + '/' + (item.maxTemperature || '-') + '\uB3C4'
+          : '\uC628\uB3C4 \uBBF8\uC785\uB825'
+        return '<div class="diary-list-row api-diary-row" data-api-diary-id="' + escapeHtml(item.id) + '">' +
+          '<button class="diary-open-button" type="button"><div><strong>' + escapeHtml(item.title || '') + '</strong>' +
+          '<span>' + escapeHtml([date, item.weather || '\uB0A0\uC528 \uBBF8\uC785\uB825', temp, item.mood || ''].filter(Boolean).join(' \u00B7 ')) + '</span>' +
+          '<p>' + escapeHtml(item.body || '') + '</p></div></button></div>'
+      }).join('')
+    }).catch(function (error) {
+      list.innerHTML = emptyRow(apiActionErrorMessage(error, '\uC77C\uAE30\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.'), '')
+    })
+  }
+
   function renderTravelPageFromApi(force) {
     if (!pageHeadingIs('\uC5EC\uD589')) return
     var panel = document.querySelector('.trip-manager')
@@ -7014,6 +7069,10 @@
     '6.4kg',
     '\uC18C\uC544\uACFC \uC815\uAE30\uAC80\uC9C4',
     '\uC5C4\uB9C8 \uC0DD\uC77C',
+    '\uAC10\uAE30 \uD68C\uBCF5',
+    '\uCCAB \uBB3C\uB180\uC774',
+    '\uC5F4\uC740 \uB0B4\uB824\uAC14\uACE0',
+    '\uC0AC\uC9C4 8\uC7A5 \uCD94\uAC00',
     '\uD611\uC7AC \uD574\uB140\uC758\uC9D1',
     '\uB3D9\uB124 \uBE0C\uB7F0\uCE58',
     '\uC804\uBCF5\uC8FD',
@@ -7091,10 +7150,13 @@
     removeDeveloperServerPanels()
     normalizeLedgerEntryForm()
     normalizeTravelEntryForm()
+    normalizeDiaryEntryForm()
+    normalizeBabyEntryForms()
     removeHardcodedDemoData()
     renderHomeMetricsFromApi(force)
     renderLedgerPageFromApi(force)
     renderRestaurantPageFromApi()
+    renderDiaryPageFromApi(force)
     renderTravelPageFromApi(force)
     if (!getStoredAuthToken()) return
     renderHomeSchedulesFromApi(force)
