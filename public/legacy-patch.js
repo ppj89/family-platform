@@ -3123,6 +3123,11 @@
     document.querySelectorAll('.panel-header button, .server-domain-panel header button').forEach(function (button) {
       var text = getCleanText(button)
       if (!text) return
+      var compactText = text.replace(/\s+/g, '')
+      if (compactText === '\uC124\uC815\uBC18\uC601' || compactText === '\uC800\uC7A5\uB428' || compactText === '\uC989\uC2DC\uBC18\uC601') {
+        button.remove()
+        return
+      }
       if (text === '\uC11C\uBC84 \uC870\uD68C' || /^\d+\uAC1C$/.test(text) || /^\d+\uAC74$/.test(text) || /^\d+\uACF3$/.test(text) || /^\d{1,2}\uC6D4\s+\d{1,2}\uC77C/.test(text)) {
         replaceButtonWithBadge(button, 'passive-header-chip')
       }
