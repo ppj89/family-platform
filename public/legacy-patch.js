@@ -642,6 +642,7 @@
     return {
       email: emailInput ? String(emailInput.value || '').trim() : '',
       password: passwordInput ? String(passwordInput.value || '') : '',
+      passwordConfirm: getFieldValue(card, '[data-field="auth-password-confirm"]'),
       nickname: nicknameInput ? String(nicknameInput.value || '').trim() : ''
     }
   }
@@ -916,6 +917,13 @@
     }, 900)
   }
 
+  function focusPasswordConfirm(card) {
+    var field = card && card.querySelector('[data-field="auth-password-confirm"]')
+    if (!field) return
+    field.focus()
+    field.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
+
   function storeAuthResponse(response, persistent) {
     var storedUser = {
       id: response.userId,
@@ -950,7 +958,11 @@
   }
 
   function getAuthRequestBody(mode, payload, forceLogin) {
-    if (mode === 'register') return payload
+    if (mode === 'register') return {
+      email: payload.email,
+      password: payload.password,
+      nickname: payload.nickname
+    }
     return {
       email: payload.email,
       password: payload.password,
@@ -1076,10 +1088,15 @@
         '<div class="auth-recovery-header"><strong>' + title + '</strong><button type="button" data-auth-recovery-close>X</button></div>',
         '<p class="auth-recovery-guide">\uC18C\uC15C \uACC4\uC815\uC73C\uB85C \uAC00\uC785\uD588\uB2E4\uBA74 \uC544\uB798 \uB124\uC774\uBC84, \uAD6C\uAE00, \uCE74\uCE74\uC624 \uB85C\uADF8\uC778\uC744 \uBA3C\uC800 \uC774\uC6A9\uD574\uC8FC\uC138\uC694.</p>',
         '<label><span>' + label + '</span><input data-auth-recovery-input type="' + inputType + '" placeholder="' + placeholder + '" /></label>',
+        isResetPassword ? '<label><span>\uC0C8 \uBE44\uBC00\uBC88\uD638 \uD655\uC778</span><input data-auth-recovery-confirm type="password" autocomplete="new-password" placeholder="\uBE44\uBC00\uBC88\uD638 \uB2E4\uC2DC \uC785\uB825" minlength="8" /></label>' : '',
         '<button class="auth-recovery-submit" type="button">' + title + '</button>'
       ].join('')
       var input = panel.querySelector('[data-auth-recovery-input]')
-      if (isResetPassword) input.minLength = 8
+      var confirmInput = panel.querySelector('[data-auth-recovery-confirm]')
+      if (isResetPassword) {
+        input.minLength = 8
+        input.autocomplete = 'new-password'
+      }
       panel.querySelector('[data-auth-recovery-close]').addEventListener('click', function () {
         panel.hidden = true
       })
@@ -1088,6 +1105,11 @@
         if (!value || (isResetPassword && value.length < 8)) {
           input.focus()
           showPatchToast(isResetPassword ? '\uBE44\uBC00\uBC88\uD638\uB294 8\uC790 \uC774\uC0C1 \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uD544\uC218\uAC12\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+          return
+        }
+        if (isResetPassword && confirmInput && value !== String(confirmInput.value || '')) {
+          confirmInput.focus()
+          showPatchToast('\uBE44\uBC00\uBC88\uD638 \uD655\uC778\uC774 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.')
           return
         }
         var request
@@ -1280,6 +1302,17 @@
     }
     ensureNicknameCheckControls(card, nicknameField)
 
+    var passwordConfirmField = card.querySelector('.auth-password-confirm-field')
+    if (!passwordConfirmField) {
+      passwordConfirmField = document.createElement('label')
+      passwordConfirmField.className = 'auth-password-confirm-field'
+      passwordConfirmField.innerHTML = '<span>\uBE44\uBC00\uBC88\uD638 \uD655\uC778</span><input data-field="auth-password-confirm" type="password" autocomplete="new-password" minlength="8" placeholder="\uBE44\uBC00\uBC88\uD638 \uB2E4\uC2DC \uC785\uB825" />'
+      var passwordLabel = passwordInput && passwordInput.closest('label')
+      if (passwordLabel) passwordLabel.insertAdjacentElement('afterend', passwordConfirmField)
+      else if (submit) submit.insertAdjacentElement('beforebegin', passwordConfirmField)
+      else card.appendChild(passwordConfirmField)
+    }
+
     var consentField = card.querySelector('.auth-required-consent')
     if (!consentField) {
       consentField = document.createElement('label')
@@ -1302,6 +1335,7 @@
         register: {
           email: initialMode === 'register' && emailInput ? emailInput.value : '',
           password: initialMode === 'register' && passwordInput ? passwordInput.value : '',
+          passwordConfirm: initialMode === 'register' ? getFieldValue(card, '[data-field="auth-password-confirm"]') : '',
           nickname: initialMode === 'register' ? getFieldValue(card, '[data-field="auth-nickname"]') : ''
         }
       }
@@ -1316,8 +1350,10 @@
       var state = authModeState(mode)
       var emailField = card.querySelector('[data-field="auth-email"]') || emailInput
       var passwordField = card.querySelector('[data-field="auth-password"]') || passwordInput
+      var passwordConfirmInput = card.querySelector('[data-field="auth-password-confirm"]')
       if (emailField) state.email = emailField.value || ''
       if (passwordField) state.password = passwordField.value || ''
+      if (passwordConfirmInput) state.passwordConfirm = passwordConfirmInput.value || ''
       var nicknameInput = card.querySelector('[data-field="auth-nickname"]')
       if (nicknameInput) state.nickname = nicknameInput.value || ''
     }
@@ -1326,8 +1362,10 @@
       var state = authModeState(mode)
       var emailField = card.querySelector('[data-field="auth-email"]') || emailInput
       var passwordField = card.querySelector('[data-field="auth-password"]') || passwordInput
+      var passwordConfirmInput = card.querySelector('[data-field="auth-password-confirm"]')
       if (emailField) setNativeInputValue(emailField, state.email || '')
       if (passwordField) setNativeInputValue(passwordField, state.password || '')
+      if (passwordConfirmInput) setNativeInputValue(passwordConfirmInput, mode === 'register' ? (state.passwordConfirm || '') : '')
       var nicknameInput = card.querySelector('[data-field="auth-nickname"]')
       if (nicknameInput) setNativeInputValue(nicknameInput, mode === 'register' ? (state.nickname || '') : '')
     }
@@ -1335,7 +1373,7 @@
     if (!card.dataset.authModeValueReady) {
       card.dataset.authModeValueReady = 'true'
       card.addEventListener('input', function (event) {
-        if (!event.target || !event.target.matches('[data-field="auth-email"], [data-field="auth-password"], [data-field="auth-nickname"]')) return
+        if (!event.target || !event.target.matches('[data-field="auth-email"], [data-field="auth-password"], [data-field="auth-password-confirm"], [data-field="auth-nickname"]')) return
         if (card.__familyAuthModeSwitchingUntil && Date.now() < card.__familyAuthModeSwitchingUntil) return
         saveAuthModeValues(card.dataset.authMode || 'login')
       }, true)
@@ -1350,6 +1388,7 @@
       loginTab.classList.toggle('active', mode === 'login')
       registerTab.classList.toggle('active', mode === 'register')
       nicknameField.style.display = mode === 'register' ? '' : 'none'
+      passwordConfirmField.style.display = mode === 'register' ? '' : 'none'
       consentField.style.display = mode === 'register' ? '' : 'none'
       if (loginPreferences) loginPreferences.style.display = mode === 'login' ? '' : 'none'
       var resendButton = card.querySelector('[data-auth-resend-verification]')
@@ -1668,6 +1707,11 @@
         showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
         return
       }
+      if (mode === 'register' && payload.password !== payload.passwordConfirm) {
+        focusPasswordConfirm(card)
+        showPatchToast('\uBE44\uBC00\uBC88\uD638 \uD655\uC778\uC774 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.')
+        return
+      }
       if (mode === 'register' && !isValidNicknameValue(payload.nickname)) {
         focusEmptyAuthField(card, payload, mode)
         setNicknameCheckState(card, 'error', nicknameRuleMessage())
@@ -1701,6 +1745,11 @@
     if (!payload.email || !payload.password || payload.password.length < 8 || (mode === 'register' && !payload.nickname)) {
       focusEmptyAuthField(card, payload, mode)
       showPatchToast(mode === 'register' ? '\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.' : '\uC774\uBA54\uC77C\uACFC 8\uC790 \uC774\uC0C1 \uBE44\uBC00\uBC88\uD638\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+      return
+    }
+    if (mode === 'register' && payload.password !== payload.passwordConfirm) {
+      focusPasswordConfirm(card)
+      showPatchToast('\uBE44\uBC00\uBC88\uD638 \uD655\uC778\uC774 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.')
       return
     }
     if (mode === 'register' && !isValidNicknameValue(payload.nickname)) {
@@ -3401,6 +3450,160 @@
     })
   }
 
+  function permissionTextClean(member) {
+    var permissions = []
+    if (member.canRead) permissions.push('\uC77D\uAE30')
+    if (member.canCreate) permissions.push('\uC791\uC131')
+    if (member.canUpdate) permissions.push('\uC218\uC815')
+    if (member.canDelete) permissions.push('\uC0AD\uC81C')
+    return permissions.length ? permissions.join('/') : '\uAD8C\uD55C \uC5C6\uC74C'
+  }
+
+  permissionText = permissionTextClean
+  roleText = function (role) {
+    return role === 'FAMILY_ADMIN' ? '\uAC00\uC871\uAD00\uB9AC\uC790' : '\uAC00\uC871\uAD6C\uC131\uC6D0'
+  }
+
+  renderFamilyManagePage = function (root, family, members) {
+    var currentUser = readStoredAuthUser() || {}
+    var rows = members.length ? members.map(function (member) {
+      var displayName = member.nickname || member.email || ('ID ' + member.userId)
+      var isMe = String(member.userId) === String(currentUser.id || '')
+      return [
+        '<article data-family-member-id="' + escapeHtml(member.id) + '">',
+        '<div><strong>' + escapeHtml(displayName) + (isMe ? ' <em>\uB098</em>' : '') + '</strong>',
+        '<span>' + escapeHtml(roleText(member.role)) + ' \u00B7 ' + escapeHtml(permissionText(member)) + (member.email ? ' \u00B7 ' + escapeHtml(member.email) : '') + '</span></div>',
+        '<div class="member-actions">',
+        isMe ? '<button type="button" class="danger-button" data-family-leave="' + escapeHtml(member.id) + '">\uAC00\uC871\uADF8\uB8F9 \uB098\uAC00\uAE30</button>' : '<button type="button" class="danger-button" data-family-remove-member="' + escapeHtml(member.id) + '">\uB0B4\uBCF4\uB0B4\uAE30</button>',
+        '</div>',
+        '</article>'
+      ].join('')
+    }).join('') : '<div class="api-empty-row"><strong>\uB4F1\uB85D\uB41C \uAD6C\uC131\uC6D0\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</strong></div>'
+    root.innerHTML = [
+      '<section class="panel wide family-group-panel">',
+      '<header class="panel-header"><h2>\uAC00\uC871\uADF8\uB8F9</h2></header>',
+      '<div class="family-group-summary">',
+      '<article><span>\uD604\uC7AC \uAC00\uC871</span><strong>' + escapeHtml(family.name || '-') + '</strong><small>\uAC00\uC871 ID ' + escapeHtml(family.id) + '</small></article>',
+      '<article><span>\uAD6C\uC131\uC6D0</span><strong>' + members.length + '\uBA85</strong><small>\uC77D\uAE30/\uC791\uC131/\uC218\uC815/\uC0AD\uC81C \uAD8C\uD55C \uAD00\uB9AC</small></article>',
+      '</div>',
+      '<form class="code-form invite-form family-invite-form">',
+      '<div class="form-row">',
+      '<label><span>\uCD94\uAC00\uD560 \uC0AC\uC6A9\uC790</span><input data-invite-user placeholder="\uC774\uBA54\uC77C, \uB2C9\uB124\uC784, \uAD00\uB9AC\uC790 \uC544\uC774\uB514" /></label>',
+      '<label><span>\uC5ED\uD560</span><select data-invite-role><option value="MEMBER">\uAC00\uC871\uAD6C\uC131\uC6D0</option><option value="FAMILY_ADMIN">\uAC00\uC871\uAD00\uB9AC\uC790</option></select></label>',
+      '</div>',
+      '<div class="permission-chips">',
+      '<button type="button" class="active" data-invite-permission="canRead">\uC77D\uAE30</button>',
+      '<button type="button" data-invite-permission="canCreate">\uC791\uC131</button>',
+      '<button type="button" data-invite-permission="canUpdate">\uC218\uC815</button>',
+      '<button type="button" data-invite-permission="canDelete">\uC0AD\uC81C</button>',
+      '</div>',
+      '<button class="submit-action" type="submit">\uAD6C\uC131\uC6D0 \uCD94\uAC00</button>',
+      '</form>',
+      '<div class="family-group-list">',
+      rows,
+      '</div>',
+      '</section>'
+    ].join('')
+    bindFamilyInviteForm(root, family)
+  }
+
+  bindFamilyInviteForm = function (root, family) {
+    var form = root.querySelector('.family-invite-form')
+    if (!form || !family || !family.id) return
+    var permissions = { canRead: true, canCreate: false, canUpdate: false, canDelete: false }
+    form.querySelectorAll('[data-invite-permission]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var key = button.dataset.invitePermission
+        permissions[key] = !permissions[key]
+        button.classList.toggle('active', !!permissions[key])
+      })
+    })
+    form.addEventListener('submit', function (event) {
+      event.preventDefault()
+      var input = form.querySelector('[data-invite-user]')
+      var invite = String((input && input.value || '').trim())
+      if (!invite) {
+        showPatchToast('\uCD94\uAC00\uD560 \uC0AC\uC6A9\uC790\uC758 \uC774\uBA54\uC77C\uC774\uB098 \uB2C9\uB124\uC784\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+        if (input) input.focus()
+        return
+      }
+      var role = (form.querySelector('[data-invite-role]') || {}).value || 'MEMBER'
+      var payload = Object.assign({ invite: invite, role: role }, permissions)
+      var submit = form.querySelector('button[type="submit"]')
+      if (submit) {
+        submit.disabled = true
+        submit.textContent = '\uCD94\uAC00 \uC911'
+      }
+      postJson('/families/' + encodeURIComponent(family.id) + '/members', payload).then(function () {
+        showPatchToast('\uAD6C\uC131\uC6D0\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
+        loadFamilyGroupPage(root)
+      }).catch(function (error) {
+        showPatchToast(error && error.status === 404 ? '\uC0AC\uC6A9\uC790\uB97C \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.' : '\uAD6C\uC131\uC6D0 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+        if (submit) {
+          submit.disabled = false
+          submit.textContent = '\uAD6C\uC131\uC6D0 \uCD94\uAC00'
+        }
+      })
+    })
+    root.querySelectorAll('[data-family-leave], [data-family-remove-member]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var memberId = button.dataset.familyLeave || button.dataset.familyRemoveMember
+        var leaving = !!button.dataset.familyLeave
+        showPatchConfirm(leaving ? '\uAC00\uC871\uADF8\uB8F9\uC5D0\uC11C \uB098\uAC08\uAE4C\uC694?' : '\uAD6C\uC131\uC6D0\uC744 \uB0B4\uBCF4\uB0BC\uAE4C\uC694?', function () {
+          apiRequest('/families/' + encodeURIComponent(family.id) + '/members/' + encodeURIComponent(memberId), { method: 'DELETE' }).then(function () {
+            if (leaving) localStorage.removeItem(AUTH_FAMILY_STORAGE_KEY)
+            showPatchToast(leaving ? '\uAC00\uC871\uADF8\uB8F9\uC5D0\uC11C \uB098\uAC14\uC2B5\uB2C8\uB2E4.' : '\uAD6C\uC131\uC6D0\uC744 \uB0B4\uBCF4\uB0C8\uC2B5\uB2C8\uB2E4.')
+            loadFamilyGroupPage(root)
+          }).catch(function () {
+            showPatchToast('\uCC98\uB9AC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+          })
+        })
+      })
+    })
+  }
+
+  renderFamilyCreatePage = function (root) {
+    root.innerHTML = [
+      '<section class="panel wide family-group-panel">',
+      '<header class="panel-header"><h2>\uAC00\uC871\uADF8\uB8F9 \uC0DD\uC131</h2></header>',
+      '<form class="code-form family-create-form">',
+      '<label><span>\uAC00\uC871\uBA85</span><input data-family-name maxlength="40" placeholder="\uC608: \uC6B0\uB9AC \uAC00\uC871" /></label>',
+      '<button class="submit-action" type="submit">\uAC00\uC871\uADF8\uB8F9 \uC0DD\uC131</button>',
+      '</form>',
+      '<div class="api-empty-row"><strong>\uC5F0\uACB0\uB41C \uAC00\uC871\uADF8\uB8F9\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</strong><small>\uAC00\uC871\uADF8\uB8F9\uC744 \uBA3C\uC800 \uC0DD\uC131\uD55C \uB4A4 \uAD6C\uC131\uC6D0\uC744 \uCD94\uAC00\uD558\uACE0 \uAD8C\uD55C\uC744 \uC124\uC815\uD569\uB2C8\uB2E4.</small></div>',
+      '</section>'
+    ].join('')
+    var form = root.querySelector('.family-create-form')
+    var input = root.querySelector('[data-family-name]')
+    if (input) input.focus()
+    if (!form) return
+    form.addEventListener('submit', function (event) {
+      event.preventDefault()
+      var name = String((input || {}).value || '').trim()
+      if (!name) {
+        showPatchToast('\uAC00\uC871\uBA85\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+        if (input) input.focus()
+        return
+      }
+      var submit = form.querySelector('button[type="submit"]')
+      if (submit) {
+        submit.disabled = true
+        submit.textContent = '\uC0DD\uC131 \uC911'
+      }
+      postJson('/families', { name: name }).then(function (family) {
+        localStorage.setItem(AUTH_FAMILY_STORAGE_KEY, String(family.id))
+        showPatchToast('\uAC00\uC871\uADF8\uB8F9\uC744 \uC0DD\uC131\uD588\uC2B5\uB2C8\uB2E4.')
+        loadFamilyGroupPage(root)
+      }).catch(function (error) {
+        showPatchToast(error && error.status === 409 ? '\uC774\uBBF8 \uAC00\uC871\uADF8\uB8F9\uC5D0 \uC18D\uD574 \uC788\uC2B5\uB2C8\uB2E4.' : '\uAC00\uC871\uADF8\uB8F9 \uC0DD\uC131\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+        if (submit) {
+          submit.disabled = false
+          submit.textContent = '\uAC00\uC871\uADF8\uB8F9 \uC0DD\uC131'
+        }
+      })
+    })
+  }
+
   function ensureAdminBatchSaveButton() {
     var title = getCleanText(document.querySelector('.topbar h1'))
     if (title.indexOf('관리자') < 0) return
@@ -4126,54 +4329,9 @@
     best: { daily: [], weekly: [], monthly: [] },
     bestLoading: false,
     bestLoadedAt: 0,
-    notice: [
-      {
-        id: 'notice-1',
-        title: '\uAC00\uC871 \uD50C\uB7AB\uD3FC \uCEE4\uBBA4\uB2C8\uD2F0 \uC624\uD508',
-        body: '\uACF5\uC9C0\uC0AC\uD56D\uC740 \uAD00\uB9AC\uC790\uB9CC \uB4F1\uB85D\uD560 \uC218 \uC788\uACE0, \uC790\uC720\uAC8C\uC2DC\uD310\uC740 \uC804\uCCB4 \uC0AC\uC6A9\uC790\uAC00 \uD568\uAED8 \uC0AC\uC6A9\uD569\uB2C8\uB2E4.',
-        author: '\uCD1D\uAD04\uAD00\uB9AC\uC790',
-        date: '2026.06.05',
-        time: '09:00',
-        files: [{ name: '\uACF5\uC9C0-\uC548\uB0B4.png', size: '840KB' }],
-        comments: []
-      }
-    ],
-    free: [
-      {
-        id: 'free-1',
-        title: '\uC8FC\uB9D0\uC5D0 \uC544\uC774\uB791 \uAC00\uAE30 \uC88B\uC740 \uACF3 \uCD94\uCC9C\uD574\uC694',
-        body: '\uAC00\uC871\uB2E8\uC704\uB97C \uB118\uC5B4\uC11C \uB2E4\uB978 \uC0AC\uC6A9\uC790\uB4E4\uACFC \uACF5\uC720\uD558\uB294 \uC790\uC720\uAC8C\uC2DC\uD310 \uC0D8\uD50C\uC785\uB2C8\uB2E4.',
-        author: '\uC5C4\uB9C8',
-        date: '2026.06.05',
-        time: '10:20',
-        files: [{ name: '\uC8FC\uB9D0-\uB098\uB4E4\uC774.jpg', size: '1.8MB' }],
-        comments: [
-          { id: 'comment-1', author: '\uC544\uBE60', time: '2026.06.05 10:42', text: '\uC9C0\uB3C4\uC640 \uC5F0\uACB0\uD558\uBA74 \uC88B\uACA0\uC5B4\uC694.' }
-        ]
-      },
-      {
-        id: 'free-2',
-        title: '\uC721\uC544 \uD328\uD134 \uAE30\uB85D \uD301 \uACF5\uC720',
-        body: '\uC218\uC720, \uC218\uBA74, \uBC30\uBCC0 \uAE30\uB85D\uC744 \uC624\uC804/\uC624\uD6C4\uB85C \uB098\uB220\uBCF4\uBA74 \uD328\uD134\uC774 \uB354 \uC798 \uBCF4\uC785\uB2C8\uB2E4.',
-        author: '\uAC00\uC871\uAD00\uB9AC\uC790',
-        date: '2026.06.04',
-        time: '21:05',
-        files: [],
-        comments: []
-      }
-    ],
-    inquiry: [
-      {
-        id: 'inquiry-1',
-        title: '\uC54C\uB9BC \uC5F0\uB3D9 \uC694\uCCAD',
-        body: '\uCD08\uB300\uB41C \uAD6C\uC131\uC6D0\uC5D0\uAC8C \uD478\uC2DC \uC54C\uB9BC\uC774 \uAC00\uB294 \uAD6C\uC870\uB97C \uBC31\uC5D4\uB4DC \uC5F0\uACB0 \uB2E8\uACC4\uC5D0\uC11C \uC815\uB9AC\uD560 \uC608\uC815\uC785\uB2C8\uB2E4.',
-        author: '\uAD00\uB9AC\uC790',
-        date: '2026.06.05',
-        time: '11:30',
-        files: [],
-        comments: []
-      }
-    ]
+    notice: [],
+    free: [],
+    inquiry: []
   }
 
   function isAdminRole() {
@@ -4814,15 +4972,21 @@
       communityState.composing ? renderCommunityEditor(tab, null) : '',
       tab === 'free' ? renderCommunityBestPanel() : '',
       '<div class="community-free-list">',
-      communityItems(tab).map(function (post) {
+      communityItems(tab).length ? communityItems(tab).map(function (post) {
+        var meta = [
+          post.author || '-',
+          [post.date || '', post.time || ''].filter(Boolean).join(' '),
+          '\uC870\uD68C ' + formatCommunityNumber(post.views || 0),
+          '\uB313\uAE00 ' + ((post.comments || []).length)
+        ].filter(Boolean).join(' / ')
         return [
           '<button type="button" class="community-free-row" data-community-open-post="' + escapeHtml(post.id) + '">',
           renderCommunityThumb(post),
-          '<div><strong>' + escapeHtml(post.title) + '</strong>',
-          '<span>' + escapeHtml(post.author) + ' / ' + escapeHtml(post.date || '') + ' ' + escapeHtml(post.time || '') + ' / \uC870\uD68C ' + formatCommunityNumber(post.views || 0) + ' / \uB313\uAE00 ' + ((post.comments || []).length) + '</span></div>',
+          '<div class="community-row-title"><strong>' + escapeHtml(post.title) + '</strong></div>',
+          '<span class="community-row-meta">' + escapeHtml(meta) + '</span>',
           '</button>'
         ].join('')
-      }).join(''),
+      }).join('') : '<div class="api-empty-row"><strong>\uB4F1\uB85D\uB41C \uAE00\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</strong></div>',
       '</div>'
     ].join('')
   }

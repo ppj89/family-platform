@@ -1141,6 +1141,8 @@ type familyMember struct {
 	ID        int64  `json:"id"`
 	FamilyID  int64  `json:"familyId"`
 	UserID    int64  `json:"userId"`
+	Email     string `json:"email,omitempty"`
+	Nickname  string `json:"nickname,omitempty"`
 	Role      string `json:"role"`
 	CanRead   bool   `json:"canRead"`
 	CanCreate bool   `json:"canCreate"`
@@ -1155,8 +1157,11 @@ func (a *app) listFamilyMembers(w http.ResponseWriter, r *http.Request, user aut
 		return
 	}
 	rows, err := a.db.Query(r.Context(), `
-		select id, family_id, user_id, role, can_read, can_create, can_update, can_delete, joined_at
-		from family_members where family_id = $1 order by joined_at asc
+		select m.id, m.family_id, m.user_id, coalesce(u.email, ''), coalesce(u.nickname, ''), m.role, m.can_read, m.can_create, m.can_update, m.can_delete, m.joined_at
+		from family_members m
+		left join app_users u on u.id = m.user_id
+		where m.family_id = $1
+		order by m.joined_at asc
 	`, familyID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
@@ -1167,7 +1172,7 @@ func (a *app) listFamilyMembers(w http.ResponseWriter, r *http.Request, user aut
 	for rows.Next() {
 		var item familyMember
 		var joinedAt time.Time
-		if err := rows.Scan(&item.ID, &item.FamilyID, &item.UserID, &item.Role, &item.CanRead, &item.CanCreate, &item.CanUpdate, &item.CanDelete, &joinedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.FamilyID, &item.UserID, &item.Email, &item.Nickname, &item.Role, &item.CanRead, &item.CanCreate, &item.CanUpdate, &item.CanDelete, &joinedAt); err != nil {
 			writeError(w, http.StatusInternalServerError, "database scan failed")
 			return
 		}
@@ -1184,13 +1189,42 @@ func (a *app) addFamilyMember(w http.ResponseWriter, r *http.Request, user authU
 	}
 	var req struct {
 		UserID    int64  `json:"userId"`
+		Invite    string `json:"invite"`
 		Role      string `json:"role"`
 		CanRead   bool   `json:"canRead"`
 		CanCreate bool   `json:"canCreate"`
 		CanUpdate bool   `json:"canUpdate"`
 		CanDelete bool   `json:"canDelete"`
 	}
-	if !readJSON(w, r, &req) || req.UserID <= 0 {
+	if !readJSON(w, r, &req) {
+		return
+	}
+	if req.UserID <= 0 {
+		invite := strings.TrimSpace(req.Invite)
+		if invite == "" {
+			writeError(w, http.StatusBadRequest, "user invite is required")
+			return
+		}
+		err := a.db.QueryRow(r.Context(), `
+			select id from app_users
+			where lower(coalesce(email, '')) = lower($1)
+			   or lower(coalesce(nickname, '')) = lower($1)
+			   or lower(coalesce(login_id, '')) = lower($1)
+			order by id asc
+			limit 1
+		`, invite).Scan(&req.UserID)
+		if err != nil {
+			writeError(w, http.StatusNotFound, "user not found")
+			return
+		}
+	}
+	var memberCount int
+	if err := a.db.QueryRow(r.Context(), "select count(1) from family_members where user_id = $1", req.UserID).Scan(&memberCount); err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	if memberCount > 0 {
+		writeError(w, http.StatusConflict, "user already belongs to a family")
 		return
 	}
 	var item familyMember
@@ -1206,6 +1240,7 @@ func (a *app) addFamilyMember(w http.ResponseWriter, r *http.Request, user authU
 		return
 	}
 	item.JoinedAt = formatTime(joinedAt)
+	_ = a.db.QueryRow(r.Context(), "select coalesce(email, ''), coalesce(nickname, '') from app_users where id = $1", item.UserID).Scan(&item.Email, &item.Nickname)
 	writeJSON(w, http.StatusCreated, item)
 }
 
@@ -1245,7 +1280,16 @@ func (a *app) updateFamilyMember(w http.ResponseWriter, r *http.Request, user au
 func (a *app) deleteFamilyMember(w http.ResponseWriter, r *http.Request, user authUser) {
 	familyID, ok := pathID(w, r, "familyId")
 	memberID, ok2 := pathID(w, r, "memberId")
-	if !ok || !ok2 || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+	if !ok || !ok2 {
+		return
+	}
+	var memberUserID int64
+	err := a.db.QueryRow(r.Context(), "select user_id from family_members where id = $1 and family_id = $2", memberID, familyID).Scan(&memberUserID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "family member not found")
+		return
+	}
+	if memberUserID != user.ID && !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
 		return
 	}
 	tag, err := a.db.Exec(r.Context(), "delete from family_members where id = $1 and family_id = $2", memberID, familyID)

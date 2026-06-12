@@ -8662,13 +8662,13 @@ select {
 
 .community-free-row {
   display: grid !important;
-  grid-template-columns: 48px minmax(0, 1fr) !important;
+  grid-template-columns: 48px minmax(0, 1fr) minmax(210px, auto) !important;
   align-items: center !important;
-  gap: 6px !important;
+  gap: 10px !important;
   width: 100% !important;
   border: 0 !important;
   border-radius: 16px !important;
-  padding: 15px 16px !important;
+  padding: 13px 15px !important;
   background: #ffffff !important;
   color: #191f28 !important;
   cursor: pointer !important;
@@ -8694,6 +8694,29 @@ select {
   box-shadow: inset 0 0 0 1px #bfdcff !important;
 }
 
+.family-group-list .member-actions {
+  display: flex !important;
+  justify-content: flex-end !important;
+  min-width: 126px !important;
+}
+
+.family-group-list .danger-button {
+  min-height: 38px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  padding: 0 14px !important;
+  background: #fff1f3 !important;
+  color: #f04452 !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+  box-shadow: inset 0 0 0 1px #ffc2ca !important;
+  cursor: pointer !important;
+}
+
+.community-row-title {
+  min-width: 0 !important;
+}
+
 .community-free-row strong {
   overflow: hidden !important;
   color: #191f28 !important;
@@ -8703,10 +8726,14 @@ select {
   white-space: nowrap !important;
 }
 
-.community-free-row span {
+.community-free-row .community-row-meta {
+  justify-self: end !important;
   color: #8b95a1 !important;
   font-size: 12px !important;
   font-weight: 800 !important;
+  line-height: 1.45 !important;
+  text-align: right !important;
+  white-space: nowrap !important;
 }
 
 .community-detail {
@@ -9241,6 +9268,13 @@ select {
   .community-free-row {
     grid-template-columns: 42px minmax(0, 1fr) !important;
     padding: 12px !important;
+  }
+
+  .community-free-row .community-row-meta {
+    grid-column: 2 !important;
+    justify-self: start !important;
+    text-align: left !important;
+    white-space: normal !important;
   }
 
   .community-list-thumb {
