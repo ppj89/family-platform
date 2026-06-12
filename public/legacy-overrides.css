@@ -5009,6 +5009,42 @@ body.api-loading-blocked::before {
   color: #fff;
 }
 
+.diary-main-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.diary-main-action-bar button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 14px;
+  padding: 0 14px;
+  background: #3182f6;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.restaurant-form .location-map-box {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
+}
+
+.restaurant-form .location-map-box iframe,
+.restaurant-form .location-map-canvas,
+.restaurant-form .location-map-osm {
+  display: block;
+  width: 100% !important;
+  min-width: 0;
+}
+
 .menu-readonly-fields span {
   color: #6b7684;
   font-size: 13px;

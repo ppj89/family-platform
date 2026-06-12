@@ -3711,6 +3711,7 @@
     enhanceBabyRecordMedia()
     cleanupBabyDetailButtons()
     ensureBabyMainActions()
+    ensureDiaryMainActions()
     ensureBabyApiRecordForm()
     enhanceBabyEditMediaHelper()
     enhanceBabyProfileEdit()
@@ -4299,16 +4300,34 @@
     createButton.type = 'button'
     createButton.textContent = '\uC544\uC774 \uCD94\uAC00'
     createButton.addEventListener('click', openBabyCreateDialog)
-    var recordButton = document.createElement('button')
-    recordButton.type = 'button'
-    recordButton.textContent = '\uAE30\uB85D \uCD94\uAC00'
-    recordButton.addEventListener('click', function () {
-      var firstCard = document.querySelector('.baby-card')
-      if (firstCard) firstCard.click()
-      else openBabyCreateDialog()
+    actions.appendChild(createButton)
+    header.appendChild(actions)
+  }
+
+  function ensureDiaryMainActions() {
+    if (getCleanText(document.querySelector('.topbar h1')).indexOf('\uC77C\uAE30') < 0) return
+    if (document.querySelector('.diary-detail-card')) return
+    var header = Array.from(document.querySelectorAll('.panel-header')).find(function (item) {
+      return getCleanText(item.querySelector('h2')).indexOf('\uC77C\uAE30') >= 0
+    })
+    if (!header || header.querySelector('.diary-main-action-bar')) return
+    var actions = document.createElement('div')
+    actions.className = 'diary-main-action-bar'
+    var createButton = document.createElement('button')
+    createButton.type = 'button'
+    createButton.textContent = '\uC77C\uAE30 \uCD94\uAC00'
+    createButton.addEventListener('click', function () {
+      var form = document.querySelector('.diary-form') || document.querySelector('[data-field="diary-title"]')
+      var target = form && (form.closest('form, .panel, aside') || form)
+      if (!target) {
+        showPatchToast('\uC77C\uAE30 \uC785\uB825 \uC601\uC5ED\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
+        return
+      }
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      var input = target.querySelector('[data-field="diary-title"], input, textarea')
+      if (input) window.setTimeout(function () { input.focus() }, 180)
     })
     actions.appendChild(createButton)
-    actions.appendChild(recordButton)
     header.appendChild(actions)
   }
 
@@ -6833,6 +6852,10 @@
     '\uC81C\uC8FC\uAD6D\uC81C\uACF5\uD56D',
     '\uC0AC\uC9C4 12\uC7A5',
     '\uC544\uAE30 \uCE68\uB300 \uC694\uCCAD \uC644\uB8CC',
+    '\uCCAB\uC9F8',
+    '\uB458\uC9F8',
+    '\uB0A8\uC544',
+    '\uC5EC\uC544',
     '\uB0AE\uC7A0 \uB9AC\uB4EC \uCCB4\uD06C \uC911',
     '\uC218\uC720\uB7C9\uACFC \uBC30\uBCC0 \uAE30\uB85D \uC9D1\uC911',
     '89cm',

@@ -1321,12 +1321,21 @@ func (a *app) deleteFamilyMember(w http.ResponseWriter, r *http.Request, user au
 		return
 	}
 	var memberUserID int64
-	err := a.db.QueryRow(r.Context(), "select user_id from family_members where id = $1 and family_id = $2", memberID, familyID).Scan(&memberUserID)
+	var memberRole string
+	err := a.db.QueryRow(r.Context(), "select user_id, role from family_members where id = $1 and family_id = $2", memberID, familyID).Scan(&memberUserID, &memberRole)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "family member not found")
 		return
 	}
 	if memberUserID != user.ID && !a.requireFamilyAdmin(w, r.Context(), user, familyID) {
+		return
+	}
+	if memberUserID == user.ID && memberRole == "FAMILY_ADMIN" {
+		if err := a.deleteFamilyGroupShell(r.Context(), familyID); err != nil {
+			writeError(w, http.StatusInternalServerError, "family group deletion failed")
+			return
+		}
+		w.WriteHeader(http.StatusNoContent)
 		return
 	}
 	tag, err := a.db.Exec(r.Context(), "delete from family_members where id = $1 and family_id = $2", memberID, familyID)
@@ -1335,6 +1344,28 @@ func (a *app) deleteFamilyMember(w http.ResponseWriter, r *http.Request, user au
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (a *app) deleteFamilyGroupShell(ctx context.Context, familyID int64) error {
+	tx, err := a.db.Begin(ctx)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback(ctx)
+	statements := []string{
+		"delete from common_codes where group_id in (select id from common_code_groups where family_id = $1)",
+		"delete from common_code_groups where family_id = $1",
+		"delete from family_invitations where family_id = $1",
+		"delete from app_notifications where family_id = $1",
+		"delete from family_members where family_id = $1",
+		"delete from family_groups where id = $1",
+	}
+	for _, statement := range statements {
+		if _, err := tx.Exec(ctx, statement, familyID); err != nil {
+			return err
+		}
+	}
+	return tx.Commit(ctx)
 }
 
 func (a *app) listFamilyInvitations(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -1555,7 +1586,11 @@ func (a *app) listLedgerEntries(w http.ResponseWriter, r *http.Request, user aut
 		select id, family_id, title, entry_type, category, payment_method, member_name, coalesce(amount, 0),
 		       transaction_date, memo, created_at
 		from ledger_entries
-		where family_id = $1 and transaction_date between $2 and $3 and deleted_at is null
+		where transaction_date between $2 and $3 and deleted_at is null
+		  and (
+		    created_by_user_id in (select user_id from family_members where family_id = $1)
+		    or (created_by_user_id is null and family_id = $1)
+		  )
 		order by transaction_date desc, created_at desc
 	`, familyID, start, end)
 	if err != nil {
@@ -1581,7 +1616,11 @@ func (a *app) ledgerSummary(w http.ResponseWriter, r *http.Request, user authUse
 		  coalesce(sum(case when entry_type = 'expense' then amount else 0 end), 0),
 		  coalesce(sum(case when entry_type = 'income' then amount else 0 end), 0)
 		from ledger_entries
-		where family_id = $1 and transaction_date between $2 and $3 and deleted_at is null
+		where transaction_date between $2 and $3 and deleted_at is null
+		  and (
+		    created_by_user_id in (select user_id from family_members where family_id = $1)
+		    or (created_by_user_id is null and family_id = $1)
+		  )
 	`, familyID, start, end).Scan(&expense, &income)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
@@ -1664,7 +1703,11 @@ func (a *app) listSchedules(w http.ResponseWriter, r *http.Request, user authUse
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, title, calendar_basis, schedule_date, schedule_time::text, category, member_name, repeat_rule, memo, created_at
 		from family_schedules
-		where family_id = $1 and schedule_date between $2 and $3 and deleted_at is null
+		where schedule_date between $2 and $3 and deleted_at is null
+		  and (
+		    created_by_user_id in (select user_id from family_members where family_id = $1)
+		    or (created_by_user_id is null and family_id = $1)
+		  )
 		order by schedule_date asc, schedule_time asc nulls last, created_at desc
 	`, familyID, start, end)
 	if err != nil {
@@ -1953,7 +1996,13 @@ func (a *app) listTrips(w http.ResponseWriter, r *http.Request, user authUser) {
 	}
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, title, start_date, end_date, description, created_at
-		from trips where family_id = $1 and deleted_at is null order by created_at desc
+		from trips
+		where deleted_at is null
+		  and (
+		    created_by_user_id in (select user_id from family_members where family_id = $1)
+		    or (created_by_user_id is null and family_id = $1)
+		  )
+		order by created_at desc
 	`, familyID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
@@ -2025,8 +2074,8 @@ func (a *app) listTravelRecords(w http.ResponseWriter, r *http.Request, user aut
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1 and deleted_at is null", tripID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from trips where id = $1 and deleted_at is null", tripID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "read", ownerID) {
 		return
 	}
 	items, ok := a.travelRecordsByTrip(w, r.Context(), tripID)
@@ -2041,8 +2090,8 @@ func (a *app) createTravelRecord(w http.ResponseWriter, r *http.Request, user au
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1 and deleted_at is null", tripID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from trips where id = $1 and deleted_at is null", tripID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "create", ownerID) {
 		return
 	}
 	req, ok := readTravelRecordPayload(w, r)
@@ -2143,7 +2192,13 @@ func (a *app) listBabies(w http.ResponseWriter, r *http.Request, user authUser) 
 	}
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at
-		from baby_profiles where family_id = $1 and deleted_at is null order by created_at desc
+		from baby_profiles
+		where deleted_at is null
+		  and (
+		    created_by_user_id in (select user_id from family_members where family_id = $1)
+		    or (created_by_user_id is null and family_id = $1)
+		  )
+		order by created_at desc
 	`, familyID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
@@ -2215,8 +2270,8 @@ func (a *app) listBabyRecords(w http.ResponseWriter, r *http.Request, user authU
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1 and deleted_at is null", babyID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from baby_profiles where id = $1 and deleted_at is null", babyID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "read", ownerID) {
 		return
 	}
 	start, end := r.URL.Query().Get("startDate"), r.URL.Query().Get("endDate")
@@ -2248,8 +2303,8 @@ func (a *app) createBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1 and deleted_at is null", babyID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from baby_profiles where id = $1 and deleted_at is null", babyID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "create", ownerID) {
 		return
 	}
 	req, ok := readBabyRecordPayload(w, r)
@@ -2332,7 +2387,12 @@ func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser)
 	}
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, title, body, diary_date, weather, mood, min_temperature, max_temperature, created_at
-		from family_diaries where family_id = $1 and diary_date between $2 and $3 and deleted_at is null
+		from family_diaries
+		where diary_date between $2 and $3 and deleted_at is null
+		  and (
+		    created_by_user_id in (select user_id from family_members where family_id = $1)
+		    or (created_by_user_id is null and family_id = $1)
+		  )
 		order by diary_date desc, created_at desc
 	`, familyID, start, end)
 	if err != nil {
@@ -4303,6 +4363,17 @@ func (a *app) requireFamilyPermission(w http.ResponseWriter, ctx context.Context
 	if user.PlatformAdmin {
 		return true
 	}
+	if a.hasFamilyPermission(ctx, user, familyID, permission) {
+		return true
+	}
+	writeError(w, http.StatusForbidden, "permission denied")
+	return false
+}
+
+func (a *app) hasFamilyPermission(ctx context.Context, user authUser, familyID int64, permission string) bool {
+	if user.PlatformAdmin {
+		return true
+	}
 	column := map[string]string{
 		"read":   "can_read",
 		"create": "can_create",
@@ -4310,23 +4381,56 @@ func (a *app) requireFamilyPermission(w http.ResponseWriter, ctx context.Context
 		"delete": "can_delete",
 	}[permission]
 	if column == "" {
-		writeError(w, http.StatusForbidden, "permission denied")
 		return false
 	}
 	var allowed bool
 	query := fmt.Sprintf("select exists(select 1 from family_members where family_id = $1 and user_id = $2 and %s = true)", column)
-	if err := a.db.QueryRow(ctx, query, familyID, user.ID).Scan(&allowed); err != nil || !allowed {
-		writeError(w, http.StatusForbidden, "permission denied")
+	if err := a.db.QueryRow(ctx, query, familyID, user.ID).Scan(&allowed); err != nil {
 		return false
 	}
-	return true
+	return allowed
 }
 
 func (a *app) requireFamilyPermissionOrOwner(w http.ResponseWriter, ctx context.Context, user authUser, familyID int64, permission string, ownerID sql.NullInt64) bool {
 	if ownerID.Valid && ownerID.Int64 == user.ID {
 		return true
 	}
-	return a.requireFamilyPermission(w, ctx, user, familyID, permission)
+	if a.hasFamilyPermission(ctx, user, familyID, permission) {
+		return true
+	}
+	if ownerID.Valid && a.hasSharedFamilyPermission(ctx, user, ownerID.Int64, permission) {
+		return true
+	}
+	writeError(w, http.StatusForbidden, "permission denied")
+	return false
+}
+
+func (a *app) hasSharedFamilyPermission(ctx context.Context, user authUser, ownerID int64, permission string) bool {
+	if user.PlatformAdmin {
+		return true
+	}
+	column := map[string]string{
+		"read":   "viewer.can_read",
+		"create": "viewer.can_create",
+		"update": "viewer.can_update",
+		"delete": "viewer.can_delete",
+	}[permission]
+	if column == "" {
+		return false
+	}
+	var allowed bool
+	query := fmt.Sprintf(`
+		select exists(
+			select 1
+			from family_members viewer
+			join family_members owner on owner.family_id = viewer.family_id
+			where viewer.user_id = $1 and owner.user_id = $2 and %s = true
+		)
+	`, column)
+	if err := a.db.QueryRow(ctx, query, user.ID, ownerID).Scan(&allowed); err != nil {
+		return false
+	}
+	return allowed
 }
 
 func (a *app) requireFamilyAdmin(w http.ResponseWriter, ctx context.Context, user authUser, familyID int64) bool {
