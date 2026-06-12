@@ -4839,8 +4839,8 @@ func readTravelRecordPayload(w http.ResponseWriter, r *http.Request) (travelReco
 	}
 	req.Title = strings.TrimSpace(req.Title)
 	req.Location = strings.TrimSpace(req.Location)
-	if req.Title == "" || req.Location == "" || !validDate(req.RecordDate) {
-		writeError(w, http.StatusBadRequest, "title, location and recordDate are required")
+	if req.Title == "" || !validDate(req.RecordDate) {
+		writeError(w, http.StatusBadRequest, "title and recordDate are required")
 		return req, false
 	}
 	if req.RecordTime != nil && !validTimeText(strings.TrimSpace(*req.RecordTime)) {
