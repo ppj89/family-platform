@@ -6509,7 +6509,7 @@
       table.dataset.apiLoading = 'false'
       table.dataset.apiBacked = 'true'
       if (!items.length) {
-        table.innerHTML = emptyRow('\uCD5C\uADFC \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '\uC0C8 \uAE30\uB85D\uC744 \uCD94\uAC00\uD558\uBA74 \uC5EC\uAE30\uC5D0 \uBCF4\uC5EC\uC9D1\uB2C8\uB2E4.')
+        table.innerHTML = emptyRow('\uCD5C\uADFC \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
         return
       }
       table.innerHTML = items.slice(0, 5).map(function (item) {
@@ -7047,48 +7047,7 @@
     })
   }
 
-  var HARDCODED_DEMO_PATTERNS = [
-    '\uC774\uB9C8\uD2B8 \uD2B8\uB808\uC774\uB354\uC2A4',
-    '\uC721\uC544\uC6A9\uD488 \uC815\uAE30\uBC30\uC1A1',
-    '\uBCD1\uC6D0\uBE44',
-    '\uC6D4\uAE09',
-    '\uC81C\uC8FC \uACF5\uD56D \uB3C4\uCC29',
-    '\uC81C\uC8FC\uB3C4 \uC5EC\uD589',
-    '\uAC00\uC871 \uC81C\uC8FC 3\uBC15 4\uC77C',
-    '\uAC15\uB989 \uC5EC\uD589',
-    '\uBC14\uB2E4 \uBCF4\uB7EC \uAC00\uB294 \uC8FC\uB9D0 \uC5EC\uD589',
-    '\uD611\uC7AC \uD574\uBCC0',
-    '\uC219\uC18C \uCCB4\uD06C\uC778',
-    '\uC81C\uC8FC\uAD6D\uC81C\uACF5\uD56D',
-    '\uC0AC\uC9C4 12\uC7A5',
-    '\uC544\uAE30 \uCE68\uB300 \uC694\uCCAD \uC644\uB8CC',
-    '\uCCAB\uC9F8',
-    '\uB458\uC9F8',
-    '\uB0A8\uC544',
-    '\uC5EC\uC544',
-    '\uB0AE\uC7A0 \uB9AC\uB4EC \uCCB4\uD06C \uC911',
-    '\uC218\uC720\uB7C9\uACFC \uBC30\uBCC0 \uAE30\uB85D \uC9D1\uC911',
-    '89cm',
-    '12.8kg',
-    '62cm',
-    '6.4kg',
-    '\uC18C\uC544\uACFC \uC815\uAE30\uAC80\uC9C4',
-    '\uC5C4\uB9C8 \uC0DD\uC77C',
-    '\uAC10\uAE30 \uD68C\uBCF5',
-    '\uCCAB \uBB3C\uB180\uC774',
-    '\uC5F4\uC740 \uB0B4\uB824\uAC14\uACE0',
-    '\uC0AC\uC9C4 8\uC7A5 \uCD94\uAC00',
-    '\uD611\uC7AC \uD574\uB140\uC758\uC9D1',
-    '\uB3D9\uB124 \uBE0C\uB7F0\uCE58',
-    '\uC804\uBCF5\uC8FD',
-    '\uD574\uBB3C\uB77C\uBA74',
-    '\uD504\uB80C\uCE58\uD1A0\uC2A4\uD2B8',
-    '\uC544\uBA54\uB9AC\uCE74\uB178',
-    '147,820\uC6D0',
-    '842,500\uC6D0',
-    '28\uAC1C',
-    '4\uBA85'
-  ]
+  var HARDCODED_DEMO_PATTERNS = []
 
   function hasHardcodedDemoText(text) {
     return HARDCODED_DEMO_PATTERNS.some(function (pattern) {
