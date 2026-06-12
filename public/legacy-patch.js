@@ -3370,10 +3370,7 @@
   }
 
   function familyActionErrorMessage(error, fallback) {
-    if (error && error.status === 403) return '권한이 없어 저장이 불가합니다.'
-    if (error && error.status === 401) return '로그인이 필요합니다.'
-    if (error && error.status === 409 && String(error.message || '').indexOf('family admin') >= 0) return '가족관리자는 최소 1명 필요합니다.'
-    return fallback || '처리에 실패했습니다.'
+    return apiActionErrorMessage(error, fallback)
   }
 
   function renderFamilyInvitationList(invitations) {
@@ -3505,11 +3502,7 @@
           showPatchToast('초대를 보냈습니다. 상대방이 수락하면 구성원으로 추가됩니다.')
           if (input) input.value = ''
         }).catch(function (error) {
-          var message = '초대에 실패했습니다.'
-          if (error && error.status === 403) message = '권한이 없어 초대를 보낼 수 없습니다.'
-          if (error && error.status === 404) message = '사용자를 찾지 못했습니다.'
-          if (error && error.status === 409) message = '이미 가족에 속했거나 대기 중인 초대가 있습니다.'
-          showPatchToast(message)
+          showPatchToast(apiActionErrorMessage(error, '초대에 실패했습니다.'))
         }).finally(function () {
           if (submit) {
             submit.disabled = false
@@ -3691,6 +3684,7 @@
     cleanupCalendarChrome()
     syncCalendarEntryToToday()
     ensureYearModeTabs()
+    ensureScheduleDefaultTime()
     wireScheduleDetailRows()
     hideSelectedDayPanels()
     refreshScheduleListCount()
@@ -5165,8 +5159,8 @@
             removeLocal()
             return
           }
-          apiRequest('/community/posts/' + encodeURIComponent(post.serverId), { method: 'DELETE' }).then(removeLocal).catch(function () {
-            showPatchToast('\uAE00 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+          apiRequest('/community/posts/' + encodeURIComponent(post.serverId), { method: 'DELETE' }).then(removeLocal).catch(function (error) {
+            showPatchToast(apiActionErrorMessage(error, '\uAE00 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
           })
         })
       })
@@ -5264,7 +5258,7 @@
           })
         }).catch(function (error) {
           if (String(error && error.message || '').indexOf('INVALID_MEDIA') < 0) {
-            showPatchToast('\uAC8C\uC2DC\uAE00 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+            showPatchToast(apiActionErrorMessage(error, '\uAC8C\uC2DC\uAE00 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
           }
         }).finally(function () {
           setCommunityFormBusy(form, false)
@@ -5301,8 +5295,8 @@
         apiRequest('/community/comments/' + encodeURIComponent(comment.serverId), {
           method: 'PUT',
           body: JSON.stringify({ body: next.trim() })
-        }).then(applyComment).catch(function () {
-          showPatchToast('\uB313\uAE00 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+        }).then(applyComment).catch(function (error) {
+          showPatchToast(apiActionErrorMessage(error, '\uB313\uAE00 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
         })
       })
     })
@@ -5328,8 +5322,8 @@
             removeComment()
             return
           }
-          apiRequest('/community/comments/' + encodeURIComponent(comment.serverId), { method: 'DELETE' }).then(removeComment).catch(function () {
-            showPatchToast('\uB313\uAE00 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+          apiRequest('/community/comments/' + encodeURIComponent(comment.serverId), { method: 'DELETE' }).then(removeComment).catch(function (error) {
+            showPatchToast(apiActionErrorMessage(error, '\uB313\uAE00 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
           })
         })
       })
@@ -5823,6 +5817,29 @@
       if (response.status === 204) return null
       return response.json()
     })
+  }
+
+  function apiErrorText(error) {
+    var raw = String((error && error.message) || error || '')
+    if (!raw) return ''
+    try {
+      var parsed = JSON.parse(raw)
+      return String(parsed.message || parsed.error || raw)
+    } catch (parseError) {
+      return raw
+    }
+  }
+
+  function apiActionErrorMessage(error, fallback) {
+    var text = apiErrorText(error)
+    if ((error && error.status === 403) || text.indexOf('permission denied') >= 0) return '권한이 없어 저장이 불가합니다.'
+    if ((error && error.status === 401) || text.indexOf('invalid session') >= 0) return '로그인이 필요합니다.'
+    if (text.indexOf('family admin') >= 0) return '가족관리자는 최소 1명 필요합니다.'
+    if (text.indexOf('nickname is ambiguous') >= 0) return '닉네임이 중복됩니다. 이메일로 초대해주세요.'
+    if (text.indexOf('user not found') >= 0) return '사용자를 찾을 수 없습니다.'
+    if (text.indexOf('already belongs') >= 0) return '이미 가족그룹에 속해 있습니다.'
+    if (text.indexOf('invitation already exists') >= 0) return '이미 초대가 진행 중입니다.'
+    return fallback || '처리에 실패했습니다.'
   }
 
   var notificationState = {
@@ -6977,8 +6994,8 @@
         renderCalendarApiSchedules(true)
         loadScheduleNotifications(true)
         if (afterDelete) afterDelete()
-      }).catch(function () {
-        showPatchToast('\uC77C\uC815 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+      }).catch(function (error) {
+        showPatchToast(apiActionErrorMessage(error, '\uC77C\uC815 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
       })
     })
   }
@@ -7016,6 +7033,18 @@
     var memo = form.querySelector('textarea')
     if (memo) setNativeInputValue(memo, '')
     if (date) updateScheduleFormVisibleDate(date)
+  }
+
+  function ensureScheduleDefaultTime() {
+    var form = document.querySelector('.schedule-form-card')
+    if (!form || form.dataset.editingScheduleId) return
+    var timeInput = setInputValueByLabel(form, '\uC2DC\uAC04', getInputValueByLabel(form, '\uC2DC\uAC04') || currentTimeText())
+    if (!timeInput) {
+      timeInput = form.querySelector('input[type="time"]')
+    }
+    if (timeInput && !String(timeInput.value || '').trim()) {
+      setNativeInputValue(timeInput, currentTimeText())
+    }
   }
 
   function getFieldValue(root, selector) {
@@ -7242,7 +7271,7 @@
         title: title,
         calendarBasis: normalizeScheduleBasis(getCustomSelectValue('\uAE30\uC900')),
         scheduleDate: getScheduleFormDateValue(form),
-        scheduleTime: timeValue || null,
+        scheduleTime: timeValue || currentTimeText(),
         category: getCustomSelectValue('\uAD6C\uBD84') || '\uC77C\uC815',
         memberName: getCustomSelectValue('\uAC00\uC871') || null,
         repeatRule: normalizeScheduleRepeat(getCustomSelectValue('\uBC18\uBCF5')),
@@ -7262,7 +7291,7 @@
       title: title,
       calendarBasis: normalizeScheduleBasis(getCustomSelectValue('\uAE30\uC900') || getScheduleSelectTextAt(form, 0)),
       scheduleDate: getScheduleFormDateValue(form),
-      scheduleTime: timeValue || null,
+      scheduleTime: timeValue || currentTimeText(),
       category: getCustomSelectValue('\uAD6C\uBD84') || getScheduleSelectTextAt(form, 1) || '\uC77C\uC815',
       memberName: getCustomSelectValue('\uAC00\uC871') || getScheduleSelectTextAt(form, 2) || null,
       repeatRule: normalizeScheduleRepeat(getCustomSelectValue('\uBC18\uBCF5') || getScheduleSelectTextAt(form, 3)),
@@ -7322,7 +7351,7 @@
     }).catch(function (error) {
       window.__familyLastScheduleSaveError = String(error && error.message ? error.message : error)
       if (window.console && console.warn) console.warn('schedule save failed', error)
-      showPatchToast(editingId ? '\uC77C\uC815 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.' : '\uC77C\uC815 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+      showPatchToast(apiActionErrorMessage(error, editingId ? '\uC77C\uC815 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.' : '\uC77C\uC815 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
     }).finally(function () {
       delete form.dataset.scheduleSubmitting
       delete form.dataset.scheduleEditConfirmed
@@ -7607,7 +7636,7 @@
       showPatchToast('\uC721\uC544 \uAE30\uB85D\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
     }).catch(function (error) {
       if (String(error && error.message || '').indexOf('INVALID_MEDIA') < 0) {
-        showPatchToast('\uC721\uC544 \uAE30\uB85D \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+        showPatchToast(apiActionErrorMessage(error, '\uC721\uC544 \uAE30\uB85D \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
       }
     }).finally(function () {
       delete form.dataset.submitting

@@ -1228,18 +1228,16 @@ func (a *app) addFamilyMember(w http.ResponseWriter, r *http.Request, user authU
 			writeError(w, http.StatusBadRequest, "user invite is required")
 			return
 		}
-		err := a.db.QueryRow(r.Context(), `
-			select id from app_users
-			where lower(coalesce(email, '')) = lower($1)
-			   or lower(coalesce(nickname, '')) = lower($1)
-			   or lower(coalesce(login_id, '')) = lower($1)
-			order by id asc
-			limit 1
-		`, invite).Scan(&req.UserID)
-		if err != nil {
+		inviteeID, found, ambiguous := a.lookupInvitee(r.Context(), invite)
+		if ambiguous {
+			writeError(w, http.StatusConflict, "nickname is ambiguous; use email")
+			return
+		}
+		if !found {
 			writeError(w, http.StatusNotFound, "user not found")
 			return
 		}
+		req.UserID = inviteeID
 	}
 	var memberCount int
 	if err := a.db.QueryRow(r.Context(), "select count(1) from family_members where user_id = $1", req.UserID).Scan(&memberCount); err != nil {
@@ -1388,16 +1386,12 @@ func (a *app) createFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 		writeError(w, http.StatusBadRequest, "invitee is required")
 		return
 	}
-	var inviteeID int64
-	err := a.db.QueryRow(r.Context(), `
-		select id from app_users
-		where lower(coalesce(email, '')) = lower($1)
-		   or lower(coalesce(nickname, '')) = lower($1)
-		   or lower(coalesce(login_id, '')) = lower($1)
-		order by id asc
-		limit 1
-	`, invite).Scan(&inviteeID)
-	if err != nil {
+	inviteeID, found, ambiguous := a.lookupInvitee(r.Context(), invite)
+	if ambiguous {
+		writeError(w, http.StatusConflict, "nickname is ambiguous; use email")
+		return
+	}
+	if !found {
 		writeError(w, http.StatusNotFound, "user not found")
 		return
 	}
@@ -1433,6 +1427,40 @@ func (a *app) createFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 		return
 	}
 	writeJSON(w, http.StatusCreated, item)
+}
+
+func (a *app) lookupInvitee(ctx context.Context, invite string) (int64, bool, bool) {
+	invite = strings.TrimSpace(invite)
+	if invite == "" {
+		return 0, false, false
+	}
+	column := "nickname"
+	if strings.Contains(invite, "@") {
+		column = "email"
+	}
+	rows, err := a.db.Query(ctx, fmt.Sprintf(`
+		select id from app_users
+		where lower(coalesce(%s, '')) = lower($1)
+		order by id asc
+	`, column), invite)
+	if err != nil {
+		return 0, false, false
+	}
+	defer rows.Close()
+	ids := []int64{}
+	for rows.Next() {
+		var id int64
+		if rows.Scan(&id) == nil {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) == 0 {
+		return 0, false, false
+	}
+	if len(ids) > 1 {
+		return 0, true, true
+	}
+	return ids[0], true, false
 }
 
 func (a *app) acceptFamilyInvitation(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -1571,7 +1599,7 @@ func (a *app) createLedgerEntry(w http.ResponseWriter, r *http.Request, user aut
 	if !ok {
 		return
 	}
-	item, ok := a.saveLedgerEntry(w, r, 0, familyID, req)
+	item, ok := a.saveLedgerEntry(w, r, 0, familyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -1584,15 +1612,15 @@ func (a *app) updateLedgerEntry(w http.ResponseWriter, r *http.Request, user aut
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from ledger_entries where id = $1 and deleted_at is null", entryID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from ledger_entries where id = $1 and deleted_at is null", entryID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
 		return
 	}
 	req, ok := readLedgerPayload(w, r)
 	if !ok {
 		return
 	}
-	item, ok := a.saveLedgerEntry(w, r, entryID, familyID, req)
+	item, ok := a.saveLedgerEntry(w, r, entryID, familyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -1605,8 +1633,8 @@ func (a *app) deleteLedgerEntry(w http.ResponseWriter, r *http.Request, user aut
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from ledger_entries where id = $1 and deleted_at is null", entryID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from ledger_entries where id = $1 and deleted_at is null", entryID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update ledger_entries set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", entryID)
@@ -1660,7 +1688,7 @@ func (a *app) createSchedule(w http.ResponseWriter, r *http.Request, user authUs
 	if !ok {
 		return
 	}
-	item, ok := a.saveSchedule(w, r, 0, familyID, req)
+	item, ok := a.saveSchedule(w, r, 0, familyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -1673,15 +1701,15 @@ func (a *app) updateSchedule(w http.ResponseWriter, r *http.Request, user authUs
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_schedules where id = $1 and deleted_at is null", id)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from family_schedules where id = $1 and deleted_at is null", id)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
 		return
 	}
 	req, ok := readSchedulePayload(w, r)
 	if !ok {
 		return
 	}
-	item, ok := a.saveSchedule(w, r, id, familyID, req)
+	item, ok := a.saveSchedule(w, r, id, familyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -1694,8 +1722,8 @@ func (a *app) deleteSchedule(w http.ResponseWriter, r *http.Request, user authUs
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_schedules where id = $1 and deleted_at is null", id)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from family_schedules where id = $1 and deleted_at is null", id)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update family_schedules set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", id)
@@ -1948,7 +1976,7 @@ func (a *app) createTrip(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
-	item, ok := a.saveTrip(w, r, 0, familyID, req)
+	item, ok := a.saveTrip(w, r, 0, familyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -1961,15 +1989,15 @@ func (a *app) updateTrip(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1 and deleted_at is null", tripID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from trips where id = $1 and deleted_at is null", tripID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
 		return
 	}
 	req, ok := readTripPayload(w, r)
 	if !ok {
 		return
 	}
-	item, ok := a.saveTrip(w, r, tripID, familyID, req)
+	item, ok := a.saveTrip(w, r, tripID, familyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -1982,8 +2010,8 @@ func (a *app) deleteTrip(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from trips where id = $1 and deleted_at is null", tripID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from trips where id = $1 and deleted_at is null", tripID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update travel_records set deleted_at = now(), updated_at = now() where trip_id = $1 and deleted_at is null", tripID)
@@ -2021,7 +2049,7 @@ func (a *app) createTravelRecord(w http.ResponseWriter, r *http.Request, user au
 	if !ok {
 		return
 	}
-	item, ok := a.saveTravelRecord(w, r, 0, tripID, req)
+	item, ok := a.saveTravelRecord(w, r, 0, tripID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -2035,21 +2063,22 @@ func (a *app) updateTravelRecord(w http.ResponseWriter, r *http.Request, user au
 		return
 	}
 	var tripID, familyID int64
+	var ownerID sql.NullInt64
 	err := a.db.QueryRow(r.Context(), `
-		select r.trip_id, t.family_id from travel_records r join trips t on t.id = r.trip_id where r.id = $1 and r.deleted_at is null and t.deleted_at is null
-	`, recordID).Scan(&tripID, &familyID)
+		select r.trip_id, t.family_id, r.created_by_user_id from travel_records r join trips t on t.id = r.trip_id where r.id = $1 and r.deleted_at is null and t.deleted_at is null
+	`, recordID).Scan(&tripID, &familyID, &ownerID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "travel record not found")
 		return
 	}
-	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+	if !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
 		return
 	}
 	req, ok := readTravelRecordPayload(w, r)
 	if !ok {
 		return
 	}
-	item, ok := a.saveTravelRecord(w, r, recordID, tripID, req)
+	item, ok := a.saveTravelRecord(w, r, recordID, tripID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -2063,14 +2092,15 @@ func (a *app) deleteTravelRecord(w http.ResponseWriter, r *http.Request, user au
 		return
 	}
 	var tripID, familyID int64
+	var ownerID sql.NullInt64
 	err := a.db.QueryRow(r.Context(), `
-		select r.trip_id, t.family_id from travel_records r join trips t on t.id = r.trip_id where r.id = $1 and r.deleted_at is null and t.deleted_at is null
-	`, recordID).Scan(&tripID, &familyID)
+		select r.trip_id, t.family_id, r.created_by_user_id from travel_records r join trips t on t.id = r.trip_id where r.id = $1 and r.deleted_at is null and t.deleted_at is null
+	`, recordID).Scan(&tripID, &familyID, &ownerID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "travel record not found")
 		return
 	}
-	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+	if !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update travel_records set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", recordID)
@@ -2136,7 +2166,7 @@ func (a *app) createBaby(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
-	item, ok := a.saveBaby(w, r, 0, familyID, req)
+	item, ok := a.saveBaby(w, r, 0, familyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -2149,15 +2179,15 @@ func (a *app) updateBaby(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1 and deleted_at is null", babyID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from baby_profiles where id = $1 and deleted_at is null", babyID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
 		return
 	}
 	req, ok := readBabyPayload(w, r)
 	if !ok {
 		return
 	}
-	item, ok := a.saveBaby(w, r, babyID, familyID, req)
+	item, ok := a.saveBaby(w, r, babyID, familyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -2170,8 +2200,8 @@ func (a *app) deleteBaby(w http.ResponseWriter, r *http.Request, user authUser) 
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from baby_profiles where id = $1 and deleted_at is null", babyID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from baby_profiles where id = $1 and deleted_at is null", babyID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update baby_records set deleted_at = now(), updated_at = now() where baby_id = $1 and deleted_at is null", babyID)
@@ -2226,7 +2256,7 @@ func (a *app) createBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 	if !ok {
 		return
 	}
-	item, ok := a.saveBabyRecord(w, r, 0, babyID, req)
+	item, ok := a.saveBabyRecord(w, r, 0, babyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -2240,19 +2270,20 @@ func (a *app) updateBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 		return
 	}
 	var babyID, familyID int64
-	err := a.db.QueryRow(r.Context(), `select r.baby_id, b.family_id from baby_records r join baby_profiles b on b.id = r.baby_id where r.id = $1 and r.deleted_at is null and b.deleted_at is null`, recordID).Scan(&babyID, &familyID)
+	var ownerID sql.NullInt64
+	err := a.db.QueryRow(r.Context(), `select r.baby_id, b.family_id, r.created_by_user_id from baby_records r join baby_profiles b on b.id = r.baby_id where r.id = $1 and r.deleted_at is null and b.deleted_at is null`, recordID).Scan(&babyID, &familyID, &ownerID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "baby record not found")
 		return
 	}
-	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+	if !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
 		return
 	}
 	req, ok := readBabyRecordPayload(w, r)
 	if !ok {
 		return
 	}
-	item, ok := a.saveBabyRecord(w, r, recordID, babyID, req)
+	item, ok := a.saveBabyRecord(w, r, recordID, babyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -2266,12 +2297,13 @@ func (a *app) deleteBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 		return
 	}
 	var familyID int64
-	err := a.db.QueryRow(r.Context(), `select b.family_id from baby_records r join baby_profiles b on b.id = r.baby_id where r.id = $1 and r.deleted_at is null and b.deleted_at is null`, recordID).Scan(&familyID)
+	var ownerID sql.NullInt64
+	err := a.db.QueryRow(r.Context(), `select b.family_id, r.created_by_user_id from baby_records r join baby_profiles b on b.id = r.baby_id where r.id = $1 and r.deleted_at is null and b.deleted_at is null`, recordID).Scan(&familyID, &ownerID)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "baby record not found")
 		return
 	}
-	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+	if !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update baby_records set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", recordID)
@@ -2324,7 +2356,7 @@ func (a *app) createDiary(w http.ResponseWriter, r *http.Request, user authUser)
 	if !ok {
 		return
 	}
-	item, ok := a.saveDiary(w, r, 0, familyID, req)
+	item, ok := a.saveDiary(w, r, 0, familyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -2337,15 +2369,15 @@ func (a *app) updateDiary(w http.ResponseWriter, r *http.Request, user authUser)
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_diaries where id = $1 and deleted_at is null", diaryID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "update") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from family_diaries where id = $1 and deleted_at is null", diaryID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
 		return
 	}
 	req, ok := readDiaryPayload(w, r)
 	if !ok {
 		return
 	}
-	item, ok := a.saveDiary(w, r, diaryID, familyID, req)
+	item, ok := a.saveDiary(w, r, diaryID, familyID, req, user.ID)
 	if !ok {
 		return
 	}
@@ -2358,8 +2390,8 @@ func (a *app) deleteDiary(w http.ResponseWriter, r *http.Request, user authUser)
 	if !ok {
 		return
 	}
-	familyID, ok := a.resourceFamilyID(w, r.Context(), "select family_id from family_diaries where id = $1 and deleted_at is null", diaryID)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "delete") {
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from family_diaries where id = $1 and deleted_at is null", diaryID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update family_diaries set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", diaryID)
@@ -2977,10 +3009,7 @@ func (a *app) fetchOAuthProfile(ctx context.Context, providerName string, provid
 
 func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauthProfile, forceLogin bool) (authResponse, error) {
 	email := profile.Email
-	nickname := strings.TrimSpace(profile.Nickname)
-	if nickname == "" {
-		nickname = provider + " user"
-	}
+	nickname := oauthDisplayNickname(provider, profile.Nickname, email)
 
 	tx, err := a.db.Begin(ctx)
 	if err != nil {
@@ -3094,6 +3123,20 @@ func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, pr
 		return false, err
 	}
 	return true, nil
+}
+
+func oauthDisplayNickname(provider, nickname, email string) string {
+	nickname = strings.TrimSpace(nickname)
+	if strings.Contains(nickname, "@") {
+		nickname = strings.TrimSpace(strings.Split(nickname, "@")[0])
+	}
+	if nickname == "" && email != "" {
+		nickname = strings.TrimSpace(strings.Split(email, "@")[0])
+	}
+	if nickname == "" {
+		nickname = provider + " user"
+	}
+	return nickname
 }
 
 func (a *app) reconcileOAuthEmail(ctx context.Context, tx pgx.Tx, provider, providerUserID, email, nickname string, userID *int64, currentEmail *string, currentNickname *string, platformAdmin *bool, activeSessionID *sql.NullString) error {
@@ -3348,6 +3391,7 @@ create table if not exists family_schedules (
 );
 alter table if exists family_schedules add column if not exists updated_at timestamp with time zone;
 alter table if exists family_schedules add column if not exists deleted_at timestamp with time zone;
+alter table if exists family_schedules add column if not exists created_by_user_id bigint;
 create table if not exists ledger_entries (
   id bigint generated by default as identity primary key,
   amount numeric(38,2),
@@ -3365,6 +3409,7 @@ create table if not exists ledger_entries (
 );
 alter table if exists ledger_entries add column if not exists updated_at timestamp with time zone;
 alter table if exists ledger_entries add column if not exists deleted_at timestamp with time zone;
+alter table if exists ledger_entries add column if not exists created_by_user_id bigint;
 create table if not exists trips (
   id bigint generated by default as identity primary key,
   created_at timestamp with time zone,
@@ -3378,6 +3423,7 @@ create table if not exists trips (
 );
 alter table if exists trips add column if not exists updated_at timestamp with time zone;
 alter table if exists trips add column if not exists deleted_at timestamp with time zone;
+alter table if exists trips add column if not exists created_by_user_id bigint;
 create table if not exists travel_records (
   id bigint generated by default as identity primary key,
   amount numeric(38,2),
@@ -3397,6 +3443,7 @@ create table if not exists travel_records (
 );
 alter table if exists travel_records add column if not exists updated_at timestamp with time zone;
 alter table if exists travel_records add column if not exists deleted_at timestamp with time zone;
+alter table if exists travel_records add column if not exists created_by_user_id bigint;
 create table if not exists travel_record_media_urls (
   travel_record_id bigint not null,
   media_urls varchar(2048)
@@ -3435,6 +3482,7 @@ create table if not exists baby_profiles (
 );
 alter table if exists baby_profiles add column if not exists updated_at timestamp with time zone;
 alter table if exists baby_profiles add column if not exists deleted_at timestamp with time zone;
+alter table if exists baby_profiles add column if not exists created_by_user_id bigint;
 create table if not exists baby_records (
   id bigint generated by default as identity primary key,
   amount_ml integer,
@@ -3451,6 +3499,7 @@ create table if not exists baby_records (
 );
 alter table if exists baby_records add column if not exists updated_at timestamp with time zone;
 alter table if exists baby_records add column if not exists deleted_at timestamp with time zone;
+alter table if exists baby_records add column if not exists created_by_user_id bigint;
 create table if not exists baby_record_media_urls (
   baby_record_id bigint not null,
   media_urls varchar(2048)
@@ -3471,6 +3520,7 @@ create table if not exists family_diaries (
 );
 alter table if exists family_diaries add column if not exists updated_at timestamp with time zone;
 alter table if exists family_diaries add column if not exists deleted_at timestamp with time zone;
+alter table if exists family_diaries add column if not exists created_by_user_id bigint;
 create table if not exists family_diary_media_urls (
   family_diary_id bigint not null,
   media_urls varchar(2048)
@@ -3523,6 +3573,27 @@ create table if not exists data_change_histories (
 );
 create index if not exists idx_data_change_histories_entity on data_change_histories (entity_type, entity_id, created_at desc);
 create index if not exists idx_data_change_histories_family on data_change_histories (family_id, created_at desc);
+update ledger_entries t set created_by_user_id = h.actor_user_id
+from (select distinct on (entity_id) entity_id, actor_user_id from data_change_histories where entity_type = 'ledger_entry' and action = 'create' and actor_user_id is not null order by entity_id, created_at asc) h
+where t.id = h.entity_id and t.created_by_user_id is null;
+update family_schedules t set created_by_user_id = h.actor_user_id
+from (select distinct on (entity_id) entity_id, actor_user_id from data_change_histories where entity_type = 'family_schedule' and action = 'create' and actor_user_id is not null order by entity_id, created_at asc) h
+where t.id = h.entity_id and t.created_by_user_id is null;
+update trips t set created_by_user_id = h.actor_user_id
+from (select distinct on (entity_id) entity_id, actor_user_id from data_change_histories where entity_type = 'trip' and action = 'create' and actor_user_id is not null order by entity_id, created_at asc) h
+where t.id = h.entity_id and t.created_by_user_id is null;
+update travel_records t set created_by_user_id = h.actor_user_id
+from (select distinct on (entity_id) entity_id, actor_user_id from data_change_histories where entity_type = 'travel_record' and action = 'create' and actor_user_id is not null order by entity_id, created_at asc) h
+where t.id = h.entity_id and t.created_by_user_id is null;
+update baby_profiles t set created_by_user_id = h.actor_user_id
+from (select distinct on (entity_id) entity_id, actor_user_id from data_change_histories where entity_type = 'baby_profile' and action = 'create' and actor_user_id is not null order by entity_id, created_at asc) h
+where t.id = h.entity_id and t.created_by_user_id is null;
+update baby_records t set created_by_user_id = h.actor_user_id
+from (select distinct on (entity_id) entity_id, actor_user_id from data_change_histories where entity_type = 'baby_record' and action = 'create' and actor_user_id is not null order by entity_id, created_at asc) h
+where t.id = h.entity_id and t.created_by_user_id is null;
+update family_diaries t set created_by_user_id = h.actor_user_id
+from (select distinct on (entity_id) entity_id, actor_user_id from data_change_histories where entity_type = 'family_diary' and action = 'create' and actor_user_id is not null order by entity_id, created_at asc) h
+where t.id = h.entity_id and t.created_by_user_id is null;
 create table if not exists app_notifications (
   id bigint generated by default as identity primary key,
   body varchar(255),
@@ -4251,6 +4322,13 @@ func (a *app) requireFamilyPermission(w http.ResponseWriter, ctx context.Context
 	return true
 }
 
+func (a *app) requireFamilyPermissionOrOwner(w http.ResponseWriter, ctx context.Context, user authUser, familyID int64, permission string, ownerID sql.NullInt64) bool {
+	if ownerID.Valid && ownerID.Int64 == user.ID {
+		return true
+	}
+	return a.requireFamilyPermission(w, ctx, user, familyID, permission)
+}
+
 func (a *app) requireFamilyAdmin(w http.ResponseWriter, ctx context.Context, user authUser, familyID int64) bool {
 	if user.PlatformAdmin {
 		return true
@@ -4278,6 +4356,16 @@ func (a *app) resourceFamilyID(w http.ResponseWriter, ctx context.Context, query
 	return familyID, true
 }
 
+func (a *app) resourceFamilyOwner(w http.ResponseWriter, ctx context.Context, query string, id int64) (int64, sql.NullInt64, bool) {
+	var familyID int64
+	var ownerID sql.NullInt64
+	if err := a.db.QueryRow(ctx, query, id).Scan(&familyID, &ownerID); err != nil {
+		writeError(w, http.StatusNotFound, "resource not found")
+		return 0, ownerID, false
+	}
+	return familyID, ownerID, true
+}
+
 type ledgerPayload struct {
 	Title           string  `json:"title"`
 	EntryType       string  `json:"entryType"`
@@ -4302,17 +4390,17 @@ func readLedgerPayload(w http.ResponseWriter, r *http.Request) (ledgerPayload, b
 	return req, true
 }
 
-func (a *app) saveLedgerEntry(w http.ResponseWriter, r *http.Request, entryID int64, familyID int64, req ledgerPayload) (ledgerEntry, bool) {
+func (a *app) saveLedgerEntry(w http.ResponseWriter, r *http.Request, entryID int64, familyID int64, req ledgerPayload, userID int64) (ledgerEntry, bool) {
 	var item ledgerEntry
 	var category, payment, member, memo sql.NullString
 	var transactionDate, createdAt time.Time
 	var err error
 	if entryID == 0 {
 		err = a.db.QueryRow(r.Context(), `
-			insert into ledger_entries (family_id, title, entry_type, category, payment_method, member_name, amount, transaction_date, memo, created_at, updated_at)
-			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now())
+			insert into ledger_entries (family_id, title, entry_type, category, payment_method, member_name, amount, transaction_date, memo, created_at, updated_at, created_by_user_id)
+			values ($1, $2, $3, $4, $5, $6, $7, $8, $9, now(), now(), $10)
 			returning id, family_id, title, entry_type, category, payment_method, member_name, coalesce(amount, 0), transaction_date, memo, created_at
-		`, familyID, req.Title, req.EntryType, req.Category, req.PaymentMethod, req.MemberName, req.Amount, req.TransactionDate, req.Memo).
+		`, familyID, req.Title, req.EntryType, req.Category, req.PaymentMethod, req.MemberName, req.Amount, req.TransactionDate, req.Memo, userID).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &item.EntryType, &category, &payment, &member, &item.Amount, &transactionDate, &memo, &createdAt)
 	} else {
 		err = a.db.QueryRow(r.Context(), `
@@ -4385,17 +4473,17 @@ func readSchedulePayload(w http.ResponseWriter, r *http.Request) (schedulePayloa
 	return req, true
 }
 
-func (a *app) saveSchedule(w http.ResponseWriter, r *http.Request, id int64, familyID int64, req schedulePayload) (scheduleItem, bool) {
+func (a *app) saveSchedule(w http.ResponseWriter, r *http.Request, id int64, familyID int64, req schedulePayload, userID int64) (scheduleItem, bool) {
 	var item scheduleItem
 	var scheduleDate, createdAt time.Time
 	var scheduleTime, category, member, repeat, memo sql.NullString
 	var err error
 	if id == 0 {
 		err = a.db.QueryRow(r.Context(), `
-			insert into family_schedules (family_id, title, calendar_basis, schedule_date, schedule_time, category, member_name, repeat_rule, memo, created_at, updated_at)
-			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,now(),now())
+			insert into family_schedules (family_id, title, calendar_basis, schedule_date, schedule_time, category, member_name, repeat_rule, memo, created_at, updated_at, created_by_user_id)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,now(),now(),$10)
 			returning id, family_id, title, calendar_basis, schedule_date, schedule_time::text, category, member_name, repeat_rule, memo, created_at
-		`, familyID, req.Title, req.CalendarBasis, req.ScheduleDate, req.ScheduleTime, req.Category, req.MemberName, req.RepeatRule, req.Memo).
+		`, familyID, req.Title, req.CalendarBasis, req.ScheduleDate, req.ScheduleTime, req.Category, req.MemberName, req.RepeatRule, req.Memo, userID).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &item.CalendarBasis, &scheduleDate, &scheduleTime, &category, &member, &repeat, &memo, &createdAt)
 	} else {
 		err = a.db.QueryRow(r.Context(), `
@@ -4562,17 +4650,17 @@ func readTripPayload(w http.ResponseWriter, r *http.Request) (tripPayload, bool)
 	return req, true
 }
 
-func (a *app) saveTrip(w http.ResponseWriter, r *http.Request, id int64, familyID int64, req tripPayload) (tripItem, bool) {
+func (a *app) saveTrip(w http.ResponseWriter, r *http.Request, id int64, familyID int64, req tripPayload, userID int64) (tripItem, bool) {
 	var item tripItem
 	var startDate, endDate, createdAt time.Time
 	var description sql.NullString
 	var err error
 	if id == 0 {
 		err = a.db.QueryRow(r.Context(), `
-			insert into trips (family_id, title, start_date, end_date, description, created_at, updated_at)
-			values ($1,$2,$3,$4,$5,now(),now())
+			insert into trips (family_id, title, start_date, end_date, description, created_at, updated_at, created_by_user_id)
+			values ($1,$2,$3,$4,$5,now(),now(),$6)
 			returning id, family_id, title, start_date, end_date, description, created_at
-		`, familyID, req.Title, req.StartDate, req.EndDate, req.Description).
+		`, familyID, req.Title, req.StartDate, req.EndDate, req.Description, userID).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &startDate, &endDate, &description, &createdAt)
 	} else {
 		err = a.db.QueryRow(r.Context(), `
@@ -4644,7 +4732,7 @@ func readTravelRecordPayload(w http.ResponseWriter, r *http.Request) (travelReco
 	return req, true
 }
 
-func (a *app) saveTravelRecord(w http.ResponseWriter, r *http.Request, id int64, tripID int64, req travelRecordPayload) (travelRecordItem, bool) {
+func (a *app) saveTravelRecord(w http.ResponseWriter, r *http.Request, id int64, tripID int64, req travelRecordPayload, userID int64) (travelRecordItem, bool) {
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database transaction failed")
@@ -4657,10 +4745,10 @@ func (a *app) saveTravelRecord(w http.ResponseWriter, r *http.Request, id int64,
 	var recordDate, createdAt time.Time
 	if id == 0 {
 		err = tx.QueryRow(r.Context(), `
-			insert into travel_records (trip_id, sort_order, title, category, amount, note, location, latitude, longitude, record_date, record_time, created_at, updated_at)
-			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now(),now())
+			insert into travel_records (trip_id, sort_order, title, category, amount, note, location, latitude, longitude, record_date, record_time, created_at, updated_at, created_by_user_id)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now(),now(),$12)
 			returning id, trip_id, sort_order, title, category, coalesce(amount, 0), note, location, latitude, longitude, record_date, record_time::text, created_at
-		`, tripID, req.SortOrder, req.Title, req.Category, req.Amount, req.Note, req.Location, req.Latitude, req.Longitude, req.RecordDate, req.RecordTime).
+		`, tripID, req.SortOrder, req.Title, req.Category, req.Amount, req.Note, req.Location, req.Latitude, req.Longitude, req.RecordDate, req.RecordTime, userID).
 			Scan(&item.ID, &item.TripID, &sortOrder, &item.Title, &category, &item.Amount, &note, &item.Location, &item.Latitude, &item.Longitude, &recordDate, &recordTime, &createdAt)
 	} else {
 		err = tx.QueryRow(r.Context(), `
@@ -4850,7 +4938,7 @@ func readBabyPayload(w http.ResponseWriter, r *http.Request) (babyPayload, bool)
 	return req, true
 }
 
-func (a *app) saveBaby(w http.ResponseWriter, r *http.Request, id int64, familyID int64, req babyPayload) (babyProfileItem, bool) {
+func (a *app) saveBaby(w http.ResponseWriter, r *http.Request, id int64, familyID int64, req babyPayload, userID int64) (babyProfileItem, bool) {
 	var item babyProfileItem
 	var gender, memo, photo sql.NullString
 	var height, weight sql.NullFloat64
@@ -4858,10 +4946,10 @@ func (a *app) saveBaby(w http.ResponseWriter, r *http.Request, id int64, familyI
 	var err error
 	if id == 0 {
 		err = a.db.QueryRow(r.Context(), `
-			insert into baby_profiles (family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at, updated_at)
-			values ($1,$2,$3,$4,$5,$6,$7,$8,now(),now())
+			insert into baby_profiles (family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at, updated_at, created_by_user_id)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,now(),now(),$9)
 			returning id, family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at
-		`, familyID, req.Name, req.Gender, req.BirthDate, req.Memo, req.PhotoURL, req.LatestHeightCm, req.LatestWeightKg).
+		`, familyID, req.Name, req.Gender, req.BirthDate, req.Memo, req.PhotoURL, req.LatestHeightCm, req.LatestWeightKg, userID).
 			Scan(&item.ID, &item.FamilyID, &item.Name, &gender, &birthDate, &memo, &photo, &height, &weight, &createdAt)
 	} else {
 		err = a.db.QueryRow(r.Context(), `
@@ -4932,7 +5020,7 @@ func readBabyRecordPayload(w http.ResponseWriter, r *http.Request) (babyRecordPa
 	return req, true
 }
 
-func (a *app) saveBabyRecord(w http.ResponseWriter, r *http.Request, id int64, babyID int64, req babyRecordPayload) (babyRecordItem, bool) {
+func (a *app) saveBabyRecord(w http.ResponseWriter, r *http.Request, id int64, babyID int64, req babyRecordPayload, userID int64) (babyRecordItem, bool) {
 	mediaURLs, ok := a.validateMediaReferences(w, req.MediaURLs)
 	if !ok {
 		return babyRecordItem{}, false
@@ -4950,10 +5038,10 @@ func (a *app) saveBabyRecord(w http.ResponseWriter, r *http.Request, id int64, b
 	var recordDate, createdAt time.Time
 	if id == 0 {
 		err = tx.QueryRow(r.Context(), `
-			insert into baby_records (baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at, updated_at)
-			values ($1,$2,$3,$4,$5,$6,$7,$8,now(),now())
+			insert into baby_records (baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at, updated_at, created_by_user_id)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,now(),now(),$9)
 			returning id, baby_id, record_type, record_date, record_time, amount_ml, height_cm, weight_kg, memo, created_at
-		`, babyID, req.RecordType, req.RecordDate, req.RecordTime, req.AmountMl, req.HeightCm, req.WeightKg, req.Memo).
+		`, babyID, req.RecordType, req.RecordDate, req.RecordTime, req.AmountMl, req.HeightCm, req.WeightKg, req.Memo, userID).
 			Scan(&item.ID, &item.BabyID, &item.RecordType, &recordDate, &recordTime, &amount, &height, &weight, &memo, &createdAt)
 	} else {
 		err = tx.QueryRow(r.Context(), `
@@ -5041,7 +5129,7 @@ func readDiaryPayload(w http.ResponseWriter, r *http.Request) (diaryPayload, boo
 	return req, true
 }
 
-func (a *app) saveDiary(w http.ResponseWriter, r *http.Request, id int64, familyID int64, req diaryPayload) (diaryItem, bool) {
+func (a *app) saveDiary(w http.ResponseWriter, r *http.Request, id int64, familyID int64, req diaryPayload, userID int64) (diaryItem, bool) {
 	mediaURLs, ok := a.validateMediaReferences(w, req.MediaURLs)
 	if !ok {
 		return diaryItem{}, false
@@ -5058,10 +5146,10 @@ func (a *app) saveDiary(w http.ResponseWriter, r *http.Request, id int64, family
 	var diaryDate, createdAt time.Time
 	if id == 0 {
 		err = tx.QueryRow(r.Context(), `
-			insert into family_diaries (family_id, title, body, diary_date, weather, mood, min_temperature, max_temperature, created_at, updated_at)
-			values ($1,$2,$3,$4,$5,$6,$7,$8,now(),now())
+			insert into family_diaries (family_id, title, body, diary_date, weather, mood, min_temperature, max_temperature, created_at, updated_at, created_by_user_id)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,now(),now(),$9)
 			returning id, family_id, title, body::text, diary_date, weather, mood, min_temperature, max_temperature, created_at
-		`, familyID, req.Title, req.Body, req.DiaryDate, req.Weather, req.Mood, req.MinTemperature, req.MaxTemperature).
+		`, familyID, req.Title, req.Body, req.DiaryDate, req.Weather, req.Mood, req.MinTemperature, req.MaxTemperature, userID).
 			Scan(&item.ID, &item.FamilyID, &item.Title, &item.Body, &diaryDate, &weather, &mood, &minTemp, &maxTemp, &createdAt)
 	} else {
 		err = tx.QueryRow(r.Context(), `
