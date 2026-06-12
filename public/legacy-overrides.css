@@ -4979,6 +4979,36 @@ body.api-loading-blocked::before {
   white-space: nowrap;
 }
 
+.admin-menu-add-hidden {
+  display: none !important;
+}
+
+.baby-main-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+.baby-main-action-bar button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 14px;
+  padding: 0 14px;
+  background: #eef6ff;
+  color: #1b64da;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.baby-main-action-bar button:first-child {
+  background: #3182f6;
+  color: #fff;
+}
+
 .menu-readonly-fields span {
   color: #6b7684;
   font-size: 13px;

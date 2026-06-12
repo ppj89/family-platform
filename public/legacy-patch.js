@@ -1291,8 +1291,54 @@
     var loginPreferences = ensureLoginPreferenceControls(card, submit)
     applyLoginPreferences(card, emailInput)
     bindLoginPreferenceControls(card, emailInput)
+    if (!card.__familyAuthModeValues) {
+      var activeAuthTab = tabs.querySelector('button.active')
+      var initialMode = card.dataset.authMode || (activeAuthTab === registerTab ? 'register' : 'login')
+      card.__familyAuthModeValues = {
+        login: {
+          email: initialMode === 'login' && emailInput ? emailInput.value : '',
+          password: initialMode === 'login' && passwordInput ? passwordInput.value : ''
+        },
+        register: {
+          email: initialMode === 'register' && emailInput ? emailInput.value : '',
+          password: initialMode === 'register' && passwordInput ? passwordInput.value : '',
+          nickname: initialMode === 'register' ? getFieldValue(card, '[data-field="auth-nickname"]') : ''
+        }
+      }
+    }
+
+    function authModeState(mode) {
+      return card.__familyAuthModeValues[mode] || (card.__familyAuthModeValues[mode] = {})
+    }
+
+    function saveAuthModeValues(mode) {
+      if (!mode) return
+      var state = authModeState(mode)
+      if (emailInput) state.email = emailInput.value || ''
+      if (passwordInput) state.password = passwordInput.value || ''
+      var nicknameInput = card.querySelector('[data-field="auth-nickname"]')
+      if (nicknameInput) state.nickname = nicknameInput.value || ''
+    }
+
+    function restoreAuthModeValues(mode) {
+      var state = authModeState(mode)
+      if (emailInput) setNativeInputValue(emailInput, state.email || '')
+      if (passwordInput) setNativeInputValue(passwordInput, state.password || '')
+      var nicknameInput = card.querySelector('[data-field="auth-nickname"]')
+      if (nicknameInput) setNativeInputValue(nicknameInput, mode === 'register' ? (state.nickname || '') : '')
+    }
+
+    if (!card.dataset.authModeValueReady) {
+      card.dataset.authModeValueReady = 'true'
+      card.addEventListener('input', function (event) {
+        if (!event.target || !event.target.matches('[data-field="auth-email"], [data-field="auth-password"], [data-field="auth-nickname"]')) return
+        saveAuthModeValues(card.dataset.authMode || 'login')
+      }, true)
+    }
 
     function setMode(mode) {
+      var previousMode = card.dataset.authMode
+      if (previousMode && previousMode !== mode) saveAuthModeValues(previousMode)
       card.dataset.authMode = mode
       loginTab.classList.toggle('active', mode === 'login')
       registerTab.classList.toggle('active', mode === 'register')
@@ -1303,6 +1349,7 @@
       if (resendButton) resendButton.hidden = true
       if (passwordInput) passwordInput.autocomplete = mode === 'register' ? 'new-password' : 'current-password'
       if (submit && submit.dataset.authBusy !== 'true') submit.textContent = mode === 'register' ? '회원가입' : '로그인'
+      restoreAuthModeValues(mode)
       normalizeAuthCopy(card, mode)
     }
 
@@ -3018,6 +3065,17 @@
     })
   }
 
+  function hideAdminMenuAddButton() {
+    document.querySelectorAll('button').forEach(function (button) {
+      var text = getCleanText(button).replace(/\s+/g, '')
+      if (text !== '\uBA54\uB274\uCD94\uAC00') return
+      var scope = button.closest('.panel, section, article, form, .content-grid') || document.body
+      var scopeText = getCleanText(scope)
+      if (scopeText.indexOf('\uBA54\uB274') < 0 && getCleanText(document.querySelector('.topbar h1')).indexOf('\uAD00\uB9AC\uC790') < 0) return
+      button.classList.add('admin-menu-add-hidden')
+    })
+  }
+
   function cleanupCalendarChrome() {
     var titleButton = document.querySelector('.family-calendar-panel .calendar-title-button')
     if (titleButton) {
@@ -3196,7 +3254,7 @@
         renderFamilyManagePage(root, family, [])
       })
     }).catch(function () {
-      root.innerHTML = '<section class="panel wide family-group-panel">' + emptyRow('가족 정보를 불러오지 못했습니다.', '다시 로그인 후 확인해주세요.') + '</section>'
+      root.innerHTML = '<section class="panel wide family-group-panel">' + emptyRow('가족 정보를 불러오지 못했습니다.', '') + '</section>'
     })
   }
 
@@ -3403,9 +3461,11 @@
     hideBabyEmptySelectionPanel()
     enhanceBabyRecordMedia()
     cleanupBabyDetailButtons()
+    ensureBabyMainActions()
     ensureBabyApiRecordForm()
     enhanceBabyEditMediaHelper()
     enhanceBabyProfileEdit()
+    hideAdminMenuAddButton()
     enhanceMediaUploadLimits()
     cleanupPassiveButtons()
     syncSelectedDayHeaderFromState()
@@ -3911,6 +3971,90 @@
       }, true)
       card.appendChild(button)
     })
+  }
+
+  function openBabyCreateDialog() {
+    if (document.querySelector('.baby-profile-edit-backdrop')) return
+    var backdrop = document.createElement('div')
+    backdrop.className = 'baby-profile-edit-backdrop'
+    var dialog = document.createElement('section')
+    dialog.className = 'baby-profile-edit-dialog baby-create-dialog'
+    dialog.innerHTML = [
+      '<button type="button" class="dialog-close">x</button>',
+      '<h2>\uC544\uC774 \uCD94\uAC00</h2>',
+      '<label><span>\uC774\uB984</span><input data-baby-create-name maxlength="30" placeholder="\uC608: \uCCAB\uC9F8" /></label>',
+      '<label><span>\uC131\uBCC4</span><input data-baby-create-gender placeholder="\uC608: \uC5EC\uC544" /></label>',
+      '<label><span>\uC0DD\uC77C</span><input data-baby-create-birth type="date" value="' + todayText() + '" /></label>',
+      '<label><span>\uBA54\uBAA8</span><input data-baby-create-memo placeholder="\uC608: \uB0AE\uC7A0 \uB9AC\uB4EC \uCCB4\uD06C \uC911" /></label>',
+      '<label><span>\uD0A4(cm)</span><input data-baby-create-height inputmode="decimal" placeholder="\uC608: 89" /></label>',
+      '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input data-baby-create-weight inputmode="decimal" placeholder="\uC608: 12.8" /></label>',
+      '<div class="baby-profile-edit-actions"><button type="button" class="cancel-button">\uCDE8\uC18C</button><button type="button" class="save-button">\uC800\uC7A5</button></div>'
+    ].join('')
+    backdrop.appendChild(dialog)
+    document.body.appendChild(backdrop)
+
+    var nameInput = dialog.querySelector('[data-baby-create-name]')
+    var closeDialog = function () { backdrop.remove() }
+    dialog.querySelector('.dialog-close').addEventListener('click', closeDialog)
+    dialog.querySelector('.cancel-button').addEventListener('click', closeDialog)
+    dialog.querySelector('.save-button').addEventListener('click', function () {
+      var name = String(nameInput.value || '').trim()
+      if (!name) {
+        showPatchToast('\uC544\uC774 \uC774\uB984\uC740 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
+        nameInput.focus()
+        return
+      }
+      var save = dialog.querySelector('.save-button')
+      save.disabled = true
+      save.textContent = '\uC800\uC7A5 \uC911'
+      getCurrentFamilyId().then(function (familyId) {
+        return postJson('/babies?familyId=' + encodeURIComponent(familyId), {
+          name: name,
+          gender: getFieldValue(dialog, '[data-baby-create-gender]') || null,
+          birthDate: getFieldValue(dialog, '[data-baby-create-birth]') || todayText(),
+          memo: getFieldValue(dialog, '[data-baby-create-memo]') || '',
+          photoUrl: null,
+          latestHeightCm: optionalDecimal(getFieldValue(dialog, '[data-baby-create-height]')),
+          latestWeightKg: optionalDecimal(getFieldValue(dialog, '[data-baby-create-weight]'))
+        })
+      }).then(function () {
+        closeDialog()
+        showPatchToast('\uC544\uC774\uB97C \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
+        goMenu('\uC721\uC544')
+        window.setTimeout(function () { refreshServerDataViews(true) }, 400)
+      }).catch(function () {
+        save.disabled = false
+        save.textContent = '\uC800\uC7A5'
+        showPatchToast('\uC544\uC774 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+      })
+    })
+    if (nameInput) nameInput.focus()
+  }
+
+  function ensureBabyMainActions() {
+    if (getCleanText(document.querySelector('.topbar h1')).indexOf('\uC721\uC544') < 0) return
+    if (document.querySelector('.baby-detail')) return
+    var header = Array.from(document.querySelectorAll('.panel-header')).find(function (item) {
+      return getCleanText(item.querySelector('h2')).indexOf('\uC721\uC544') >= 0
+    })
+    if (!header || header.querySelector('.baby-main-action-bar')) return
+    var actions = document.createElement('div')
+    actions.className = 'baby-main-action-bar'
+    var createButton = document.createElement('button')
+    createButton.type = 'button'
+    createButton.textContent = '\uC544\uC774 \uCD94\uAC00'
+    createButton.addEventListener('click', openBabyCreateDialog)
+    var recordButton = document.createElement('button')
+    recordButton.type = 'button'
+    recordButton.textContent = '\uAE30\uB85D \uCD94\uAC00'
+    recordButton.addEventListener('click', function () {
+      var firstCard = document.querySelector('.baby-card')
+      if (firstCard) firstCard.click()
+      else openBabyCreateDialog()
+    })
+    actions.appendChild(createButton)
+    actions.appendChild(recordButton)
+    header.appendChild(actions)
   }
 
   function findNavButton(label) {
