@@ -4413,20 +4413,42 @@
       item.hidden = true
       item.textContent = ''
     })
+    dialog.querySelectorAll('label.has-field-error').forEach(function (label) {
+      label.classList.remove('has-field-error')
+      label.removeAttribute('data-error-message')
+    })
   }
 
   function setBabyCreateError(dialog, key, message) {
     var item = dialog && dialog.querySelector('[data-baby-create-error="' + key + '"]')
-    if (!item) return
-    item.textContent = message
-    item.hidden = false
+    if (item) {
+      item.textContent = message
+      item.hidden = true
+    }
+    var field = key === 'name'
+      ? dialog && dialog.querySelector('[data-baby-create-name]')
+      : dialog && dialog.querySelector('[data-baby-create-gender-select]')
+    var label = field && field.closest && field.closest('label')
+    if (label) {
+      label.classList.add('has-field-error')
+      label.setAttribute('data-error-message', message)
+    }
   }
 
   function hideBabyCreateError(dialog, key) {
     var item = dialog && dialog.querySelector('[data-baby-create-error="' + key + '"]')
-    if (!item) return
-    item.textContent = ''
-    item.hidden = true
+    if (item) {
+      item.textContent = ''
+      item.hidden = true
+    }
+    var field = key === 'name'
+      ? dialog && dialog.querySelector('[data-baby-create-name]')
+      : dialog && dialog.querySelector('[data-baby-create-gender-select]')
+    var label = field && field.closest && field.closest('label')
+    if (label) {
+      label.classList.remove('has-field-error')
+      label.removeAttribute('data-error-message')
+    }
   }
 
   function bindBabyCreateGender(dialog) {

@@ -8821,6 +8821,15 @@ select {
   display: none !important;
 }
 
+.baby-create-dialog label.has-field-error::after {
+  content: attr(data-error-message) !important;
+  display: block !important;
+  margin-top: 7px !important;
+  color: #e42939 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
 .baby-create-dialog .baby-create-date-field {
   position: relative !important;
 }
