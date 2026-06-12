@@ -1579,7 +1579,7 @@ type ledgerEntry struct {
 
 func (a *app) listLedgerEntries(w http.ResponseWriter, r *http.Request, user authUser) {
 	familyID, start, end, ok := familyDateRange(w, r)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
 	rows, err := a.db.Query(r.Context(), `
@@ -1588,11 +1588,12 @@ func (a *app) listLedgerEntries(w http.ResponseWriter, r *http.Request, user aut
 		from ledger_entries
 		where transaction_date between $2 and $3 and deleted_at is null
 		  and (
-		    created_by_user_id in (select user_id from family_members where family_id = $1)
-		    or (created_by_user_id is null and family_id = $1)
+		    created_by_user_id = $4
+		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
+		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
 		  )
 		order by transaction_date desc, created_at desc
-	`, familyID, start, end)
+	`, familyID, start, end, user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -1607,7 +1608,7 @@ func (a *app) listLedgerEntries(w http.ResponseWriter, r *http.Request, user aut
 
 func (a *app) ledgerSummary(w http.ResponseWriter, r *http.Request, user authUser) {
 	familyID, start, end, ok := familyDateRange(w, r)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
 	var expense, income float64
@@ -1618,10 +1619,11 @@ func (a *app) ledgerSummary(w http.ResponseWriter, r *http.Request, user authUse
 		from ledger_entries
 		where transaction_date between $2 and $3 and deleted_at is null
 		  and (
-		    created_by_user_id in (select user_id from family_members where family_id = $1)
-		    or (created_by_user_id is null and family_id = $1)
+		    created_by_user_id = $4
+		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
+		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
 		  )
-	`, familyID, start, end).Scan(&expense, &income)
+	`, familyID, start, end, user.ID).Scan(&expense, &income)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -1697,7 +1699,7 @@ type scheduleItem struct {
 
 func (a *app) listSchedules(w http.ResponseWriter, r *http.Request, user authUser) {
 	familyID, start, end, ok := familyDateRange(w, r)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
 	rows, err := a.db.Query(r.Context(), `
@@ -1705,11 +1707,12 @@ func (a *app) listSchedules(w http.ResponseWriter, r *http.Request, user authUse
 		from family_schedules
 		where schedule_date between $2 and $3 and deleted_at is null
 		  and (
-		    created_by_user_id in (select user_id from family_members where family_id = $1)
-		    or (created_by_user_id is null and family_id = $1)
+		    created_by_user_id = $4
+		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
+		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
 		  )
 		order by schedule_date asc, schedule_time asc nulls last, created_at desc
-	`, familyID, start, end)
+	`, familyID, start, end, user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -1990,8 +1993,8 @@ type travelRecordItem struct {
 }
 
 func (a *app) listTrips(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryInt64(r, "familyId", 1)
-	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+	familyID := queryFamilyID(r)
+	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
 		return
 	}
 	rows, err := a.db.Query(r.Context(), `
@@ -1999,11 +2002,12 @@ func (a *app) listTrips(w http.ResponseWriter, r *http.Request, user authUser) {
 		from trips
 		where deleted_at is null
 		  and (
-		    created_by_user_id in (select user_id from family_members where family_id = $1)
-		    or (created_by_user_id is null and family_id = $1)
+		    created_by_user_id = $2
+		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
+		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
 		  )
 		order by created_at desc
-	`, familyID)
+	`, familyID, user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -2186,8 +2190,8 @@ type babyRecordItem struct {
 }
 
 func (a *app) listBabies(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryInt64(r, "familyId", 1)
-	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+	familyID := queryFamilyID(r)
+	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
 		return
 	}
 	rows, err := a.db.Query(r.Context(), `
@@ -2195,11 +2199,12 @@ func (a *app) listBabies(w http.ResponseWriter, r *http.Request, user authUser) 
 		from baby_profiles
 		where deleted_at is null
 		  and (
-		    created_by_user_id in (select user_id from family_members where family_id = $1)
-		    or (created_by_user_id is null and family_id = $1)
+		    created_by_user_id = $2
+		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
+		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
 		  )
 		order by created_at desc
-	`, familyID)
+	`, familyID, user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -2382,7 +2387,7 @@ type diaryItem struct {
 
 func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser) {
 	familyID, start, end, ok := familyDateRange(w, r)
-	if !ok || !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
 	rows, err := a.db.Query(r.Context(), `
@@ -2390,11 +2395,12 @@ func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser)
 		from family_diaries
 		where diary_date between $2 and $3 and deleted_at is null
 		  and (
-		    created_by_user_id in (select user_id from family_members where family_id = $1)
-		    or (created_by_user_id is null and family_id = $1)
+		    created_by_user_id = $4
+		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
+		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
 		  )
 		order by diary_date desc, created_at desc
-	`, familyID, start, end)
+	`, familyID, start, end, user.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -4271,8 +4277,16 @@ func queryInt64(r *http.Request, name string, fallback int64) int64 {
 	return value
 }
 
+func queryFamilyID(r *http.Request) int64 {
+	raw := strings.TrimSpace(r.URL.Query().Get("familyId"))
+	if raw == "0" {
+		return 0
+	}
+	return queryInt64(r, "familyId", 1)
+}
+
 func familyDateRange(w http.ResponseWriter, r *http.Request) (int64, string, string, bool) {
-	familyID := queryInt64(r, "familyId", 1)
+	familyID := queryFamilyID(r)
 	start := strings.TrimSpace(r.URL.Query().Get("startDate"))
 	end := strings.TrimSpace(r.URL.Query().Get("endDate"))
 	if !validDate(start) || !validDate(end) {
@@ -5035,8 +5049,12 @@ func readBabyPayload(w http.ResponseWriter, r *http.Request) (babyPayload, bool)
 		return req, false
 	}
 	req.Name = strings.TrimSpace(req.Name)
-	if req.Name == "" || !validDate(req.BirthDate) {
-		writeError(w, http.StatusBadRequest, "name and birthDate are required")
+	if req.Gender != nil {
+		gender := strings.TrimSpace(*req.Gender)
+		req.Gender = &gender
+	}
+	if req.Name == "" || req.Gender == nil || *req.Gender == "" || !validDate(req.BirthDate) {
+		writeError(w, http.StatusBadRequest, "name, gender and birthDate are required")
 		return req, false
 	}
 	return req, true

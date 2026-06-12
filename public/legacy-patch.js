@@ -437,6 +437,7 @@
     count: 0,
     showTimer: 0,
     hideTimer: 0,
+    watchdogTimer: 0,
     installed: false
   }
 
@@ -458,6 +459,13 @@
 
   function beginApiLoading() {
     apiLoadingState.count += 1
+    if (apiLoadingState.watchdogTimer) window.clearTimeout(apiLoadingState.watchdogTimer)
+    apiLoadingState.watchdogTimer = window.setTimeout(function () {
+      apiLoadingState.count = 0
+      apiLoadingState.showTimer = 0
+      apiLoadingState.hideTimer = 0
+      setApiLoadingVisible(false)
+    }, 15000)
     if (apiLoadingState.hideTimer) {
       window.clearTimeout(apiLoadingState.hideTimer)
       apiLoadingState.hideTimer = 0
@@ -473,6 +481,10 @@
   function endApiLoading() {
     apiLoadingState.count = Math.max(0, apiLoadingState.count - 1)
     if (apiLoadingState.count > 0) return
+    if (apiLoadingState.watchdogTimer) {
+      window.clearTimeout(apiLoadingState.watchdogTimer)
+      apiLoadingState.watchdogTimer = 0
+    }
     if (apiLoadingState.showTimer) {
       window.clearTimeout(apiLoadingState.showTimer)
       apiLoadingState.showTimer = 0
@@ -482,7 +494,13 @@
     }, 180)
   }
 
-  function shouldTrackApiRequest(input) {
+  function apiRequestMethod(input, init) {
+    return String((init && init.method) || (input && input.method) || 'GET').toUpperCase()
+  }
+
+  function shouldTrackApiRequest(input, init) {
+    var method = apiRequestMethod(input, init)
+    if (['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(method) < 0) return false
     var url = typeof input === 'string' ? input : (input && input.url) || ''
     if (!url) return false
     try {
@@ -498,7 +516,7 @@
     apiLoadingState.installed = true
     var originalFetch = window.fetch.bind(window)
     window.fetch = function (input, init) {
-      var tracked = shouldTrackApiRequest(input)
+      var tracked = shouldTrackApiRequest(input, init)
       if (tracked) beginApiLoading()
       return originalFetch(input, init).finally(function () {
         if (tracked) endApiLoading()
@@ -3818,7 +3836,7 @@
     logoutCurrentSession()
     forceClearStoredAuth()
     window.setTimeout(function () {
-      window.location.replace('/legacy/?loggedOut=' + Date.now())
+      window.location.replace('/?loggedOut=' + Date.now())
     }, 80)
   }, true)
 
@@ -4262,9 +4280,9 @@
     dialog.innerHTML = [
       '<button type="button" class="dialog-close">x</button>',
       '<h2>\uC544\uC774 \uCD94\uAC00</h2>',
-      '<label><span>\uC774\uB984</span><input data-baby-create-name maxlength="30" /></label>',
-      '<label><span>\uC131\uBCC4</span><input data-baby-create-gender /></label>',
-      '<label class="baby-create-date-field"><span>\uC0DD\uC77C</span><input data-baby-create-birth type="date" value="' + todayText() + '" /></label>',
+      '<label><span>\uC774\uB984 <em class="required-mark">*</em></span><input data-baby-create-name maxlength="30" /></label>',
+      '<label><span>\uC131\uBCC4 <em class="required-mark">*</em></span><select data-baby-create-gender><option value="">\uC120\uD0DD</option><option value="\uB0A8">\uB0A8</option><option value="\uC5EC">\uC5EC</option></select></label>',
+      '<label class="baby-create-date-field"><span>\uC0DD\uC77C</span><input data-baby-create-birth type="text" readonly value="' + todayText() + '" /></label>',
       '<label><span>\uBA54\uBAA8</span><input data-baby-create-memo /></label>',
       '<label><span>\uD0A4(cm)</span><input data-baby-create-height inputmode="decimal" /></label>',
       '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input data-baby-create-weight inputmode="decimal" /></label>',
@@ -4277,11 +4295,18 @@
     var closeDialog = function () { backdrop.remove() }
     dialog.querySelector('.dialog-close').addEventListener('click', closeDialog)
     dialog.querySelector('.cancel-button').addEventListener('click', closeDialog)
+    var birthInput = dialog.querySelector('[data-baby-create-birth]')
+    if (birthInput) {
+      birthInput.addEventListener('click', function () { openBabyDatePopover(birthInput) })
+      birthInput.addEventListener('focus', function () { openBabyDatePopover(birthInput) })
+    }
     dialog.querySelector('.save-button').addEventListener('click', function () {
       var name = String(nameInput.value || '').trim()
-      if (!name) {
-        showPatchToast('\uC544\uC774 \uC774\uB984\uC740 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
-        nameInput.focus()
+      var genderInput = dialog.querySelector('[data-baby-create-gender]')
+      var gender = String((genderInput && genderInput.value) || '').trim()
+      if (!name || !gender) {
+        showPatchToast('\uC774\uB984, \uC131\uBCC4\uC740 \uD544\uC218\uC785\uB2C8\uB2E4.')
+        ;(!name ? nameInput : genderInput).focus()
         return
       }
       var save = dialog.querySelector('.save-button')
@@ -4290,7 +4315,7 @@
       getCurrentFamilyId().then(function (familyId) {
         return postJson('/babies?familyId=' + encodeURIComponent(familyId), {
           name: name,
-          gender: getFieldValue(dialog, '[data-baby-create-gender]') || null,
+          gender: gender,
           birthDate: getFieldValue(dialog, '[data-baby-create-birth]') || todayText(),
           memo: getFieldValue(dialog, '[data-baby-create-memo]') || '',
           photoUrl: null,
@@ -4302,10 +4327,10 @@
         showPatchToast('\uC544\uC774\uB97C \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
         goMenu('\uC721\uC544')
         window.setTimeout(function () { refreshServerDataViews(true) }, 400)
-      }).catch(function () {
+      }).catch(function (error) {
         save.disabled = false
         save.textContent = '\uC800\uC7A5'
-        showPatchToast('\uC544\uC774 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+        showPatchToast(apiActionErrorMessage(error, '\uC544\uC774 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
       })
     })
     if (nameInput) nameInput.focus()
@@ -4320,6 +4345,87 @@
     var birthInput = dialog.querySelector('[data-baby-create-birth]')
     if (birthInput && !birthInput.value) setInputValue(birthInput, todayText())
   }
+
+  function openBabyDatePopover(input) {
+    if (!input) return
+    var old = document.querySelector('.baby-date-popover')
+    if (old) old.remove()
+    var selected = parseApiDate(input.value) || todayText()
+    var view = new Date(selected + 'T00:00:00')
+    var popover = document.createElement('div')
+    popover.className = 'calendar-popover baby-date-popover'
+
+    function draw() {
+      var year = view.getFullYear()
+      var month = view.getMonth()
+      var first = new Date(year, month, 1)
+      var last = new Date(year, month + 1, 0).getDate()
+      var html = '<header class="calendar-header"><button type="button" data-baby-date-prev>&lt;</button><strong>' + year + '\uB144 ' + (month + 1) + '\uC6D4</strong><button type="button" data-baby-date-next>&gt;</button></header>'
+      html += '<div class="calendar-today-row"><button type="button" data-baby-date-today>\uC624\uB298</button></div>'
+      html += '<div class="calendar-weekdays"><span>\uC77C</span><span>\uC6D4</span><span>\uD654</span><span>\uC218</span><span>\uBAA9</span><span>\uAE08</span><span>\uD1A0</span></div><div class="calendar-day-grid">'
+      for (var blank = 0; blank < first.getDay(); blank += 1) html += '<span class="calendar-empty"></span>'
+      for (var day = 1; day <= last; day += 1) {
+        var date = new Date(year, month, day)
+        var iso = formatDate(date)
+        var classes = []
+        if (date.getDay() === 0) classes.push('holiday')
+        if (date.getDay() === 6) classes.push('saturday')
+        if (iso === selected) classes.push('selected')
+        html += '<button type="button" class="' + classes.join(' ') + '" data-baby-date="' + iso + '">' + day + '</button>'
+      }
+      html += '</div>'
+      popover.innerHTML = html
+    }
+
+    function position() {
+      var rect = input.getBoundingClientRect()
+      var width = Math.min(330, window.innerWidth - 28)
+      popover.style.position = 'fixed'
+      popover.style.width = width + 'px'
+      popover.style.left = Math.max(14, Math.min(window.innerWidth - width - 14, rect.left)) + 'px'
+      popover.style.top = Math.min(window.innerHeight - 20, rect.bottom + 8) + 'px'
+      popover.style.transform = 'none'
+    }
+
+    draw()
+    document.body.appendChild(popover)
+    position()
+    popover.addEventListener('click', function (event) {
+      var target = event.target
+      if (!target || !target.closest) return
+      if (target.closest('[data-baby-date-prev]')) {
+        view.setMonth(view.getMonth() - 1)
+        draw()
+        position()
+        return
+      }
+      if (target.closest('[data-baby-date-next]')) {
+        view.setMonth(view.getMonth() + 1)
+        draw()
+        position()
+        return
+      }
+      if (target.closest('[data-baby-date-today]')) {
+        selected = todayText()
+        setInputValue(input, selected)
+        popover.remove()
+        return
+      }
+      var dayButton = target.closest('[data-baby-date]')
+      if (dayButton) {
+        selected = dayButton.dataset.babyDate
+        setInputValue(input, selected)
+        popover.remove()
+      }
+    })
+  }
+
+  document.addEventListener('pointerdown', function (event) {
+    var popover = document.querySelector('.baby-date-popover')
+    if (!popover) return
+    if (event.target && event.target.closest && event.target.closest('.baby-date-popover, [data-baby-create-birth]')) return
+    popover.remove()
+  }, true)
 
   function ensureBabyMainActions() {
     if (getCleanText(document.querySelector('.topbar h1')).indexOf('\uC721\uC544') < 0) return
@@ -5953,6 +6059,8 @@
     if (status === 401 || text.indexOf('invalid session') >= 0) return '\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.'
     if (status === 403 || text.indexOf('permission denied') >= 0 || text.indexOf('permission required') >= 0) return '\uAD8C\uD55C\uC774 \uC5C6\uC5B4 \uCC98\uB9AC\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.'
     if (text.indexOf('family admin') >= 0) return '\uAC00\uC871\uAD00\uB9AC\uC790\uB294 \uCD5C\uC18C 1\uBA85 \uD544\uC694\uD569\uB2C8\uB2E4.'
+    if (text.indexOf('No family group available') >= 0) return '\uAC00\uC871\uADF8\uB8F9\uC744 \uBA3C\uC800 \uC0DD\uC131\uD574\uC8FC\uC138\uC694.'
+    if (text.indexOf('name, gender') >= 0) return '\uC774\uB984, \uC131\uBCC4\uC740 \uD544\uC218\uC785\uB2C8\uB2E4.'
     if (text.indexOf('nickname is ambiguous') >= 0) return '\uB2C9\uB124\uC784\uC774 \uC911\uBCF5\uB429\uB2C8\uB2E4. \uC774\uBA54\uC77C\uB85C \uCD08\uB300\uD574\uC8FC\uC138\uC694.'
     if (text.indexOf('user not found') >= 0) return '\uC0AC\uC6A9\uC790\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.'
     if (text.indexOf('resource not found') >= 0 || text.indexOf('not found') >= 0 || status === 404) return '\uB300\uC0C1 \uB370\uC774\uD130\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.'
@@ -6031,7 +6139,7 @@
       body.innerHTML = '<p>\uB4F1\uB85D\uB41C \uC77C\uC815 \uC54C\uB9BC\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
     } else {
       body.innerHTML = notificationState.items.map(function (item) {
-        return '<button type="button" class="schedule-notification-item" data-id="' + item.id + '">' +
+        return '<button type="button" class="schedule-notification-item" data-id="' + item.id + '" data-type="' + escapeHtml(item.type || 'schedule') + '">' +
           '<span>' + escapeHtml(item.title || '\uB4F1\uB85D\uB41C \uC77C\uC815\uC774 \uC788\uC2B5\uB2C8\uB2E4.') + '</span>' +
           '<strong>' + escapeHtml(item.body || '') + '</strong>' +
           '<small>' + escapeHtml(item.targetDate || '') + '</small>' +
@@ -6058,6 +6166,11 @@
     })
     popup.querySelectorAll('.schedule-notification-item').forEach(function (item) {
       item.addEventListener('click', function () {
+        if (item.dataset.type === 'family-invitation') {
+          popup.remove()
+          goMenu('\uAC00\uC871\uADF8\uB8F9')
+          return
+        }
         markNotificationRead(item.dataset.id)
         popup.remove()
         goMenu('\uCE98\uB9B0\uB354')
@@ -6080,6 +6193,23 @@
     })
   }
 
+  function loadFamilyInvitationNotifications() {
+    if (!getStoredAuthToken()) return Promise.resolve([])
+    return apiRequest('/family-invitations').then(function (items) {
+      return (Array.isArray(items) ? items : []).map(function (item) {
+        return {
+          id: 'family-invitation-' + item.id,
+          type: 'family-invitation',
+          title: '\uAC00\uC871\uADF8\uB8F9 \uCD08\uB300\uAC00 \uC788\uC2B5\uB2C8\uB2E4.',
+          body: (item.familyName || '\uAC00\uC871\uADF8\uB8F9') + ' \u00B7 ' + (item.inviterName || '\uCD08\uB300\uC790'),
+          targetDate: '\uD655\uC778\uD558\uB824\uBA74 \uB204\uB974\uC138\uC694.'
+        }
+      })
+    }).catch(function () {
+      return []
+    })
+  }
+
   function loadScheduleNotifications(force) {
     if (!getStoredAuthToken()) return Promise.resolve([])
     if (!force && Date.now() - notificationState.loadedAt < 30000) {
@@ -6087,14 +6217,20 @@
       return Promise.resolve(notificationState.items)
     }
     return apiRequest('/notifications?unreadOnly=true').then(function (items) {
-      notificationState.items = Array.isArray(items) ? items : []
-      notificationState.loadedAt = Date.now()
-      renderNotificationBell()
-      if (notificationState.items.length && !sessionStorage.getItem('family-platform-schedule-notification-seen')) {
-        sessionStorage.setItem('family-platform-schedule-notification-seen', 'true')
-        showPatchToast('\uB4F1\uB85D\uB41C \uC77C\uC815\uC774 \uC788\uC2B5\uB2C8\uB2E4.')
-      }
-      return notificationState.items
+      var scheduleItems = Array.isArray(items) ? items : []
+      return loadFamilyInvitationNotifications().then(function (inviteItems) {
+        notificationState.items = inviteItems.concat(scheduleItems)
+        notificationState.loadedAt = Date.now()
+        renderNotificationBell()
+        if (inviteItems.length && !sessionStorage.getItem('family-platform-invitation-notification-seen')) {
+          sessionStorage.setItem('family-platform-invitation-notification-seen', 'true')
+          showPatchToast('\uAC00\uC871\uADF8\uB8F9 \uCD08\uB300\uAC00 \uC788\uC2B5\uB2C8\uB2E4.')
+        } else if (scheduleItems.length && !sessionStorage.getItem('family-platform-schedule-notification-seen')) {
+          sessionStorage.setItem('family-platform-schedule-notification-seen', 'true')
+          showPatchToast('\uB4F1\uB85D\uB41C \uC77C\uC815\uC774 \uC788\uC2B5\uB2C8\uB2E4.')
+        }
+        return notificationState.items
+      })
     }).catch(function () {
       return []
     })
@@ -6139,7 +6275,7 @@
 
   function fetchSchedules(startDate, endDate) {
     if (!getStoredAuthToken()) return Promise.resolve([])
-    return getCurrentFamilyId().then(function (familyId) {
+    return getReadableFamilyId().then(function (familyId) {
       return apiRequest('/schedules?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
         '&endDate=' + encodeURIComponent(endDate))
@@ -6152,7 +6288,7 @@
 
   function fetchLedgerEntries(startDate, endDate) {
     if (!getStoredAuthToken()) return Promise.resolve([])
-    return getCurrentFamilyId().then(function (familyId) {
+    return getReadableFamilyId().then(function (familyId) {
       return apiRequest('/ledger-entries?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
         '&endDate=' + encodeURIComponent(endDate))
@@ -6165,7 +6301,7 @@
 
   function fetchLedgerSummary(startDate, endDate) {
     if (!getStoredAuthToken()) return Promise.resolve({ expense: 0, income: 0, total: 0 })
-    return getCurrentFamilyId().then(function (familyId) {
+    return getReadableFamilyId().then(function (familyId) {
       return apiRequest('/ledger-entries/summary?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
         '&endDate=' + encodeURIComponent(endDate))
@@ -6841,7 +6977,7 @@
 
   function fetchTrips() {
     if (!getStoredAuthToken()) return Promise.resolve([])
-    return getCurrentFamilyId().then(function (familyId) {
+    return getReadableFamilyId().then(function (familyId) {
       return apiRequest('/trips?familyId=' + encodeURIComponent(familyId))
     }).then(function (items) {
       return Array.isArray(items) ? items : []
@@ -6861,7 +6997,7 @@
 
   function fetchDiaries(startDate, endDate) {
     if (!getStoredAuthToken()) return Promise.resolve([])
-    return getCurrentFamilyId().then(function (familyId) {
+    return getReadableFamilyId().then(function (familyId) {
       return apiRequest('/diaries?familyId=' + encodeURIComponent(familyId) +
         '&startDate=' + encodeURIComponent(startDate) +
         '&endDate=' + encodeURIComponent(endDate))
@@ -6874,7 +7010,7 @@
 
   function fetchBabies() {
     if (!getStoredAuthToken()) return Promise.resolve([])
-    return getCurrentFamilyId().then(function (familyId) {
+    return getReadableFamilyId().then(function (familyId) {
       return apiRequest('/babies?familyId=' + encodeURIComponent(familyId))
     }).then(function (items) {
       return Array.isArray(items) ? items : []
@@ -7145,6 +7281,12 @@
       if (!family || !family.id) throw new Error('No family group available')
       localStorage.setItem(API_FAMILY_ID_KEY, String(family.id))
       return family.id
+    })
+  }
+
+  function getReadableFamilyId(forceRefresh) {
+    return getCurrentFamilyId(forceRefresh).catch(function () {
+      return 0
     })
   }
 

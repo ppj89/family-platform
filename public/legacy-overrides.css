@@ -7958,7 +7958,8 @@ select {
   font-weight: 900 !important;
 }
 
-.baby-profile-edit-dialog input {
+.baby-profile-edit-dialog input,
+.baby-profile-edit-dialog select {
   width: 100% !important;
   min-height: 44px !important;
   border: 1px solid #dfe4ea !important;
@@ -8788,19 +8789,37 @@ select {
   font-weight: 800 !important;
 }
 
+.baby-profile-edit-dialog select {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  padding-right: 40px !important;
+  background-image: linear-gradient(45deg, transparent 50%, #6b7684 50%), linear-gradient(135deg, #6b7684 50%, transparent 50%) !important;
+  background-position: calc(100% - 20px) 19px, calc(100% - 14px) 19px !important;
+  background-size: 6px 6px, 6px 6px !important;
+  background-repeat: no-repeat !important;
+}
+
+.baby-profile-edit-dialog .required-mark {
+  color: #e42939 !important;
+  font-style: normal !important;
+  font-weight: 900 !important;
+}
+
 .baby-create-dialog {
   width: min(460px, 100%) !important;
 }
 
-.baby-create-dialog .baby-create-date-field input[type="date"] {
+.baby-create-dialog .baby-create-date-field input {
   appearance: none !important;
   -webkit-appearance: none !important;
   color-scheme: light !important;
+  cursor: pointer !important;
 }
 
-.baby-create-dialog .baby-create-date-field input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer !important;
-  opacity: 0.72 !important;
+.baby-date-popover {
+  z-index: 100010 !important;
+  max-height: min(430px, calc(100vh - 40px)) !important;
+  overflow: auto !important;
 }
 
 .diary-api-composer {
