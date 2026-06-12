@@ -9147,7 +9147,7 @@ select {
 .patch-confirm-backdrop {
   position: fixed !important;
   inset: 0 !important;
-  z-index: 15000 !important;
+  z-index: 2147482400 !important;
   display: grid !important;
   place-items: center !important;
   padding: 20px !important;

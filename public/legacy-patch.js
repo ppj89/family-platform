@@ -306,8 +306,12 @@
           })
         }
         window.__familyDirectCalendarDebug = { step: 'schedules', dateText: dateText, items: scheduleItems }
-        if (!scheduleItems.length) resetScheduleCreateFieldsForDate(selectedDate)
-        showSchedules(selectedDate, scheduleItems)
+        if (!scheduleItems.length) {
+          resetScheduleCreateFieldsForDate(selectedDate)
+          removeSchedulePopups()
+          return
+        }
+        openCalendarApiDayPopup(selectedDate, scheduleItems)
       })
     }, true)
   }
@@ -6556,14 +6560,35 @@
         '</div>'
     }).join('')
     list.querySelectorAll('.api-schedule-row').forEach(function (row, index) {
+      var item = schedules[index]
+      var editButton = row.querySelector('.schedule-row-actions .edit-button')
+      var deleteButton = row.querySelector('.schedule-row-actions .danger-button')
+      if (editButton) {
+        editButton.addEventListener('click', function (event) {
+          event.preventDefault()
+          event.stopPropagation()
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+          startScheduleApiEdit(item)
+        })
+      }
+      if (deleteButton) {
+        deleteButton.addEventListener('click', function (event) {
+          event.preventDefault()
+          event.stopPropagation()
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+          deleteScheduleApiItem(item, function () {
+            renderCalendarApiSchedules(true)
+          })
+        })
+      }
       row.addEventListener('click', function (event) {
         if (event.target && event.target.closest && event.target.closest('.schedule-row-actions button')) return
-        openScheduleApiDetail(schedules[index])
+        openScheduleApiDetail(item)
       })
       row.addEventListener('keydown', function (event) {
         if (event.key !== 'Enter' && event.key !== ' ') return
         event.preventDefault()
-        openScheduleApiDetail(schedules[index])
+        openScheduleApiDetail(item)
       })
     })
   }
@@ -7554,7 +7579,10 @@
 
   function resetScheduleCreateFieldsForDate(date) {
     var form = document.querySelector('.schedule-form-card')
-    if (!form || form.dataset.editingScheduleId) return
+    if (!form) return
+    if (form.dataset.editingScheduleId || window.__familyEditingScheduleId) {
+      clearScheduleFormEditMode(form)
+    }
     setInputValueByLabel(form, '\uC77C\uC815\uBA85', '')
     setInputValueByLabel(form, '\uC2DC\uAC04', currentTimeText())
     setInputValueByLabel(form, '\uBA54\uBAA8', '')
@@ -7840,6 +7868,10 @@
     var payload = buildSchedulePayloadFromForm(form)
     var titleInput = form.querySelector('input')
     var editingId = form.dataset.editingScheduleId || window.__familyEditingScheduleId || ''
+    if (editingId && !findScheduleItemById(editingId)) {
+      clearScheduleFormEditMode(form)
+      editingId = ''
+    }
     if (!payload) {
       if (titleInput) titleInput.focus()
       showPatchToast('\uC77C\uC815\uBA85\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
