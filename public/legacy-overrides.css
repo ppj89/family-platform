@@ -4283,6 +4283,10 @@ body.api-loading-blocked::before {
   gap: 12px;
 }
 
+.restaurant-grid:not([data-api-backed="true"]) .restaurant-card {
+  display: none !important;
+}
+
 .restaurant-card {
   overflow: hidden;
   border-radius: 8px;
@@ -8782,6 +8786,31 @@ select {
   font: inherit !important;
   font-size: 14px !important;
   font-weight: 800 !important;
+}
+
+.baby-create-dialog {
+  width: min(460px, 100%) !important;
+}
+
+.baby-create-dialog .baby-create-date-field input[type="date"] {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  color-scheme: light !important;
+}
+
+.baby-create-dialog .baby-create-date-field input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer !important;
+  opacity: 0.72 !important;
+}
+
+.diary-api-composer {
+  display: block !important;
+  margin-top: 12px !important;
+}
+
+.diary-api-composer .ledger-form textarea {
+  min-height: 130px !important;
+  resize: vertical !important;
 }
 
 .family-group-list .member-actions button:not(.danger-button):not(.cancel-button):not(.save-button) {

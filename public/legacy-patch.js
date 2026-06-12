@@ -3268,6 +3268,20 @@
     }, 0)
   }
 
+  function clearCustomPatchPageNow() {
+    clearCommunityPatchPage()
+    clearFamilyGroupPage()
+    document.querySelectorAll('.patch-community-root, .patch-family-group-root').forEach(function (root) {
+      root.remove()
+    })
+    var content = document.querySelector('.content-grid')
+    if (content) {
+      content.classList.remove('community-grid')
+      content.classList.remove('community-source-hidden')
+      delete content.dataset.communityReady
+    }
+  }
+
   function openFamilyGroupPage() {
     pausePatchObserver()
     if (document.documentElement.dataset.patchPage === 'community') {
@@ -3685,6 +3699,8 @@
     syncCalendarEntryToToday()
     ensureYearModeTabs()
     ensureScheduleDefaultTime()
+    normalizeLedgerEntryForm()
+    normalizeTravelEntryForm()
     wireScheduleDetailRows()
     hideSelectedDayPanels()
     refreshScheduleListCount()
@@ -3711,6 +3727,7 @@
     enhanceBabyRecordMedia()
     cleanupBabyDetailButtons()
     ensureBabyMainActions()
+    normalizeBabyCreateDialog()
     ensureDiaryMainActions()
     ensureBabyApiRecordForm()
     enhanceBabyEditMediaHelper()
@@ -4238,12 +4255,12 @@
     dialog.innerHTML = [
       '<button type="button" class="dialog-close">x</button>',
       '<h2>\uC544\uC774 \uCD94\uAC00</h2>',
-      '<label><span>\uC774\uB984</span><input data-baby-create-name maxlength="30" placeholder="\uC608: \uCCAB\uC9F8" /></label>',
-      '<label><span>\uC131\uBCC4</span><input data-baby-create-gender placeholder="\uC608: \uC5EC\uC544" /></label>',
-      '<label><span>\uC0DD\uC77C</span><input data-baby-create-birth type="date" value="' + todayText() + '" /></label>',
-      '<label><span>\uBA54\uBAA8</span><input data-baby-create-memo placeholder="\uC608: \uB0AE\uC7A0 \uB9AC\uB4EC \uCCB4\uD06C \uC911" /></label>',
-      '<label><span>\uD0A4(cm)</span><input data-baby-create-height inputmode="decimal" placeholder="\uC608: 89" /></label>',
-      '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input data-baby-create-weight inputmode="decimal" placeholder="\uC608: 12.8" /></label>',
+      '<label><span>\uC774\uB984</span><input data-baby-create-name maxlength="30" /></label>',
+      '<label><span>\uC131\uBCC4</span><input data-baby-create-gender /></label>',
+      '<label class="baby-create-date-field"><span>\uC0DD\uC77C</span><input data-baby-create-birth type="date" value="' + todayText() + '" /></label>',
+      '<label><span>\uBA54\uBAA8</span><input data-baby-create-memo /></label>',
+      '<label><span>\uD0A4(cm)</span><input data-baby-create-height inputmode="decimal" /></label>',
+      '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input data-baby-create-weight inputmode="decimal" /></label>',
       '<div class="baby-profile-edit-actions"><button type="button" class="cancel-button">\uCDE8\uC18C</button><button type="button" class="save-button">\uC800\uC7A5</button></div>'
     ].join('')
     backdrop.appendChild(dialog)
@@ -4287,6 +4304,16 @@
     if (nameInput) nameInput.focus()
   }
 
+  function normalizeBabyCreateDialog() {
+    var dialog = document.querySelector('.baby-create-dialog')
+    if (!dialog) return
+    dialog.querySelectorAll('input, textarea').forEach(function (field) {
+      field.removeAttribute('placeholder')
+    })
+    var birthInput = dialog.querySelector('[data-baby-create-birth]')
+    if (birthInput && !birthInput.value) setInputValue(birthInput, todayText())
+  }
+
   function ensureBabyMainActions() {
     if (getCleanText(document.querySelector('.topbar h1')).indexOf('\uC721\uC544') < 0) return
     if (document.querySelector('.baby-detail')) return
@@ -4317,18 +4344,79 @@
     createButton.type = 'button'
     createButton.textContent = '\uC77C\uAE30 \uCD94\uAC00'
     createButton.addEventListener('click', function () {
-      var form = document.querySelector('.diary-form') || document.querySelector('[data-field="diary-title"]')
+      var form = document.querySelector('.diary-form') || ensureDiaryApiComposer()
       var target = form && (form.closest('form, .panel, aside') || form)
       if (!target) {
         showPatchToast('\uC77C\uAE30 \uC785\uB825 \uC601\uC5ED\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
         return
       }
+      target.classList.add('diary-api-composer-open')
       target.scrollIntoView({ behavior: 'smooth', block: 'center' })
       var input = target.querySelector('[data-field="diary-title"], input, textarea')
       if (input) window.setTimeout(function () { input.focus() }, 180)
     })
     actions.appendChild(createButton)
     header.appendChild(actions)
+  }
+
+  function ensureDiaryApiComposer() {
+    if (getCleanText(document.querySelector('.topbar h1')).indexOf('\uC77C\uAE30') < 0) return null
+    var existing = document.querySelector('.diary-api-composer')
+    if (existing) return existing
+    var grid = document.querySelector('.content-grid')
+    if (!grid) return null
+    var panel = document.createElement('section')
+    panel.className = 'panel wide full-span diary-api-composer diary-form'
+    panel.innerHTML = [
+      '<div class="panel-header"><div><h2>\uC77C\uAE30 \uCD94\uAC00</h2></div></div>',
+      '<form class="ledger-form">',
+      '<label><span>\uC81C\uBAA9</span><input data-diary-create-title maxlength="80" /></label>',
+      '<label><span>\uB0A0\uC9DC</span><input data-diary-create-date type="date" value="' + todayText() + '" /></label>',
+      '<div class="form-row">',
+      '<label><span>\uB0A0\uC528</span><input data-diary-create-weather maxlength="30" /></label>',
+      '<label><span>\uAE30\uBD84</span><input data-diary-create-mood maxlength="30" /></label>',
+      '</div>',
+      '<label><span>\uB0B4\uC6A9</span><textarea data-diary-create-content rows="5"></textarea></label>',
+      '<button class="submit-action" type="submit">\uC800\uC7A5</button>',
+      '</form>'
+    ].join('')
+    panel.querySelector('form').addEventListener('submit', function (event) {
+      event.preventDefault()
+      var title = getFieldValue(panel, '[data-diary-create-title]')
+      var content = getFieldValue(panel, '[data-diary-create-content]')
+      if (!title) {
+        showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
+        panel.querySelector('[data-diary-create-title]').focus()
+        return
+      }
+      var button = panel.querySelector('.submit-action')
+      button.disabled = true
+      button.textContent = '\uC800\uC7A5 \uC911'
+      getCurrentFamilyId().then(function (familyId) {
+        return postJson('/diaries?familyId=' + encodeURIComponent(familyId), {
+          title: title,
+          body: content,
+          diaryDate: getFieldValue(panel, '[data-diary-create-date]') || todayText(),
+          weather: getFieldValue(panel, '[data-diary-create-weather]') || null,
+          mood: getFieldValue(panel, '[data-diary-create-mood]') || null,
+          photoUrls: [],
+          videoUrls: []
+        })
+      }).then(function () {
+        showPatchToast('\uC77C\uAE30\uB97C \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
+        panel.querySelector('form').reset()
+        panel.querySelector('[data-diary-create-date]').value = todayText()
+        button.disabled = false
+        button.textContent = '\uC800\uC7A5'
+        refreshServerDataViews(true)
+      }).catch(function (error) {
+        button.disabled = false
+        button.textContent = '\uC800\uC7A5'
+        showPatchToast(apiActionErrorMessage(error, '\uC77C\uAE30 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+      })
+    })
+    grid.appendChild(panel)
+    return panel
   }
 
   function findNavButton(label) {
@@ -4466,7 +4554,10 @@
     if (!nav || isCommunityNavItem(nav) || isFamilyGroupNavItem(nav)) return
     var wasCommunity = document.documentElement.dataset.patchPage === 'community'
     var wasFamilyGroup = document.documentElement.dataset.patchPage === 'family-group'
-    if (wasCommunity || wasFamilyGroup) clearCustomPatchPageAfterReact(wasCommunity, wasFamilyGroup)
+    if (wasCommunity || wasFamilyGroup) {
+      clearCustomPatchPageNow()
+      clearCustomPatchPageAfterReact(wasCommunity, wasFamilyGroup)
+    }
   }, true)
 
   document.addEventListener('click', function (event) {
@@ -4880,7 +4971,7 @@
     }
     return [
       '<div class="community-board-toolbar">',
-      '<div><strong>\uC790\uC720\uAC8C\uC2DC\uD310</strong><span>\uC81C\uBAA9\uC744 \uB204\uB974\uBA74 \uC0C1\uC138\uC640 \uB313\uAE00\uC744 \uD655\uC778\uD569\uB2C8\uB2E4.</span></div>',
+      '<div><strong>\uC790\uC720\uAC8C\uC2DC\uD310</strong></div>',
       '<button type="button" data-community-compose-toggle>' + (communityState.composing ? '\uC791\uC131 \uB2EB\uAE30' : '\uAE00\uC4F0\uAE30') + '</button>',
       '</div>',
       communityState.composing ? renderCommunityFreeEditor(null) : '',
@@ -5022,7 +5113,7 @@
     if (communityState.view === 'detail' && communityState.selectedPostId) return renderCommunityDetail(tab)
     return [
       '<div class="community-board-toolbar">',
-      '<div><strong>' + communityTabLabel(tab) + '</strong><span>\uC81C\uBAA9\uC744 \uB204\uB974\uBA74 \uC0C1\uC138\uC640 \uB313\uAE00\uC744 \uD655\uC778\uD569\uB2C8\uB2E4.</span></div>',
+      '<div><strong>' + communityTabLabel(tab) + '</strong></div>',
       '<button type="button" data-community-compose-toggle>' + (communityState.composing ? '\uC791\uC131 \uB2EB\uAE30' : '\uAE00\uC4F0\uAE30') + '</button>',
       '</div>',
       communityState.composing ? renderCommunityEditor(tab, null) : '',
@@ -6375,6 +6466,7 @@
   function renderHomeMetricsFromApi(force) {
     var metrics = Array.from(document.querySelectorAll('.metric-grid .metric'))
     if (!metrics.length || (!force && document.documentElement.dataset.homeMetricsApiBacked === 'true')) return
+    resetHomeMetrics(metrics)
     if (!getStoredAuthToken()) {
       resetHomeMetrics(metrics)
       return
@@ -6457,6 +6549,12 @@
     var key = range.start + ':' + range.end
     if (!force && daily && daily.dataset.apiRangeKey === key) return
     if (daily) daily.dataset.apiRangeKey = key
+    if (summary) {
+      var initialCards = Array.from(summary.querySelectorAll('.metric strong'))
+      setMetricValue(initialCards[0] && initialCards[0].closest('.metric'), '0\uC6D0')
+      setMetricValue(initialCards[1] && initialCards[1].closest('.metric'), '0\uC6D0')
+      setMetricValue(initialCards[2] && initialCards[2].closest('.metric'), '0\uC6D0')
+    }
 
     fetchLedgerSummary(range.start, range.end).then(function (values) {
       var cards = summary ? Array.from(summary.querySelectorAll('.metric strong')) : []
@@ -6500,6 +6598,8 @@
 
   function renderRestaurantPageFromApi() {
     if (!pageHeadingIs('\uB9DB\uC9D1')) return
+    clearCustomPatchPageNow()
+    removeHardcodedDemoData()
     var hero = document.querySelector('.restaurant-hero')
     if (hero) hero.remove()
     var grid = document.querySelector('.restaurant-grid')
@@ -6534,6 +6634,56 @@
     else input.value = value
     input.dispatchEvent(new Event('input', { bubbles: true }))
     input.dispatchEvent(new Event('change', { bubbles: true }))
+  }
+
+  function removePlaceholdersIn(root, labelTexts) {
+    if (!root) return
+    var labels = Array.from(root.querySelectorAll('label'))
+    labels.forEach(function (label) {
+      var text = getCleanText(label)
+      if (!labelTexts.some(function (target) { return text.indexOf(target) >= 0 })) return
+      label.querySelectorAll('input, textarea').forEach(function (field) {
+        field.removeAttribute('placeholder')
+      })
+    })
+  }
+
+  function setDateFieldToToday(root, labelTexts) {
+    if (!root) return
+    var dotToday = formatDotDate(new Date())
+    var isoToday = todayText()
+    Array.from(root.querySelectorAll('.date-picker-field, label')).forEach(function (field) {
+      var text = getCleanText(field)
+      if (!labelTexts.some(function (target) { return text.indexOf(target) >= 0 })) return
+      var triggerText = field.querySelector('.date-picker-trigger span')
+      if (triggerText && (!triggerText.textContent || parseApiDate(triggerText.textContent) === '2026-06-03')) {
+        triggerText.textContent = dotToday
+      }
+      field.querySelectorAll('input').forEach(function (input) {
+        var nextValue = input.type === 'date' ? isoToday : dotToday
+        if (!input.value || parseApiDate(input.value) === '2026-06-03') setInputValue(input, nextValue)
+      })
+    })
+  }
+
+  function normalizeLedgerEntryForm() {
+    if (!pageHeadingIs('\uAC00\uACC4\uBD80')) return
+    var forms = document.querySelectorAll('.ledger-form, .entry-panel, form')
+    forms.forEach(function (form) {
+      var text = getCleanText(form)
+      if (text.indexOf('\uAC00\uACC4\uBD80') < 0 && text.indexOf('\uAC70\uB798\uC77C') < 0 && text.indexOf('\uAE08\uC561') < 0) return
+      removePlaceholdersIn(form, ['\uAC00\uB9F9\uC810', '\uB0B4\uC6A9', '\uAE08\uC561'])
+      setDateFieldToToday(form, ['\uAC70\uB798\uC77C'])
+    })
+  }
+
+  function normalizeTravelEntryForm() {
+    if (!pageHeadingIs('\uC5EC\uD589')) return
+    document.querySelectorAll('.travel-form, .trip-manager, .entry-panel, form').forEach(function (form) {
+      var text = getCleanText(form)
+      if (text.indexOf('\uC2DC\uC791') < 0 && text.indexOf('\uC885\uB8CC') < 0) return
+      setDateFieldToToday(form, ['\uC2DC\uC791\uC77C', '\uC885\uB8CC\uC77C'])
+    })
   }
 
   function renderTravelPageFromApi(force) {
@@ -6864,6 +7014,12 @@
     '6.4kg',
     '\uC18C\uC544\uACFC \uC815\uAE30\uAC80\uC9C4',
     '\uC5C4\uB9C8 \uC0DD\uC77C',
+    '\uD611\uC7AC \uD574\uB140\uC758\uC9D1',
+    '\uB3D9\uB124 \uBE0C\uB7F0\uCE58',
+    '\uC804\uBCF5\uC8FD',
+    '\uD574\uBB3C\uB77C\uBA74',
+    '\uD504\uB80C\uCE58\uD1A0\uC2A4\uD2B8',
+    '\uC544\uBA54\uB9AC\uCE74\uB178',
     '147,820\uC6D0',
     '842,500\uC6D0',
     '28\uAC1C',
@@ -6933,6 +7089,8 @@
 
   function refreshServerDataViews(force) {
     removeDeveloperServerPanels()
+    normalizeLedgerEntryForm()
+    normalizeTravelEntryForm()
     removeHardcodedDemoData()
     renderHomeMetricsFromApi(force)
     renderLedgerPageFromApi(force)
