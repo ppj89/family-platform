@@ -3540,7 +3540,9 @@ body.api-loading-blocked::before {
 
 .baby-card {
   display: grid;
-  gap: 9px;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
   border: 0;
   border-radius: 8px;
   padding: 16px;
@@ -3594,12 +3596,26 @@ body.api-loading-blocked::before {
 }
 
 .baby-card div:last-child {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px 16px;
+}
+
+.baby-card div:last-child strong,
+.baby-card div:last-child p,
+.baby-card div:last-child small {
+  grid-column: 1 / -1;
+}
+
+.baby-card div:last-child > span {
+  justify-self: end;
+  white-space: nowrap;
+  margin-left: 14px;
 }
 
 .baby-card small {
+  width: fit-content;
   border-radius: 999px;
   padding: 5px 8px;
   background: #ffffff;
@@ -4281,6 +4297,26 @@ body.api-loading-blocked::before {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.baby-api-detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.baby-api-detail-header h2 {
+  margin: 0;
+}
+
+.baby-api-detail .baby-profile-band {
+  align-items: flex-start;
+}
+
+.baby-api-detail .baby-profile-band > div {
+  display: grid;
+  gap: 6px;
 }
 
 .restaurant-grid:not([data-api-backed="true"]) .restaurant-card {
@@ -8889,6 +8925,115 @@ select {
   overflow: auto !important;
 }
 
+.baby-create-dialog label > span {
+  color: #6b7684 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.baby-create-dialog input,
+.baby-create-dialog textarea,
+.baby-create-dialog .baby-create-date-button,
+.baby-create-dialog .baby-create-gender-select .custom-select-trigger {
+  background: #fff !important;
+  color: #191f28 !important;
+  font-weight: 700 !important;
+}
+
+.baby-create-dialog .baby-create-gender-select .custom-select-trigger {
+  display: flex !important;
+  align-items: center !important;
+  text-align: left !important;
+}
+
+.baby-create-dialog .calendar-popover .calendar-header {
+  display: grid !important;
+  grid-template-columns: 40px minmax(0, 1fr) 40px !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 0 !important;
+  background: #fff !important;
+}
+
+.baby-create-dialog .calendar-popover .calendar-header strong {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 40px !important;
+  border: 1px solid #e5e8eb !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  color: #191f28 !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  text-align: center !important;
+}
+
+.baby-create-dialog .calendar-popover .calendar-header > button {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  border: 1px solid #e5e8eb !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  color: #191f28 !important;
+}
+
+.baby-create-dialog .calendar-popover .calendar-today-row {
+  justify-content: flex-end !important;
+  padding-top: 8px !important;
+}
+
+.baby-list-grid .baby-card {
+  display: grid !important;
+  grid-template-columns: 52px minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+}
+
+.baby-list-grid .baby-card > div:last-child {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 6px 18px !important;
+  align-items: center !important;
+}
+
+.baby-list-grid .baby-card > div:last-child strong {
+  grid-column: 1 !important;
+}
+
+.baby-list-grid .baby-card > div:last-child > span {
+  grid-column: 2 !important;
+  justify-self: end !important;
+  white-space: nowrap !important;
+  margin-left: 18px !important;
+}
+
+.baby-list-grid .baby-card > div:last-child p,
+.baby-list-grid .baby-card > div:last-child small {
+  grid-column: 1 / -1 !important;
+}
+
+.baby-list-grid .baby-card small {
+  width: fit-content !important;
+}
+
+.travel-header-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  margin-left: auto !important;
+}
+
+.travel-header-actions button {
+  min-height: 38px !important;
+  border-radius: 14px !important;
+  padding: 0 14px !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
 .diary-api-composer {
   display: block !important;
   margin-top: 12px !important;
@@ -10455,10 +10600,22 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 
 .schedule-row.api-schedule-row {
   width: 100% !important;
+  cursor: pointer !important;
+  grid-template-columns: 56px minmax(0, 1fr) auto !important;
   border: 0 !important;
   outline: 0 !important;
   appearance: none !important;
   -webkit-appearance: none !important;
+}
+
+.schedule-row.api-schedule-row .schedule-row-actions {
+  position: relative !important;
+  z-index: 2 !important;
+  pointer-events: auto !important;
+}
+
+.schedule-row.api-schedule-row .schedule-row-actions button {
+  pointer-events: auto !important;
 }
 
 .schedule-row.api-schedule-row:focus-visible {

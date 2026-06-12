@@ -2914,30 +2914,46 @@
   function ensureScheduleActionDelegates() {
     if (window.__familyScheduleActionDelegatesReady) return
     window.__familyScheduleActionDelegatesReady = true
-    document.addEventListener('click', function (event) {
-      var editButton = event.target && event.target.closest && event.target.closest('[data-schedule-detail-edit], .schedule-row-actions .edit-button')
-      var deleteButton = event.target && event.target.closest && event.target.closest('[data-schedule-detail-delete], .schedule-row-actions .danger-button')
+    var lastScheduleAction = { key: '', at: 0 }
+    var handleScheduleAction = function (event) {
+      if (!event.target || !event.target.closest) return
+      var editButton = event.target.closest('[data-schedule-detail-edit], .api-schedule-row .schedule-row-actions .edit-button, .server-year-schedule-row .schedule-row-actions .edit-button')
+      var deleteButton = event.target.closest('[data-schedule-detail-delete], .api-schedule-row .schedule-row-actions .danger-button, .server-year-schedule-row .schedule-row-actions .danger-button')
       var actionButton = editButton || deleteButton
-      if (!actionButton) return
-      var row = actionButton.closest('.api-schedule-row, .server-year-schedule-row')
-      var id = actionButton.dataset.scheduleId ||
+      var row = actionButton ? actionButton.closest('.api-schedule-row, .server-year-schedule-row') : event.target.closest('.api-schedule-row, .server-year-schedule-row')
+      if (!row) return
+      if (!actionButton && event.target.closest('.schedule-row-actions button')) return
+      var id = (actionButton && (actionButton.dataset.scheduleId ||
         actionButton.dataset.scheduleDetailEdit ||
-        actionButton.dataset.scheduleDetailDelete ||
+        actionButton.dataset.scheduleDetailDelete)) ||
         (row && row.getAttribute('data-api-schedule-id'))
       var item = findScheduleItemById(id)
       if (!item) return
+      var key = String(id || '') + ':' + (editButton ? 'edit' : (deleteButton ? 'delete' : 'open'))
+      var now = Date.now()
+      if (event.type === 'click' && lastScheduleAction.key === key && now - lastScheduleAction.at < 450) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+        return
+      }
+      lastScheduleAction = { key: key, at: now }
       event.preventDefault()
       event.stopPropagation()
       if (event.stopImmediatePropagation) event.stopImmediatePropagation()
       if (editButton) {
         closeScheduleEditPopups()
         startScheduleApiEdit(item)
-      } else {
+      } else if (deleteButton) {
         deleteScheduleApiItem(item, function () {
           document.querySelectorAll('.schedule-detail-patch-backdrop').forEach(function (node) { node.remove() })
         })
+      } else {
+        openScheduleApiDetail(item)
       }
-    }, true)
+    }
+    document.addEventListener('pointerup', handleScheduleAction, true)
+    document.addEventListener('click', handleScheduleAction, true)
   }
 
   function renderYearSelectedMonthList(monthDate, force) {
@@ -3782,8 +3798,10 @@
     ensureScheduleDefaultTime()
     normalizeLedgerEntryForm()
     normalizeTravelEntryForm()
+    ensureTravelHeaderActions()
     normalizeDiaryEntryForm()
     normalizeBabyEntryForms()
+    normalizeTimeInputs()
     wireScheduleDetailRows()
     hideSelectedDayPanels()
     refreshScheduleListCount()
@@ -5977,6 +5995,8 @@
   }
 
   function ensureApiBabyForDetail() {
+    var detail = document.querySelector('.baby-detail')
+    if (detail && detail.dataset.apiBabyId) return Promise.resolve(detail.dataset.apiBabyId)
     var profile = getVisibleBabyProfile()
     if (!profile) return Promise.reject(new Error('BABY_PROFILE_REQUIRED'))
     return fetchBabies().then(function (babies) {
@@ -6843,14 +6863,9 @@
     if (!summary && !daily) return
     var range = getLedgerPageRange()
     var key = range.start + ':' + range.end
-    if (!force && daily && daily.dataset.apiRangeKey === key) return
+    if (!force && daily && daily.dataset.apiRangeKey === key && (!summary || summary.dataset.apiRangeKey === key)) return
     if (daily) daily.dataset.apiRangeKey = key
-    if (summary) {
-      var initialCards = Array.from(summary.querySelectorAll('.metric strong'))
-      setMetricValue(initialCards[0] && initialCards[0].closest('.metric'), '0\uC6D0')
-      setMetricValue(initialCards[1] && initialCards[1].closest('.metric'), '0\uC6D0')
-      setMetricValue(initialCards[2] && initialCards[2].closest('.metric'), '0\uC6D0')
-    }
+    if (summary) summary.dataset.apiRangeKey = key
 
     fetchLedgerSummary(range.start, range.end).then(function (values) {
       var cards = summary ? Array.from(summary.querySelectorAll('.metric strong')) : []
@@ -6962,6 +6977,39 @@
     })
   }
 
+  function normalizeTimeInputs(root) {
+    var scope = root || document
+    var now = currentTimeText()
+    scope.querySelectorAll('input[type="time"], input[name="recordTime"], [data-field="travel-record-time"]').forEach(function (input) {
+      if (!input || input.disabled) return
+      if (!input.value || input.value === '00:00' || input.value === '14:00') setInputValue(input, now)
+    })
+  }
+
+  function clearSampleFieldValues(root) {
+    if (!root) return
+    root.querySelectorAll('input, textarea').forEach(function (field) {
+      var value = String(field.value || '').trim()
+      var placeholder = String(field.getAttribute('placeholder') || '')
+      if (placeholder.indexOf('\uC608:') >= 0 || placeholder.indexOf('\uD611\uC7AC\uD574\uC218\uC695\uC7A5') >= 0 || placeholder.indexOf('\uC81C\uC8FC\uB3C4') >= 0) {
+        field.removeAttribute('placeholder')
+      }
+      if (value === '24,500' || value === '24500' || value.indexOf('\uD611\uC7AC\uD574\uC218\uC695\uC7A5') >= 0) setInputValue(field, '')
+    })
+  }
+
+  function ensureRequiredMarkForInput(input) {
+    if (!input) return
+    var label = input.closest('label')
+    var title = label && label.querySelector('span, strong, b')
+    if (!title || title.querySelector('.required-mark')) return
+    var mark = document.createElement('em')
+    mark.className = 'required-mark'
+    mark.textContent = '*'
+    title.appendChild(document.createTextNode(' '))
+    title.appendChild(mark)
+  }
+
   function normalizeLedgerEntryForm() {
     if (!pageHeadingIs('\uAC00\uACC4\uBD80')) return
     var forms = document.querySelectorAll('.ledger-form, .entry-panel, form')
@@ -6979,7 +7027,61 @@
       var text = getCleanText(form)
       if (text.indexOf('\uC2DC\uC791') < 0 && text.indexOf('\uC885\uB8CC') < 0) return
       setDateFieldToToday(form, ['\uC2DC\uC791\uC77C', '\uC885\uB8CC\uC77C'])
+      clearSampleFieldValues(form)
+      normalizeTimeInputs(form)
+      ensureRequiredMarkForInput(form.querySelector('[data-field="travel-title"]'))
+      form.querySelectorAll('[data-field="travel-location"], [data-field="travel-amount"], [data-field="travel-title"]').forEach(function (field) {
+        field.removeAttribute('placeholder')
+      })
+      form.querySelectorAll('button, span, b, strong, small').forEach(function (node) {
+        if (getCleanText(node) === '\uC5EC\uD589' && !node.closest('label')) node.remove()
+      })
     })
+  }
+
+  function ensureTravelHeaderActions() {
+    if (!pageHeadingIs('\uC5EC\uD589')) return
+    var panel = document.querySelector('.trip-manager')
+    if (!panel) return
+    var header = panel.querySelector('.panel-header') || panel.closest('.panel') && panel.closest('.panel').querySelector('.panel-header')
+    if (!header) return
+    var actions = header.querySelector('.travel-header-actions')
+    if (!actions) {
+      actions = document.createElement('div')
+      actions.className = 'travel-header-actions'
+      header.appendChild(actions)
+    }
+    var newButton = actions.querySelector('[data-travel-new-entry]')
+    if (!newButton) {
+      newButton = document.createElement('button')
+      newButton.type = 'button'
+      newButton.className = 'save-button travel-new-entry-button'
+      newButton.dataset.travelNewEntry = 'true'
+      newButton.textContent = '\uC2E0\uADDC\uC785\uB825'
+      actions.appendChild(newButton)
+      newButton.addEventListener('click', function () {
+        panel.classList.add('list-mode')
+        var first = panel.querySelector('.trip-add-row input, .travel-form input, .travel-form textarea')
+        if (first) {
+          first.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          window.setTimeout(function () { first.focus() }, 180)
+        }
+      })
+    }
+    var listButton = actions.querySelector('[data-travel-list-back]')
+    var originalList = Array.from(panel.querySelectorAll('button')).find(function (button) {
+      return getCleanText(button) === '\uBAA9\uB85D' && !button.dataset.travelListBack
+    })
+    if (!listButton && originalList) {
+      listButton = document.createElement('button')
+      listButton.type = 'button'
+      listButton.className = originalList.className || 'cancel-button'
+      listButton.dataset.travelListBack = 'true'
+      listButton.textContent = '\uBAA9\uB85D'
+      actions.appendChild(listButton)
+      listButton.addEventListener('click', function () { originalList.click() })
+      originalList.style.display = 'none'
+    }
   }
 
   function normalizeDiaryEntryForm() {
@@ -7319,9 +7421,89 @@
           '</div></button>'
         ].join('')
       }).join('')
+      grid.querySelectorAll('.baby-card[data-api-baby-id]').forEach(function (card) {
+        card.addEventListener('click', function (event) {
+          if (event.target && event.target.closest && event.target.closest('.baby-card-edit-button')) return
+          openBabyApiDetailById(card.dataset.apiBabyId)
+        })
+      })
     }).catch(function (error) {
       grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>' + escapeHtml(apiActionErrorMessage(error, '\uC544\uC774 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</strong></div>'
     })
+  }
+
+  function babyMetaText(baby) {
+    return [baby.gender || '', baby.birthDate || ''].filter(Boolean).join(' \u00B7 ')
+  }
+
+  function babyGrowthText(baby) {
+    return [baby.latestHeightCm ? baby.latestHeightCm + 'cm' : '', baby.latestWeightKg ? baby.latestWeightKg + 'kg' : ''].filter(Boolean).join(' \u00B7 ') || '\uC131\uC7A5 \uAE30\uB85D \uC5C6\uC74C'
+  }
+
+  function renderBabyApiRecordRows(detail, babyId) {
+    var list = detail && detail.querySelector('.baby-record-list')
+    if (!list) return
+    list.innerHTML = '<div class="api-empty-row">\uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</div>'
+    var range = monthRangeFor(todayText())
+    fetchBabyRecords(babyId, range.start, range.end).then(function (records) {
+      if (!records.length) {
+        list.innerHTML = '<div class="api-empty-row">\uB4F1\uB85D\uB41C \uC721\uC544 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</div>'
+        return
+      }
+      list.innerHTML = records.map(function (record) {
+        var metrics = [
+          record.amountMl ? record.amountMl + 'ml' : '',
+          record.heightCm ? record.heightCm + 'cm' : '',
+          record.weightKg ? record.weightKg + 'kg' : ''
+        ].filter(Boolean).join(' \u00B7 ')
+        return '<article class="baby-record-row api-baby-record-row" data-api-baby-record-id="' + escapeHtml(record.id) + '">' +
+          '<div><strong>' + escapeHtml(record.recordType || '\uAE30\uB85D') + '</strong>' +
+          '<span>' + escapeHtml([record.recordDate || '', record.recordTime || '', metrics].filter(Boolean).join(' \u00B7 ')) + '</span>' +
+          '<p>' + escapeHtml(record.memo || '') + '</p></div>' +
+          '</article>'
+      }).join('')
+    }).catch(function (error) {
+      list.innerHTML = '<div class="api-empty-row">' + escapeHtml(apiActionErrorMessage(error, '\uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</div>'
+    })
+  }
+
+  function openBabyApiDetailById(babyId) {
+    if (!babyId) return
+    fetchBabies().then(function (babies) {
+      var baby = babies.find(function (item) { return String(item.id) === String(babyId) })
+      if (baby) openBabyApiDetail(baby)
+    })
+  }
+
+  function openBabyApiDetail(baby) {
+    var grid = document.querySelector('.baby-list-grid')
+    if (!grid) return
+    var old = document.querySelector('.baby-api-detail')
+    if (old) old.remove()
+    grid.hidden = true
+    var detail = document.createElement('section')
+    detail.className = 'baby-detail baby-api-detail'
+    detail.dataset.apiBabyId = baby.id
+    detail.innerHTML = [
+      '<header class="baby-api-detail-header"><h2>' + escapeHtml(baby.name || '\uC544\uC774') + '</h2><button type="button" class="back-button">\uBAA9\uB85D</button></header>',
+      '<article class="baby-profile-band">',
+      '<span class="baby-avatar large">\uC544\uC774</span>',
+      '<div><strong>' + escapeHtml(baby.name || '-') + '</strong><span>' + escapeHtml(babyMetaText(baby)) + '</span><p>' + escapeHtml(baby.memo || '') + '</p><small>' + escapeHtml(babyGrowthText(baby)) + '</small></div>',
+      '</article>',
+      '<section class="baby-record-list"></section>'
+    ].join('')
+    grid.insertAdjacentElement('afterend', detail)
+    var back = detail.querySelector('.back-button')
+    if (back) {
+      back.addEventListener('click', function () {
+        detail.remove()
+        grid.hidden = false
+        renderBabyApiCards(true)
+      })
+    }
+    ensureBabyApiRecordForm()
+    normalizeTimeInputs(detail)
+    renderBabyApiRecordRows(detail, baby.id)
   }
 
   function renderBabyServerEntries(force) {
@@ -7440,8 +7622,10 @@
     removeDeveloperServerPanels()
     normalizeLedgerEntryForm()
     normalizeTravelEntryForm()
+    ensureTravelHeaderActions()
     normalizeDiaryEntryForm()
     normalizeBabyEntryForms()
+    normalizeTimeInputs()
     removeHardcodedDemoData()
     renderHomeMetricsFromApi(force)
     renderLedgerPageFromApi(force)
@@ -8063,7 +8247,12 @@
     window.setTimeout(function () {
       var title = getFieldValue(form, '[data-field="travel-title"]')
       var location = getFieldValue(form, '[data-field="travel-location"]')
-      if (!title || !location) return
+      if (!title) {
+        var titleInput = form.querySelector('[data-field="travel-title"]')
+        showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+        if (titleInput) titleInput.focus()
+        return
+      }
 
       var fileInput = form.querySelector('input[type="file"]')
       var submit = form.querySelector('button[type="submit"], .submit-action')
@@ -8082,11 +8271,11 @@
             category: getCustomSelectValue('비용 구분') || '기타',
             amount: parseAmountValue(getFieldValue(form, '[data-field="travel-amount"]')),
             note: getFieldValue(form, 'textarea'),
-            location: location,
+            location: location || '',
             latitude: 0,
             longitude: 0,
             recordDate: getDatePickerValue(form, '날짜'),
-            recordTime: getFieldValue(form, '[data-field="travel-record-time"]') || null,
+            recordTime: getFieldValue(form, '[data-field="travel-record-time"]') || currentTimeText(),
             mediaUrls: communityMediaUrls(files)
           }
         })
