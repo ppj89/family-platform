@@ -6351,6 +6351,7 @@
 
   var API_BASE_URL = window.FAMILY_PLATFORM_API_BASE_URL || localStorage.getItem('family-platform-api-base-url') || '/api'
   var API_QUEUE_KEY = 'family-platform-api-sync-queue'
+  var LEDGER_QUEUE_CLEANUP_KEY = 'family-platform-ledger-queue-cleaned-20260614-01'
   var API_TRIP_ID_KEY = AUTH_TRIP_STORAGE_KEY
   var API_AUTH_TOKEN_KEY = AUTH_TOKEN_STORAGE_KEY
   var API_FAMILY_ID_KEY = AUTH_FAMILY_STORAGE_KEY
@@ -6371,6 +6372,16 @@
     var queue = readSyncQueue()
     queue.push(Object.assign({ id: Date.now() + '-' + Math.random().toString(16).slice(2), createdAt: new Date().toISOString() }, task))
     writeSyncQueue(queue)
+  }
+
+  function purgeStaleLedgerSyncQueueOnce() {
+    if (localStorage.getItem(LEDGER_QUEUE_CLEANUP_KEY) === 'true') return
+    var queue = readSyncQueue()
+    var next = queue.filter(function (task) {
+      return task && task.type !== 'createLedgerEntry'
+    })
+    if (next.length !== queue.length) writeSyncQueue(next)
+    localStorage.setItem(LEDGER_QUEUE_CLEANUP_KEY, 'true')
   }
 
   function apiRequest(path, options) {
@@ -8323,6 +8334,7 @@
   }
 
   function refreshServerDataViews(force) {
+    purgeStaleLedgerSyncQueueOnce()
     removeDeveloperServerPanels()
     cleanupPatchRootsForCurrentMenu()
     normalizeMenuCaptions()
