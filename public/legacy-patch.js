@@ -3851,9 +3851,11 @@
 
   function refreshCalendarPatch() {
     if (document.documentElement.dataset.patchPage === 'community') {
+      removeFeaturePlaceholders()
       return
     }
     if (document.documentElement.dataset.patchPage === 'family-group') {
+      removeFeaturePlaceholders()
       cleanupPassiveButtons()
       return
     }
