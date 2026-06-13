@@ -1701,10 +1701,68 @@
     if (firstInput) firstInput.focus()
   }
 
+  function closeAccountInfoDialog() {
+    var dialog = document.querySelector('.account-info-backdrop')
+    if (dialog) dialog.remove()
+  }
+
+  function accountDisplayValue(value) {
+    return escapeHtml(value || '-')
+  }
+
+  function renderAccountInfoDialog(user) {
+    closeAccountInfoDialog()
+    user = user || readStoredAuthUser() || {}
+    var loginId = user.email || user.loginId || user.identifier || ''
+    var nickname = user.nickname || ''
+    var backdrop = document.createElement('div')
+    backdrop.className = 'account-info-backdrop'
+    backdrop.innerHTML = [
+      '<section class="account-info-dialog" role="dialog" aria-modal="true" aria-label="\uB0B4 \uC815\uBCF4">',
+      '<div class="account-password-header"><strong>\uB0B4 \uC815\uBCF4</strong><button type="button" data-account-info-close>X</button></div>',
+      '<div class="account-info-list">',
+      '<div><span>\uC811\uC18D ID</span><strong>' + accountDisplayValue(loginId) + '</strong></div>',
+      '<div><span>\uB2C9\uB124\uC784</span><strong>' + accountDisplayValue(nickname) + '</strong></div>',
+      '</div>',
+      '<div class="account-password-actions account-info-actions">',
+      '<button type="button" class="cancel-button" data-account-info-close>\uB2EB\uAE30</button>',
+      '<button type="button" class="save-button" data-account-info-password>\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD</button>',
+      '</div>',
+      '</section>'
+    ].join('')
+    backdrop.addEventListener('click', function (event) {
+      if (event.target === backdrop || (event.target.closest && event.target.closest('[data-account-info-close]'))) {
+        closeAccountInfoDialog()
+        return
+      }
+      if (event.target.closest && event.target.closest('[data-account-info-password]')) {
+        closeAccountInfoDialog()
+        openPasswordChangeDialog()
+      }
+    })
+    document.body.appendChild(backdrop)
+  }
+
+  function openAccountInfoDialog() {
+    var stored = readStoredAuthUser()
+    renderAccountInfoDialog(stored)
+    if (!getStoredAuthToken()) return
+    apiRequest('/auth/me').then(function (response) {
+      if (response && response.accessToken) {
+        writeAuthSession(response.accessToken, response, shouldPersistAuthSession())
+      }
+      renderAccountInfoDialog(response || stored)
+    }).catch(function () {})
+  }
+
   function ensurePasswordChangeAction() {
     if (document.querySelector('.auth-card')) return
     var actions = document.querySelector('.top-actions')
-    if (!actions || actions.querySelector('[data-account-password-change]')) return
+    if (!actions) return
+    actions.querySelectorAll('[data-account-password-change]').forEach(function (button) {
+      button.remove()
+    })
+    if (actions.querySelector('[data-account-info]')) return
     var logout = Array.from(actions.querySelectorAll('button')).find(function (button) {
       return getCleanText(button).replace(/\s+/g, '') === '\uB85C\uADF8\uC544\uC6C3'
     })
@@ -1712,9 +1770,9 @@
     var button = document.createElement('button')
     button.type = 'button'
     button.className = 'secondary-action account-password-change'
-    button.dataset.accountPasswordChange = 'true'
-    button.textContent = '\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD'
-    button.addEventListener('click', openPasswordChangeDialog)
+    button.dataset.accountInfo = 'true'
+    button.textContent = '\uB0B4 \uC815\uBCF4'
+    button.addEventListener('click', openAccountInfoDialog)
     if (logout) actions.insertBefore(button, logout)
     else actions.appendChild(button)
   }
@@ -6451,13 +6509,33 @@
       document.body
   }
 
+  function placeNotificationBell(wrap, mount) {
+    if (!wrap || !mount) return
+    wrap.classList.remove('floating')
+    var themeButton = Array.from(mount.querySelectorAll('.icon-button, button')).find(function (button) {
+      var label = (button.getAttribute('aria-label') || button.getAttribute('title') || getCleanText(button)).trim()
+      return label.indexOf('\uD14C\uB9C8') >= 0 || label.indexOf('\uB2E4\uD06C') >= 0 || label.indexOf('\uBAA8\uB4DC') >= 0
+    })
+    if (themeButton && themeButton.parentElement === mount) {
+      themeButton.insertAdjacentElement('afterend', wrap)
+      return
+    }
+    var logout = Array.from(mount.querySelectorAll('button')).find(function (button) {
+      return getCleanText(button).replace(/\s+/g, '') === '\uB85C\uADF8\uC544\uC6C3'
+    })
+    if (logout) mount.insertBefore(wrap, logout)
+    else mount.appendChild(wrap)
+  }
+
   function ensureNotificationBell() {
     if (!getStoredAuthToken()) return null
     var existing = document.querySelector('.schedule-notification-bell')
-    if (existing) return existing
-
     var mount = getNotificationMount()
     if (!mount) return null
+    if (existing) {
+      placeNotificationBell(existing.closest('.schedule-notification-wrap') || existing, mount)
+      return existing
+    }
 
     var wrap = document.createElement('div')
     wrap.className = 'schedule-notification-wrap'
@@ -6476,7 +6554,7 @@
       wrap.classList.add('floating')
       document.body.appendChild(wrap)
     } else {
-      mount.appendChild(wrap)
+      placeNotificationBell(wrap, mount)
     }
     return button
   }
