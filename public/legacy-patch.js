@@ -4703,8 +4703,14 @@
     if (getCleanText(document.querySelector('.topbar h1')).indexOf('\uC77C\uAE30') < 0) return null
     var existing = document.querySelector('.diary-api-composer')
     if (existing) return existing
-    var grid = document.querySelector('.content-grid')
-    if (!grid) return null
+    var diaryPanel = Array.from(document.querySelectorAll('.panel, article, section')).find(function (item) {
+      var heading = item.querySelector('h2')
+      return heading && getCleanText(heading) === '\uC77C\uAE30'
+    })
+    var targetParent = diaryPanel && diaryPanel.parentElement
+      ? diaryPanel.parentElement
+      : (document.querySelector('.content-grid') || document.querySelector('main'))
+    if (!targetParent) return null
     var panel = document.createElement('section')
     panel.className = 'panel wide full-span diary-api-composer diary-form'
     panel.innerHTML = [
@@ -4755,7 +4761,9 @@
         showPatchToast(apiActionErrorMessage(error, '\uC77C\uAE30 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
       })
     })
-    grid.appendChild(panel)
+    if (diaryPanel && diaryPanel.nextSibling) targetParent.insertBefore(panel, diaryPanel.nextSibling)
+    else targetParent.appendChild(panel)
+    removeFeaturePlaceholders(panel)
     return panel
   }
 
