@@ -7051,6 +7051,7 @@
         table.innerHTML = emptyRow('\uCD5C\uADFC \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
         return
       }
+      items.forEach(storeLedgerItemForDetail)
       table.innerHTML = items.slice(0, 5).map(function (item) {
         return '<div class="ledger-row api-ledger-row" data-api-ledger-id="' + item.id + '">' +
           '<div><strong>' + escapeHtml(item.title) + '</strong><span>' +
@@ -7073,6 +7074,12 @@
       day: 'numeric',
       weekday: 'short'
     })
+  }
+
+  function storeLedgerItemForDetail(item) {
+    if (!item || item.id == null) return
+    window.__familyLedgerItemsById = window.__familyLedgerItemsById || {}
+    window.__familyLedgerItemsById[String(item.id)] = item
   }
 
   function getLedgerPageRange() {
@@ -7167,8 +7174,7 @@
           return String(b.createdAt || '').localeCompare(String(a.createdAt || ''))
         })
         rows.forEach(function (item) {
-          window.__familyLedgerItemsById = window.__familyLedgerItemsById || {}
-          window.__familyLedgerItemsById[String(item.id)] = item
+          storeLedgerItemForDetail(item)
         })
         return '<section class="api-ledger-day">' +
           '<header><strong>' + escapeHtml(formatLedgerDateLabel(date)) + '</strong></header>' +
