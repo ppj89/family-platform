@@ -4507,9 +4507,11 @@
       }).then(function () {
         closeDialog()
         showPatchToast('\uC544\uC774\uB97C \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
-        renderBabyApiCards(true)
-        refreshServerDataViews(true)
         goMenu('\uC721\uC544')
+        window.setTimeout(function () {
+          renderBabyApiCards(true)
+          refreshServerDataViews(true)
+        }, 250)
       }).catch(function (error) {
         save.disabled = false
         save.textContent = '\uC800\uC7A5'
@@ -7828,7 +7830,13 @@
 
   function renderBabyApiCards(force) {
     if (getCleanText(document.querySelector('.topbar h1')) !== '\uC721\uC544') return
-    if (document.querySelector('.baby-detail')) return
+    if (force) {
+      document.querySelectorAll('.baby-api-detail, .baby-detail').forEach(function (detail) {
+        detail.remove()
+      })
+    } else if (document.querySelector('.baby-detail')) {
+      return
+    }
     var grid = document.querySelector('.baby-list-grid')
     if (!grid) {
       var panel = Array.from(document.querySelectorAll('.panel')).find(function (item) {
@@ -7839,8 +7847,10 @@
       grid.className = 'baby-list-grid'
       panel.appendChild(grid)
     }
+    grid.hidden = false
     if (!force && grid.dataset.apiLoaded === 'true') return
     grid.dataset.apiLoaded = 'true'
+    grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>\uC544\uC774 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</strong></div>'
     fetchBabies().then(function (babies) {
       if (!babies.length) {
         grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>\uB4F1\uB85D\uB41C \uC544\uC774\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</strong></div>'
