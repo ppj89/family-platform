@@ -3879,38 +3879,6 @@
     })
   }
 
-  function ensureAdminBatchSaveButton() {
-    var title = getCleanText(document.querySelector('.topbar h1'))
-    if (title.indexOf('관리자') < 0) return
-    var panels = Array.from(document.querySelectorAll('.panel, .entry-panel')).filter(function (panel) {
-      var text = getCleanText(panel)
-      return text.indexOf('총괄관리자') >= 0 && text.indexOf('가족관리자') >= 0 && text.indexOf('가족구성원') >= 0
-    })
-    panels.forEach(function (panel) {
-      if (panel.querySelector('.batch-role-save-button')) return
-      var button = document.createElement('button')
-      button.type = 'button'
-      button.className = 'save-button batch-role-save-button'
-      button.textContent = '전체 저장'
-      button.addEventListener('click', function () {
-        var saveButtons = Array.from(panel.querySelectorAll('button.save-button')).filter(function (item) {
-          return item !== button && !item.disabled
-        })
-        if (!saveButtons.length) {
-          showPatchToast('저장할 수정 항목이 없습니다.')
-          return
-        }
-        showPatchConfirm('수정 중인 권한을 한 번에 저장할까요?', function () {
-          saveButtons.forEach(function (item) { item.click() })
-          showPatchToast('권한 변경을 저장했습니다.')
-        })
-      })
-      var header = panel.querySelector('.panel-header')
-      if (header) header.appendChild(button)
-      else panel.insertBefore(button, panel.firstChild)
-    })
-  }
-
   function refreshCalendarPatch() {
     if (document.documentElement.dataset.patchPage === 'community') {
       removeFeaturePlaceholders()
@@ -9343,9 +9311,7 @@
   }, 60000)
   window.setInterval(function () {
     refreshServerDataViews(true)
-    ensureAdminBatchSaveButton()
   }, 120000)
-  window.setInterval(ensureAdminBatchSaveButton, 1000)
 
   document.addEventListener('submit', function (event) {
     var form = event.target && event.target.closest && event.target.closest('.schedule-form-card')
