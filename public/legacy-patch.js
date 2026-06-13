@@ -4700,16 +4700,20 @@
     if (getCleanText(document.querySelector('.topbar h1')).indexOf('\uC77C\uAE30') < 0) return
     if (document.querySelector('.diary-detail-card')) return
     var header = Array.from(document.querySelectorAll('.panel-header')).find(function (item) {
-      return getCleanText(item.querySelector('h2')).indexOf('\uC77C\uAE30') >= 0
+      return getCleanText(item.querySelector('h2')) === '\uC77C\uAE30'
+    }) || Array.from(document.querySelectorAll('.panel-header')).find(function (item) {
+      var heading = getCleanText(item.querySelector('h2'))
+      return heading.indexOf('\uC77C\uAE30') >= 0 && heading.indexOf('\uCD94\uAC00') < 0
     })
     if (!header || header.querySelector('.diary-main-action-bar')) return
     var actions = document.createElement('div')
     actions.className = 'diary-main-action-bar'
     var createButton = document.createElement('button')
     createButton.type = 'button'
+    createButton.dataset.diaryOpenComposer = 'true'
     createButton.textContent = '\uC77C\uAE30 \uCD94\uAC00'
     createButton.addEventListener('click', function () {
-      var form = document.querySelector('.diary-form') || ensureDiaryApiComposer()
+      var form = document.querySelector('.diary-api-composer') || ensureDiaryApiComposer()
       var target = form && (form.closest('form, .panel, aside') || form)
       if (!target) {
         showPatchToast('\uC77C\uAE30 \uC785\uB825 \uC601\uC5ED\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
@@ -8920,6 +8924,7 @@
   document.addEventListener('click', function (event) {
     var button = event.target && event.target.closest && event.target.closest('button')
     if (!button || getCleanText(button) !== '\uC77C\uAE30 \uCD94\uAC00') return
+    if (button.closest('.diary-main-action-bar') || button.dataset.diaryOpenComposer === 'true') return
     var panel = button.closest('aside, section, article, .panel, .entry-panel') || button.closest('form')
     if (!panel || getCleanText(panel.querySelector('h2')) !== '\uC77C\uAE30 \uCD94\uAC00') return
     event.preventDefault()
