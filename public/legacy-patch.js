@@ -4767,6 +4767,55 @@
     return panel
   }
 
+  function getControlValueByLabel(root, labelText) {
+    var labels = Array.from(root.querySelectorAll('label'))
+    var target = labels.find(function (item) {
+      return getCleanText(item.querySelector('span')) === labelText
+    })
+    if (!target) return ''
+    var control = target.querySelector('input, textarea, .custom-select-trigger, .date-picker-trigger, button')
+    return control ? getCleanText(control) || String(control.value || '').trim() : ''
+  }
+
+  function submitExistingDiaryPanel(panel, submitButton) {
+    if (!panel || panel.dataset.diaryPanelSubmitting === 'true') return
+    var title = getInputValueByLabel(panel, '\uC81C\uBAA9')
+    var body = getInputValueByLabel(panel, '\uB0B4\uC6A9') || getFieldValue(panel, 'textarea')
+    if (!title) {
+      showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
+      var titleField = panel.querySelector('label input, input')
+      if (titleField) titleField.focus()
+      return
+    }
+    panel.dataset.diaryPanelSubmitting = 'true'
+    if (submitButton) submitButton.disabled = true
+    getCurrentFamilyId().then(function (familyId) {
+      return postJson('/diaries?familyId=' + encodeURIComponent(familyId), {
+        title: title,
+        body: body,
+        diaryDate: getDatePickerValue(panel, '\uB0A0\uC9DC') || todayText(),
+        weather: getControlValueByLabel(panel, '\uB0A0\uC528') || null,
+        mood: getControlValueByLabel(panel, '\uAE30\uBD84') || null,
+        minTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uC800 \uC628\uB3C4')),
+        maxTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uACE0 \uC628\uB3C4')),
+        photoUrls: [],
+        videoUrls: []
+      })
+    }).then(function () {
+      showPatchToast('\uC77C\uAE30\uB97C \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
+      panel.querySelectorAll('input, textarea').forEach(function (field) {
+        if (field.type !== 'hidden') setNativeInputValue(field, '')
+      })
+      renderDiaryPageFromApi(true)
+      refreshServerDataViews(true)
+    }).catch(function (error) {
+      showPatchToast(apiActionErrorMessage(error, '\uC77C\uAE30 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+    }).finally(function () {
+      delete panel.dataset.diaryPanelSubmitting
+      if (submitButton) submitButton.disabled = false
+    })
+  }
+
   function findNavButton(label) {
     return Array.from(document.querySelectorAll('.nav-item')).find(function (button) {
       return getCleanText(button) === label
@@ -8824,6 +8873,17 @@
   document.addEventListener('submit', function (event) {
     var diaryForm = event.target && event.target.closest && event.target.closest('.diary-form')
     if (diaryForm) syncDiaryForm(diaryForm)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var button = event.target && event.target.closest && event.target.closest('button')
+    if (!button || getCleanText(button) !== '\uC77C\uAE30 \uCD94\uAC00') return
+    var panel = button.closest('form, aside, section, article, .panel, .entry-panel')
+    if (!panel || getCleanText(panel.querySelector('h2')) !== '\uC77C\uAE30 \uCD94\uAC00') return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitExistingDiaryPanel(panel, button)
   }, true)
 
   document.addEventListener('submit', function (event) {
