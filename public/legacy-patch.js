@@ -7146,7 +7146,81 @@
     if (panel) panel.dataset.apiBacked = 'true'
     fetchTrips().then(function (trips) {
       if (headerAction) headerAction.textContent = Number(trips.length || 0).toLocaleString('ko-KR') + '\uAC1C'
+      if (panel) renderApiTripList(panel, trips)
       removeHardcodedDemoData()
+    })
+  }
+
+  function renderApiTripList(panel, trips) {
+    var list = panel.querySelector('.trip-list')
+    if (!list) {
+      list = document.createElement('div')
+      list.className = 'trip-list'
+      panel.appendChild(list)
+    }
+    if (!trips.length) {
+      list.innerHTML = emptyRow('\uB4F1\uB85D\uB41C \uC5EC\uD589\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
+      return
+    }
+    list.innerHTML = trips.map(function (trip) {
+      return '<button type="button" class="trip-list-card api-trip-card" data-api-trip-id="' + escapeHtml(trip.id) + '">' +
+        '<div><strong>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</strong>' +
+        '<span>' + escapeHtml((trip.startDate || '') + (trip.endDate && trip.endDate !== trip.startDate ? ' ~ ' + trip.endDate : '')) + '</span></div>' +
+        '<small>\uAE30\uB85D \uCD94\uAC00</small>' +
+        '</button>'
+    }).join('')
+    list.querySelectorAll('.api-trip-card').forEach(function (card) {
+      card.addEventListener('click', function () {
+        var trip = trips.find(function (item) { return String(item.id) === String(card.dataset.apiTripId) })
+        if (trip) openApiTripDetail(panel, trip)
+      })
+    })
+  }
+
+  function openApiTripDetail(panel, trip) {
+    if (!panel || !trip) return
+    localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
+    var detail = panel.querySelector('.api-trip-detail')
+    if (!detail) {
+      detail = document.createElement('section')
+      detail.className = 'api-trip-detail'
+      panel.appendChild(detail)
+    }
+    detail.innerHTML = [
+      '<header class="api-trip-detail-header"><div><h3>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</h3><span>' + escapeHtml((trip.startDate || '') + (trip.endDate && trip.endDate !== trip.startDate ? ' ~ ' + trip.endDate : '')) + '</span></div><button type="button" data-api-trip-back>\uBAA9\uB85D</button></header>',
+      '<form class="travel-form api-travel-record-form">',
+      '<label><span>\uC81C\uBAA9 <em class="required-mark">*</em></span><input data-field="travel-title" /></label>',
+      '<label><span>\uC704\uCE58</span><input data-field="travel-location" /></label>',
+      '<label><span>\uC0AC\uC6A9\uAE08\uC561</span><input data-field="travel-amount" inputmode="numeric" /></label>',
+      '<label><span>\uB0A0\uC9DC</span><input data-field="travel-record-date" type="date" value="' + todayText() + '" /></label>',
+      '<label><span>\uC2DC\uAC04</span><input data-field="travel-record-time" type="time" value="' + currentTimeText() + '" /></label>',
+      '<label class="travel-note-field"><span>\uBA54\uBAA8</span><textarea rows="4"></textarea></label>',
+      '<div class="travel-form-actions"><button type="submit" class="submit-action">\uAE30\uB85D \uCD94\uAC00</button></div>',
+      '</form>',
+      '<div class="api-trip-record-list"></div>'
+    ].join('')
+    var back = detail.querySelector('[data-api-trip-back]')
+    if (back) back.addEventListener('click', function () { detail.remove() })
+    normalizeTravelEntryForm()
+    renderApiTripRecords(detail, trip.id)
+    var first = detail.querySelector('[data-field="travel-title"]')
+    if (first) window.setTimeout(function () { first.focus() }, 120)
+  }
+
+  function renderApiTripRecords(detail, tripId) {
+    var list = detail && detail.querySelector('.api-trip-record-list')
+    if (!list) return
+    list.innerHTML = '<p class="empty-note">\uC5EC\uD589 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</p>'
+    fetchTripRecords(tripId).then(function (records) {
+      if (!records.length) {
+        list.innerHTML = '<p class="empty-note">\uB4F1\uB85D\uB41C \uC5EC\uD589 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
+        return
+      }
+      list.innerHTML = records.map(function (record) {
+        return '<article class="travel-record-card api-travel-record-card"><strong>' + escapeHtml(record.title || '') + '</strong>' +
+          '<span>' + escapeHtml([record.recordDate || '', record.recordTime || '', record.category || '', record.location || ''].filter(Boolean).join(' \u00B7 ')) + '</span>' +
+          '<p>' + escapeHtml(record.note || '') + '</p></article>'
+      }).join('')
     })
   }
 
@@ -8268,13 +8342,13 @@
           payload: {
             sortOrder: parseAmountValue(getFieldValue(form, 'input[inputmode="numeric"]')) || null,
             title: title,
-            category: getCustomSelectValue('비용 구분') || '기타',
+            category: getCustomSelectValue('\uBE44\uC6A9 \uAD6C\uBD84') || '\uAE30\uD0C0',
             amount: parseAmountValue(getFieldValue(form, '[data-field="travel-amount"]')),
             note: getFieldValue(form, 'textarea'),
             location: location || '',
             latitude: 0,
             longitude: 0,
-            recordDate: getDatePickerValue(form, '날짜'),
+            recordDate: getDatePickerValue(form, '\uB0A0\uC9DC') || getFieldValue(form, '[data-field="travel-record-date"]') || todayText(),
             recordTime: getFieldValue(form, '[data-field="travel-record-time"]') || currentTimeText(),
             mediaUrls: communityMediaUrls(files)
           }
@@ -8408,6 +8482,12 @@
 
   document.addEventListener('submit', function (event) {
     var travelForm = event.target && event.target.closest && event.target.closest('.travel-form')
+    if (travelForm && travelForm.classList.contains('api-travel-record-form')) {
+      event.preventDefault()
+      event.stopPropagation()
+      syncTravelForm(travelForm)
+      return
+    }
     if (travelForm) syncTravelForm(travelForm)
   }, true)
 
