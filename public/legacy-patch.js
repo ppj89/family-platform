@@ -3903,6 +3903,7 @@
     renderNotificationBell()
     loadScheduleNotifications()
     refreshServerDataViews()
+    removeLedgerManageButton()
     hideBabyEmptySelectionPanel()
     enhanceBabyRecordMedia()
     cleanupBabyDetailButtons()
@@ -7512,6 +7513,17 @@
     removeFeaturePlaceholders()
   }
 
+  function removeLedgerManageButton() {
+    if (!pageHeadingIs('\uAC00\uACC4\uBD80')) return
+    Array.from(document.querySelectorAll('.panel-header')).forEach(function (header) {
+      var title = getCleanText(header.querySelector('h2'))
+      if (title !== '\uAC00\uACC4\uBD80 \uC870\uD68C') return
+      Array.from(header.querySelectorAll('button, .passive-header-chip, [role="button"]')).forEach(function (button) {
+        if (getCleanText(button) === '\uB0B4\uC5ED \uAD00\uB9AC') button.remove()
+      })
+    })
+  }
+
   function normalizeTravelEntryForm() {
     if (!pageHeadingIs('\uC5EC\uD589')) return
     document.querySelectorAll('.travel-form, .trip-manager, .entry-panel, form').forEach(function (form) {
@@ -8198,6 +8210,7 @@
     cleanupPatchRootsForCurrentMenu()
     normalizeMenuCaptions()
     normalizeLedgerEntryForm()
+    removeLedgerManageButton()
     normalizeTravelEntryForm()
     ensureTravelHeaderActions()
     normalizeDiaryEntryForm()
