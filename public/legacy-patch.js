@@ -7533,6 +7533,7 @@
       clearSampleFieldValues(form)
       normalizeTimeInputs(form)
       ensureRequiredMarkForInput(form.querySelector('[data-field="travel-title"]'))
+      ensureTravelLocationSearch(form)
       form.querySelectorAll('[data-field="travel-location"], [data-field="travel-amount"], [data-field="travel-title"]').forEach(function (field) {
         field.removeAttribute('placeholder')
       })
@@ -7541,6 +7542,122 @@
       })
     })
     removeFeaturePlaceholders()
+  }
+
+  function searchTravelPlaces(query, limit) {
+    var text = String(query || '').trim()
+    if (!text || text.length < 2 || !getStoredAuthToken()) return Promise.resolve([])
+    return apiRequest('/places/search?q=' + encodeURIComponent(text) + '&limit=' + encodeURIComponent(limit || 6)).then(function (items) {
+      return Array.isArray(items) ? items : []
+    }).catch(function () {
+      return []
+    })
+  }
+
+  function placeCandidateLabel(item) {
+    return String(item && (item.name || item.address) || '').trim()
+  }
+
+  function placeCandidateDetail(item) {
+    return String(item && item.address || '').trim()
+  }
+
+  function setTravelLocationCandidate(input, item) {
+    if (!input || !item) return
+    var label = placeCandidateLabel(item)
+    var detail = placeCandidateDetail(item)
+    setNativeInputValue(input, label || detail)
+    input.dataset.latitude = String(item.latitude || '')
+    input.dataset.longitude = String(item.longitude || '')
+    input.dataset.placeAddress = detail
+  }
+
+  function getTravelLocationCoordinates(form) {
+    var input = form && form.querySelector('[data-field="travel-location"]')
+    if (!input) return null
+    var latitude = Number(input.dataset.latitude)
+    var longitude = Number(input.dataset.longitude)
+    if (Number.isFinite(latitude) && Number.isFinite(longitude) && latitude !== 0 && longitude !== 0) {
+      return { latitude: latitude, longitude: longitude }
+    }
+    return Gv(String(input.value || ''))
+  }
+
+  function resolveTravelLocationForSubmit(form, location) {
+    var existing = getTravelLocationCoordinates(form)
+    if (existing || !String(location || '').trim()) return Promise.resolve(existing)
+    return searchTravelPlaces(location, 1).then(function (items) {
+      var first = items[0]
+      if (!first) return null
+      var input = form.querySelector('[data-field="travel-location"]')
+      setTravelLocationCandidate(input, first)
+      return { latitude: Number(first.latitude), longitude: Number(first.longitude) }
+    })
+  }
+
+  function ensureTravelLocationSearch(form) {
+    var input = form && form.querySelector('[data-field="travel-location"]')
+    if (!input || input.dataset.placeSearchReady === 'true') return
+    input.dataset.placeSearchReady = 'true'
+    var label = input.closest('label')
+    var candidates = document.createElement('div')
+    candidates.className = 'location-candidates travel-location-candidates'
+    candidates.hidden = true
+    if (label && label.parentElement) {
+      label.insertAdjacentElement('afterend', candidates)
+    }
+    var timer = null
+
+    function hideCandidates() {
+      candidates.hidden = true
+      candidates.innerHTML = ''
+    }
+
+    function renderCandidates(query, items) {
+      if (String(input.value || '').trim() !== query) return
+      if (!items.length) {
+        candidates.innerHTML = '<span>\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC0C1\uD638\uBA85\uC744 \uC880 \uB354 \uC790\uC138\uD788 \uC785\uB825\uD574\uC8FC\uC138\uC694.</span>'
+        candidates.hidden = false
+        return
+      }
+      candidates.innerHTML = '<span>\uC704\uCE58\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</span>' + items.map(function (item, index) {
+        return '<button type="button" data-place-index="' + index + '">' +
+          '<b>' + escapeHtml(placeCandidateLabel(item)) + '</b>' +
+          '<small>' + escapeHtml(placeCandidateDetail(item)) + '</small>' +
+          '</button>'
+      }).join('')
+      candidates.hidden = false
+      candidates.querySelectorAll('button[data-place-index]').forEach(function (button) {
+        button.addEventListener('mousedown', function (event) { event.preventDefault() })
+        button.addEventListener('click', function () {
+          var item = items[Number(button.dataset.placeIndex)]
+          setTravelLocationCandidate(input, item)
+          hideCandidates()
+        })
+      })
+    }
+
+    input.addEventListener('input', function () {
+      delete input.dataset.latitude
+      delete input.dataset.longitude
+      delete input.dataset.placeAddress
+      window.clearTimeout(timer)
+      var query = String(input.value || '').trim()
+      if (query.length < 2) {
+        hideCandidates()
+        return
+      }
+      timer = window.setTimeout(function () {
+        candidates.innerHTML = '<span>\uC704\uCE58\uB97C \uAC80\uC0C9\uD558\uB294 \uC911\uC785\uB2C8\uB2E4.</span>'
+        candidates.hidden = false
+        searchTravelPlaces(query, 6).then(function (items) {
+          renderCandidates(query, items)
+        })
+      }, 280)
+    })
+    input.addEventListener('blur', function () {
+      window.setTimeout(hideCandidates, 220)
+    })
   }
 
   function ensureTravelHeaderActions() {
@@ -8852,7 +8969,12 @@
         submit.textContent = '\uC5C5\uB85C\uB4DC \uC911'
       }
 
-      uploadMediaFiles(fileInput).then(function (files) {
+      resolveTravelLocationForSubmit(form, location).then(function (coords) {
+        return uploadMediaFiles(fileInput).then(function (files) {
+          return { files: files, coords: coords }
+        })
+      }).then(function (result) {
+        var coords = result.coords || { latitude: 0, longitude: 0 }
         queueApiSync({
           type: 'createTravelRecord',
           payload: {
@@ -8862,11 +8984,11 @@
             amount: parseAmountValue(getFieldValue(form, '[data-field="travel-amount"]')),
             note: getFieldValue(form, 'textarea'),
             location: location || '',
-            latitude: 0,
-            longitude: 0,
+            latitude: Number(coords.latitude || 0),
+            longitude: Number(coords.longitude || 0),
             recordDate: getDatePickerValue(form, '\uB0A0\uC9DC') || getFieldValue(form, '[data-field="travel-record-date"]') || todayText(),
             recordTime: getFieldValue(form, '[data-field="travel-record-time"]') || currentTimeText(),
-            mediaUrls: communityMediaUrls(files)
+            mediaUrls: communityMediaUrls(result.files)
           }
         })
         flushApiQueue()

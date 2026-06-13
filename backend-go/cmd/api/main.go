@@ -51,6 +51,7 @@ type config struct {
 	mediaS3SecretKey          string
 	publicBaseURL             string
 	oauth                     map[string]oauthProviderConfig
+	kakaoRestAPIKey           string
 	maxFilesPerPost           int
 	maxReferenceLength        int
 	maxImageBytes             int64
@@ -193,6 +194,7 @@ func loadConfig() (config, error) {
 		mediaS3SecretKey:          getenv("APP_MEDIA_S3_SECRET_ACCESS_KEY", ""),
 		publicBaseURL:             defaultPublicBaseURL(),
 		oauth:                     loadOAuthProviders(),
+		kakaoRestAPIKey:           getenv("APP_KAKAO_REST_API_KEY", getenv("APP_OAUTH_KAKAO_CLIENT_ID", "")),
 		maxFilesPerPost:           envInt("APP_MEDIA_MAX_FILES_PER_POST", 6),
 		maxReferenceLength:        envInt("APP_MEDIA_MAX_REFERENCE_LENGTH", 2048),
 		maxImageBytes:             parseSize(getenv("APP_MEDIA_MAX_IMAGE_SIZE", "8MB"), 8*1024*1024),
@@ -308,6 +310,7 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("POST /api/trips/{tripId}/records", a.requireAuth(a.createTravelRecord))
 	mux.HandleFunc("PUT /api/travel-records/{recordId}", a.requireAuth(a.updateTravelRecord))
 	mux.HandleFunc("DELETE /api/travel-records/{recordId}", a.requireAuth(a.deleteTravelRecord))
+	mux.HandleFunc("GET /api/places/search", a.requireAuth(a.searchPlaces))
 	mux.HandleFunc("GET /api/babies", a.requireAuth(a.listBabies))
 	mux.HandleFunc("POST /api/babies", a.requireAuth(a.createBaby))
 	mux.HandleFunc("PUT /api/babies/{babyId}", a.requireAuth(a.updateBaby))
@@ -340,6 +343,103 @@ func (a *app) routes() http.Handler {
 
 func (a *app) health(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "UP", "runtime": "go"})
+}
+
+type placeSearchResult struct {
+	ID        string  `json:"id"`
+	Name      string  `json:"name"`
+	Address   string  `json:"address"`
+	Latitude  float64 `json:"latitude"`
+	Longitude float64 `json:"longitude"`
+	Source    string  `json:"source"`
+}
+
+func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
+	query := strings.TrimSpace(r.URL.Query().Get("q"))
+	if utf8.RuneCountInString(query) < 2 {
+		writeJSON(w, http.StatusOK, []placeSearchResult{})
+		return
+	}
+	limit := envClampedInt(r.URL.Query().Get("limit"), 5, 1, 10)
+	results, err := a.searchKakaoPlaces(r.Context(), query, limit)
+	if err != nil {
+		a.log.Warn("place search failed", "query", query, "error", err)
+		writeJSON(w, http.StatusOK, []placeSearchResult{})
+		return
+	}
+	writeJSON(w, http.StatusOK, results)
+}
+
+func (a *app) searchKakaoPlaces(ctx context.Context, query string, limit int) ([]placeSearchResult, error) {
+	key := strings.TrimSpace(a.cfg.kakaoRestAPIKey)
+	if key == "" {
+		return []placeSearchResult{}, nil
+	}
+	values := url.Values{}
+	values.Set("query", query)
+	values.Set("size", strconv.Itoa(limit))
+	values.Set("page", "1")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://dapi.kakao.com/v2/local/search/keyword.json?"+values.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "KakaoAK "+key)
+	req.Header.Set("Accept", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return nil, fmt.Errorf("kakao local search returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+	var payload struct {
+		Documents []struct {
+			ID              string `json:"id"`
+			PlaceName       string `json:"place_name"`
+			AddressName     string `json:"address_name"`
+			RoadAddressName string `json:"road_address_name"`
+			X               string `json:"x"`
+			Y               string `json:"y"`
+		} `json:"documents"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	results := make([]placeSearchResult, 0, len(payload.Documents))
+	for _, item := range payload.Documents {
+		longitude, lonErr := strconv.ParseFloat(item.X, 64)
+		latitude, latErr := strconv.ParseFloat(item.Y, 64)
+		if lonErr != nil || latErr != nil {
+			continue
+		}
+		name := strings.TrimSpace(item.PlaceName)
+		address := firstNonEmpty(item.RoadAddressName, item.AddressName)
+		results = append(results, placeSearchResult{
+			ID:        firstNonEmpty(item.ID, fmt.Sprintf("%f,%f", latitude, longitude)),
+			Name:      name,
+			Address:   address,
+			Latitude:  latitude,
+			Longitude: longitude,
+			Source:    "kakao",
+		})
+	}
+	return results, nil
+}
+
+func envClampedInt(value string, fallback, min, max int) int {
+	parsed, err := strconv.Atoi(strings.TrimSpace(value))
+	if err != nil {
+		parsed = fallback
+	}
+	if parsed < min {
+		return min
+	}
+	if parsed > max {
+		return max
+	}
+	return parsed
 }
 
 func isValidNickname(nickname string) bool {
