@@ -3319,6 +3319,7 @@
         if (getCleanText(item) === '\uACF5\uC720') item.remove()
       })
     }
+    normalizeRestaurantFormControls()
   }
 
   function normalizeMenuCaptions() {
@@ -7291,6 +7292,45 @@
     if (visitDateInput && (!visitDateInput.value || visitDateInput.value === '2026.06.03')) {
       setInputValue(visitDateInput, formatDotDate(new Date()))
     }
+  }
+
+  function normalizeRestaurantFormControls() {
+    var form = document.querySelector('.restaurant-form')
+    if (!form) return
+    Array.from(form.querySelectorAll('label')).forEach(function (label) {
+      var labelText = getCleanText(label)
+      var title = label.querySelector('span')
+
+      if (labelText.indexOf('\uB9DB\uC9D1 \uC774\uB984') >= 0) {
+        if (title) title.textContent = '\uC0C1\uD638\uBA85'
+        label.querySelectorAll('input, textarea').forEach(function (field) {
+          field.removeAttribute('placeholder')
+        })
+      }
+
+      if (labelText.indexOf('\uAC00\uACA9\uB300') >= 0 || (title && getCleanText(title) === '\uAC00\uACA9')) {
+        if (title) title.textContent = '\uAC00\uACA9'
+        var priceInput = label.querySelector('[data-restaurant-price-input]')
+        if (!priceInput) {
+          priceInput = document.createElement('input')
+          priceInput.type = 'text'
+          priceInput.inputMode = 'numeric'
+          priceInput.pattern = '[0-9]*'
+          priceInput.name = 'restaurantPrice'
+          priceInput.dataset.restaurantPriceInput = 'true'
+          priceInput.autocomplete = 'off'
+          label.appendChild(priceInput)
+          priceInput.addEventListener('input', function () {
+            var next = String(priceInput.value || '').replace(/[^\d]/g, '')
+            if (priceInput.value !== next) setInputValue(priceInput, next)
+          })
+        }
+        priceInput.removeAttribute('placeholder')
+        label.querySelectorAll('.custom-select, select').forEach(function (select) {
+          if (!select.contains(priceInput)) hidePatchElement(select)
+        })
+      }
+    })
   }
 
   function setInputValue(input, value) {
