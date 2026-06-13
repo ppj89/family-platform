@@ -4468,7 +4468,6 @@
         closeDialog()
         showPatchToast('\uC544\uC774\uB97C \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
         goMenu('\uC721\uC544')
-        window.setTimeout(function () { renderBabyApiCards(true); refreshServerDataViews(true) }, 400)
       }).catch(function (error) {
         save.disabled = false
         save.textContent = '\uC800\uC7A5'
@@ -7017,6 +7016,10 @@
         })
         var expense = rows.filter(function (item) { return item.entryType !== 'income' }).reduce(function (sum, item) { return sum + Number(item.amount || 0) }, 0)
         var income = rows.filter(function (item) { return item.entryType === 'income' }).reduce(function (sum, item) { return sum + Number(item.amount || 0) }, 0)
+        rows.forEach(function (item) {
+          window.__familyLedgerItemsById = window.__familyLedgerItemsById || {}
+          window.__familyLedgerItemsById[String(item.id)] = item
+        })
         return '<section class="api-ledger-day">' +
           '<header><strong>' + escapeHtml(formatLedgerDateLabel(date)) + '</strong><span>\uC9C0\uCD9C ' + expense.toLocaleString('ko-KR') + '\uC6D0 \u00B7 \uC218\uC785 ' + income.toLocaleString('ko-KR') + '\uC6D0</span></header>' +
           rows.map(function (item) {
@@ -7024,10 +7027,128 @@
               '<div><strong>' + escapeHtml(item.title || '') + '</strong><span>' +
               escapeHtml((item.category || '-') + ' \u00B7 ' + (item.memberName || '-') + ' \u00B7 ' + (item.paymentMethod || '-')) +
               '</span></div><b class="' + escapeHtml(item.entryType || 'expense') + '">' +
-              escapeHtml(moneyText(item.amount, item.entryType)) + '</b></div>'
+              escapeHtml(moneyText(item.amount, item.entryType)) + '</b><div class="ledger-row-actions">' +
+              '<button type="button" data-ledger-edit-id="' + escapeHtml(item.id) + '">\uC218\uC815</button>' +
+              '<button type="button" class="danger-button" data-ledger-delete-id="' + escapeHtml(item.id) + '">\uC0AD\uC81C</button>' +
+              '</div></div>'
           }).join('') +
           '</section>'
       }).join('')
+    })
+  }
+
+  function setLedgerDateValue(form, value) {
+    var date = parseApiDate(value) || todayText()
+    Array.from(form.querySelectorAll('.date-picker-field, label')).forEach(function (field) {
+      if (getCleanText(field).indexOf('\uAC70\uB798\uC77C') < 0) return
+      var triggerText = field.querySelector('.date-picker-trigger span')
+      if (triggerText) triggerText.textContent = date.replace(/-/g, '.')
+      field.querySelectorAll('input').forEach(function (input) {
+        setInputValue(input, input.type === 'date' ? date : date.replace(/-/g, '.'))
+      })
+    })
+  }
+
+  function findLedgerForm() {
+    return Array.from(document.querySelectorAll('.ledger-form, .entry-panel, form')).find(function (form) {
+      var text = getCleanText(form)
+      return text.indexOf('\uAC70\uB798\uC77C') >= 0 && text.indexOf('\uAE08\uC561') >= 0
+    })
+  }
+
+  function fillLedgerFormForEdit(item) {
+    var form = findLedgerForm()
+    if (!form || !item) return false
+    form.dataset.apiLedgerEditId = String(item.id || '')
+    setInputValueByLabel(form, '\uB0B4\uC5ED', item.title || '')
+      || setInputValueByLabel(form, '\uC81C\uBAA9', item.title || '')
+      || setInputValueByLabel(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', item.title || '')
+      || setScheduleTextInputAt(form, 0, item.title || '')
+    setInputValueByLabel(form, '\uAE08\uC561', Number(item.amount || 0).toLocaleString('ko-KR'))
+    setInputValueByLabel(form, '\uBA54\uBAA8', item.memo || '')
+    setLedgerDateValue(form, item.transactionDate)
+    setCustomSelectValueByLabel(form, '\uAD6C\uBD84', item.entryType === 'income' ? '\uC218\uC785' : '\uC9C0\uCD9C')
+    setCustomSelectValueByLabel(form, '\uCE74\uD14C\uACE0\uB9AC', item.category || '')
+    setCustomSelectValueByLabel(form, '\uACB0\uC81C\uC218\uB2E8', item.paymentMethod || '')
+    setCustomSelectValueByLabel(form, '\uC0AC\uC6A9\uC790', item.memberName || '')
+    setCustomSelectValueByLabel(form, '\uAC00\uC871', item.memberName || '')
+    var submit = form.querySelector('button[type="submit"], .submit-action')
+    if (submit) {
+      submit.textContent = '\uC800\uC7A5'
+      submit.dataset.ledgerEditSubmit = 'true'
+      submit.onclick = function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+        submitLedgerEdit(form)
+        return false
+      }
+    }
+    var target = form.querySelector('input, textarea, .custom-select-trigger, .date-picker-trigger')
+    if (target) target.focus()
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return true
+  }
+
+  function ledgerPayloadFromForm(form) {
+    return {
+      title: getInputValueByLabel(form, '\uB0B4\uC5ED') || getInputValueByLabel(form, '\uC81C\uBAA9') || getInputValueByLabel(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9') || firstInputValue(form),
+      entryType: normalizeLedgerType(getCustomSelectValue('\uAD6C\uBD84')),
+      category: getCustomSelectValue('\uCE74\uD14C\uACE0\uB9AC') || null,
+      paymentMethod: getCustomSelectValue('\uACB0\uC81C\uC218\uB2E8') || null,
+      memberName: getCustomSelectValue('\uC0AC\uC6A9\uC790') || getCustomSelectValue('\uAC00\uC871') || null,
+      amount: parseAmountValue(getInputValueByLabel(form, '\uAE08\uC561') || getFieldValue(form, '[data-field="ledger-amount"]') || getFieldValue(form, 'input[inputmode="numeric"]')),
+      transactionDate: getDatePickerValue(form, '\uAC70\uB798\uC77C'),
+      memo: getInputValueByLabel(form, '\uBA54\uBAA8') || ''
+    }
+  }
+
+  function refreshLedgerAfterMutation() {
+    var daily = document.querySelector('.daily-ledger')
+    if (daily) delete daily.dataset.apiRangeKey
+    var summary = document.querySelector('.ledger-summary')
+    if (summary) delete summary.dataset.apiRangeKey
+    renderLedgerPageFromApi(true)
+    renderHomeMetricsFromApi(true)
+    renderHomeLedgerFromApi(true)
+  }
+
+  function submitLedgerEdit(form) {
+    var entryId = form && form.dataset.apiLedgerEditId
+    if (!entryId || form.dataset.ledgerEditSubmitting === 'true') return
+    var payload = ledgerPayloadFromForm(form)
+    if (!payload.title || !payload.amount) {
+      showPatchToast('\uB0B4\uC5ED\uACFC \uAE08\uC561\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+      return
+    }
+    showPatchConfirm('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uC218\uC815\uD560\uAE4C\uC694?', function () {
+      form.dataset.ledgerEditSubmitting = 'true'
+      getCurrentFamilyId().then(function (familyId) {
+        return apiRequest('/ledger-entries/' + encodeURIComponent(entryId) + '?familyId=' + encodeURIComponent(familyId), {
+          method: 'PUT',
+          body: JSON.stringify(payload)
+        })
+      }).then(function () {
+        delete form.dataset.apiLedgerEditId
+        showPatchToast('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.')
+        refreshLedgerAfterMutation()
+      }).catch(function (error) {
+        showPatchToast(apiActionErrorMessage(error, '\uAC00\uACC4\uBD80 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+      }).finally(function () {
+        delete form.dataset.ledgerEditSubmitting
+      })
+    })
+  }
+
+  function deleteLedgerEntry(entryId) {
+    if (!entryId) return
+    showPatchConfirm('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
+      apiRequest('/ledger-entries/' + encodeURIComponent(entryId), { method: 'DELETE' }).then(function () {
+        showPatchToast('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
+        refreshLedgerAfterMutation()
+      }).catch(function (error) {
+        showPatchToast(apiActionErrorMessage(error, '\uAC00\uACC4\uBD80 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+      })
     })
   }
 
@@ -7697,7 +7818,6 @@
       back.addEventListener('click', function () {
         detail.remove()
         grid.hidden = false
-        renderBabyApiCards(true)
       })
     }
     ensureBabyApiRecordForm()
@@ -8624,7 +8744,41 @@
 
   document.addEventListener('submit', function (event) {
     var ledgerForm = event.target && event.target.closest && event.target.closest('.ledger-form')
-    if (ledgerForm) syncLedgerForm(ledgerForm)
+    if (!ledgerForm) return
+    if (ledgerForm.dataset.apiLedgerEditId) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      submitLedgerEdit(ledgerForm)
+      return
+    }
+    syncLedgerForm(ledgerForm)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var editButton = event.target && event.target.closest && event.target.closest('[data-ledger-edit-id]')
+    var deleteButton = event.target && event.target.closest && event.target.closest('[data-ledger-delete-id]')
+    if (!editButton && !deleteButton) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    if (editButton) {
+      var item = window.__familyLedgerItemsById && window.__familyLedgerItemsById[String(editButton.dataset.ledgerEditId)]
+      if (!fillLedgerFormForEdit(item)) showPatchToast('\uC218\uC815\uD560 \uB300\uC0C1\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
+      return
+    }
+    deleteLedgerEntry(deleteButton.dataset.ledgerDeleteId)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var button = event.target && event.target.closest && event.target.closest('.ledger-form button[type="submit"], .ledger-form .submit-action')
+    if (!button) return
+    var form = button.closest('.ledger-form')
+    if (!form || !form.dataset.apiLedgerEditId) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitLedgerEdit(form)
   }, true)
 
   document.addEventListener('submit', function (event) {

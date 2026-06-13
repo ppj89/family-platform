@@ -2354,6 +2354,70 @@ body.api-loading-blocked::before {
   font-weight: 800;
 }
 
+.api-ledger-day > header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 36px !important;
+  padding: 4px 0 10px !important;
+}
+
+.api-ledger-day > header strong {
+  flex: 0 0 auto !important;
+}
+
+.api-ledger-day > header span {
+  margin-left: auto !important;
+  text-align: right !important;
+}
+
+.api-ledger-row {
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+}
+
+.ledger-row-actions {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-left: 8px !important;
+}
+
+.ledger-row-actions button {
+  min-width: 52px !important;
+  height: 34px !important;
+  border: 1px solid #d6e6ff !important;
+  border-radius: 12px !important;
+  background: #edf4ff !important;
+  color: #1b64da !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+}
+
+.ledger-row-actions .danger-button {
+  border-color: #ffd8df !important;
+  background: #fff0f3 !important;
+  color: #e5485d !important;
+}
+
+@media (max-width: 640px) {
+  .api-ledger-day > header {
+    align-items: flex-start !important;
+    gap: 16px !important;
+  }
+
+  .api-ledger-row {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .api-ledger-row .ledger-row-actions {
+    grid-column: 1 / -1 !important;
+    justify-content: flex-end !important;
+    margin-left: 0 !important;
+    margin-top: 8px !important;
+  }
+}
+
 .empty-message {
   margin: 0;
   border-radius: 14px;
