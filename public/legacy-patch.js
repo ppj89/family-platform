@@ -3330,6 +3330,11 @@
     var pageTitle = getCleanText(title)
     if (pageTitle === '\uC77C\uAE30') caption.textContent = '\uC77C\uAE30'
     if (pageTitle === '\uB9DB\uC9D1') caption.textContent = '\uB9DB\uC9D1'
+    document.querySelectorAll('.panel h2').forEach(function (heading) {
+      var text = getCleanText(heading)
+      if (text === '\uAC00\uC871 \uC77C\uAE30') heading.textContent = '\uC77C\uAE30'
+      if (text === '\uAC00\uC871 \uB9DB\uC9D1') heading.textContent = '\uB9DB\uC9D1'
+    })
   }
 
   function cleanupPatchRootsForCurrentMenu() {
