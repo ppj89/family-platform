@@ -6678,6 +6678,9 @@
     items: [],
     loadedAt: 0
   }
+  var homeMetricsRequestSeq = 0
+  var homeLedgerRequestSeq = 0
+  var ledgerPageRequestSeq = 0
 
   function rangeForCalendarMode() {
     var mode = getActiveCalendarMode ? getActiveCalendarMode() : 'month'
@@ -6982,27 +6985,27 @@
   function renderHomeMetricsFromApi(force) {
     var metrics = Array.from(document.querySelectorAll('.metric-grid .metric'))
     if (!metrics.length || (!force && document.documentElement.dataset.homeMetricsApiBacked === 'true')) return
-    resetHomeMetrics(metrics)
     if (!getStoredAuthToken()) {
       resetHomeMetrics(metrics)
       return
     }
+    var requestSeq = ++homeMetricsRequestSeq
+    var firstLoad = document.documentElement.dataset.homeMetricsApiBacked !== 'true'
     document.documentElement.dataset.homeMetricsApiBacked = 'true'
     var range = monthRangeFor(todayText())
-    fetchLedgerSummary(range.start, range.end).then(function (summary) {
-      setMetricValue(metrics[0], Number(summary.expense || 0).toLocaleString('ko-KR') + '\uC6D0')
-    })
-    fetchTrips().then(calculateTripTotal).then(function (total) {
-      setMetricValue(metrics[1], Number(total || 0).toLocaleString('ko-KR') + '\uC6D0')
-    })
-    fetchBabies().then(function (babies) {
-      setMetricValue(metrics[2], '0\uAC1C')
-      return countBabyRecords(babies)
-    }).then(function (count) {
-      setMetricValue(metrics[2], Number(count || 0).toLocaleString('ko-KR') + '\uAC1C')
-    })
-    fetchFamilyMembers().then(function (members) {
-      setMetricValue(metrics[3], Number(members.length || 0).toLocaleString('ko-KR') + '\uBA85')
+    Promise.all([
+      fetchLedgerSummary(range.start, range.end),
+      fetchTrips().then(calculateTripTotal),
+      fetchBabies().then(countBabyRecords),
+      fetchFamilyMembers()
+    ]).then(function (results) {
+      if (requestSeq !== homeMetricsRequestSeq) return
+      setMetricValue(metrics[0], Number((results[0] && results[0].expense) || 0).toLocaleString('ko-KR') + '\uC6D0')
+      setMetricValue(metrics[1], Number(results[1] || 0).toLocaleString('ko-KR') + '\uC6D0')
+      setMetricValue(metrics[2], Number(results[2] || 0).toLocaleString('ko-KR') + '\uAC1C')
+      setMetricValue(metrics[3], Number((results[3] && results[3].length) || 0).toLocaleString('ko-KR') + '\uBA85')
+    }).catch(function () {
+      if (firstLoad && requestSeq === homeMetricsRequestSeq) resetHomeMetrics(metrics)
     })
   }
 
@@ -7022,10 +7025,14 @@
     if (table.dataset.apiLoading === 'true') return
     if (!force && table.dataset.apiBacked === 'true') return
     table.dataset.apiLoading = 'true'
-    table.innerHTML = emptyRow('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.', '')
+    var requestSeq = ++homeLedgerRequestSeq
+    if (table.dataset.apiBacked !== 'true') {
+      table.innerHTML = emptyRow('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.', '')
+    }
 
     var range = monthRangeFor(todayText())
     fetchLedgerEntries(range.start, range.end).then(function (items) {
+      if (requestSeq !== homeLedgerRequestSeq) return
       table.dataset.apiLoading = 'false'
       table.dataset.apiBacked = 'true'
       if (!items.length) {
@@ -7039,6 +7046,11 @@
           '</span></div><span>' + escapeHtml(item.paymentMethod || '-') + '</span><b class="' + escapeHtml(item.entryType || 'expense') + '">' +
           escapeHtml(moneyText(item.amount, item.entryType)) + '</b></div>'
       }).join('')
+    }).catch(function () {
+      if (requestSeq !== homeLedgerRequestSeq) return
+      table.dataset.apiLoading = 'false'
+      table.dataset.apiBacked = 'true'
+      table.innerHTML = emptyRow('\uCD5C\uADFC \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
     })
   }
 
@@ -7097,20 +7109,37 @@
     if (!summary && !daily) return
     var range = getLedgerPageRange()
     var key = range.start + ':' + range.end
+    if (daily && daily.dataset.apiLoading === 'true' && daily.dataset.apiPendingKey === key) return
     if (!force && daily && daily.dataset.apiRangeKey === key && (!summary || summary.dataset.apiRangeKey === key)) return
-    if (daily) daily.dataset.apiRangeKey = key
-    if (summary) summary.dataset.apiRangeKey = key
+    var requestSeq = ++ledgerPageRequestSeq
+    if (daily) {
+      daily.dataset.apiLoading = 'true'
+      daily.dataset.apiPendingKey = key
+    }
+    if (summary) summary.dataset.apiPendingKey = key
 
     fetchLedgerSummary(range.start, range.end).then(function (values) {
+      if (requestSeq !== ledgerPageRequestSeq) return
+      if (!pageHeadingIs('\uAC00\uACC4\uBD80')) return
+      if (summary && summary.dataset.apiPendingKey !== key) return
       var cards = summary ? Array.from(summary.querySelectorAll('.metric strong')) : []
       setMetricValue(cards[0] && cards[0].closest('.metric'), Number(values.expense || 0).toLocaleString('ko-KR') + '\uC6D0')
       setMetricValue(cards[1] && cards[1].closest('.metric'), Number(values.income || 0).toLocaleString('ko-KR') + '\uC6D0')
       setMetricValue(cards[2] && cards[2].closest('.metric'), Number(values.total || 0).toLocaleString('ko-KR') + '\uC6D0')
+      if (summary) summary.dataset.apiRangeKey = key
     })
 
     if (!daily) return
-    daily.innerHTML = emptyRow('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.', '')
+    if (daily.dataset.apiBacked !== 'true') {
+      daily.innerHTML = emptyRow('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.', '')
+    }
     fetchLedgerEntries(range.start, range.end).then(function (items) {
+      if (requestSeq !== ledgerPageRequestSeq) return
+      if (!pageHeadingIs('\uAC00\uACC4\uBD80')) return
+      if (daily.dataset.apiPendingKey !== key) return
+      daily.dataset.apiLoading = 'false'
+      daily.dataset.apiBacked = 'true'
+      daily.dataset.apiRangeKey = key
       if (!items.length) {
         daily.innerHTML = emptyRow('\uD574\uB2F9 \uAE30\uAC04\uC758 \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
         return
@@ -7145,6 +7174,12 @@
           }).join('') +
           '</section>'
       }).join('')
+    }).catch(function () {
+      if (requestSeq !== ledgerPageRequestSeq) return
+      daily.dataset.apiLoading = 'false'
+      daily.dataset.apiBacked = 'true'
+      daily.dataset.apiRangeKey = key
+      daily.innerHTML = emptyRow('\uD574\uB2F9 \uAE30\uAC04\uC758 \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
     })
   }
 
