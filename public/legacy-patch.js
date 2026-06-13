@@ -4236,6 +4236,11 @@
   }
 
   function refreshLabelCleanup() {
+    document.querySelectorAll('.topbar span, .eyebrow, .panel-header h2').forEach(function (item) {
+      var text = getCleanText(item)
+      if (text === '\uC0AC\uC9C4, \uB0A0\uC528, \uAC00\uC871 \uC77C\uAE30') item.textContent = '\uC0AC\uC9C4, \uB0A0\uC528, \uC77C\uAE30'
+      if (text === '\uAC00\uC871 \uC77C\uAE30') item.textContent = '\uC77C\uAE30'
+    })
     document.querySelectorAll('.panel-header').forEach(function (header) {
       var title = getCleanText(header.querySelector('h2'))
       var actionButton = header.querySelector(':scope > button')
@@ -4276,7 +4281,7 @@
         }
       }
 
-      if (title === '\uAC00\uC871 \uC77C\uAE30') {
+      if (title === '\uC77C\uAE30' || title === '\uAC00\uC871 \uC77C\uAE30') {
         var detailButton = actionButton && getCleanText(actionButton) === '\uC0C1\uC138' ? actionButton : null
         if (detailButton) hidePatchElement(detailButton)
 
@@ -7785,7 +7790,7 @@
     if (!anchor || !anchor.parentElement) return
     var panel = document.createElement('section')
     panel.className = 'panel server-diary-list server-domain-panel'
-    panel.innerHTML = '<header class="panel-header"><h2>DB 가족일기</h2><button type="button">서버 조회</button></header><div class="server-data-list"></div>'
+    panel.innerHTML = '<header class="panel-header"><h2>DB 일기</h2><button type="button">서버 조회</button></header><div class="server-data-list"></div>'
     anchor.parentElement.insertBefore(panel, anchor.nextSibling)
   }
 

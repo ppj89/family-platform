@@ -14,7 +14,7 @@ const menus: Array<{ key: MenuKey; label: string; caption: string; icon: typeof 
   { key: 'ledger', label: '가계부', caption: '수입, 지출, 카드 내역', icon: WalletCards },
   { key: 'travel', label: '여행', caption: '장소, 동선, 비용 기록', icon: MapPinned },
   { key: 'baby', label: '육아', caption: '수유, 배변, 성장 기록', icon: Baby },
-  { key: 'diary', label: '일기', caption: '사진, 날씨, 가족 일기', icon: FileText },
+  { key: 'diary', label: '일기', caption: '사진, 날씨, 일기', icon: FileText },
   { key: 'family', label: '가족그룹', caption: '공유와 권한 관리', icon: Users },
   { key: 'restaurant', label: '맛집', caption: '가족 맛집 리스트', icon: MapPinned },
   { key: 'community', label: '커뮤니티', caption: '공지, 자유게시판, 문의사항', icon: MessageSquareText },
