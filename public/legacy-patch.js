@@ -3954,6 +3954,9 @@
 
   var observer = new MutationObserver(handlePatchMutations)
   observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['placeholder'] })
+  window.setInterval(function () {
+    removeFeaturePlaceholders()
+  }, 250)
   window.setInterval(safeRefreshCalendarPatch, 1000)
   safeRefreshCalendarPatch()
 
