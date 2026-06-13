@@ -216,7 +216,7 @@ export default function FamilyCalendar() {
           </div>
           <label>
             <span>일정명</span>
-            <input data-field="schedule-title" onChange={(event) => updateDraft('title', event.target.value)} placeholder="예: 가족 식사, 생일, 병원 예약" value={draft.title} />
+            <input data-field="schedule-title" onChange={(event) => updateDraft('title', event.target.value)} value={draft.title} />
           </label>
           <div className="fc-form-grid">
             <label>
@@ -258,7 +258,7 @@ export default function FamilyCalendar() {
           </div>
           <label>
             <span>메모</span>
-            <textarea onChange={(event) => updateDraft('note', event.target.value)} placeholder="장소, 준비물, 가족에게 공유할 내용을 적어주세요." value={draft.note} />
+            <textarea onChange={(event) => updateDraft('note', event.target.value)} value={draft.note} />
           </label>
           <button className="fc-submit" type="submit">
             <Plus size={17} />

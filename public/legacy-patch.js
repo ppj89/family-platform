@@ -3584,7 +3584,7 @@
     var inviteForm = canManage ? [
       '<form class="code-form invite-form family-invite-form">',
       '<div class="form-row">',
-      '<label><span>초대할 사용자</span><input data-invite-user placeholder="이메일 또는 닉네임" /></label>',
+      '<label><span>초대할 사용자</span><input data-invite-user /></label>',
       '<label><span>역할</span><select data-invite-role><option value="MEMBER">가족구성원</option><option value="FAMILY_ADMIN">가족관리자</option></select></label>',
       '</div>',
       '<div class="permission-chips">',
@@ -3779,7 +3779,7 @@
       '<header class="panel-header"><h2>가족그룹 생성</h2></header>',
       renderFamilyInvitationList(invitations || []),
       '<form class="code-form family-create-form">',
-      '<label><span>가족명</span><input data-family-name maxlength="40" placeholder="예: 우리 가족" /></label>',
+      '<label><span>가족명</span><input data-family-name maxlength="40" /></label>',
       '<button class="submit-action" type="submit">가족그룹 생성</button>',
       '</form>',
       '<div class="api-empty-row"><strong>연결된 가족그룹이 없습니다.</strong></div>',
@@ -3932,8 +3932,23 @@
     }, 120)
   }
 
-  var observer = new MutationObserver(schedulePatchRefresh)
-  observer.observe(document.documentElement, { childList: true, subtree: true })
+  function handlePatchMutations(mutations) {
+    mutations.forEach(function (mutation) {
+      if (mutation.type === 'attributes') {
+        removeFeaturePlaceholders(mutation.target)
+        return
+      }
+      Array.from(mutation.addedNodes || []).forEach(function (node) {
+        if (!node || node.nodeType !== 1) return
+        removeFeaturePlaceholders(node)
+        clearSampleFieldValues(node)
+      })
+    })
+    schedulePatchRefresh()
+  }
+
+  var observer = new MutationObserver(handlePatchMutations)
+  observer.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ['placeholder'] })
   window.setInterval(safeRefreshCalendarPatch, 1000)
   safeRefreshCalendarPatch()
 
@@ -5386,8 +5401,8 @@
     return [
       '<form class="community-composer" data-community-compose="' + tab + '">',
       '<div class="community-composer-title"><strong>' + label + '</strong><span>' + (adminOnly ? '\uAD00\uB9AC\uC790 \uAD8C\uD55C' : '\uC804\uCCB4 \uACF5\uAC1C') + '</span></div>',
-      '<input name="title" placeholder="\uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694" />',
-      '<textarea name="body" rows="3" placeholder="\uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694"></textarea>',
+      '<input name="title" />',
+      '<textarea name="body" rows="3"></textarea>',
       '<button type="submit">\uB4F1\uB85D</button>',
       '</form>'
     ].join('')
@@ -5421,8 +5436,8 @@
     return [
       '<form class="community-composer community-free-editor" data-community-compose="free" data-edit-post="' + (editing ? escapeHtml(post.id) : '') + '">',
       '<div class="community-composer-title"><strong>' + (editing ? '\uAE00 \uC218\uC815' : '\uC0C8 \uAE00 \uC791\uC131') + '</strong><span>\uC0AC\uC9C4 \uCCA8\uBD80 \uAC00\uB2A5</span></div>',
-      '<input name="title" value="' + escapeHtml(post ? post.title : '') + '" placeholder="\uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694" />',
-      '<textarea name="body" rows="5" placeholder="\uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694">' + escapeHtml(post ? post.body : '') + '</textarea>',
+      '<input name="title" value="' + escapeHtml(post ? post.title : '') + '" />',
+      '<textarea name="body" rows="5">' + escapeHtml(post ? post.body : '') + '</textarea>',
       '<label class="community-file-field"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCCA8\uBD80</span><input name="files" type="file" accept="image/*,video/*" multiple /><small>' + ((post && post.files && post.files.length) ? post.files.map(function (file) { return escapeHtml(file.name) }).join(', ') : mediaLimitText()) + '</small></label>',
       '<div class="community-editor-actions"><button type="button" class="cancel-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
       '</form>'
@@ -5483,7 +5498,7 @@
         return '<div class="community-comment" data-comment-id="' + escapeHtml(comment.id || '') + '"><div><strong>' + escapeHtml(comment.author) + '</strong><small>' + escapeHtml(comment.time || '') + '</small></div><span>' + escapeHtml(comment.text) + '</span><div class="community-comment-actions"><button type="button" data-edit-comment="' + escapeHtml(comment.id || '') + '">\uC218\uC815</button><button type="button" data-delete-comment="' + escapeHtml(comment.id || '') + '">\uC0AD\uC81C</button></div></div>'
       }).join(''),
       '<form class="community-comment-form" data-comment-post="' + escapeHtml(post.id) + '">',
-      '<input name="comment" placeholder="\uB313\uAE00\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694" />',
+      '<input name="comment" />',
       '<button type="submit">\uB4F1\uB85D</button>',
       '</form>',
       '</div>'
@@ -5571,8 +5586,8 @@
     return [
       '<form class="community-composer community-free-editor" data-community-compose="' + tab + '" data-edit-post="' + (editing ? escapeHtml(post.id) : '') + '">',
       '<div class="community-composer-title"><strong>' + (editing ? '\uAE00 \uC218\uC815' : '\uC0C8 \uAE00 \uC791\uC131') + '</strong><span>\uC0AC\uC9C4 \uCCA8\uBD80 \uAC00\uB2A5</span></div>',
-      '<input name="title" value="' + escapeHtml(post ? post.title : '') + '" placeholder="\uC81C\uBAA9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694" />',
-      '<textarea name="body" rows="5" placeholder="\uB0B4\uC6A9\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694">' + escapeHtml(post ? post.body : '') + '</textarea>',
+      '<input name="title" value="' + escapeHtml(post ? post.title : '') + '" />',
+      '<textarea name="body" rows="5">' + escapeHtml(post ? post.body : '') + '</textarea>',
       '<label class="community-file-field"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCCA8\uBD80</span><b>\uD30C\uC77C \uC120\uD0DD</b><input name="files" type="file" accept="image/*,video/*" multiple /><small>' + ((post && post.files && post.files.length) ? post.files.map(function (file) { return escapeHtml(file.name) }).join(', ') : mediaLimitText()) + '</small></label>',
       '<div class="community-editor-actions"><button type="button" class="cancel-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
       '</form>'
@@ -6208,11 +6223,11 @@
       '<label><span>\uAE30\uB85D\uC885\uB958</span><select name="recordType" required><option value="\uC218\uC720">\uC218\uC720</option><option value="\uB300\uBCC0">\uB300\uBCC0</option><option value="\uC18C\uBCC0">\uC18C\uBCC0</option><option value="\uC218\uBA74">\uC218\uBA74</option><option value="\uC131\uC7A5">\uC131\uC7A5</option><option value="\uBCD1\uC6D0">\uBCD1\uC6D0</option><option value="\uBA54\uBAA8">\uBA54\uBAA8</option></select></label>',
       '<label><span>\uB0A0\uC9DC</span><input name="recordDate" type="date" required value="' + todayText() + '" /></label>',
       '<label><span>\uC2DC\uAC04</span><input name="recordTime" type="time" value="' + String(new Date().getHours()).padStart(2, '0') + ':' + String(new Date().getMinutes()).padStart(2, '0') + '" /></label>',
-      '<label><span>\uC218\uC720\uB7C9(ml)</span><input name="amountMl" type="text" inputmode="numeric" placeholder="예: 120" /></label>',
-      '<label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" placeholder="예: 89.5" /></label>',
-      '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" placeholder="예: 12.8" /></label>',
+      '<label><span>\uC218\uC720\uB7C9(ml)</span><input name="amountMl" type="text" inputmode="numeric" /></label>',
+      '<label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" /></label>',
+      '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" /></label>',
       '</div>',
-      '<label class="baby-api-memo"><span>\uBA54\uBAA8</span><textarea name="memo" rows="3" placeholder="\uAE30\uB85D\uD560 \uB0B4\uC6A9\uC744 \uC801\uC5B4\uC8FC\uC138\uC694."></textarea></label>',
+      '<label class="baby-api-memo"><span>\uBA54\uBAA8</span><textarea name="memo" rows="3"></textarea></label>',
       '<label class="community-file-field baby-api-file-field"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCCA8\uBD80</span><b>\uD30C\uC77C \uC120\uD0DD</b><input name="files" type="file" accept="image/*,video/*" multiple /><small>' + mediaLimitText() + '</small></label>',
       '<div class="baby-api-record-actions"><button type="button" class="cancel-button" data-baby-api-clear>\uCD08\uAE30\uD654</button><button type="submit" class="save-button">\uC800\uC7A5</button></div>',
       '</form>'
@@ -8884,6 +8899,17 @@
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     submitExistingDiaryPanel(panel, button)
+  }, true)
+
+  document.addEventListener('submit', function (event) {
+    var form = event.target && event.target.closest && event.target.closest('form')
+    if (!form) return
+    var panel = form.closest('aside, section, article, .panel, .entry-panel') || form
+    if (!panel || getCleanText(panel.querySelector('h2')) !== '\uC77C\uAE30 \uCD94\uAC00') return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitExistingDiaryPanel(panel, form.querySelector('button[type="submit"]'))
   }, true)
 
   document.addEventListener('submit', function (event) {
