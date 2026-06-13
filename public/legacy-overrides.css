@@ -4393,10 +4393,6 @@ body.api-loading-blocked::before {
   gap: 6px;
 }
 
-.restaurant-grid:not([data-api-backed="true"]) .restaurant-card {
-  display: none !important;
-}
-
 .restaurant-card {
   overflow: hidden;
   border-radius: 8px;

@@ -3310,7 +3310,7 @@
     var title = document.querySelector('.topbar h1')
     if (title && getCleanText(title) !== '\uB9DB\uC9D1') title.textContent = '\uB9DB\uC9D1'
     var caption = document.querySelector('.topbar h1') && document.querySelector('.topbar h1').previousElementSibling
-    if (caption && caption.tagName === 'SPAN') caption.textContent = '\uAC00\uC871 \uB9DB\uC9D1'
+    if (caption && caption.tagName === 'SPAN') caption.textContent = '\uB9DB\uC9D1'
     setNavActive('\uB9DB\uC9D1')
     var restaurantForm = document.querySelector('.restaurant-form')
     var formPanel = restaurantForm && restaurantForm.closest('.panel')
@@ -3319,6 +3319,17 @@
         if (getCleanText(item) === '\uACF5\uC720') item.remove()
       })
     }
+  }
+
+  function normalizeMenuCaptions() {
+    var title = document.querySelector('.topbar h1')
+    var caption = title && title.previousElementSibling && title.previousElementSibling.tagName === 'SPAN'
+      ? title.previousElementSibling
+      : null
+    if (!caption) return
+    var pageTitle = getCleanText(title)
+    if (pageTitle === '\uC77C\uAE30') caption.textContent = '\uC77C\uAE30'
+    if (pageTitle === '\uB9DB\uC9D1') caption.textContent = '\uB9DB\uC9D1'
   }
 
   function cleanupPatchRootsForCurrentMenu() {
@@ -3858,6 +3869,7 @@
     normalizeDiaryEntryForm()
     normalizeBabyEntryForms()
     normalizeTimeInputs()
+    removeFeaturePlaceholders()
     wireScheduleDetailRows()
     hideSelectedDayPanels()
     refreshScheduleListCount()
@@ -4467,6 +4479,8 @@
       }).then(function () {
         closeDialog()
         showPatchToast('\uC544\uC774\uB97C \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
+        renderBabyApiCards(true)
+        refreshServerDataViews(true)
         goMenu('\uC721\uC544')
       }).catch(function (error) {
         save.disabled = false
@@ -7156,6 +7170,7 @@
     if (!pageHeadingIs('\uB9DB\uC9D1')) return
     clearCustomPatchPageNow()
     removeHardcodedDemoData()
+    removeFeaturePlaceholders()
     var hero = document.querySelector('.restaurant-hero')
     if (hero) hero.remove()
     var grid = document.querySelector('.restaurant-grid')
@@ -7165,9 +7180,6 @@
     window.setTimeout(normalizeRestaurantVisitDate, 200)
     window.setTimeout(normalizeRestaurantVisitDate, 800)
     syncRestaurantMenuState()
-    if (!grid || grid.dataset.apiBacked === 'true') return
-    grid.dataset.apiBacked = 'true'
-    grid.innerHTML = emptyRow('\uB4F1\uB85D\uB41C \uB9DB\uC9D1\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
   }
 
   function normalizeRestaurantVisitDate() {
@@ -7244,6 +7256,14 @@
     })
   }
 
+  function removeFeaturePlaceholders(root) {
+    var scope = root || document
+    scope.querySelectorAll('input[placeholder], textarea[placeholder]').forEach(function (field) {
+      if (field.closest('.auth-card, .auth-recovery-dialog, .password-change-dialog')) return
+      field.removeAttribute('placeholder')
+    })
+  }
+
   function ensureRequiredMarkForInput(input) {
     if (!input) return
     var label = input.closest('label')
@@ -7265,6 +7285,7 @@
       removePlaceholdersIn(form, ['\uAC00\uB9F9\uC810', '\uB0B4\uC6A9', '\uAE08\uC561'])
       setDateFieldToToday(form, ['\uAC70\uB798\uC77C'])
     })
+    removeFeaturePlaceholders()
   }
 
   function normalizeTravelEntryForm() {
@@ -7283,6 +7304,7 @@
         if (getCleanText(node) === '\uC5EC\uD589' && !node.closest('label')) node.remove()
       })
     })
+    removeFeaturePlaceholders()
   }
 
   function ensureTravelHeaderActions() {
@@ -7338,6 +7360,7 @@
       removePlaceholdersIn(form, ['\uC81C\uBAA9', '\uCD5C\uC800 \uC628\uB3C4', '\uCD5C\uACE0 \uC628\uB3C4', '\uB0B4\uC6A9'])
       setDateFieldToToday(form, ['\uB0A0\uC9DC'])
     })
+    removeFeaturePlaceholders()
   }
 
   function normalizeBabyEntryForms() {
@@ -7348,6 +7371,7 @@
       removePlaceholdersIn(form, ['\uC544\uC774 \uC774\uB984', '\uC774\uB984', '\uC131\uBCC4', '\uBA54\uBAA8', '\uD0A4', '\uBAB8\uBB34\uAC8C'])
       setDateFieldToToday(form, ['\uC0DD\uC77C', '\uB0A0\uC9DC'])
     })
+    removeFeaturePlaceholders()
   }
 
   function renderDiaryPageFromApi(force) {
@@ -7940,12 +7964,14 @@
   function refreshServerDataViews(force) {
     removeDeveloperServerPanels()
     cleanupPatchRootsForCurrentMenu()
+    normalizeMenuCaptions()
     normalizeLedgerEntryForm()
     normalizeTravelEntryForm()
     ensureTravelHeaderActions()
     normalizeDiaryEntryForm()
     normalizeBabyEntryForms()
     normalizeTimeInputs()
+    removeFeaturePlaceholders()
     removeHardcodedDemoData()
     renderHomeMetricsFromApi(force)
     renderLedgerPageFromApi(force)
@@ -7953,6 +7979,7 @@
     if (!getStoredAuthToken()) return
     renderHomeSchedulesFromApi(force)
     renderHomeLedgerFromApi(force)
+    removeFeaturePlaceholders()
     window.setTimeout(removeHardcodedDemoData, 50)
   }
 
