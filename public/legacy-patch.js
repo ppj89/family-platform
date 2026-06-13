@@ -3292,6 +3292,35 @@
     return nav && getCleanText(nav) === '\uB9DB\uC9D1'
   }
 
+  function isLedgerNavItem(nav) {
+    return nav && getCleanText(nav) === '\uAC00\uACC4\uBD80'
+  }
+
+  function setNavActive(label) {
+    document.querySelectorAll('.nav-item.active').forEach(function (item) {
+      item.classList.remove('active')
+    })
+    var nav = findNavButton(label) || findNavButtonContains(label)
+    if (nav) nav.classList.add('active')
+  }
+
+  function syncRestaurantMenuState() {
+    if (!document.querySelector('.restaurant-grid, .restaurant-form')) return
+    delete document.documentElement.dataset.patchPage
+    var title = document.querySelector('.topbar h1')
+    if (title && getCleanText(title) !== '\uB9DB\uC9D1') title.textContent = '\uB9DB\uC9D1'
+    var caption = document.querySelector('.topbar h1') && document.querySelector('.topbar h1').previousElementSibling
+    if (caption && caption.tagName === 'SPAN') caption.textContent = '\uAC00\uC871 \uB9DB\uC9D1'
+    setNavActive('\uB9DB\uC9D1')
+    var restaurantForm = document.querySelector('.restaurant-form')
+    var formPanel = restaurantForm && restaurantForm.closest('.panel')
+    if (formPanel) {
+      Array.from(formPanel.querySelectorAll('.panel-header button, .panel-header .passive-header-chip')).forEach(function (item) {
+        if (getCleanText(item) === '\uACF5\uC720') item.remove()
+      })
+    }
+  }
+
   function cleanupPatchRootsForCurrentMenu() {
     var title = getCleanText(document.querySelector('.topbar h1, h1'))
     if (title !== '\uAC00\uC871\uADF8\uB8F9') {
@@ -4069,6 +4098,9 @@
   function closeOpenSelects(target) {
     if (target && target.closest && target.closest('.custom-select')) {
       var current = target.closest('.custom-select')
+      document.querySelectorAll('.date-picker-field .calendar-popover').forEach(function (popover) {
+        popover.remove()
+      })
       document.querySelectorAll('.custom-select.open').forEach(function (select) {
         if (select !== current) select.classList.remove('open')
       })
@@ -4857,11 +4889,28 @@
     window.setTimeout(function () {
       cleanupPatchRootsForCurrentMenu()
       renderRestaurantPageFromApi()
+      syncRestaurantMenuState()
     }, 0)
     window.setTimeout(function () {
       cleanupPatchRootsForCurrentMenu()
       renderRestaurantPageFromApi()
+      syncRestaurantMenuState()
     }, 350)
+    window.setTimeout(function () {
+      cleanupPatchRootsForCurrentMenu()
+      renderRestaurantPageFromApi()
+      syncRestaurantMenuState()
+    }, 900)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var nav = event.target && event.target.closest && event.target.closest('.nav-item')
+    if (!isLedgerNavItem(nav)) return
+    ;[0, 350, 900, 1600].forEach(function (delay) {
+      window.setTimeout(function () {
+        renderLedgerPageFromApi(true)
+      }, delay)
+    })
   }, true)
 
   document.addEventListener('click', function (event) {
@@ -6971,6 +7020,7 @@
     normalizeRestaurantVisitDate()
     window.setTimeout(normalizeRestaurantVisitDate, 200)
     window.setTimeout(normalizeRestaurantVisitDate, 800)
+    syncRestaurantMenuState()
     if (!grid || grid.dataset.apiBacked === 'true') return
     grid.dataset.apiBacked = 'true'
     grid.innerHTML = emptyRow('\uB4F1\uB85D\uB41C \uB9DB\uC9D1\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
@@ -7757,9 +7807,6 @@
     renderHomeMetricsFromApi(force)
     renderLedgerPageFromApi(force)
     renderRestaurantPageFromApi()
-    renderDiaryPageFromApi(force)
-    renderTravelPageFromApi(force)
-    renderBabyApiCards(force)
     if (!getStoredAuthToken()) return
     renderHomeSchedulesFromApi(force)
     renderHomeLedgerFromApi(force)
