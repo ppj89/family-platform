@@ -3441,6 +3441,7 @@
       workspace.appendChild(root)
     }
     root.innerHTML = '<section class="panel wide family-group-panel"><div class="api-empty-row"><strong>가족 정보를 불러오는 중입니다.</strong></div></section>'
+    schedulePlaceholderSweep()
     loadFamilyGroupPage(root)
     resumePatchObserver()
   }
@@ -3611,6 +3612,7 @@
       '</div>',
       '</section>'
     ].join('')
+    schedulePlaceholderSweep(root)
     bindFamilyInviteForm(root, family, canManage)
     bindFamilyInvitationActions(root)
   }
@@ -3785,6 +3787,7 @@
       '<div class="api-empty-row"><strong>연결된 가족그룹이 없습니다.</strong></div>',
       '</section>'
     ].join('')
+    schedulePlaceholderSweep(root)
     bindFamilyInvitationActions(root)
     var form = root.querySelector('.family-create-form')
     var input = root.querySelector('[data-family-name]')
@@ -7343,6 +7346,14 @@
     })
   }
 
+  function schedulePlaceholderSweep(root) {
+    ;[0, 60, 180, 400, 800, 1400, 2400, 3600].forEach(function (delay) {
+      window.setTimeout(function () {
+        removeFeaturePlaceholders(root || document)
+      }, delay)
+    })
+  }
+
   function ensureRequiredMarkForInput(input) {
     if (!input) return
     var label = input.closest('label')
@@ -8065,6 +8076,7 @@
   document.addEventListener('click', function (event) {
     var nav = event.target && event.target.closest && event.target.closest('.nav-item')
     if (!nav) return
+    schedulePlaceholderSweep()
     window.setTimeout(function () {
       refreshServerDataViews(true)
     }, 700)
