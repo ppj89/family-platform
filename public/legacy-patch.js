@@ -3288,6 +3288,33 @@
     return nav && getCleanText(nav).indexOf('\uAC00\uC871\uADF8\uB8F9') >= 0
   }
 
+  function isRestaurantNavItem(nav) {
+    return nav && getCleanText(nav) === '\uB9DB\uC9D1'
+  }
+
+  function cleanupPatchRootsForCurrentMenu() {
+    var title = getCleanText(document.querySelector('.topbar h1, h1'))
+    if (title !== '\uAC00\uC871\uADF8\uB8F9') {
+      document.querySelectorAll('.patch-family-group-root').forEach(function (root) {
+        root.remove()
+      })
+    }
+    if (title !== '\uCEE4\uBBA4\uB2C8\uD2F0') {
+      document.querySelectorAll('.patch-community-root').forEach(function (root) {
+        root.remove()
+      })
+    }
+    if (title !== '\uAC00\uC871\uADF8\uB8F9' && title !== '\uCEE4\uBBA4\uB2C8\uD2F0') {
+      delete document.documentElement.dataset.patchPage
+      var content = document.querySelector('.content-grid')
+      if (content) {
+        content.classList.remove('community-grid')
+        content.classList.remove('community-source-hidden')
+        delete content.dataset.communityReady
+      }
+    }
+  }
+
   function clearFamilyGroupPage() {
     if (document.documentElement.dataset.patchPage !== 'family-group') return
     delete document.documentElement.dataset.patchPage
@@ -4821,6 +4848,20 @@
       clearCustomPatchPageNow()
       clearCustomPatchPageAfterReact(wasCommunity, wasFamilyGroup)
     }
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var nav = event.target && event.target.closest && event.target.closest('.nav-item')
+    if (!isRestaurantNavItem(nav)) return
+    clearCustomPatchPageNow()
+    window.setTimeout(function () {
+      cleanupPatchRootsForCurrentMenu()
+      renderRestaurantPageFromApi()
+    }, 0)
+    window.setTimeout(function () {
+      cleanupPatchRootsForCurrentMenu()
+      renderRestaurantPageFromApi()
+    }, 350)
   }, true)
 
   document.addEventListener('click', function (event) {
@@ -6808,7 +6849,18 @@
 
   function renderHomeLedgerFromApi(force) {
     var table = document.querySelector('.content-grid .panel.wide .ledger-table')
-    if (!table || table.dataset.apiLoading === 'true') return
+    if (!table) return
+    if (table.dataset.apiHomeLedgerInitialized !== 'true') {
+      table.dataset.apiHomeLedgerInitialized = 'true'
+      table.innerHTML = emptyRow('\uCD5C\uADFC \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
+    }
+    if (!getStoredAuthToken()) {
+      table.dataset.apiBacked = 'true'
+      table.dataset.apiLoading = 'false'
+      table.innerHTML = emptyRow('\uCD5C\uADFC \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
+      return
+    }
+    if (table.dataset.apiLoading === 'true') return
     if (!force && table.dataset.apiBacked === 'true') return
     table.dataset.apiLoading = 'true'
     table.innerHTML = emptyRow('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.', '')
@@ -7694,6 +7746,7 @@
 
   function refreshServerDataViews(force) {
     removeDeveloperServerPanels()
+    cleanupPatchRootsForCurrentMenu()
     normalizeLedgerEntryForm()
     normalizeTravelEntryForm()
     ensureTravelHeaderActions()
