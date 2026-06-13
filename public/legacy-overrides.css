@@ -2373,6 +2373,11 @@ body.api-loading-blocked::before {
 
 .api-ledger-row {
   grid-template-columns: minmax(0, 1fr) auto auto !important;
+  cursor: pointer !important;
+}
+
+.api-ledger-row:hover {
+  background: #eef6ff !important;
 }
 
 .ledger-row-actions {
@@ -2416,6 +2421,140 @@ body.api-loading-blocked::before {
     margin-left: 0 !important;
     margin-top: 8px !important;
   }
+}
+
+.patch-ledger-detail-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 2147482300 !important;
+  display: grid !important;
+  place-items: center !important;
+  padding: 20px !important;
+  background: rgba(25, 31, 40, 0.36) !important;
+  backdrop-filter: blur(3px) !important;
+}
+
+.patch-ledger-detail-dialog {
+  position: relative !important;
+  display: grid !important;
+  gap: 14px !important;
+  width: min(440px, 100%) !important;
+  border-radius: 24px !important;
+  padding: 24px !important;
+  background: #ffffff !important;
+  color: #191f28 !important;
+  box-shadow: 0 24px 70px rgba(25, 31, 40, 0.24) !important;
+}
+
+.patch-ledger-detail-dialog h2 {
+  margin: 0 !important;
+  padding-right: 42px !important;
+  font-size: 22px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0 !important;
+}
+
+.patch-ledger-detail-dialog .dialog-close {
+  position: absolute !important;
+  top: 14px !important;
+  right: 14px !important;
+  width: 36px !important;
+  height: 36px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: #f2f4f6 !important;
+  color: #191f28 !important;
+  font-size: 18px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
+
+.ledger-detail-chip {
+  justify-self: start !important;
+  min-height: 30px !important;
+  border-radius: 999px !important;
+  padding: 6px 12px !important;
+  background: #edf4ff !important;
+  color: #1b64da !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.ledger-detail-amount {
+  font-size: 26px !important;
+  font-weight: 900 !important;
+}
+
+.ledger-detail-amount.expense {
+  color: #f04452 !important;
+}
+
+.ledger-detail-amount.income {
+  color: #00a889 !important;
+}
+
+.patch-ledger-detail-dialog dl {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  margin: 0 !important;
+}
+
+.patch-ledger-detail-dialog dl div {
+  display: grid !important;
+  gap: 5px !important;
+  border-radius: 16px !important;
+  padding: 13px !important;
+  background: #f7f8fa !important;
+}
+
+.patch-ledger-detail-dialog dt {
+  color: #8b95a1 !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+}
+
+.patch-ledger-detail-dialog dd {
+  margin: 0 !important;
+  color: #191f28 !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+}
+
+.patch-ledger-detail-dialog p {
+  margin: 0 !important;
+  border-radius: 16px !important;
+  padding: 14px !important;
+  background: #f7f8fa !important;
+  color: #4e5968 !important;
+  font-size: 14px !important;
+  line-height: 1.55 !important;
+  font-weight: 700 !important;
+}
+
+.ledger-detail-actions {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 10px !important;
+}
+
+.ledger-detail-actions button {
+  min-height: 46px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  cursor: pointer !important;
+  font: inherit !important;
+  font-weight: 900 !important;
+}
+
+.ledger-detail-actions .edit-button {
+  background: #edf4ff !important;
+  color: #1b64da !important;
+}
+
+.ledger-detail-actions .danger-button {
+  background: #fff1f3 !important;
+  color: #f04452 !important;
 }
 
 .empty-message {

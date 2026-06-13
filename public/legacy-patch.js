@@ -7154,14 +7154,12 @@
         var rows = groups[date].slice().sort(function (a, b) {
           return String(b.createdAt || '').localeCompare(String(a.createdAt || ''))
         })
-        var expense = rows.filter(function (item) { return item.entryType !== 'income' }).reduce(function (sum, item) { return sum + Number(item.amount || 0) }, 0)
-        var income = rows.filter(function (item) { return item.entryType === 'income' }).reduce(function (sum, item) { return sum + Number(item.amount || 0) }, 0)
         rows.forEach(function (item) {
           window.__familyLedgerItemsById = window.__familyLedgerItemsById || {}
           window.__familyLedgerItemsById[String(item.id)] = item
         })
         return '<section class="api-ledger-day">' +
-          '<header><strong>' + escapeHtml(formatLedgerDateLabel(date)) + '</strong><span>\uC9C0\uCD9C ' + expense.toLocaleString('ko-KR') + '\uC6D0 \u00B7 \uC218\uC785 ' + income.toLocaleString('ko-KR') + '\uC6D0</span></header>' +
+          '<header><strong>' + escapeHtml(formatLedgerDateLabel(date)) + '</strong></header>' +
           rows.map(function (item) {
             return '<div class="ledger-row api-ledger-row" data-api-ledger-id="' + item.id + '">' +
               '<div><strong>' + escapeHtml(item.title || '') + '</strong><span>' +
@@ -7234,6 +7232,53 @@
     if (target) target.focus()
     form.scrollIntoView({ behavior: 'smooth', block: 'center' })
     return true
+  }
+
+  function showLedgerDetail(item) {
+    if (!item) {
+      showPatchToast('\uC0C1\uC138\uB97C \uBCFC \uB0B4\uC5ED\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
+      return
+    }
+    var old = document.querySelector('.patch-ledger-detail-backdrop')
+    if (old) old.remove()
+    var backdrop = document.createElement('div')
+    backdrop.className = 'patch-ledger-detail-backdrop'
+    backdrop.innerHTML = [
+      '<section class="patch-ledger-detail-dialog">',
+      '<button type="button" class="dialog-close" data-ledger-detail-close>\u00D7</button>',
+      '<span class="ledger-detail-chip">' + escapeHtml(item.entryType === 'income' ? '\uC218\uC785' : '\uC9C0\uCD9C') + '</span>',
+      '<h2>' + escapeHtml(item.title || '\uB0B4\uC5ED \uC5C6\uC74C') + '</h2>',
+      '<strong class="ledger-detail-amount ' + escapeHtml(item.entryType || 'expense') + '">' + escapeHtml(moneyText(item.amount, item.entryType)) + '</strong>',
+      '<dl>',
+      '<div><dt>\uAC70\uB798\uC77C</dt><dd>' + escapeHtml((item.transactionDate || '').replace(/-/g, '.')) + '</dd></div>',
+      '<div><dt>\uCE74\uD14C\uACE0\uB9AC</dt><dd>' + escapeHtml(item.category || '-') + '</dd></div>',
+      '<div><dt>\uACB0\uC81C\uC218\uB2E8</dt><dd>' + escapeHtml(item.paymentMethod || '-') + '</dd></div>',
+      '<div><dt>\uC0AC\uC6A9\uC790</dt><dd>' + escapeHtml(item.memberName || '-') + '</dd></div>',
+      '</dl>',
+      '<p>' + escapeHtml(item.memo || '\uBA54\uBAA8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.') + '</p>',
+      '<div class="ledger-detail-actions">',
+      '<button type="button" class="edit-button" data-ledger-detail-edit="' + escapeHtml(item.id) + '">\uC218\uC815</button>',
+      '<button type="button" class="danger-button" data-ledger-detail-delete="' + escapeHtml(item.id) + '">\uC0AD\uC81C</button>',
+      '</div>',
+      '</section>'
+    ].join('')
+    backdrop.addEventListener('click', function (event) {
+      if (event.target === backdrop || event.target.closest('[data-ledger-detail-close]')) {
+        backdrop.remove()
+        return
+      }
+      var edit = event.target.closest('[data-ledger-detail-edit]')
+      if (edit) {
+        backdrop.remove()
+        if (!fillLedgerFormForEdit(item)) showPatchToast('\uC218\uC815\uD560 \uB300\uC0C1\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
+        return
+      }
+      var del = event.target.closest('[data-ledger-detail-delete]')
+      if (del) {
+        deleteLedgerEntry(del.dataset.ledgerDetailDelete)
+      }
+    })
+    document.body.appendChild(backdrop)
   }
 
   function ledgerPayloadFromForm(form) {
@@ -8983,6 +9028,13 @@
       return
     }
     deleteLedgerEntry(deleteButton.dataset.ledgerDeleteId)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var row = event.target && event.target.closest && event.target.closest('.api-ledger-row[data-api-ledger-id]')
+    if (!row || event.target.closest('button, a, input, textarea, select, .custom-select')) return
+    var item = window.__familyLedgerItemsById && window.__familyLedgerItemsById[String(row.dataset.apiLedgerId)]
+    showLedgerDetail(item)
   }, true)
 
   document.addEventListener('click', function (event) {
