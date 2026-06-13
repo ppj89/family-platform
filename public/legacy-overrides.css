@@ -2325,6 +2325,15 @@ body.api-loading-blocked::before {
   margin-top: 18px;
 }
 
+.api-ledger-list-host {
+  margin-top: 28px !important;
+}
+
+.form-message + .api-ledger-list-host,
+.sms-parser + .api-ledger-list-host {
+  margin-top: 28px !important;
+}
+
 .daily-group {
   display: grid;
   gap: 12px;

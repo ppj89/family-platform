@@ -3315,7 +3315,7 @@
     var restaurantForm = document.querySelector('.restaurant-form')
     var formPanel = restaurantForm && restaurantForm.closest('.panel')
     if (formPanel) {
-      Array.from(formPanel.querySelectorAll('.panel-header button, .panel-header .passive-header-chip')).forEach(function (item) {
+      Array.from(formPanel.querySelectorAll('.panel-header button, .panel-header .passive-header-chip, .panel-header [role="button"]')).forEach(function (item) {
         if (getCleanText(item) === '\uACF5\uC720') item.remove()
       })
     }
@@ -6951,6 +6951,29 @@
     return monthRangeFor(todayText())
   }
 
+  function getLedgerListHost() {
+    var existing = document.querySelector('.daily-ledger')
+    if (existing) return existing
+    var panel = Array.from(document.querySelectorAll('.content-grid .panel.wide, .content-grid .panel')).find(function (candidate) {
+      return candidate.querySelector('.ledger-summary') && (candidate.querySelector('.sms-parser') || candidate.querySelector('.parser-box'))
+    })
+    if (!panel) return null
+    var host = panel.querySelector('.api-ledger-list-host')
+    if (!host) {
+      host = document.createElement('section')
+      host.className = 'daily-ledger api-ledger-list-host'
+      var empty = panel.querySelector('.empty-message')
+      if (empty) {
+        empty.replaceWith(host)
+      } else {
+        var message = panel.querySelector('.form-message') || panel.querySelector('.sms-parser') || panel.querySelector('.parser-box')
+        if (message) message.insertAdjacentElement('afterend', host)
+        else panel.appendChild(host)
+      }
+    }
+    return host
+  }
+
   function pageHeadingIs(label) {
     return Array.from(document.querySelectorAll('h1')).some(function (heading) {
       return getCleanText(heading) === label
@@ -6960,7 +6983,7 @@
   function renderLedgerPageFromApi(force) {
     if (!pageHeadingIs('\uAC00\uACC4\uBD80')) return
     var summary = document.querySelector('.ledger-summary')
-    var daily = document.querySelector('.daily-ledger')
+    var daily = getLedgerListHost()
     if (!summary && !daily) return
     var range = getLedgerPageRange()
     var key = range.start + ':' + range.end
