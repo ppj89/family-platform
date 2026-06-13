@@ -8406,7 +8406,7 @@
   }
 
   function postScheduleWithFreshFamily(payload, forceRefresh) {
-    return getCurrentFamilyId(forceRefresh).then(function (familyId) {
+    return getReadableFamilyId(forceRefresh).then(function (familyId) {
       return postJson('/schedules?familyId=' + encodeURIComponent(familyId), payload)
     })
   }
@@ -8904,7 +8904,7 @@
     }
 
     if (task.type === 'createSchedule') {
-      return getCurrentFamilyId().then(function (familyId) {
+      return getReadableFamilyId().then(function (familyId) {
         return postJson('/schedules?familyId=' + encodeURIComponent(familyId), task.payload)
       })
     }

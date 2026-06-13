@@ -1826,8 +1826,8 @@ func (a *app) listSchedules(w http.ResponseWriter, r *http.Request, user authUse
 }
 
 func (a *app) createSchedule(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryInt64(r, "familyId", 1)
-	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
+	familyID := queryFamilyID(r)
+	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
 	req, ok := readSchedulePayload(w, r)
