@@ -8354,6 +8354,14 @@
           }
         })
         flushApiQueue()
+        if (form.classList.contains('api-travel-record-form')) {
+          window.setTimeout(function () {
+            renderApiTripRecords(form.closest('.api-trip-detail'), localStorage.getItem(API_TRIP_ID_KEY))
+          }, 900)
+          window.setTimeout(function () {
+            renderApiTripRecords(form.closest('.api-trip-detail'), localStorage.getItem(API_TRIP_ID_KEY))
+          }, 1800)
+        }
       }).catch(function (error) {
         if (String(error && error.message || '').indexOf('INVALID_MEDIA') < 0) {
           showPatchToast('\uCCA8\uBD80\uD30C\uC77C \uC5C5\uB85C\uB4DC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
