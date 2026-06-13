@@ -5754,6 +5754,52 @@ body.api-loading-blocked::before {
   align-self: start;
 }
 
+.schedule-form-card form,
+.schedule-form-card {
+  row-gap: 16px;
+}
+
+.schedule-form-card label,
+.schedule-form-card .date-picker-field {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  margin: 0 0 14px;
+}
+
+.schedule-form-card label > span,
+.schedule-form-card .date-picker-field > span {
+  display: block;
+  margin: 0;
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.schedule-form-card .custom-select,
+.schedule-form-card .date-picker-field,
+.schedule-form-card input,
+.schedule-form-card textarea {
+  width: 100%;
+}
+
+.schedule-form-card .custom-select-trigger,
+.schedule-form-card .date-picker-trigger,
+.schedule-form-card input {
+  min-height: 46px;
+}
+
+.schedule-date-basis-row {
+  display: grid;
+  gap: 16px;
+}
+
+.schedule-date-basis-row .basis-field-patched,
+.schedule-date-basis-row .date-picker-field {
+  margin-bottom: 0;
+}
+
 .schedule-form-card textarea {
   min-height: 118px;
 }
