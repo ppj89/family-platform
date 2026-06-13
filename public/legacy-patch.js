@@ -8878,7 +8878,7 @@
   document.addEventListener('click', function (event) {
     var button = event.target && event.target.closest && event.target.closest('button')
     if (!button || getCleanText(button) !== '\uC77C\uAE30 \uCD94\uAC00') return
-    var panel = button.closest('form, aside, section, article, .panel, .entry-panel')
+    var panel = button.closest('aside, section, article, .panel, .entry-panel') || button.closest('form')
     if (!panel || getCleanText(panel.querySelector('h2')) !== '\uC77C\uAE30 \uCD94\uAC00') return
     event.preventDefault()
     event.stopPropagation()
