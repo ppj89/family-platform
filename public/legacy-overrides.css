@@ -10974,3 +10974,47 @@ body:has(.family-calendar-panel) .fc-day[data-api-chip-count]::before {
   background: #3182f6 !important;
   color: #ffffff !important;
 }
+
+body:has(.family-calendar-panel) .api-schedule-list .schedule-row.api-schedule-row,
+body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-row {
+  grid-template-columns: 96px minmax(0, 1fr) auto !important;
+  column-gap: 24px !important;
+  row-gap: 10px !important;
+  align-items: center !important;
+  padding: 16px 14px !important;
+}
+
+body:has(.family-calendar-panel) .api-schedule-list .schedule-row.api-schedule-row .schedule-date-badge,
+body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-row .schedule-date-badge {
+  justify-self: start !important;
+  min-width: 82px !important;
+  margin: 0 !important;
+}
+
+body:has(.family-calendar-panel) .api-schedule-list .schedule-row.api-schedule-row > div:nth-child(2),
+body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-row > div:nth-child(2) {
+  display: grid !important;
+  gap: 5px !important;
+  min-width: 0 !important;
+  padding-left: 4px !important;
+}
+
+body:has(.family-calendar-panel) .api-schedule-list .schedule-row.api-schedule-row .schedule-row-actions,
+body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-row .schedule-row-actions {
+  margin-left: 22px !important;
+}
+
+@media (max-width: 720px) {
+  body:has(.family-calendar-panel) .api-schedule-list .schedule-row.api-schedule-row,
+  body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-row {
+    grid-template-columns: 88px minmax(0, 1fr) !important;
+    column-gap: 18px !important;
+  }
+
+  body:has(.family-calendar-panel) .api-schedule-list .schedule-row.api-schedule-row .schedule-row-actions,
+  body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-row .schedule-row-actions {
+    grid-column: 1 / -1 !important;
+    justify-content: flex-end !important;
+    margin-left: 0 !important;
+  }
+}
