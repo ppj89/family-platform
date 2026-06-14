@@ -644,6 +644,14 @@ body.api-loading-blocked::before {
   gap: 8px;
 }
 
+.auth-card[data-auth-mode="login"] .auth-nickname-field,
+.auth-card[data-auth-mode="login"] .auth-password-confirm-field,
+.auth-card[data-auth-mode="login"] .auth-required-consent,
+.auth-card .auth-nickname-field[style*="display: none"],
+.auth-card .auth-password-confirm-field[style*="display: none"] {
+  display: none !important;
+}
+
 .auth-card .auth-required-consent {
   display: flex;
   align-items: flex-start;
@@ -11751,10 +11759,18 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
     gap: 12px !important;
   }
 
-  .fp-map-box,
-  .fp-map-canvas,
-  .fp-map-box .leaflet-container,
-  .fp-map-box iframe {
-    min-height: 230px !important;
-  }
+.fp-map-box,
+.fp-map-canvas,
+.fp-map-box .leaflet-container,
+.fp-map-box iframe {
+  min-height: 230px !important;
+}
+}
+
+.fp-content-grid.community-source-hidden,
+.content-grid.fp-content-grid.community-source-hidden,
+.content-grid.fp-workspace-grid.community-source-hidden {
+  display: none !important;
+  pointer-events: none !important;
+  visibility: hidden !important;
 }
