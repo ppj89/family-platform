@@ -8010,7 +8010,7 @@
       if (row.classList.contains('schedule-row')) row.classList.add('fp-schedule-row')
       if (row.classList.contains('admin-row')) row.classList.add('fp-admin-row')
       if (row.classList.contains('trip-list-card') || row.classList.contains('api-travel-record-card')) row.classList.add('fp-travel-row')
-      if (row.classList.contains('baby-card') || row.classList.contains('baby-record-row')) row.classList.add('fp-baby-row')
+      if (row.classList.contains('baby-record-row')) row.classList.add('fp-baby-row')
       if (row.classList.contains('restaurant-card')) row.classList.add('fp-restaurant-row')
       if (row.classList.contains('community-post') || row.classList.contains('community-free-row')) row.classList.add('fp-community-row')
       row.querySelectorAll('span, small, em').forEach(function (meta) {

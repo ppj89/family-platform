@@ -9311,39 +9311,43 @@ html[data-year-schedule-mode="list"] .year-month-card {
 
 .baby-list-grid .baby-card {
   display: grid !important;
-  grid-template-columns: 52px minmax(0, 1fr) auto !important;
+  grid-template-columns: 52px minmax(0, 1fr) !important;
   align-items: center !important;
-  gap: 14px !important;
+  gap: 12px !important;
 }
 
 .baby-list-grid .baby-card > div:nth-of-type(2) {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  gap: 7px 22px !important;
-  align-items: center !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 6px !important;
+  align-items: start !important;
   min-width: 0 !important;
 }
 
-.baby-list-grid .baby-card > div:nth-of-type(2) .fp-text-title {
-  grid-column: 1 !important;
-  min-width: 0 !important;
+.baby-list-grid .baby-card > div:nth-of-type(2) .fp-text-title,
+.baby-list-grid .baby-card > div:nth-of-type(2) strong {
+  grid-column: 1 / -1 !important;
 }
 
-.baby-list-grid .baby-card > div:nth-of-type(2) > .fp-text-meta {
-  grid-column: 2 !important;
-  justify-self: end !important;
-  white-space: nowrap !important;
-  margin-left: 22px !important;
+.baby-list-grid .baby-card > div:nth-of-type(2) > .fp-text-meta,
+.baby-list-grid .baby-card > div:nth-of-type(2) > span {
+  grid-column: 1 / -1 !important;
+  justify-self: start !important;
+  white-space: normal !important;
+  margin-left: 0 !important;
 }
 
 .baby-list-grid .baby-card > div:nth-of-type(2) .fp-text-copy,
-.baby-list-grid .baby-card > div:nth-of-type(2) small.fp-text-meta {
+.baby-list-grid .baby-card > div:nth-of-type(2) small.fp-text-meta,
+.baby-list-grid .baby-card > div:nth-of-type(2) p,
+.baby-list-grid .baby-card > div:nth-of-type(2) small {
   grid-column: 1 / -1 !important;
   justify-self: start !important;
   margin-left: 0 !important;
 }
 
-.baby-list-grid .baby-card .fp-card-meta {
+.baby-list-grid .baby-card .fp-card-meta,
+.baby-list-grid .baby-card small {
   width: fit-content !important;
 }
 
@@ -9475,13 +9479,31 @@ html[data-year-schedule-mode="list"] .year-month-card {
 }
 
 .diary-api-composer {
-  display: block !important;
-  margin-top: 12px !important;
+  display: grid !important;
+  align-self: start !important;
+  gap: 16px !important;
+  margin-top: 0 !important;
 }
 
 .diary-api-composer .ledger-form .fp-textarea {
   min-height: 130px !important;
   resize: vertical !important;
+}
+
+@media (min-width: 1120px) {
+  .content-grid > .diary-api-composer,
+  .fp-workspace-grid > .diary-api-composer {
+    grid-column: 2 !important;
+    grid-row: 1 / span 3 !important;
+  }
+}
+
+@media (max-width: 1119px) {
+  .content-grid > .diary-api-composer,
+  .fp-workspace-grid > .diary-api-composer {
+    grid-column: 1 !important;
+    grid-row: auto !important;
+  }
 }
 
 .family-group-list .member-actions .fp-button:not(.danger-button):not(.cancel-button):not(.save-button) {
