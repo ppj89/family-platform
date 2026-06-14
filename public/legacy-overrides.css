@@ -5641,6 +5641,7 @@ body.api-loading-blocked::before {
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 8px;
+  min-width: 0;
 }
 
 .calendar-weekday {
@@ -5655,6 +5656,7 @@ body.api-loading-blocked::before {
   display: grid;
   align-content: start;
   gap: 5px;
+  min-width: 0;
   min-height: 96px;
   border: 0;
   border-radius: 16px;
@@ -6499,9 +6501,9 @@ body.api-loading-blocked::before {
 
 /* Legacy runtime hard overrides */
 .fp-page-calendar .content-grid {
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 300px) !important;
+  grid-template-columns: minmax(620px, 1fr) minmax(320px, 380px) !important;
   align-items: start !important;
-  gap: 12px !important;
+  gap: 20px !important;
 }
 
 .fp-page-calendar .entry-panel {
@@ -6514,6 +6516,7 @@ body.api-loading-blocked::before {
 
 .fp-page-calendar .family-calendar-panel {
   grid-column: 1 !important;
+  min-width: 0 !important;
 }
 
 .fp-page-calendar .schedule-form-card {
@@ -6521,6 +6524,8 @@ body.api-loading-blocked::before {
   grid-row: 2 !important;
   position: sticky !important;
   top: 18px !important;
+  width: 100% !important;
+  max-width: 380px !important;
 }
 
 .fp-page-calendar .family-calendar-panel .calendar-bottom-grid {
@@ -8682,6 +8687,7 @@ html[data-year-schedule-mode="list"] .year-month-card {
   background: #f2f4f6 !important;
 }
 
+.community-tabs button,
 .community-tabs .fp-button {
   min-height: 44px !important;
   border: 0 !important;
@@ -8694,6 +8700,7 @@ html[data-year-schedule-mode="list"] .year-month-card {
   font-weight: 900 !important;
 }
 
+.community-tabs button.active,
 .community-tabs .fp-button.active {
   background: #ffffff !important;
   color: #1b64da !important;
@@ -10213,11 +10220,11 @@ html[data-year-schedule-mode="list"] .year-month-card {
 
   .fp-page-calendar .content-grid {
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) 300px !important;
-    gap: 16px !important;
+    grid-template-columns: minmax(620px, 1fr) minmax(320px, 380px) !important;
+    gap: 20px !important;
     align-items: start !important;
     width: 100% !important;
-    max-width: 980px !important;
+    max-width: none !important;
   }
 
   .fp-page-calendar .calendar-hero,
@@ -10246,6 +10253,7 @@ html[data-year-schedule-mode="list"] .year-month-card {
     position: sticky !important;
     top: 18px !important;
     width: 100% !important;
+    max-width: 380px !important;
     min-width: 0 !important;
   }
 
@@ -10258,10 +10266,12 @@ html[data-year-schedule-mode="list"] .year-month-card {
   }
 
   .fp-page-calendar .family-month-grid {
+    min-width: 0 !important;
     gap: 7px !important;
   }
 
   .fp-page-calendar .calendar-day-card {
+    min-width: 0 !important;
     min-height: 90px !important;
   }
 }

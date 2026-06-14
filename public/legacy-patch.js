@@ -5408,7 +5408,7 @@
       '<section class="panel wide community-panel">',
       '<div class="community-tabs">',
       ['notice', 'free', 'inquiry'].map(function (key) {
-        return '<button type="button" class="' + (tab === key ? 'active' : '') + '" data-community-tab="' + key + '">' + communityTabLabel(key) + '</button>'
+        return '<button type="button" class="fp-button ' + (tab === key ? 'active' : '') + '" data-community-tab="' + key + '">' + communityTabLabel(key) + '</button>'
       }).join(''),
       '</div>',
       bodyHtml,
