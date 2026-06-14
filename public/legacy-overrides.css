@@ -11289,3 +11289,182 @@ body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-
     margin-left: 0 !important;
   }
 }
+
+/* Family Platform common UI layer.
+   Keep all form-like screens on one visual contract instead of per-menu one-offs. */
+.fp-workspace-grid {
+  align-items: start !important;
+  gap: 20px !important;
+}
+
+@media (min-width: 1120px) {
+  .fp-workspace-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 380px) !important;
+  }
+
+  .fp-workspace-grid > .panel:not(.wide):has(.fp-form),
+  .fp-workspace-grid > .entry-panel,
+  .fp-workspace-grid > aside {
+    align-self: start !important;
+  }
+}
+
+@media (max-width: 1119px) {
+  .fp-workspace-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+.fp-form,
+.ledger-form.fp-form,
+.travel-form.fp-form,
+.diary-form.fp-form,
+.baby-form.fp-form,
+.baby-profile-form.fp-form,
+.baby-api-record-form.fp-form,
+.restaurant-form.fp-form {
+  display: grid !important;
+  gap: 16px !important;
+  min-width: 0 !important;
+}
+
+.fp-form .form-row,
+.fp-form .baby-api-form-grid,
+.fp-form .fc-form-grid,
+.fp-form .travel-form-row {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+}
+
+@media (max-width: 720px) {
+  .fp-form .form-row,
+  .fp-form .baby-api-form-grid,
+  .fp-form .fc-form-grid,
+  .fp-form .travel-form-row {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+
+.fp-field,
+.fp-form label {
+  display: grid !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+  overflow: visible !important;
+}
+
+.fp-field-label,
+.fp-form label > span,
+.fp-form label > strong,
+.fp-form label > b {
+  color: #4e5968 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+
+.required-mark {
+  color: #f04452 !important;
+  font-style: normal !important;
+  font-weight: 900 !important;
+}
+
+.fp-control,
+.fp-form input:not([type="hidden"]):not([type="file"]),
+.fp-form textarea,
+.fp-form select,
+.fp-form .date-picker-trigger,
+.fp-form .custom-select-trigger {
+  box-sizing: border-box !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  min-height: 46px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  padding: 0 14px !important;
+  background: #ffffff !important;
+  color: #191f28 !important;
+  outline: none !important;
+  box-shadow: inset 0 0 0 1px #d7dee8 !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+.fp-form textarea,
+textarea.fp-control {
+  min-height: 128px !important;
+  padding: 13px 14px !important;
+  resize: vertical !important;
+  line-height: 1.5 !important;
+}
+
+.fp-control:focus,
+.fp-form input:not([type="hidden"]):not([type="file"]):focus,
+.fp-form textarea:focus,
+.fp-form select:focus,
+.fp-form .date-picker-trigger:focus-visible,
+.fp-form .custom-select-trigger:focus-visible,
+.fp-form .custom-select-trigger.open {
+  box-shadow: inset 0 0 0 2px #3182f6 !important;
+}
+
+.field-error {
+  color: #f04452 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.35 !important;
+}
+
+.field-invalid .fp-control,
+.field-invalid input,
+.field-invalid textarea,
+.field-invalid select,
+.field-invalid .date-picker-trigger,
+.field-invalid .custom-select-trigger {
+  box-shadow: inset 0 0 0 2px #f04452 !important;
+}
+
+.fp-form .custom-select,
+.fp-form .date-picker-field {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.fp-form .custom-select-list,
+.custom-select-list {
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  box-shadow: 0 18px 42px rgba(25, 31, 40, 0.18) !important;
+}
+
+.fp-form button[type="submit"],
+.fp-form .submit-action,
+.fp-form .save-button {
+  min-height: 46px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: #3182f6 !important;
+  color: #ffffff !important;
+  font-weight: 900 !important;
+}
+
+.theme-dark .fp-field-label,
+.theme-dark .fp-form label > span,
+.theme-dark .fp-form label > strong,
+.theme-dark .fp-form label > b {
+  color: #b8c2cf !important;
+}
+
+.theme-dark .fp-control,
+.theme-dark .fp-form input:not([type="hidden"]):not([type="file"]),
+.theme-dark .fp-form textarea,
+.theme-dark .fp-form select,
+.theme-dark .fp-form .date-picker-trigger,
+.theme-dark .fp-form .custom-select-trigger {
+  background: #303742 !important;
+  color: #f8fafc !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14) !important;
+}

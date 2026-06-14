@@ -3907,6 +3907,7 @@
     cleanupDiaryApiComposer()
     normalizeBabyEntryForms()
     normalizeTimeInputs()
+    applyCommonUiStandard()
     removeFeaturePlaceholders()
     wireScheduleDetailRows()
     hideSelectedDayPanels()
@@ -7519,6 +7520,108 @@
     title.appendChild(mark)
   }
 
+  function findFieldByLabel(root, labelText) {
+    if (!root) return null
+    var labels = Array.from(root.querySelectorAll('label, .date-picker-field'))
+    var target = labels.find(function (label) {
+      return getCleanText(label).indexOf(labelText) >= 0
+    })
+    if (!target) return null
+    return target.querySelector('input:not([type="hidden"]), textarea, select, .custom-select-trigger, .date-picker-trigger')
+  }
+
+  function clearFieldErrors(root) {
+    ;(root || document).querySelectorAll('.field-error').forEach(function (item) {
+      item.hidden = true
+      item.textContent = ''
+    })
+    ;(root || document).querySelectorAll('.field-invalid').forEach(function (item) {
+      item.classList.remove('field-invalid')
+    })
+  }
+
+  function showRequiredFieldMessage(control, labelText) {
+    var message = labelText + '\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.'
+    var label = control && control.closest && control.closest('label')
+    if (label) {
+      var error = label.querySelector('.field-error')
+      if (!error) {
+        error = document.createElement('small')
+        error.className = 'field-error'
+        label.appendChild(error)
+      }
+      error.textContent = message
+      error.hidden = false
+      label.classList.add('field-invalid')
+    }
+    showPatchToast(message)
+    if (control && control.focus) {
+      control.focus()
+      control.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }
+
+  function requireField(root, selectors, labelText) {
+    var control = null
+    selectors.some(function (selector) {
+      if (selector.charAt(0) === '@') control = findFieldByLabel(root, selector.slice(1))
+      else control = root && root.querySelector(selector)
+      return !!control
+    })
+    var value = ''
+    if (control) {
+      value = control.classList && control.classList.contains('date-picker-trigger')
+        ? getCleanText(control)
+        : String(control.value || control.textContent || '').trim()
+    }
+    if (value) return true
+    showRequiredFieldMessage(control || root, labelText)
+    return false
+  }
+
+  function applyCommonUiStandard(root) {
+    var scope = root || document
+    var pageTitle = getCleanText(document.querySelector('.topbar h1'))
+    var content = document.querySelector('.content-grid')
+    var standardPages = ['\uAC00\uACC4\uBD80', '\uC5EC\uD589', '\uC721\uC544', '\uC77C\uAE30', '\uB9DB\uC9D1', '\uCE98\uB9B0\uB354']
+    if (content && standardPages.indexOf(pageTitle) >= 0) content.classList.add('fp-workspace-grid')
+
+    scope.querySelectorAll([
+      '.ledger-form',
+      '.travel-form',
+      '.diary-form',
+      '.baby-form',
+      '.baby-create-form',
+      '.baby-profile-form',
+      '.baby-api-record-form',
+      '.restaurant-form',
+      '.schedule-form-card form',
+      '.family-group-panel form',
+      '.community-write-card form',
+      '.entry-panel form'
+    ].join(',')).forEach(function (form) {
+      form.classList.add('fp-form')
+    })
+
+    scope.querySelectorAll('.fp-form label, .ledger-form label, .travel-form label, .diary-form label, .baby-form label, .restaurant-form label, .baby-api-record-form label').forEach(function (label) {
+      label.classList.add('fp-field')
+      var title = label.querySelector('span, strong, b')
+      if (title) title.classList.add('fp-field-label')
+      var control = label.querySelector('input:not([type="hidden"]):not([type="file"]), textarea, select, .date-picker-trigger, .custom-select-trigger')
+      if (control) control.classList.add('fp-control')
+    })
+
+    scope.querySelectorAll('.date-picker-field').forEach(function (field) {
+      field.classList.add('fp-field')
+      var trigger = field.querySelector('.date-picker-trigger')
+      if (trigger) trigger.classList.add('fp-control')
+    })
+
+    scope.querySelectorAll('.custom-select-trigger, input:not([type="hidden"]):not([type="file"]), textarea, select, .date-picker-trigger').forEach(function (control) {
+      if (!control.closest('.auth-card')) control.classList.add('fp-control')
+    })
+  }
+
   function normalizeLedgerEntryForm() {
     if (!pageHeadingIs('\uAC00\uACC4\uBD80')) return
     var forms = document.querySelectorAll('.ledger-form, .entry-panel, form')
@@ -7527,6 +7630,8 @@
       if (text.indexOf('\uAC00\uACC4\uBD80') < 0 && text.indexOf('\uAC70\uB798\uC77C') < 0 && text.indexOf('\uAE08\uC561') < 0) return
       removePlaceholdersIn(form, ['\uAC00\uB9F9\uC810', '\uB0B4\uC6A9', '\uAE08\uC561'])
       setDateFieldToToday(form, ['\uAC70\uB798\uC77C'])
+      ensureRequiredMarkForInput(findFieldByLabel(form, '\uB0B4\uC5ED') || findFieldByLabel(form, '\uC81C\uBAA9') || findFieldByLabel(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9'))
+      ensureRequiredMarkForInput(findFieldByLabel(form, '\uAE08\uC561'))
     })
     removeFeaturePlaceholders()
   }
@@ -8858,7 +8963,15 @@
         getFieldValue(form, 'input[inputmode="numeric"]')
       )
 
-      if (!title || !amount) return
+      clearFieldErrors(form)
+      if (!title) {
+        requireField(form, ['@' + '\uB0B4\uC5ED', '@' + '\uC81C\uBAA9', '@' + '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', '[data-field="ledger-title"]'], '\uB0B4\uC5ED')
+        return
+      }
+      if (!amount) {
+        requireField(form, ['@' + '\uAE08\uC561', '[data-field="ledger-amount"]', 'input[inputmode="numeric"]'], '\uAE08\uC561')
+        return
+      }
 
       queueApiSync({
         type: 'createLedgerEntry',
