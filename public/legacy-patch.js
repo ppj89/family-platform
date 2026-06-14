@@ -8355,6 +8355,8 @@
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    button.dataset.diarySubmitAttemptedAt = String(Date.now())
+    form.dataset.diarySubmitAttemptedAt = button.dataset.diarySubmitAttemptedAt
     submitExistingDiaryPanel(form, button)
     return true
   }
