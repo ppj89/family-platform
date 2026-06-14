@@ -7753,9 +7753,10 @@
         '.community-list',
         '.admin-list'
       ].join(','))
-      if (isFormPanel || isScheduleFormPanel || isRightFormByTitle) panel.classList.add('fp-side-panel')
-      if (isPrimaryByContent || panel.classList.contains('wide') || panel.classList.contains('full-span')) panel.classList.add('fp-primary-panel')
-      if (panel.classList.contains('wide') || panel.classList.contains('full-span')) panel.classList.add('fp-wide-panel')
+      var isWidePanel = panel.classList.contains('wide') || panel.classList.contains('full-span')
+      if ((isFormPanel || isScheduleFormPanel || isRightFormByTitle) && !isWidePanel) panel.classList.add('fp-side-panel')
+      if (isPrimaryByContent || isWidePanel) panel.classList.add('fp-primary-panel')
+      if (isWidePanel) panel.classList.add('fp-wide-panel')
     })
     scope.querySelectorAll('.ledger-summary').forEach(function (item) { item.classList.add('fp-ledger-summary') })
     scope.querySelectorAll('.sync-panel').forEach(function (panel) {
