@@ -3880,13 +3880,16 @@
   }
 
   function refreshCalendarPatch() {
+    syncCommonUiStateClasses()
     if (document.documentElement.dataset.patchPage === 'community') {
       removeFeaturePlaceholders()
+      syncCommonUiStateClasses()
       return
     }
     if (document.documentElement.dataset.patchPage === 'family-group') {
       removeFeaturePlaceholders()
       cleanupPassiveButtons()
+      syncCommonUiStateClasses()
       return
     }
     cleanupStaleServerPanels()
@@ -3946,6 +3949,7 @@
     enhanceMediaUploadLimits()
     cleanupPassiveButtons()
     syncSelectedDayHeaderFromState()
+    syncCommonUiStateClasses()
   }
 
   function safeRefreshCalendarPatch() {
@@ -4103,6 +4107,7 @@
             triggerText.textContent = formatDisplayDate(now)
           }
           popover.classList.add('calendar-popover-hidden')
+          syncCommonUiStateClasses()
         })
         row.appendChild(today)
         var header = popover.querySelector('.calendar-header')
@@ -4121,6 +4126,7 @@
               if (date) updateScheduleFormVisibleDate(date)
             }
             if (stillOpen) stillOpen.classList.add('calendar-popover-hidden')
+            syncCommonUiStateClasses()
           }, 120)
         })
       })
@@ -4172,6 +4178,7 @@
       document.querySelectorAll('.date-picker-field .calendar-popover').forEach(function (popover) {
         popover.remove()
       })
+      syncCommonUiStateClasses()
       document.querySelectorAll('.custom-select.open').forEach(function (select) {
         if (select !== current) select.classList.remove('open')
       })
@@ -4206,6 +4213,7 @@
           current.querySelectorAll('.custom-select-trigger.open').forEach(function (trigger) {
             trigger.classList.remove('open')
           })
+          syncCommonUiStateClasses()
         }, 220)
       }
       return
@@ -4220,6 +4228,7 @@
       document.querySelectorAll('.custom-select-trigger.open').forEach(function (trigger) {
         trigger.classList.remove('open')
       })
+      syncCommonUiStateClasses()
     }, 0)
   }
 
@@ -4243,6 +4252,7 @@
       field.querySelectorAll('.calendar-popover-hidden').forEach(function (popover) {
         popover.classList.remove('calendar-popover-hidden')
       })
+      syncCommonUiStateClasses()
     }, 0)
   }, true)
 
@@ -7666,6 +7676,19 @@
     })
   }
 
+  function syncCommonUiStateClasses() {
+    var isCalendar = !!document.querySelector('.family-calendar-panel')
+    ;[document.documentElement, document.body].forEach(function (node) {
+      if (!node) return
+      node.classList.toggle('fp-page-calendar', isCalendar)
+      node.classList.toggle('fp-page-standard', !isCalendar)
+    })
+
+    document.querySelectorAll('.date-picker-field').forEach(function (field) {
+      field.classList.toggle('fp-datepicker-open', !!field.querySelector('.calendar-popover:not(.calendar-popover-hidden)'))
+    })
+  }
+
   function installCommonRequiredSubmitGuard() {
     if (window.__familyCommonRequiredSubmitGuardReady) return
     window.__familyCommonRequiredSubmitGuardReady = true
@@ -9546,6 +9569,7 @@
       document.querySelectorAll('.date-picker-field .calendar-popover').forEach(function (popover) {
         popover.classList.add('calendar-popover-hidden')
       })
+      syncCommonUiStateClasses()
     }, 0)
   })
 })()
