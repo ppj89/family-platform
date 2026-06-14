@@ -3908,6 +3908,7 @@
     normalizeBabyEntryForms()
     normalizeTimeInputs()
     applyCommonUiStandard()
+    installCommonRequiredSubmitGuard()
     removeFeaturePlaceholders()
     wireScheduleDetailRows()
     hideSelectedDayPanels()
@@ -7620,6 +7621,31 @@
     scope.querySelectorAll('.custom-select-trigger, input:not([type="hidden"]):not([type="file"]), textarea, select, .date-picker-trigger').forEach(function (control) {
       if (!control.closest('.auth-card')) control.classList.add('fp-control')
     })
+
+    scope.querySelectorAll('.fp-form [required], .ledger-form [required], .travel-form [required], .diary-form [required], .baby-form [required], .restaurant-form [required]').forEach(function (control) {
+      ensureRequiredMarkForInput(control)
+    })
+  }
+
+  function installCommonRequiredSubmitGuard() {
+    if (window.__familyCommonRequiredSubmitGuardReady) return
+    window.__familyCommonRequiredSubmitGuardReady = true
+    document.addEventListener('submit', function (event) {
+      var form = event.target && event.target.closest && event.target.closest('.fp-form, .ledger-form, .travel-form, .diary-form, .baby-form, .baby-api-record-form, .restaurant-form')
+      if (!form || form.closest('.auth-card')) return
+      var invalid = Array.from(form.querySelectorAll('[required]')).find(function (control) {
+        if (control.disabled || control.type === 'hidden') return false
+        return !String(control.value || '').trim()
+      })
+      if (!invalid) return
+      var label = invalid.closest('label')
+      var labelText = getCleanText(label && label.querySelector('span, strong, b')) || '\uD544\uC218\uAC12'
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      clearFieldErrors(form)
+      showRequiredFieldMessage(invalid, labelText.replace(/\s*\*$/, ''))
+    }, true)
   }
 
   function normalizeLedgerEntryForm() {
