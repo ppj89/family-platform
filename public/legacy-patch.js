@@ -450,6 +450,7 @@
     if (bar) return bar
     bar = document.createElement('div')
     bar.className = 'global-api-loading'
+    bar.hidden = true
     bar.innerHTML = '<div class="global-api-loading-track"><span></span></div><strong>\uB370\uC774\uD130 \uBD88\uB7EC\uC624\uB294 \uC911</strong>'
     document.body.appendChild(bar)
     return bar
@@ -457,6 +458,7 @@
 
   function setApiLoadingVisible(visible) {
     var bar = ensureApiLoadingBar()
+    bar.hidden = !visible
     bar.classList.toggle('active', !!visible)
     document.body.classList.toggle('api-loading-blocked', !!visible)
   }
