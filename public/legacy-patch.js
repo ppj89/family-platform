@@ -3933,6 +3933,7 @@
     enhanceBabyRecordMedia()
     cleanupBabyDetailButtons()
     ensureBabyMainActions()
+    renderBabyApiCards(false)
     normalizeBabyCreateDialog()
     ensureDiaryMainActions()
     ensureBabyApiRecordForm()
