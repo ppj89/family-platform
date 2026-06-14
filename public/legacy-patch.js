@@ -7243,23 +7243,36 @@
     })
   }
 
+  function setFieldValue(root, selector, value) {
+    var field = root && root.querySelector(selector)
+    if (!field) return false
+    setNativeInputValue(field, value)
+    return true
+  }
+
   function fillLedgerFormForEdit(item) {
-    var form = findLedgerForm()
-    if (!form || !item) return false
-    form.dataset.apiLedgerEditId = String(item.id || '')
-    setInputValueByLabel(form, '\uB0B4\uC5ED', item.title || '')
-      || setInputValueByLabel(form, '\uC81C\uBAA9', item.title || '')
-      || setInputValueByLabel(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', item.title || '')
-      || setScheduleTextInputAt(form, 0, item.title || '')
-    setInputValueByLabel(form, '\uAE08\uC561', Number(item.amount || 0).toLocaleString('ko-KR'))
-    setInputValueByLabel(form, '\uBA54\uBAA8', item.memo || '')
-    setLedgerDateValue(form, item.transactionDate)
-    setCustomSelectValueByLabel(form, '\uAD6C\uBD84', item.entryType === 'income' ? '\uC218\uC785' : '\uC9C0\uCD9C')
-    setCustomSelectValueByLabel(form, '\uCE74\uD14C\uACE0\uB9AC', item.category || '')
-    setCustomSelectValueByLabel(form, '\uACB0\uC81C\uC218\uB2E8', item.paymentMethod || '')
-    setCustomSelectValueByLabel(form, '\uC0AC\uC6A9\uC790', item.memberName || '')
-    setCustomSelectValueByLabel(form, '\uAC00\uC871', item.memberName || '')
-    var submit = form.querySelector('button[type="submit"], .submit-action')
+    var panel = findLedgerForm()
+    if (!panel || !item) return false
+    var form = panel.matches && panel.matches('.ledger-form') ? panel : panel.querySelector('.ledger-form')
+    var editId = String(item.id || '')
+    panel.dataset.apiLedgerEditId = editId
+    if (form) form.dataset.apiLedgerEditId = editId
+    var scope = form || panel
+    setInputValueByLabel(panel, '\uB0B4\uC5ED', item.title || '')
+      || setInputValueByLabel(panel, '\uC81C\uBAA9', item.title || '')
+      || setInputValueByLabel(panel, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', item.title || '')
+      || setScheduleTextInputAt(panel, 0, item.title || '')
+    setFieldValue(scope, '[data-field="ledger-title"]', item.title || '')
+    setInputValueByLabel(panel, '\uAE08\uC561', Number(item.amount || 0).toLocaleString('ko-KR'))
+    setFieldValue(scope, '[data-field="ledger-amount"]', Number(item.amount || 0).toLocaleString('ko-KR'))
+    setInputValueByLabel(panel, '\uBA54\uBAA8', item.memo || '')
+    setLedgerDateValue(panel, item.transactionDate)
+    setCustomSelectValueByLabel(panel, '\uAD6C\uBD84', item.entryType === 'income' ? '\uC218\uC785' : '\uC9C0\uCD9C')
+    setCustomSelectValueByLabel(panel, '\uCE74\uD14C\uACE0\uB9AC', item.category || '')
+    setCustomSelectValueByLabel(panel, '\uACB0\uC81C\uC218\uB2E8', item.paymentMethod || '')
+    setCustomSelectValueByLabel(panel, '\uC0AC\uC6A9\uC790', item.memberName || '')
+    setCustomSelectValueByLabel(panel, '\uAC00\uC871', item.memberName || '')
+    var submit = scope.querySelector('button[type="submit"], .submit-action')
     if (submit) {
       submit.textContent = '\uC800\uC7A5'
       submit.dataset.ledgerEditSubmit = 'true'
@@ -7267,13 +7280,13 @@
         event.preventDefault()
         event.stopPropagation()
         if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-        submitLedgerEdit(form)
+        submitLedgerEdit(scope)
         return false
       }
     }
-    var target = form.querySelector('input, textarea, .custom-select-trigger, .date-picker-trigger')
+    var target = scope.querySelector('input, textarea, .custom-select-trigger, .date-picker-trigger')
     if (target) target.focus()
-    form.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    panel.scrollIntoView({ behavior: 'smooth', block: 'center' })
     return true
   }
 
