@@ -1732,7 +1732,7 @@ func (a *app) ledgerSummary(w http.ResponseWriter, r *http.Request, user authUse
 }
 
 func (a *app) createLedgerEntry(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryInt64(r, "familyId", 1)
+	familyID := queryFamilyID(r)
 	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
@@ -2121,7 +2121,7 @@ func (a *app) listTrips(w http.ResponseWriter, r *http.Request, user authUser) {
 }
 
 func (a *app) createTrip(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryInt64(r, "familyId", 1)
+	familyID := queryFamilyID(r)
 	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
@@ -2318,7 +2318,7 @@ func (a *app) listBabies(w http.ResponseWriter, r *http.Request, user authUser) 
 }
 
 func (a *app) createBaby(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryInt64(r, "familyId", 1)
+	familyID := queryFamilyID(r)
 	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
@@ -2514,7 +2514,7 @@ func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser)
 }
 
 func (a *app) createDiary(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryInt64(r, "familyId", 1)
+	familyID := queryFamilyID(r)
 	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
