@@ -3877,11 +3877,14 @@
     cleanupTravelListWorkspace()
     if (document.documentElement.dataset.patchPage === 'community') {
       removeFeaturePlaceholders()
+      applyCommonUiStandard()
+      cleanupPassiveButtons()
       syncCommonUiStateClasses()
       return
     }
     if (document.documentElement.dataset.patchPage === 'family-group') {
       removeFeaturePlaceholders()
+      applyCommonUiStandard()
       cleanupPassiveButtons()
       syncCommonUiStateClasses()
       return
