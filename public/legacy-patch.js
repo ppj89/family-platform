@@ -3874,6 +3874,7 @@
 
   function refreshCalendarPatch() {
     syncCommonUiStateClasses()
+    cleanupTravelListWorkspace()
     if (document.documentElement.dataset.patchPage === 'community') {
       removeFeaturePlaceholders()
       syncCommonUiStateClasses()
@@ -8387,6 +8388,9 @@
     var grid = document.querySelector('.content-grid')
     var manager = document.querySelector('.trip-manager.list-mode')
     if (!grid || !manager) return
+    document.querySelectorAll('.travel-trip-create-card').forEach(function (node) {
+      if (node.parentElement !== grid) node.remove()
+    })
     var panel = manager.closest('.panel')
     if (!panel) return
     panel.classList.remove('full-span', 'fp-side-panel')
@@ -8403,6 +8407,11 @@
     }
     if (row.parentElement !== aside) aside.appendChild(row)
     row.classList.add('fp-form')
+  }
+
+  function cleanupTravelListWorkspace() {
+    if (pageHeadingIs('\uC5EC\uD589')) return
+    document.querySelectorAll('.travel-trip-create-card').forEach(function (node) { node.remove() })
   }
 
   function normalizeDiaryEntryForm() {
