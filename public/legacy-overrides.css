@@ -11407,6 +11407,33 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 }
 
 /* Cross-menu standard layout: calendar and ledger are the baseline. */
+.home-clean-header .fp-topbar {
+  margin-bottom: 14px !important;
+}
+
+.home-clean-header .fp-topbar .fp-eyebrow,
+.home-clean-header .fp-topbar .fp-page-title,
+.home-clean-header .fp-topbar > div:first-child,
+.home-clean-header .fp-top-actions > .custom-select,
+.home-clean-header .fp-top-actions > .user-chip {
+  display: none !important;
+}
+
+.passive-header-chip {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-height: 34px !important;
+  padding: 0 14px !important;
+  border-radius: 999px !important;
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
+}
+
 .fp-content-grid.fp-workspace-grid {
   display: grid !important;
   align-items: start !important;
@@ -11450,8 +11477,51 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 
 .fp-screen-panel,
 .fp-primary-panel,
-.fp-side-panel {
+.fp-side-panel,
+.fp-family-group-panel {
   min-width: 0 !important;
+}
+
+.fp-family-group-panel {
+  display: grid !important;
+  gap: 18px !important;
+}
+
+.fp-family-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+}
+
+.fp-family-summary-card {
+  padding: 18px !important;
+  border-radius: 16px !important;
+  background: #f7f8fa !important;
+  box-shadow: inset 0 0 0 1px #e5e8eb !important;
+}
+
+.fp-family-member-list {
+  gap: 10px !important;
+}
+
+.fp-family-member-row {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 14px !important;
+  padding: 16px !important;
+}
+
+.fp-status-badge {
+  display: inline-flex !important;
+  align-items: center !important;
+  min-height: 30px !important;
+  padding: 0 12px !important;
+  border-radius: 999px !important;
+  background: #eaf3ff !important;
+  color: #2f7ee6 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  white-space: nowrap !important;
 }
 
 .fp-side-panel .fp-panel-header,
@@ -11630,6 +11700,7 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 .theme-dark .fp-baby-row,
 .theme-dark .fp-restaurant-row,
 .theme-dark .fp-community-row,
+.theme-dark .fp-family-summary-card,
 .theme-dark .fp-upload-field,
 .theme-dark .fp-map-box {
   background: #303742 !important;
@@ -11657,6 +11728,21 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 
   .fp-baby-row {
     gap: 8px 12px !important;
+  }
+
+  .fp-family-summary {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .fp-family-member-row {
+    align-items: flex-start !important;
+    flex-direction: column !important;
+  }
+
+  .passive-header-chip {
+    min-height: 30px !important;
+    padding: 0 11px !important;
+    font-size: 12px !important;
   }
 
   .daily-ledger > .fp-section-header,

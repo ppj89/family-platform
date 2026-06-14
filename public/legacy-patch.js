@@ -3193,27 +3193,9 @@
   }
 
   function ensureUiCleanupStyles() {
-    if (document.getElementById('family-platform-ui-cleanup-style')) return
-    var style = document.createElement('style')
-    style.id = 'family-platform-ui-cleanup-style'
-    style.textContent = [
-      '.passive-header-chip{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 14px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:13px;font-weight:700;white-space:nowrap}',
-      '.family-group-panel{display:grid;gap:18px}',
-      '.family-group-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
-      '.family-group-summary article,.family-group-list article{background:#f8fafc;border:1px solid #e5eaf2;border-radius:18px;padding:18px}',
-      '.family-group-summary span,.family-group-list span{display:block;color:#7b8794;font-size:13px;font-weight:700}',
-      '.family-group-summary strong,.family-group-list strong{display:block;margin-top:8px;color:#171f2e;font-size:18px}',
-      '.family-group-summary small{display:block;margin-top:7px;color:#7b8794;font-weight:700}',
-      '.family-group-list{display:grid;gap:10px}',
-      '.family-group-list article{display:flex;align-items:center;justify-content:space-between;gap:14px}',
-      '.family-group-list b{display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:999px;background:#eaf3ff;color:#2f7ee6;font-size:13px}',
-      'html.home-clean-header .topbar{margin-bottom:14px}',
-      'html.home-clean-header .topbar .eyebrow,html.home-clean-header .topbar h1{display:none!important}',
-      'html.home-clean-header .topbar>div:first-child{display:none!important}',
-      'html.home-clean-header .top-actions>.custom-select,html.home-clean-header .top-actions>.user-chip{display:none!important}',
-      '@media(max-width:760px){.family-group-summary{grid-template-columns:1fr}.family-group-list article{align-items:flex-start;flex-direction:column}.passive-header-chip{min-height:30px;padding:0 11px;font-size:12px}}'
-    ].join('\n')
-    document.head.appendChild(style)
+    document.querySelectorAll('#family-platform-ui-cleanup-style').forEach(function (style) {
+      style.remove()
+    })
   }
 
   function syncHomeCleanHeader() {
@@ -7698,6 +7680,23 @@
       box.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-parser-copy') })
     })
     scope.querySelectorAll('.filter-panel').forEach(function (panel) { panel.classList.add('fp-filter-panel') })
+    scope.querySelectorAll('.family-group-panel').forEach(function (panel) { panel.classList.add('fp-family-group-panel') })
+    scope.querySelectorAll('.family-group-summary').forEach(function (summary) {
+      summary.classList.add('fp-family-summary', 'fp-metric-grid')
+      summary.querySelectorAll('article').forEach(function (card) {
+        card.classList.add('fp-family-summary-card', 'fp-metric-card')
+        card.querySelectorAll('span').forEach(function (label) { label.classList.add('fp-metric-label') })
+        card.querySelectorAll('strong').forEach(function (value) { value.classList.add('fp-metric-value') })
+        card.querySelectorAll('small').forEach(function (copy) { copy.classList.add('fp-card-meta') })
+      })
+    })
+    scope.querySelectorAll('.family-group-list').forEach(function (list) { list.classList.add('fp-family-member-list', 'fp-list') })
+    scope.querySelectorAll('.family-group-list article').forEach(function (row) {
+      row.classList.add('fp-family-member-row', 'fp-list-row')
+      row.querySelectorAll('span, small').forEach(function (meta) { meta.classList.add('fp-row-meta') })
+      row.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-row-title') })
+      row.querySelectorAll('b').forEach(function (badge) { badge.classList.add('fp-status-badge') })
+    })
     scope.querySelectorAll('.auth-copy').forEach(function (copy) {
       copy.querySelectorAll('h1, h2').forEach(function (title) { title.classList.add('fp-auth-copy-title') })
       copy.querySelectorAll('p').forEach(function (text) { text.classList.add('fp-auth-copy-text') })
