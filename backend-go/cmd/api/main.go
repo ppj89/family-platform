@@ -4477,6 +4477,9 @@ func (a *app) requireFamilyPermission(w http.ResponseWriter, ctx context.Context
 	if user.PlatformAdmin {
 		return true
 	}
+	if familyID <= 0 {
+		return true
+	}
 	if a.hasFamilyPermission(ctx, user, familyID, permission) {
 		return true
 	}

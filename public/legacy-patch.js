@@ -4522,7 +4522,7 @@
       var save = dialog.querySelector('.save-button')
       save.disabled = true
       save.textContent = '\uC800\uC7A5 \uC911'
-      getCurrentFamilyId().then(function (familyId) {
+      getReadableFamilyId().then(function (familyId) {
         return postJson('/babies?familyId=' + encodeURIComponent(familyId), {
           name: name,
           gender: gender,
@@ -4745,8 +4745,7 @@
       var form = findExistingDiaryComposer()
       var target = form && (form.closest('form, .panel, aside') || form)
       if (!target) {
-        showPatchToast('\uC77C\uAE30 \uC785\uB825 \uC601\uC5ED\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
-        return
+        target = createDiaryApiComposer()
       }
       target.classList.add('diary-api-composer-open')
       target.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -4755,6 +4754,31 @@
     })
     actions.appendChild(createButton)
     header.appendChild(actions)
+  }
+
+  function createDiaryApiComposer() {
+    var host = document.querySelector('.content-grid') || document.querySelector('.workspace')
+    var panel = document.createElement('aside')
+    panel.className = 'panel entry-panel diary-api-composer diary-api-composer-open fp-screen-panel fp-side-panel fp-panel fp-panel-with-form'
+    panel.innerHTML = [
+      '<header class="panel-header fp-panel-header"><h2 class="fp-panel-title">\uC77C\uAE30 \uCD94\uAC00</h2></header>',
+      '<form class="diary-form ledger-form fp-form">',
+      '<label class="fp-field"><span class="fp-field-label">\uC81C\uBAA9 <em class="required-mark">*</em></span><input class="fp-control" data-field="diary-title" /></label>',
+      '<label class="fp-field"><span class="fp-field-label">\uB0A0\uC9DC</span><input class="fp-control" data-field="diary-date" type="date" value="' + todayText() + '" /></label>',
+      '<div class="form-row fp-form-row">',
+      '<label class="fp-field"><span class="fp-field-label">\uB0A0\uC528</span><input class="fp-control" data-field="diary-weather" /></label>',
+      '<label class="fp-field"><span class="fp-field-label">\uAE30\uBD84</span><input class="fp-control" data-field="diary-mood" /></label>',
+      '</div>',
+      '<div class="form-row fp-form-row">',
+      '<label class="fp-field"><span class="fp-field-label">\uCD5C\uC800 \uC628\uB3C4</span><input class="fp-control" data-field="diary-min-temp" inputmode="numeric" /></label>',
+      '<label class="fp-field"><span class="fp-field-label">\uCD5C\uACE0 \uC628\uB3C4</span><input class="fp-control" data-field="diary-max-temp" inputmode="numeric" /></label>',
+      '</div>',
+      '<label class="fp-field"><span class="fp-field-label">\uB0B4\uC6A9 <em class="required-mark">*</em></span><textarea class="fp-control fp-textarea" data-field="diary-body" rows="5"></textarea></label>',
+      '<button class="submit-action fp-button fp-submit-action" type="submit">\uC800\uC7A5</button>',
+      '</form>'
+    ].join('')
+    if (host) host.appendChild(panel)
+    return panel
   }
 
   function cleanupDiaryApiComposer() {
@@ -4800,17 +4824,16 @@
     }
     panel.dataset.diaryPanelSubmitting = 'true'
     if (submitButton) submitButton.disabled = true
-    getCurrentFamilyId().then(function (familyId) {
+    getReadableFamilyId().then(function (familyId) {
       return postJson('/diaries?familyId=' + encodeURIComponent(familyId), {
         title: title,
         body: body,
-        diaryDate: getDatePickerValue(panel, '\uB0A0\uC9DC') || todayText(),
-        weather: getControlValueByLabel(panel, '\uB0A0\uC528') || null,
-        mood: getControlValueByLabel(panel, '\uAE30\uBD84') || null,
-        minTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uC800 \uC628\uB3C4')),
-        maxTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uACE0 \uC628\uB3C4')),
-        photoUrls: [],
-        videoUrls: []
+        diaryDate: getDatePickerValue(panel, '\uB0A0\uC9DC') || getFieldValue(panel, '[data-field="diary-date"]') || todayText(),
+        weather: getControlValueByLabel(panel, '\uB0A0\uC528') || getFieldValue(panel, '[data-field="diary-weather"]') || null,
+        mood: getControlValueByLabel(panel, '\uAE30\uBD84') || getFieldValue(panel, '[data-field="diary-mood"]') || null,
+        minTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uC800 \uC628\uB3C4') || getFieldValue(panel, '[data-field="diary-min-temp"]')),
+        maxTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uACE0 \uC628\uB3C4') || getFieldValue(panel, '[data-field="diary-max-temp"]')),
+        mediaUrls: []
       })
     }).then(function () {
       showPatchToast('\uC77C\uAE30\uB97C \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
@@ -5371,10 +5394,6 @@
     var bodyHtml = renderCommunityBoard(tab, admin)
     root.innerHTML = [
       '<section class="panel wide community-panel">',
-      '<div class="community-hero">',
-      '<div><span>Community</span><h2>\uAC00\uC871\uC744 \uB118\uC5B4 \uD568\uAED8 \uB098\uB204\uB294 \uACF5\uAC04</h2><p>\uC790\uC720\uAC8C\uC2DC\uD310\uC740 \uC804\uCCB4 \uC0AC\uC6A9\uC790\uC640 \uACF5\uC720\uD558\uACE0, \uACF5\uC9C0\uC0AC\uD56D\uACFC \uBB38\uC758\uC0AC\uD56D\uC740 \uAD00\uB9AC\uC790 \uAD8C\uD55C\uC73C\uB85C \uC791\uC131\uD569\uB2C8\uB2E4.</p></div>',
-      '<strong>\uBA54\uB274 \uB178\uCD9C\uAD8C\uD55C<br><b>\uAD00\uB9AC\uC790</b></strong>',
-      '</div>',
       '<div class="community-tabs">',
       ['notice', 'free', 'inquiry'].map(function (key) {
         return '<button type="button" class="' + (tab === key ? 'active' : '') + '" data-community-tab="' + key + '">' + communityTabLabel(key) + '</button>'
@@ -9454,7 +9473,7 @@
     var cachedId = Number(localStorage.getItem(API_TRIP_ID_KEY) || '')
     if (Number.isFinite(cachedId) && cachedId > 0) return Promise.resolve(cachedId)
 
-    return getCurrentFamilyId().then(function (familyId) {
+    return getReadableFamilyId().then(function (familyId) {
       return postJson('/trips?familyId=' + encodeURIComponent(familyId), {
       title: '기본 여행',
       startDate: todayText(),
@@ -9469,7 +9488,7 @@
 
   function trySyncTask(task) {
     if (task.type === 'createTrip') {
-      return getCurrentFamilyId().then(function (familyId) {
+      return getReadableFamilyId().then(function (familyId) {
         return postJson('/trips?familyId=' + encodeURIComponent(familyId), task.payload)
       }).then(function (trip) {
         if (trip && trip.id) localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
@@ -9489,13 +9508,13 @@
     }
 
     if (task.type === 'createLedgerEntry') {
-      return getCurrentFamilyId().then(function (familyId) {
+      return getReadableFamilyId().then(function (familyId) {
         return postJson('/ledger-entries?familyId=' + encodeURIComponent(familyId), task.payload)
       })
     }
 
     if (task.type === 'createDiary') {
-      return getCurrentFamilyId().then(function (familyId) {
+      return getReadableFamilyId().then(function (familyId) {
         return postJson('/diaries?familyId=' + encodeURIComponent(familyId), task.payload)
       })
     }
@@ -9782,6 +9801,7 @@
 
   document.addEventListener('submit', function (event) {
     var diaryForm = event.target && event.target.closest && event.target.closest('.diary-form')
+    if (diaryForm && diaryForm.closest('.diary-api-composer')) return
     if (diaryForm) syncDiaryForm(diaryForm)
   }, true)
 
