@@ -11279,40 +11279,108 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 }
 
 .fp-calendar-schedule-row {
-  grid-template-columns: 96px minmax(0, 1fr) auto !important;
-  column-gap: 24px !important;
-  row-gap: 10px !important;
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  column-gap: 18px !important;
+  row-gap: 8px !important;
   align-items: center !important;
-  padding: 16px 14px !important;
+  padding: 14px 16px !important;
+  border: 1px solid #e5e8eb !important;
+  border-radius: 18px !important;
+  background: #ffffff !important;
+  box-shadow: none !important;
 }
 
 .fp-schedule-date-badge {
   justify-self: start !important;
-  min-width: 82px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  min-width: 74px !important;
+  height: 42px !important;
   margin: 0 !important;
+  border-radius: 999px !important;
+  background: #eaf3ff !important;
+  color: #1b64da !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  white-space: nowrap !important;
 }
 
 .fp-schedule-row-detail {
   display: grid !important;
-  gap: 5px !important;
+  gap: 4px !important;
   min-width: 0 !important;
-  padding-left: 4px !important;
+  padding-left: 0 !important;
+}
+
+.fp-schedule-row-detail > strong,
+.fp-schedule-row-detail .fp-card-title {
+  color: #111827 !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.fp-schedule-row-detail p,
+.fp-schedule-row-detail small {
+  margin: 0 !important;
+  color: #6b7684 !important;
+  font-size: 13px !important;
+  line-height: 1.45 !important;
 }
 
 .fp-schedule-row-actions {
-  margin-left: 22px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 8px !important;
+  margin-left: 0 !important;
+}
+
+.fp-schedule-row-actions button,
+.fp-schedule-row-actions .fp-button {
+  width: auto !important;
+  min-width: 58px !important;
+  min-height: 34px !important;
+  padding: 0 13px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: #edf4ff !important;
+  color: #1b64da !important;
+  box-shadow: inset 0 0 0 1px #bfdcff !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+}
+
+.fp-schedule-row-actions .danger-button {
+  background: #fff1f3 !important;
+  color: #f04452 !important;
+  box-shadow: inset 0 0 0 1px #ffc2ca !important;
 }
 
 @media (max-width: 720px) {
   .fp-calendar-schedule-row {
-    grid-template-columns: 88px minmax(0, 1fr) !important;
-    column-gap: 18px !important;
+    grid-template-columns: 72px minmax(0, 1fr) !important;
+    column-gap: 12px !important;
+    padding: 14px !important;
   }
 
   .fp-schedule-row-actions {
-    grid-column: 1 / -1 !important;
-    justify-content: flex-end !important;
+    grid-column: 2 !important;
+    justify-content: flex-start !important;
     margin-left: 0 !important;
+  }
+
+  .fp-schedule-row-actions button,
+  .fp-schedule-row-actions .fp-button {
+    min-width: 72px !important;
+  }
+
+  .fp-schedule-date-badge {
+    min-width: 64px !important;
   }
 }
 
