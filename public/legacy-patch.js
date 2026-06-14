@@ -3898,7 +3898,6 @@
     normalizeTravelEntryForm()
     ensureTravelHeaderActions()
     normalizeDiaryEntryForm()
-    cleanupDiaryApiComposer()
     normalizeBabyEntryForms()
     normalizeTimeInputs()
     refreshMapLayouts()
@@ -4809,7 +4808,6 @@
   }
 
   function ensureDiaryApiComposer() {
-    cleanupDiaryApiComposer()
     return findExistingDiaryComposer()
   }
 
@@ -4825,24 +4823,17 @@
 
   function submitExistingDiaryPanel(panel, submitButton) {
     if (!panel || panel.dataset.diaryPanelSubmitting === 'true') return
-    panel.dataset.diarySubmitStage = 'started'
     var title = getFieldValue(panel, '[data-field="diary-title"]') || getInputValueByLabel(panel, '\uC81C\uBAA9')
     var body = getFieldValue(panel, '[data-field="diary-body"]') || getInputValueByLabel(panel, '\uB0B4\uC6A9') || getFieldValue(panel, 'textarea')
-    panel.dataset.diarySubmitTitle = title || ''
-    panel.dataset.diarySubmitBodyLength = String((body || '').length)
     if (!title) {
-      panel.dataset.diarySubmitStage = 'missing-title'
       showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
       var titleField = panel.querySelector('label input, input')
       if (titleField) titleField.focus()
       return
     }
     panel.dataset.diaryPanelSubmitting = 'true'
-    panel.dataset.diarySubmitStage = 'family-id'
     if (submitButton) submitButton.disabled = true
     getReadableFamilyId().then(function (familyId) {
-      panel.dataset.diarySubmitStage = 'posting'
-      panel.dataset.diarySubmitFamilyId = String(familyId)
       return postJson('/diaries?familyId=' + encodeURIComponent(familyId), {
         title: title,
         body: body,
@@ -4854,7 +4845,6 @@
         mediaUrls: []
       })
     }).then(function () {
-      panel.dataset.diarySubmitStage = 'saved'
       showPatchToast('\uC77C\uAE30\uB97C \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
       panel.querySelectorAll('input, textarea').forEach(function (field) {
         if (field.type !== 'hidden') setNativeInputValue(field, '')
@@ -4862,8 +4852,6 @@
       renderDiaryPageFromApi(true)
       refreshServerDataViews(true)
     }).catch(function (error) {
-      panel.dataset.diarySubmitStage = 'error'
-      panel.dataset.diarySubmitError = String((error && error.message) || error || '')
       showPatchToast(apiActionErrorMessage(error, '\uC77C\uAE30 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
     }).finally(function () {
       delete panel.dataset.diaryPanelSubmitting
@@ -8408,8 +8396,6 @@
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    button.dataset.diarySubmitAttemptedAt = String(Date.now())
-    form.dataset.diarySubmitAttemptedAt = button.dataset.diarySubmitAttemptedAt
     submitExistingDiaryPanel(form, button)
     return true
   }
