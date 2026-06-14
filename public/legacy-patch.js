@@ -7538,6 +7538,7 @@
     })
     ;(root || document).querySelectorAll('.field-invalid').forEach(function (item) {
       item.classList.remove('field-invalid')
+      item.classList.remove('fp-field-invalid')
     })
   }
 
@@ -7554,6 +7555,7 @@
       error.textContent = message
       error.hidden = false
       label.classList.add('field-invalid')
+      label.classList.add('fp-field-invalid')
     }
     showPatchToast(message)
     if (control && control.focus) {
@@ -7602,6 +7604,12 @@
       '.entry-panel form'
     ].join(',')).forEach(function (form) {
       form.classList.add('fp-form')
+      var panel = form.closest('.panel, .entry-panel, aside, section')
+      if (panel) panel.classList.add('fp-panel-with-form')
+    })
+
+    scope.querySelectorAll('.form-row, .baby-api-form-grid, .fc-form-grid, .travel-form-row').forEach(function (row) {
+      if (row.closest('.fp-form')) row.classList.add('fp-form-row')
     })
 
     scope.querySelectorAll('.fp-form label, .ledger-form label, .travel-form label, .diary-form label, .baby-form label, .restaurant-form label, .baby-api-record-form label').forEach(function (label) {
@@ -7609,17 +7617,48 @@
       var title = label.querySelector('span, strong, b')
       if (title) title.classList.add('fp-field-label')
       var control = label.querySelector('input:not([type="hidden"]):not([type="file"]), textarea, select, .date-picker-trigger, .custom-select-trigger')
-      if (control) control.classList.add('fp-control')
+      if (control) {
+        control.classList.add('fp-control')
+        if (control.tagName === 'TEXTAREA') control.classList.add('fp-textarea')
+      }
     })
 
     scope.querySelectorAll('.date-picker-field').forEach(function (field) {
       field.classList.add('fp-field')
+      field.classList.add('fp-datepicker-field')
       var trigger = field.querySelector('.date-picker-trigger')
       if (trigger) trigger.classList.add('fp-control')
     })
 
     scope.querySelectorAll('.custom-select-trigger, input:not([type="hidden"]):not([type="file"]), textarea, select, .date-picker-trigger').forEach(function (control) {
-      if (!control.closest('.auth-card')) control.classList.add('fp-control')
+      if (!control.closest('.auth-card')) {
+        control.classList.add('fp-control')
+        if (control.tagName === 'TEXTAREA') control.classList.add('fp-textarea')
+      }
+    })
+
+    scope.querySelectorAll('.custom-select').forEach(function (select) {
+      select.classList.add('fp-select-wrap')
+    })
+
+    scope.querySelectorAll('.custom-select-list').forEach(function (list) {
+      list.classList.add('fp-select-list')
+    })
+
+    scope.querySelectorAll('.fp-form button[type="submit"], .fp-form .submit-action, .fp-form .save-button').forEach(function (button) {
+      button.classList.add('fp-submit-action')
+    })
+
+    scope.querySelectorAll('.family-calendar-panel .api-schedule-row, .family-calendar-panel .schedule-row.api-schedule-row').forEach(function (row) {
+      row.classList.add('fp-calendar-schedule-row')
+      var badge = row.querySelector('.schedule-date-badge')
+      if (badge) badge.classList.add('fp-schedule-date-badge')
+      var detail = Array.from(row.children).find(function (child) {
+        return child !== badge && !child.classList.contains('schedule-row-actions')
+      })
+      if (detail) detail.classList.add('fp-schedule-row-detail')
+      var actions = row.querySelector('.schedule-row-actions')
+      if (actions) actions.classList.add('fp-schedule-row-actions')
     })
 
     scope.querySelectorAll('.fp-form [required], .ledger-form [required], .travel-form [required], .diary-form [required], .baby-form [required], .restaurant-form [required]').forEach(function (control) {
