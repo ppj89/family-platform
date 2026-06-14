@@ -7596,7 +7596,7 @@
     var scope = root || document
     var pageTitle = getCleanText(document.querySelector('.topbar h1'))
     var content = document.querySelector('.content-grid')
-    var standardPages = ['\uAC00\uACC4\uBD80', '\uC5EC\uD589', '\uC721\uC544', '\uC77C\uAE30', '\uB9DB\uC9D1', '\uCE98\uB9B0\uB354']
+    var standardPages = ['\uAC00\uACC4\uBD80', '\uC5EC\uD589', '\uC721\uC544', '\uC77C\uAE30', '\uB9DB\uC9D1', '\uCE98\uB9B0\uB354', '\uAC00\uC871\uADF8\uB8F9', '\uCEE4\uBBA4\uB2C8\uD2F0', '\uAD00\uB9AC\uC790']
     if (content) {
       content.classList.add('fp-content-grid')
       if (standardPages.indexOf(pageTitle) >= 0) content.classList.add('fp-workspace-grid')
@@ -7641,6 +7641,48 @@
       metric.classList.add('fp-metric-card')
       metric.querySelectorAll('span').forEach(function (label) { label.classList.add('fp-metric-label') })
       metric.querySelectorAll('strong').forEach(function (value) { value.classList.add('fp-metric-value') })
+    })
+    scope.querySelectorAll([
+      '.content-grid > .panel',
+      '.content-grid > .entry-panel',
+      '.patch-family-group-root > .panel',
+      '.patch-community-root > .panel'
+    ].join(',')).forEach(function (panel) {
+      panel.classList.add('fp-screen-panel')
+      var text = getCleanText(panel)
+      var isFormPanel = !!panel.querySelector([
+        '.ledger-form',
+        '.travel-form',
+        '.diary-form',
+        '.baby-form',
+        '.baby-create-form',
+        '.baby-profile-form',
+        '.baby-api-record-form',
+        '.restaurant-form',
+        '.schedule-form-card form',
+        '.family-create-form',
+        '.family-invite-form'
+      ].join(','))
+      var isScheduleFormPanel = panel.classList.contains('schedule-form-card')
+      var isRightFormByTitle = /(\uCD94\uAC00|\uC785\uB825|\uC218\uC815|\uC0C8\s*\uC77C\uC815|\uC77C\uC815\s*\uCD94\uAC00|\uB9DB\uC9D1\s*\uCD94\uAC00|\uAE30\uB85D\s*\uCD94\uAC00)/.test(text)
+      var isPrimaryByContent = !!panel.querySelector([
+        '.ledger-table',
+        '.daily-ledger',
+        '.family-calendar-panel',
+        '.trip-manager',
+        '.trip-list',
+        '.diary-section',
+        '.diary-list',
+        '.baby-list-grid',
+        '.baby-record-list',
+        '.restaurant-grid',
+        '.family-group-list',
+        '.community-list',
+        '.admin-list'
+      ].join(','))
+      if (isFormPanel || isScheduleFormPanel || isRightFormByTitle) panel.classList.add('fp-side-panel')
+      if (isPrimaryByContent || panel.classList.contains('wide') || panel.classList.contains('full-span')) panel.classList.add('fp-primary-panel')
+      if (panel.classList.contains('wide') || panel.classList.contains('full-span')) panel.classList.add('fp-wide-panel')
     })
     scope.querySelectorAll('.ledger-summary').forEach(function (item) { item.classList.add('fp-ledger-summary') })
     scope.querySelectorAll('.sync-panel').forEach(function (panel) {
@@ -7859,14 +7901,32 @@
     scope.querySelectorAll('.ledger-table, .timeline, .member-list, .admin-list, .task-list, .diary-list, .family-group-list, .schedule-list').forEach(function (list) {
       list.classList.add('fp-list')
     })
+    scope.querySelectorAll([
+      '.trip-list',
+      '.api-trip-record-list',
+      '.baby-list-grid',
+      '.restaurant-grid',
+      '.community-list',
+      '.permission-chips',
+      '.location-candidates'
+    ].join(',')).forEach(function (list) {
+      list.classList.add('fp-list')
+    })
 
-    scope.querySelectorAll('.ledger-row, .timeline-row, .member-row, .admin-row, .schedule-row, .diary-list-row, .baby-record-row').forEach(function (row) {
+    scope.querySelectorAll('.ledger-row, .timeline-row, .member-row, .admin-row, .schedule-row, .diary-list-row, .baby-record-row, .trip-list-card, .api-travel-record-card, .baby-card, .restaurant-card, .community-post, .community-free-row, .family-group-list article').forEach(function (row) {
       row.classList.add('fp-list-row')
       if (row.classList.contains('ledger-row')) row.classList.add('fp-ledger-row')
       if (row.classList.contains('schedule-row')) row.classList.add('fp-schedule-row')
       if (row.classList.contains('admin-row')) row.classList.add('fp-admin-row')
+      if (row.classList.contains('trip-list-card') || row.classList.contains('api-travel-record-card')) row.classList.add('fp-travel-row')
+      if (row.classList.contains('baby-card') || row.classList.contains('baby-record-row')) row.classList.add('fp-baby-row')
+      if (row.classList.contains('restaurant-card')) row.classList.add('fp-restaurant-row')
+      if (row.classList.contains('community-post') || row.classList.contains('community-free-row')) row.classList.add('fp-community-row')
       row.querySelectorAll('span, small, em').forEach(function (meta) {
         meta.classList.add('fp-row-meta')
+      })
+      row.querySelectorAll('strong, h2, h3').forEach(function (title) {
+        title.classList.add('fp-row-title')
       })
       row.querySelectorAll('b').forEach(function (amount) {
         amount.classList.add('fp-row-amount')
@@ -7936,6 +7996,15 @@
 
     scope.querySelectorAll('.fp-form button[type="submit"], .fp-form .submit-action, .fp-form .save-button').forEach(function (button) {
       button.classList.add('fp-button', 'fp-submit-action')
+    })
+    scope.querySelectorAll('.location-map-box, .route-map, .travel-map, .restaurant-form .location-map-box').forEach(function (map) {
+      map.classList.add('fp-map-box')
+      map.querySelectorAll('.leaflet-container, iframe, .location-map-canvas, .location-map-osm').forEach(function (canvas) {
+        canvas.classList.add('fp-map-canvas')
+      })
+    })
+    scope.querySelectorAll('.photo-input, .media-upload-empty, .community-file-field, .baby-profile-photo-field').forEach(function (field) {
+      field.classList.add('fp-upload-field')
     })
 
     scope.querySelectorAll('button, [role="button"]').forEach(function (button) {

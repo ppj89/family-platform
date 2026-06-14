@@ -11405,3 +11405,270 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
   color: #f8fafc !important;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14) !important;
 }
+
+/* Cross-menu standard layout: calendar and ledger are the baseline. */
+.fp-content-grid.fp-workspace-grid {
+  display: grid !important;
+  align-items: start !important;
+  gap: 20px !important;
+}
+
+@media (min-width: 1120px) {
+  .fp-content-grid.fp-workspace-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 380px) !important;
+  }
+
+  .fp-content-grid.fp-workspace-grid > .fp-primary-panel,
+  .fp-content-grid.fp-workspace-grid > .fp-wide-panel,
+  .patch-family-group-root > .fp-primary-panel,
+  .patch-community-root > .fp-primary-panel {
+    grid-column: 1 !important;
+  }
+
+  .fp-content-grid.fp-workspace-grid > .fp-side-panel {
+    grid-column: 2 !important;
+    align-self: start !important;
+    position: sticky !important;
+    top: 22px !important;
+  }
+
+  .fp-content-grid.fp-workspace-grid > .fp-side-panel.fp-primary-panel {
+    grid-column: 1 / -1 !important;
+    position: static !important;
+  }
+}
+
+@media (max-width: 1119px) {
+  .fp-content-grid.fp-workspace-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .fp-content-grid.fp-workspace-grid > .fp-side-panel {
+    position: static !important;
+  }
+}
+
+.fp-screen-panel,
+.fp-primary-panel,
+.fp-side-panel {
+  min-width: 0 !important;
+}
+
+.fp-side-panel .fp-panel-header,
+.fp-primary-panel .fp-panel-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 12px !important;
+}
+
+.fp-side-panel .fp-panel-title,
+.fp-primary-panel .fp-panel-title {
+  min-width: 0 !important;
+}
+
+.fp-list {
+  display: grid !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+.fp-list-row,
+.fp-travel-row,
+.fp-baby-row,
+.fp-restaurant-row,
+.fp-community-row {
+  min-width: 0 !important;
+  border-radius: 16px !important;
+  background: #f7f8fa !important;
+  box-shadow: inset 0 0 0 1px #e5e8eb !important;
+}
+
+.fp-list-row {
+  color: #191f28 !important;
+}
+
+.fp-row-title,
+.fp-list-row .fp-text-title,
+.fp-list-row .fp-card-title {
+  color: #191f28 !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+  line-height: 1.35 !important;
+  letter-spacing: 0 !important;
+}
+
+.fp-row-meta,
+.fp-list-row .fp-card-meta,
+.fp-list-row .fp-text-meta {
+  color: #6b7684 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.45 !important;
+}
+
+.fp-ledger-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto auto !important;
+  gap: 6px 18px !important;
+  align-items: center !important;
+}
+
+.daily-ledger > .fp-section-header,
+.daily-ledger > div:first-child {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 24px !important;
+  margin-bottom: 12px !important;
+}
+
+.daily-ledger > .fp-section-header .fp-text-title,
+.daily-ledger > div:first-child .fp-text-title {
+  flex: 0 0 auto !important;
+}
+
+.daily-ledger > .fp-section-header .fp-text-meta,
+.daily-ledger > div:first-child .fp-text-meta {
+  margin-left: auto !important;
+  text-align: right !important;
+  white-space: normal !important;
+}
+
+.fp-travel-row,
+.fp-baby-row,
+.fp-restaurant-row,
+.fp-community-row {
+  padding: 14px !important;
+}
+
+.fp-baby-row {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr) auto !important;
+  gap: 8px 18px !important;
+  align-items: center !important;
+}
+
+.fp-baby-row .fp-row-title,
+.fp-baby-row .fp-card-title {
+  margin-right: 10px !important;
+}
+
+.fp-travel-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  gap: 8px 14px !important;
+  text-align: left !important;
+}
+
+.fp-restaurant-row {
+  overflow: hidden !important;
+}
+
+.fp-form {
+  width: 100% !important;
+}
+
+.fp-form .fp-field {
+  margin: 0 !important;
+}
+
+.fp-form .fp-field + .fp-field,
+.fp-form .fp-form-row + .fp-field,
+.fp-form .fp-field + .fp-form-row {
+  margin-top: 2px !important;
+}
+
+.fp-control,
+.fp-select-wrap,
+.fp-datepicker-field,
+.fp-upload-field {
+  position: relative !important;
+}
+
+.fp-select-list,
+.custom-select-list {
+  z-index: 2147481200 !important;
+}
+
+.date-picker-field .calendar-popover,
+.calendar-popover {
+  z-index: 2147481300 !important;
+}
+
+.fp-map-box {
+  overflow: hidden !important;
+  min-height: 260px !important;
+  border-radius: 18px !important;
+  background: #eef4f8 !important;
+  box-shadow: inset 0 0 0 1px #dfe7ef !important;
+}
+
+.fp-map-canvas,
+.fp-map-box .leaflet-container,
+.fp-map-box iframe {
+  display: block !important;
+  width: 100% !important;
+  min-height: 260px !important;
+  height: 100% !important;
+}
+
+.fp-upload-field {
+  display: grid !important;
+  place-items: center !important;
+  min-height: 118px !important;
+  border-radius: 16px !important;
+  background: #f7f9fc !important;
+  color: #1b64da !important;
+  box-shadow: inset 0 0 0 1px #e5e8eb !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.theme-dark .fp-list-row,
+.theme-dark .fp-travel-row,
+.theme-dark .fp-baby-row,
+.theme-dark .fp-restaurant-row,
+.theme-dark .fp-community-row,
+.theme-dark .fp-upload-field,
+.theme-dark .fp-map-box {
+  background: #303742 !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1) !important;
+}
+
+.theme-dark .fp-row-title,
+.theme-dark .fp-list-row .fp-text-title,
+.theme-dark .fp-list-row .fp-card-title {
+  color: #f8fafc !important;
+}
+
+.theme-dark .fp-row-meta,
+.theme-dark .fp-list-row .fp-card-meta,
+.theme-dark .fp-list-row .fp-text-meta {
+  color: #b8c2cf !important;
+}
+
+@media (max-width: 720px) {
+  .fp-ledger-row,
+  .fp-travel-row,
+  .fp-baby-row {
+    grid-template-columns: minmax(0, 1fr) auto !important;
+  }
+
+  .fp-baby-row {
+    gap: 8px 12px !important;
+  }
+
+  .daily-ledger > .fp-section-header,
+  .daily-ledger > div:first-child {
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .fp-map-box,
+  .fp-map-canvas,
+  .fp-map-box .leaflet-container,
+  .fp-map-box iframe {
+    min-height: 230px !important;
+  }
+}
