@@ -8341,17 +8341,22 @@
     scope.querySelectorAll('.diary-form button[type="submit"], .diary-form .submit-action').forEach(function (button) {
       if (button.dataset.diarySubmitWired === 'true') return
       button.dataset.diarySubmitWired = 'true'
-      var submit = function (event) {
-        var form = button.closest('.diary-form')
-        if (!form) return
-        event.preventDefault()
-        event.stopPropagation()
-        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-        submitExistingDiaryPanel(form, button)
-      }
+      var submit = function (event) { handleDiarySubmitControlEvent(event, button) }
       button.addEventListener('pointerdown', submit, true)
       button.addEventListener('click', submit, true)
     })
+  }
+
+  function handleDiarySubmitControlEvent(event, matchedButton) {
+    var button = matchedButton || (event.target && event.target.closest && event.target.closest('.diary-form button[type="submit"], .diary-form .submit-action'))
+    if (!button || !pageHeadingIs('\uC77C\uAE30')) return false
+    var form = button.closest('.diary-form')
+    if (!form) return false
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitExistingDiaryPanel(form, button)
+    return true
   }
 
   function normalizeBabyEntryForms() {
@@ -9828,6 +9833,14 @@
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     submitLedgerEdit(form)
+  }, true)
+
+  window.addEventListener('pointerdown', function (event) {
+    handleDiarySubmitControlEvent(event)
+  }, true)
+
+  window.addEventListener('click', function (event) {
+    handleDiarySubmitControlEvent(event)
   }, true)
 
   document.addEventListener('submit', function (event) {
