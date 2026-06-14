@@ -5442,7 +5442,7 @@
     return [
       '<div class="community-board-toolbar">',
       '<div><strong>\uC790\uC720\uAC8C\uC2DC\uD310</strong></div>',
-      '<button type="button" data-community-compose-toggle>' + (communityState.composing ? '\uC791\uC131 \uB2EB\uAE30' : '\uAE00\uC4F0\uAE30') + '</button>',
+      '<button type="button" class="fp-button community-write-toggle" data-community-compose-toggle>' + (communityState.composing ? '\uC791\uC131 \uB2EB\uAE30' : '\uAE00\uC4F0\uAE30') + '</button>',
       '</div>',
       communityState.composing ? renderCommunityFreeEditor(null) : '',
       '<div class="community-free-list">',
@@ -5466,7 +5466,7 @@
       '<input name="title" value="' + escapeHtml(post ? post.title : '') + '" />',
       '<textarea name="body" rows="5">' + escapeHtml(post ? post.body : '') + '</textarea>',
       '<label class="community-file-field"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCCA8\uBD80</span><input name="files" type="file" accept="image/*,video/*" multiple /><small>' + ((post && post.files && post.files.length) ? post.files.map(function (file) { return escapeHtml(file.name) }).join(', ') : mediaLimitText()) + '</small></label>',
-      '<div class="community-editor-actions"><button type="button" class="cancel-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
+      '<div class="community-editor-actions"><button type="button" class="cancel-button fp-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit" class="submit-action fp-button">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
       '</form>'
     ].join('')
   }
@@ -5480,7 +5480,7 @@
     }
     return [
       '<div class="community-detail">',
-      '<div class="community-detail-top"><button type="button" data-community-back-list>\uBAA9\uB85D</button><div><button type="button" data-community-edit-post="' + escapeHtml(post.id) + '">\uC218\uC815</button><button type="button" class="danger-button" data-community-delete-post="' + escapeHtml(post.id) + '">\uC0AD\uC81C</button></div></div>',
+      '<div class="community-detail-top"><button type="button" class="fp-button" data-community-back-list>\uBAA9\uB85D</button><div><button type="button" class="fp-button" data-community-edit-post="' + escapeHtml(post.id) + '">\uC218\uC815</button><button type="button" class="danger-button fp-button" data-community-delete-post="' + escapeHtml(post.id) + '">\uC0AD\uC81C</button></div></div>',
       communityState.editingPostId === post.id ? renderCommunityFreeEditor(post) : [
         '<article class="community-detail-article">',
         '<h3>' + escapeHtml(post.title) + '</h3>',
@@ -5522,11 +5522,11 @@
     return [
       '<div class="community-comments">',
       comments.map(function (comment) {
-        return '<div class="community-comment" data-comment-id="' + escapeHtml(comment.id || '') + '"><div><strong>' + escapeHtml(comment.author) + '</strong><small>' + escapeHtml(comment.time || '') + '</small></div><span>' + escapeHtml(comment.text) + '</span><div class="community-comment-actions"><button type="button" data-edit-comment="' + escapeHtml(comment.id || '') + '">\uC218\uC815</button><button type="button" data-delete-comment="' + escapeHtml(comment.id || '') + '">\uC0AD\uC81C</button></div></div>'
+        return '<div class="community-comment" data-comment-id="' + escapeHtml(comment.id || '') + '"><div><strong>' + escapeHtml(comment.author) + '</strong><small>' + escapeHtml(comment.time || '') + '</small></div><span>' + escapeHtml(comment.text) + '</span><div class="community-comment-actions"><button type="button" class="fp-button" data-edit-comment="' + escapeHtml(comment.id || '') + '">\uC218\uC815</button><button type="button" class="fp-button" data-delete-comment="' + escapeHtml(comment.id || '') + '">\uC0AD\uC81C</button></div></div>'
       }).join(''),
       '<form class="community-comment-form" data-comment-post="' + escapeHtml(post.id) + '">',
       '<input name="comment" />',
-      '<button type="submit">\uB4F1\uB85D</button>',
+      '<button type="submit" class="submit-action fp-button">\uB4F1\uB85D</button>',
       '</form>',
       '</div>'
     ].join('')
@@ -5584,7 +5584,7 @@
     return [
       '<div class="community-board-toolbar">',
       '<div><strong>' + communityTabLabel(tab) + '</strong></div>',
-      '<button type="button" data-community-compose-toggle>' + (communityState.composing ? '\uC791\uC131 \uB2EB\uAE30' : '\uAE00\uC4F0\uAE30') + '</button>',
+      '<button type="button" class="fp-button community-write-toggle" data-community-compose-toggle>' + (communityState.composing ? '\uC791\uC131 \uB2EB\uAE30' : '\uAE00\uC4F0\uAE30') + '</button>',
       '</div>',
       communityState.composing ? renderCommunityEditor(tab, null) : '',
       tab === 'free' ? renderCommunityBestPanel() : '',
@@ -5616,7 +5616,7 @@
       '<input name="title" value="' + escapeHtml(post ? post.title : '') + '" />',
       '<textarea name="body" rows="5">' + escapeHtml(post ? post.body : '') + '</textarea>',
       '<label class="community-file-field"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCCA8\uBD80</span><b>\uD30C\uC77C \uC120\uD0DD</b><input name="files" type="file" accept="image/*,video/*" multiple /><small>' + ((post && post.files && post.files.length) ? post.files.map(function (file) { return escapeHtml(file.name) }).join(', ') : mediaLimitText()) + '</small></label>',
-      '<div class="community-editor-actions"><button type="button" class="cancel-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
+      '<div class="community-editor-actions"><button type="button" class="cancel-button fp-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit" class="submit-action fp-button">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
       '</form>'
     ].join('')
   }
@@ -5638,7 +5638,7 @@
     }
     return [
       '<div class="community-detail">',
-      '<div class="community-detail-top"><button type="button" data-community-back-list>\uBAA9\uB85D</button><div><button type="button" data-community-edit-post="' + escapeHtml(post.id) + '">\uC218\uC815</button><button type="button" class="danger-button" data-community-delete-post="' + escapeHtml(post.id) + '">\uC0AD\uC81C</button></div></div>',
+      '<div class="community-detail-top"><button type="button" class="fp-button" data-community-back-list>\uBAA9\uB85D</button><div><button type="button" class="fp-button" data-community-edit-post="' + escapeHtml(post.id) + '">\uC218\uC815</button><button type="button" class="danger-button fp-button" data-community-delete-post="' + escapeHtml(post.id) + '">\uC0AD\uC81C</button></div></div>',
       communityState.editingPostId === post.id ? renderCommunityEditor(tab, post) : [
         '<article class="community-detail-article">',
         '<h3>' + escapeHtml(post.title) + '</h3>',
@@ -8357,7 +8357,8 @@
       actions.appendChild(newButton)
       newButton.addEventListener('click', function () {
         panel.classList.add('list-mode')
-        var first = panel.querySelector('.trip-add-row input, .travel-form input, .travel-form textarea')
+        normalizeTravelListWorkspace()
+        var first = document.querySelector('.travel-trip-create-card .trip-add-row input, .trip-add-row input, .travel-form input, .travel-form textarea')
         if (first) {
           first.scrollIntoView({ behavior: 'smooth', block: 'center' })
           window.setTimeout(function () { first.focus() }, 180)
@@ -8378,6 +8379,30 @@
       listButton.addEventListener('click', function () { originalList.click() })
       originalList.remove()
     }
+    normalizeTravelListWorkspace()
+  }
+
+  function normalizeTravelListWorkspace() {
+    if (!pageHeadingIs('\uC5EC\uD589')) return
+    var grid = document.querySelector('.content-grid')
+    var manager = document.querySelector('.trip-manager.list-mode')
+    if (!grid || !manager) return
+    var panel = manager.closest('.panel')
+    if (!panel) return
+    panel.classList.remove('full-span', 'fp-side-panel')
+    panel.classList.add('fp-primary-panel', 'fp-wide-panel')
+
+    var row = manager.querySelector('.trip-add-row')
+    if (!row) return
+    var aside = grid.querySelector('.travel-trip-create-card')
+    if (!aside) {
+      aside = document.createElement('aside')
+      aside.className = 'panel entry-panel travel-trip-create-card fp-screen-panel fp-side-panel fp-panel fp-panel-with-form'
+      aside.innerHTML = '<header class="panel-header fp-panel-header fp-section-header"><h2 class="fp-panel-title fp-text-title">\uC5EC\uD589 \uCD94\uAC00</h2></header>'
+      panel.insertAdjacentElement('afterend', aside)
+    }
+    if (row.parentElement !== aside) aside.appendChild(row)
+    row.classList.add('fp-form')
   }
 
   function normalizeDiaryEntryForm() {
@@ -8467,9 +8492,11 @@
     if (!panel && !headerAction) return
     if (!force && panel && panel.dataset.apiBacked === 'true') return
     if (panel) panel.dataset.apiBacked = 'true'
+    normalizeTravelListWorkspace()
     fetchTrips().then(function (trips) {
       if (headerAction) headerAction.textContent = Number(trips.length || 0).toLocaleString('ko-KR') + '\uAC1C'
       if (panel) renderApiTripList(panel, trips)
+      normalizeTravelListWorkspace()
       removeHardcodedDemoData()
     })
   }

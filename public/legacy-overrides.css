@@ -11788,3 +11788,50 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
   pointer-events: none !important;
   visibility: hidden !important;
 }
+
+/* Common layout repair pass: keep new menu screens aligned with ledger/calendar. */
+.travel-trip-create-card {
+  align-self: start !important;
+}
+
+.travel-trip-create-card .trip-add-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 14px !important;
+}
+
+.travel-trip-create-card .trip-add-row > .fp-control,
+.travel-trip-create-card .trip-add-row > .date-picker-field,
+.travel-trip-create-card .trip-add-row > .fp-button,
+.travel-trip-create-card .trip-add-row > .submit-action {
+  width: 100% !important;
+  min-height: 46px !important;
+}
+
+.community-tabs button,
+.community-board-toolbar > button,
+.community-detail-top button,
+.community-comment-form button,
+.community-editor-actions button {
+  border: 0 !important;
+  border-radius: 12px !important;
+  cursor: pointer !important;
+  font: inherit !important;
+  font-weight: 900 !important;
+}
+
+.community-board-toolbar > button,
+.community-detail-top button,
+.community-comment-form button,
+.community-editor-actions button {
+  min-height: 38px !important;
+  padding: 0 14px !important;
+  background: #edf4ff !important;
+  color: #1b64da !important;
+  font-size: 13px !important;
+}
+
+.community-editor-actions .cancel-button {
+  background: #fff1f3 !important;
+  color: #e84158 !important;
+}
