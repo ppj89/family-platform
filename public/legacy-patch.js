@@ -3360,6 +3360,15 @@
       })
     }
     normalizeRestaurantFormControls()
+    refreshMapLayouts()
+  }
+
+  function refreshMapLayouts() {
+    ;[0, 120, 420].forEach(function (delay) {
+      window.setTimeout(function () {
+        window.dispatchEvent(new Event('resize'))
+      }, delay)
+    })
   }
 
   function normalizeMenuCaptions() {
@@ -3892,6 +3901,7 @@
     cleanupDiaryApiComposer()
     normalizeBabyEntryForms()
     normalizeTimeInputs()
+    refreshMapLayouts()
     applyCommonUiStandard()
     installCommonRequiredSubmitGuard()
     removeFeaturePlaceholders()
@@ -4814,8 +4824,8 @@
 
   function submitExistingDiaryPanel(panel, submitButton) {
     if (!panel || panel.dataset.diaryPanelSubmitting === 'true') return
-    var title = getInputValueByLabel(panel, '\uC81C\uBAA9')
-    var body = getInputValueByLabel(panel, '\uB0B4\uC6A9') || getFieldValue(panel, 'textarea')
+    var title = getFieldValue(panel, '[data-field="diary-title"]') || getInputValueByLabel(panel, '\uC81C\uBAA9')
+    var body = getFieldValue(panel, '[data-field="diary-body"]') || getInputValueByLabel(panel, '\uB0B4\uC6A9') || getFieldValue(panel, 'textarea')
     if (!title) {
       showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
       var titleField = panel.querySelector('label input, input')
@@ -7439,7 +7449,7 @@
         }
         priceInput.removeAttribute('placeholder')
         label.querySelectorAll('.custom-select, select').forEach(function (select) {
-          if (!select.contains(priceInput)) hidePatchElement(select)
+          if (!select.contains(priceInput)) select.remove()
         })
       }
     })
@@ -8308,7 +8318,7 @@
       listButton.textContent = '\uBAA9\uB85D'
       actions.appendChild(listButton)
       listButton.addEventListener('click', function () { originalList.click() })
-      originalList.style.display = 'none'
+      originalList.remove()
     }
   }
 
@@ -9801,8 +9811,22 @@
 
   document.addEventListener('submit', function (event) {
     var diaryForm = event.target && event.target.closest && event.target.closest('.diary-form')
-    if (diaryForm && diaryForm.closest('.diary-api-composer')) return
-    if (diaryForm) syncDiaryForm(diaryForm)
+    if (!diaryForm || !pageHeadingIs('\uC77C\uAE30')) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitExistingDiaryPanel(diaryForm, diaryForm.querySelector('button[type="submit"], .submit-action'))
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var diarySubmit = event.target && event.target.closest && event.target.closest('.diary-form button[type="submit"], .diary-form .submit-action')
+    if (!diarySubmit || !pageHeadingIs('\uC77C\uAE30')) return
+    var diaryForm = diarySubmit.closest('.diary-form')
+    if (!diaryForm) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitExistingDiaryPanel(diaryForm, diarySubmit)
   }, true)
 
   document.addEventListener('click', function (event) {
