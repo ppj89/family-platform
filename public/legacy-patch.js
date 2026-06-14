@@ -7597,7 +7597,45 @@
     var pageTitle = getCleanText(document.querySelector('.topbar h1'))
     var content = document.querySelector('.content-grid')
     var standardPages = ['\uAC00\uACC4\uBD80', '\uC5EC\uD589', '\uC721\uC544', '\uC77C\uAE30', '\uB9DB\uC9D1', '\uCE98\uB9B0\uB354']
-    if (content && standardPages.indexOf(pageTitle) >= 0) content.classList.add('fp-workspace-grid')
+    if (content) {
+      content.classList.add('fp-content-grid')
+      if (standardPages.indexOf(pageTitle) >= 0) content.classList.add('fp-workspace-grid')
+    }
+
+    scope.querySelectorAll('.panel, .entry-panel, .summary-band, .metric').forEach(function (panel) {
+      panel.classList.add(panel.classList.contains('metric') ? 'fp-metric-card' : 'fp-panel')
+      panel.querySelectorAll('h2, h3').forEach(function (title) {
+        title.classList.add('fp-panel-title')
+      })
+      panel.querySelectorAll('p').forEach(function (copy) {
+        copy.classList.add('fp-panel-copy')
+      })
+    })
+
+    scope.querySelectorAll('.panel-header').forEach(function (header) {
+      header.classList.add('fp-panel-header')
+      var title = header.querySelector('h2, h3')
+      if (title) title.classList.add('fp-panel-title')
+      header.querySelectorAll('button, [role="button"]').forEach(function (button) {
+        button.classList.add('fp-button', 'fp-panel-header-action')
+      })
+    })
+
+    scope.querySelectorAll('.ledger-table, .timeline, .member-list, .admin-list, .task-list, .diary-list, .family-group-list, .schedule-list').forEach(function (list) {
+      list.classList.add('fp-list')
+    })
+
+    scope.querySelectorAll('.ledger-row, .timeline-row, .member-row, .admin-row, .schedule-row, .diary-list-row, .baby-record-row').forEach(function (row) {
+      row.classList.add('fp-list-row')
+      if (row.classList.contains('ledger-row')) row.classList.add('fp-ledger-row')
+      if (row.classList.contains('schedule-row')) row.classList.add('fp-schedule-row')
+      row.querySelectorAll('span, small, em').forEach(function (meta) {
+        meta.classList.add('fp-row-meta')
+      })
+      row.querySelectorAll('b').forEach(function (amount) {
+        amount.classList.add('fp-row-amount')
+      })
+    })
 
     scope.querySelectorAll([
       '.ledger-form',
@@ -7630,6 +7668,7 @@
       if (control) {
         control.classList.add('fp-control')
         if (control.tagName === 'TEXTAREA') control.classList.add('fp-textarea')
+        if (control.tagName === 'SELECT') control.classList.add('fp-native-select')
       }
     })
 
@@ -7653,10 +7692,21 @@
 
     scope.querySelectorAll('.custom-select-list').forEach(function (list) {
       list.classList.add('fp-select-list')
+      list.querySelectorAll('button').forEach(function (button) {
+        button.classList.add('fp-select-option')
+      })
     })
 
     scope.querySelectorAll('.fp-form button[type="submit"], .fp-form .submit-action, .fp-form .save-button').forEach(function (button) {
-      button.classList.add('fp-submit-action')
+      button.classList.add('fp-button', 'fp-submit-action')
+    })
+
+    scope.querySelectorAll('button, [role="button"]').forEach(function (button) {
+      if (button.closest('.auth-card')) return
+      button.classList.add('fp-button')
+      if (button.classList.contains('danger-button')) button.classList.add('fp-danger-action')
+      if (button.classList.contains('cancel-button')) button.classList.add('fp-cancel-action')
+      if (button.classList.contains('save-button') || button.classList.contains('primary-action')) button.classList.add('fp-primary-action')
     })
 
     scope.querySelectorAll('.family-calendar-panel .api-schedule-row, .family-calendar-panel .schedule-row.api-schedule-row').forEach(function (row) {

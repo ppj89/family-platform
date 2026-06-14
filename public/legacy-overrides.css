@@ -192,7 +192,7 @@
 
 .theme-dark .brand p,
 .theme-dark .topbar h1,
-.theme-dark .panel h2,
+.theme-dark .fp-panel-title,
 .theme-dark .summary-band h2,
 .theme-dark .travel-main strong,
 .theme-dark .member-row strong,
@@ -204,7 +204,7 @@
 .theme-dark .brand span,
 .theme-dark .sync-panel p,
 .theme-dark .eyebrow,
-.theme-dark .panel p,
+.theme-dark .fp-panel-copy,
 .theme-dark label span,
 .theme-dark .filter-panel label span,
 .theme-dark .date-picker-field > span,
@@ -249,7 +249,7 @@
 
 .theme-dark .icon-button,
 .theme-dark .summary-actions button,
-.theme-dark .panel-header button,
+.theme-dark .fp-panel-header-action,
 .theme-dark .admin-row button,
 .theme-dark .filter-panel input,
 .theme-dark .date-picker-trigger,
@@ -1485,7 +1485,7 @@ body.api-loading-blocked::before {
 .brand p,
 .brand span,
 .sync-panel p,
-.panel p,
+.fp-panel-copy,
 .admin-row p {
   margin: 0;
 }
@@ -1510,7 +1510,7 @@ body.api-loading-blocked::before {
 .nav-item,
 .icon-button,
 .primary-action,
-.panel-header button,
+.fp-panel-header-action,
 .summary-actions button,
 .admin-row button {
   border: 0;
@@ -1636,7 +1636,7 @@ body.api-loading-blocked::before {
 .icon-button,
 .primary-action,
 .summary-actions button,
-.panel-header button,
+.fp-panel-header-action,
 .admin-row button {
   display: inline-flex;
   align-items: center;
@@ -1700,7 +1700,7 @@ body.api-loading-blocked::before {
 }
 
 .summary-band h2,
-.panel h2 {
+.fp-panel-title {
   margin: 0;
 }
 
@@ -1831,7 +1831,7 @@ body.api-loading-blocked::before {
   font-size: 16px;
 }
 
-.admin-workspace .panel-header button {
+.admin-workspace .fp-panel-header-action {
   min-height: 32px;
   border-radius: 10px;
   padding: 0 12px;
@@ -1983,7 +1983,7 @@ body.api-loading-blocked::before {
   font-weight: 900;
 }
 
-.panel-header button,
+.fp-panel-header-action,
 .admin-row button {
   min-height: 36px;
   background: #e9edf2;
@@ -2026,7 +2026,7 @@ body.api-loading-blocked::before {
   grid-template-columns: minmax(0, 1fr) auto auto;
 }
 
-.ledger-row span,
+.fp-ledger-row .fp-row-meta,
 .timeline-row span,
 .member-row span,
 .diary-card span {
@@ -2034,21 +2034,21 @@ body.api-loading-blocked::before {
   font-size: 12px;
 }
 
-.ledger-row div span {
+.fp-ledger-row div .fp-row-meta {
   display: block;
   margin-top: 4px;
 }
 
-.ledger-row b {
+.fp-ledger-row .fp-row-amount {
   color: #191f28;
   font-weight: 900;
 }
 
-.ledger-row b.expense {
+.fp-ledger-row .fp-row-amount.expense {
   color: #f04452;
 }
 
-.ledger-row b.income {
+.fp-ledger-row .fp-row-amount.income {
   color: #00a886;
 }
 
@@ -2719,7 +2719,7 @@ body.api-loading-blocked::before {
   box-shadow: 0 18px 42px rgba(25, 31, 40, 0.16);
 }
 
-.custom-select-list button {
+.fp-select-option {
   min-height: 36px;
   border: 0;
   border-radius: 12px;
@@ -2733,8 +2733,8 @@ body.api-loading-blocked::before {
   text-align: left;
 }
 
-.custom-select-list button:hover,
-.custom-select-list button.selected {
+.fp-select-option:hover,
+.fp-select-option.selected {
   background: #edf4ff;
   color: #1b64da;
 }
@@ -6981,7 +6981,7 @@ body .calendar-bottom-grid .selected-day-card {
   box-shadow: 0 18px 42px rgba(25, 31, 40, 0.16) !important;
 }
 
-.custom-select-list button {
+.fp-select-option {
   min-height: 36px !important;
   border: 0 !important;
   border-radius: 12px !important;
@@ -6994,8 +6994,8 @@ body .calendar-bottom-grid .selected-day-card {
   text-align: left !important;
 }
 
-.custom-select-list button:hover,
-.custom-select-list button.selected {
+.fp-select-option:hover,
+.fp-select-option.selected {
   background: #edf4ff !important;
   color: #1b64da !important;
 }
@@ -7932,37 +7932,36 @@ html[data-year-schedule-mode="list"] .year-month-card {
 }
 
 /* Readability pass: denser cards, clearer hierarchy, less vertical drag. */
-.panel {
+.fp-panel {
   border-radius: 14px !important;
   padding: 20px !important;
   box-shadow: inset 0 0 0 1px #e9edf2 !important;
 }
 
-.panel-header {
+.fp-panel-header {
   gap: 12px !important;
   margin-bottom: 14px !important;
 }
 
-.panel-header h2,
-.panel h2 {
+.fp-panel-title {
   color: #111827 !important;
   font-size: 19px !important;
   line-height: 1.25 !important;
   letter-spacing: 0 !important;
 }
 
-.panel-header button,
-.summary-actions button,
-.admin-row button {
+.fp-panel-header-action,
+.summary-actions .fp-button,
+.admin-row .fp-button {
   border-radius: 14px !important;
   font-size: 13px !important;
   font-weight: 800 !important;
 }
 
-label span,
-.filter-panel label span,
-.date-picker-field > span,
-.metric span {
+.fp-field-label,
+.filter-panel .fp-field-label,
+.fp-datepicker-field > span,
+.fp-metric-card span {
   color: #6b7684 !important;
   font-size: 12px !important;
   font-weight: 800 !important;
@@ -8014,7 +8013,7 @@ label span,
 }
 
 .sync-panel p,
-.panel p,
+.fp-panel-copy,
 .admin-row p {
   color: #687586 !important;
   line-height: 1.55 !important;
@@ -8056,39 +8055,28 @@ label span,
   line-height: 1.55 !important;
 }
 
-.ledger-row,
-.timeline-row,
-.member-row,
-.admin-row,
-.schedule-row {
+.fp-list-row {
   border-radius: 14px !important;
   padding: 13px 14px !important;
 }
 
-.ledger-row strong,
-.timeline-row strong,
-.member-row strong,
-.admin-row strong,
-.schedule-row strong {
+.fp-list-row strong {
   color: #111827 !important;
   line-height: 1.35 !important;
 }
 
+.fp-control,
 .custom-select-trigger,
-.date-picker-trigger,
-input,
-textarea,
-select {
+.date-picker-trigger {
   border-radius: 14px !important;
 }
 
 @media (max-width: 620px) {
-  .panel {
+  .fp-panel {
     padding: 18px !important;
   }
 
-  .panel-header h2,
-  .panel h2 {
+  .fp-panel-title {
     font-size: 18px !important;
   }
 
@@ -8166,14 +8154,14 @@ select {
     white-space: nowrap !important;
   }
 
-  .daily-ledger .ledger-row div span,
+  .daily-ledger .fp-ledger-row div .fp-row-meta,
   .daily-ledger .ledger-row > span {
     color: #7b8794 !important;
     font-size: 11px !important;
     line-height: 1.35 !important;
   }
 
-  .daily-ledger .ledger-row div span {
+  .daily-ledger .fp-ledger-row div .fp-row-meta {
     display: block !important;
     margin-top: 4px !important;
     overflow: hidden !important;
@@ -9228,7 +9216,7 @@ select {
   display: none !important;
 }
 
-.baby-create-dialog .baby-create-gender-select .custom-select-list button {
+.baby-create-dialog .baby-create-gender-select .fp-select-option {
   min-height: 42px !important;
   border: 0 !important;
   border-radius: 12px !important;
@@ -9979,14 +9967,14 @@ select {
     white-space: nowrap !important;
   }
 
-  .content-grid .panel.wide .ledger-row div span,
+  .content-grid .panel.wide .fp-ledger-row div .fp-row-meta,
   .content-grid .panel.wide .ledger-row > span {
     color: #7b8794 !important;
     font-size: 11px !important;
     line-height: 1.35 !important;
   }
 
-  .content-grid .panel.wide .ledger-row div span {
+  .content-grid .panel.wide .fp-ledger-row div .fp-row-meta {
     display: block !important;
     margin-top: 3px !important;
     overflow: hidden !important;
@@ -10968,7 +10956,7 @@ html.calendar-jump-open .fp-page-calendar .family-calendar-panel .calendar-nav {
   font-size: 15px;
 }
 
-.server-ledger-list .ledger-row b {
+.server-ledger-list .fp-ledger-row .fp-row-amount {
   font-size: 16px;
   white-space: normal;
   overflow-wrap: anywhere;
@@ -11219,7 +11207,7 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 .theme-dark .server-schedule-row small,
 .theme-dark .server-domain-row span,
 .theme-dark .server-domain-row small,
-.theme-dark .ledger-row span {
+.theme-dark .fp-ledger-row .fp-row-meta {
   color: #b8c2cf !important;
 }
 
@@ -11232,7 +11220,7 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 .theme-dark .calendar-popover,
 .theme-dark .icon-button,
 .theme-dark .summary-actions button,
-.theme-dark .panel-header button,
+.theme-dark .fp-panel-header-action,
 .theme-dark .passive-header-chip {
   background: #303742 !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
