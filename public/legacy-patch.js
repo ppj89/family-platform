@@ -7602,6 +7602,241 @@
       if (standardPages.indexOf(pageTitle) >= 0) content.classList.add('fp-workspace-grid')
     }
 
+    scope.querySelectorAll('.sidebar').forEach(function (item) { item.classList.add('fp-sidebar') })
+    scope.querySelectorAll('.workspace').forEach(function (item) { item.classList.add('fp-workspace') })
+    scope.querySelectorAll('.brand').forEach(function (brand) {
+      brand.classList.add('fp-brand')
+      var mark = brand.querySelector('.brand-mark')
+      var title = brand.querySelector('p, strong')
+      var subtitle = brand.querySelector('span, small')
+      if (mark) mark.classList.add('fp-brand-mark')
+      if (title) title.classList.add('fp-brand-title')
+      if (subtitle) subtitle.classList.add('fp-brand-subtitle')
+    })
+    scope.querySelectorAll('.nav-list').forEach(function (item) { item.classList.add('fp-nav-list') })
+    scope.querySelectorAll('.nav-item').forEach(function (item) {
+      item.classList.add('fp-nav-item')
+      item.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-nav-icon') })
+      item.querySelectorAll('span').forEach(function (label) { label.classList.add('fp-nav-label') })
+    })
+    scope.querySelectorAll('.topbar').forEach(function (bar) {
+      bar.classList.add('fp-topbar')
+      var eyebrow = bar.querySelector('.eyebrow')
+      var title = bar.querySelector('h1')
+      if (eyebrow) eyebrow.classList.add('fp-eyebrow')
+      if (title) title.classList.add('fp-page-title')
+    })
+    scope.querySelectorAll('.top-actions').forEach(function (item) { item.classList.add('fp-top-actions') })
+    scope.querySelectorAll('.summary-actions').forEach(function (item) { item.classList.add('fp-summary-actions') })
+    scope.querySelectorAll('.icon-button').forEach(function (item) { item.classList.add('fp-button', 'fp-icon-button') })
+    scope.querySelectorAll('.primary-action').forEach(function (item) { item.classList.add('fp-button', 'fp-primary-action') })
+    scope.querySelectorAll('.secondary-action').forEach(function (item) { item.classList.add('fp-button', 'fp-secondary-action') })
+    scope.querySelectorAll('.summary-band').forEach(function (band) {
+      band.classList.add('fp-summary-band')
+      band.querySelectorAll('h2, h3').forEach(function (title) { title.classList.add('fp-summary-title') })
+      band.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-summary-copy') })
+    })
+    scope.querySelectorAll('.metric-grid').forEach(function (grid) { grid.classList.add('fp-metric-grid') })
+    scope.querySelectorAll('.metric').forEach(function (metric) {
+      metric.classList.add('fp-metric-card')
+      metric.querySelectorAll('span').forEach(function (label) { label.classList.add('fp-metric-label') })
+      metric.querySelectorAll('strong').forEach(function (value) { value.classList.add('fp-metric-value') })
+    })
+    scope.querySelectorAll('.ledger-summary').forEach(function (item) { item.classList.add('fp-ledger-summary') })
+    scope.querySelectorAll('.sync-panel').forEach(function (panel) {
+      panel.classList.add('fp-sync-panel')
+      panel.querySelectorAll('strong, h3, h4').forEach(function (title) { title.classList.add('fp-sync-title') })
+      panel.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-panel-copy') })
+      panel.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-panel-icon') })
+    })
+    scope.querySelectorAll('.parser-box').forEach(function (box) {
+      box.classList.add('fp-parser-box')
+      box.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-parser-icon') })
+      box.querySelectorAll('strong, h3, h4').forEach(function (title) { title.classList.add('fp-parser-title') })
+      box.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-parser-copy') })
+    })
+    scope.querySelectorAll('.filter-panel').forEach(function (panel) { panel.classList.add('fp-filter-panel') })
+    scope.querySelectorAll('.auth-copy').forEach(function (copy) {
+      copy.querySelectorAll('h1, h2').forEach(function (title) { title.classList.add('fp-auth-copy-title') })
+      copy.querySelectorAll('p').forEach(function (text) { text.classList.add('fp-auth-copy-text') })
+    })
+    scope.querySelectorAll('.auth-preview').forEach(function (preview) {
+      preview.querySelectorAll('div').forEach(function (item) { item.classList.add('fp-auth-preview-item') })
+      preview.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-auth-preview-title') })
+      preview.querySelectorAll('span').forEach(function (text) { text.classList.add('fp-auth-preview-text') })
+    })
+    scope.querySelectorAll('.auth-tabs button').forEach(function (button) { button.classList.add('fp-button', 'fp-auth-tab') })
+    scope.querySelectorAll('.auth-heading').forEach(function (heading) {
+      heading.querySelectorAll('strong, h2, h3').forEach(function (title) { title.classList.add('fp-auth-heading-title') })
+      heading.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-auth-heading-copy') })
+    })
+    scope.querySelectorAll('.auth-card label').forEach(function (label) {
+      label.classList.add('fp-auth-field')
+      label.querySelectorAll('span').forEach(function (text) { text.classList.add('fp-auth-field-label') })
+    })
+    scope.querySelectorAll('.auth-card input').forEach(function (input) { input.classList.add('fp-auth-input') })
+    scope.querySelectorAll('.auth-helper button').forEach(function (button) { button.classList.add('fp-button', 'fp-auth-helper-button') })
+    scope.querySelectorAll('.auth-required-consent').forEach(function (consent) {
+      consent.classList.add('fp-auth-consent')
+      consent.querySelectorAll('input').forEach(function (input) { input.classList.add('fp-auth-consent-input') })
+      consent.querySelectorAll('span').forEach(function (text) { text.classList.add('fp-auth-consent-text') })
+      consent.querySelectorAll('strong').forEach(function (text) { text.classList.add('fp-auth-consent-title') })
+    })
+    scope.querySelectorAll('.auth-login-preferences').forEach(function (prefs) {
+      prefs.classList.add('fp-auth-prefs')
+      prefs.querySelectorAll('label').forEach(function (label) { label.classList.add('fp-auth-pref') })
+      prefs.querySelectorAll('input').forEach(function (input) { input.classList.add('fp-auth-pref-input') })
+      prefs.querySelectorAll('span').forEach(function (text) { text.classList.add('fp-auth-pref-text') })
+    })
+    scope.querySelectorAll('.auth-recovery-header').forEach(function (header) {
+      header.querySelectorAll('strong, h2, h3').forEach(function (title) { title.classList.add('fp-auth-recovery-title') })
+      header.querySelectorAll('button').forEach(function (button) { button.classList.add('fp-button', 'fp-auth-recovery-close') })
+    })
+    scope.querySelectorAll('.auth-recovery-panel textarea').forEach(function (textarea) { textarea.classList.add('fp-auth-recovery-textarea') })
+    scope.querySelectorAll('.account-info-list').forEach(function (list) {
+      list.querySelectorAll('span').forEach(function (label) { label.classList.add('fp-account-label') })
+      list.querySelectorAll('strong').forEach(function (value) { value.classList.add('fp-account-value') })
+    })
+    scope.querySelectorAll('.account-password-header').forEach(function (header) {
+      header.querySelectorAll('strong, h2, h3').forEach(function (title) { title.classList.add('fp-account-title') })
+      header.querySelectorAll('button').forEach(function (button) { button.classList.add('fp-button', 'fp-account-close') })
+    })
+    scope.querySelectorAll('.account-password-dialog').forEach(function (dialog) {
+      dialog.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-account-copy') })
+      dialog.querySelectorAll('label').forEach(function (label) { label.classList.add('fp-account-field') })
+      dialog.querySelectorAll('input').forEach(function (input) { input.classList.add('fp-account-input') })
+    })
+    scope.querySelectorAll('.account-password-actions button').forEach(function (button) { button.classList.add('fp-button', 'fp-account-action') })
+    scope.querySelectorAll([
+      '.travel-main',
+      '.travel-summary',
+      '.travel-detail-dialog',
+      '.diary-card',
+      '.diary-list-row',
+      '.diary-detail-card',
+      '.baby-card',
+      '.baby-profile-band',
+      '.baby-metrics',
+      '.baby-record-row',
+      '.baby-api-record-card',
+      '.baby-api-detail-header',
+      '.baby-empty-guide',
+      '.baby-create-dialog',
+      '.baby-profile-edit-dialog',
+      '.restaurant-hero',
+      '.restaurant-card',
+      '.restaurant-card-top',
+      '.restaurant-meta'
+    ].join(',')).forEach(function (card) {
+      card.classList.add('fp-data-card')
+      card.querySelectorAll('h2, h3, strong, b').forEach(function (title) { title.classList.add('fp-card-title') })
+      card.querySelectorAll('span, small, em, i').forEach(function (meta) { meta.classList.add('fp-card-meta') })
+      card.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-card-copy') })
+      card.querySelectorAll('img, video').forEach(function (media) { media.classList.add('fp-card-media') })
+      card.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-card-icon') })
+    })
+    scope.querySelectorAll('.photo-input').forEach(function (field) {
+      field.classList.add('fp-photo-field')
+      field.querySelectorAll('img, video').forEach(function (media) { media.classList.add('fp-card-media') })
+      field.querySelectorAll('input[type="file"]').forEach(function (input) { input.classList.add('fp-file-input') })
+    })
+    scope.querySelectorAll('.media-upload-empty').forEach(function (field) { field.classList.add('fp-media-empty') })
+    scope.querySelectorAll('.travel-form textarea, .diary-form textarea, .restaurant-form textarea, .baby-form textarea, .baby-profile-form textarea').forEach(function (textarea) {
+      textarea.classList.add('fp-textarea')
+    })
+    scope.querySelectorAll('.travel-form input, .travel-form select, .baby-form input, .baby-form select, .restaurant-form input, .restaurant-form select, .diary-form input, .diary-form select').forEach(function (control) {
+      control.classList.add('fp-control')
+    })
+    scope.querySelectorAll('.travel-header-actions button, .baby-main-action-bar button, .diary-main-action-bar button, .restaurant-actions button, .baby-api-record-actions button').forEach(function (button) {
+      button.classList.add('fp-button')
+    })
+    scope.querySelectorAll('.baby-api-record-form label, .baby-create-dialog label, .baby-profile-edit-dialog label').forEach(function (label) {
+      label.classList.add('fp-field')
+      label.querySelectorAll('span, strong, b').forEach(function (text) { text.classList.add('fp-field-label') })
+    })
+    scope.querySelectorAll('.baby-api-record-form input, .baby-api-record-form select, .baby-api-record-form textarea, .baby-create-dialog input, .baby-create-dialog textarea, .baby-profile-edit-dialog input, .baby-profile-edit-dialog select, .baby-create-date-button, .baby-create-gender-select .custom-select-trigger').forEach(function (control) {
+      control.classList.add('fp-control')
+      if (control.tagName === 'TEXTAREA') control.classList.add('fp-textarea')
+    })
+    scope.querySelectorAll('.baby-api-record-actions button, .baby-profile-edit-actions button').forEach(function (button) {
+      button.classList.add('fp-button')
+    })
+    scope.querySelectorAll('.baby-profile-photo-preview img').forEach(function (image) { image.classList.add('fp-card-media') })
+    scope.querySelectorAll('.baby-profile-photo-field input[type="file"]').forEach(function (input) { input.classList.add('fp-file-input') })
+    scope.querySelectorAll('.baby-profile-photo-field > span').forEach(function (label) { label.classList.add('fp-field-label') })
+    scope.querySelectorAll('.calendar-header, .calendar-popover .calendar-header').forEach(function (header) {
+      header.classList.add('fp-calendar-header')
+      header.querySelectorAll('button').forEach(function (button) { button.classList.add('fp-button', 'fp-calendar-nav-button') })
+      header.querySelectorAll('.calendar-title-button').forEach(function (button) { button.classList.add('fp-calendar-title-button') })
+    })
+    scope.querySelectorAll('.calendar-title-button').forEach(function (button) {
+      button.classList.add('fp-calendar-title-button')
+      button.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-calendar-title') })
+      button.querySelectorAll('span').forEach(function (meta) { meta.classList.add('fp-calendar-subtitle') })
+    })
+    scope.querySelectorAll('.calendar-weekdays span').forEach(function (item) { item.classList.add('fp-calendar-weekday') })
+    scope.querySelectorAll('.calendar-day-grid button, .calendar-month-grid button, .calendar-year-grid button').forEach(function (button) {
+      button.classList.add('fp-button', 'fp-calendar-option')
+    })
+    scope.querySelectorAll('.calendar-view-tabs button').forEach(function (button) { button.classList.add('fp-button', 'fp-calendar-view-tab') })
+    scope.querySelectorAll('.calendar-nav > button').forEach(function (button) { button.classList.add('fp-button', 'fp-calendar-nav-button') })
+    scope.querySelectorAll('.calendar-hero').forEach(function (hero) {
+      hero.querySelectorAll('h2, h3').forEach(function (title) { title.classList.add('fp-calendar-hero-title') })
+      hero.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-calendar-hero-copy') })
+    })
+    scope.querySelectorAll('.calendar-hero-card').forEach(function (card) {
+      card.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-card-icon') })
+      card.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-card-title') })
+      card.querySelectorAll('span').forEach(function (meta) { meta.classList.add('fp-card-meta') })
+    })
+    scope.querySelectorAll('.calendar-day-card').forEach(function (card) {
+      card.querySelectorAll('small').forEach(function (meta) { meta.classList.add('fp-card-meta') })
+      card.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-card-title') })
+    })
+    scope.querySelectorAll('.schedule-date-badge').forEach(function (badge) {
+      badge.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-schedule-badge-title') })
+      badge.querySelectorAll('span').forEach(function (meta) { meta.classList.add('fp-schedule-badge-meta') })
+    })
+    scope.querySelectorAll('.schedule-detail-dialog, .schedule-detail-patch-dialog, .schedule-detail-meta').forEach(function (card) {
+      card.querySelectorAll('h2, h3, strong').forEach(function (title) { title.classList.add('fp-card-title') })
+      card.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-card-copy') })
+      card.querySelectorAll('span, small').forEach(function (meta) { meta.classList.add('fp-card-meta') })
+    })
+    scope.querySelectorAll('.schedule-row-actions button, .schedule-detail-patch-actions button, .schedule-day-patch-list button, .calendar-popover .calendar-today-row button, .calendar-jump-control button').forEach(function (button) {
+      button.classList.add('fp-button')
+    })
+    scope.querySelectorAll('.schedule-form-card label').forEach(function (label) {
+      label.classList.add('fp-field')
+      label.querySelectorAll('span, strong, b').forEach(function (text) { text.classList.add('fp-field-label') })
+    })
+    scope.querySelectorAll('.schedule-form-card input, .schedule-form-card textarea, .calendar-jump-control input').forEach(function (control) {
+      control.classList.add('fp-control')
+      if (control.tagName === 'TEXTAREA') control.classList.add('fp-textarea')
+    })
+    scope.querySelectorAll('.patch-ledger-detail-dialog, .patch-confirm-dialog, .confirm-dialog').forEach(function (dialog) {
+      dialog.querySelectorAll('h2, h3, strong, dt').forEach(function (title) { title.classList.add('fp-dialog-title') })
+      dialog.querySelectorAll('p, dd').forEach(function (copy) { copy.classList.add('fp-dialog-copy') })
+      dialog.querySelectorAll('button').forEach(function (button) { button.classList.add('fp-button') })
+      dialog.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-dialog-icon') })
+    })
+    scope.querySelectorAll('.toast-message, .patch-toast-message').forEach(function (toast) {
+      toast.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-toast-icon') })
+    })
+    scope.querySelectorAll('.route-marker, .route-sequence-item, .location-candidates, .invite-row').forEach(function (item) {
+      item.querySelectorAll('span, small, i').forEach(function (meta) { meta.classList.add('fp-card-meta') })
+      item.querySelectorAll('strong, b').forEach(function (title) { title.classList.add('fp-card-title') })
+      item.querySelectorAll('button, a').forEach(function (button) { button.classList.add('fp-button') })
+    })
+    scope.querySelectorAll('.permission-chips button, .location-map-actions button, .location-map-actions a').forEach(function (button) {
+      button.classList.add('fp-button')
+    })
+    scope.querySelectorAll('.schedule-notification-popup').forEach(function (popup) {
+      popup.querySelectorAll('header strong, .schedule-notification-item strong').forEach(function (title) { title.classList.add('fp-card-title') })
+      popup.querySelectorAll('.schedule-notification-list p').forEach(function (copy) { copy.classList.add('fp-card-copy') })
+      popup.querySelectorAll('.schedule-notification-item span, .schedule-notification-item small').forEach(function (meta) { meta.classList.add('fp-card-meta') })
+      popup.querySelectorAll('header button, footer button').forEach(function (button) { button.classList.add('fp-button') })
+    })
+
     scope.querySelectorAll('.panel, .entry-panel, .summary-band, .metric').forEach(function (panel) {
       panel.classList.add(panel.classList.contains('metric') ? 'fp-metric-card' : 'fp-panel')
       panel.querySelectorAll('h2, h3').forEach(function (title) {
@@ -7629,6 +7864,7 @@
       row.classList.add('fp-list-row')
       if (row.classList.contains('ledger-row')) row.classList.add('fp-ledger-row')
       if (row.classList.contains('schedule-row')) row.classList.add('fp-schedule-row')
+      if (row.classList.contains('admin-row')) row.classList.add('fp-admin-row')
       row.querySelectorAll('span, small, em').forEach(function (meta) {
         meta.classList.add('fp-row-meta')
       })
@@ -7675,6 +7911,7 @@
     scope.querySelectorAll('.date-picker-field').forEach(function (field) {
       field.classList.add('fp-field')
       field.classList.add('fp-datepicker-field')
+      field.querySelectorAll(':scope > span').forEach(function (label) { label.classList.add('fp-field-label') })
       var trigger = field.querySelector('.date-picker-trigger')
       if (trigger) trigger.classList.add('fp-control')
     })
@@ -7708,6 +7945,23 @@
       if (button.classList.contains('cancel-button')) button.classList.add('fp-cancel-action')
       if (button.classList.contains('save-button') || button.classList.contains('primary-action')) button.classList.add('fp-primary-action')
     })
+
+    scope.querySelectorAll('button, [role="button"]').forEach(function (button) {
+      button.classList.add('fp-button')
+    })
+    scope.querySelectorAll('input:not([type="hidden"]):not([type="file"]), select, textarea, .date-picker-trigger, .custom-select-trigger').forEach(function (control) {
+      control.classList.add('fp-control')
+      if (control.tagName === 'TEXTAREA') control.classList.add('fp-textarea')
+      if (control.tagName === 'SELECT') control.classList.add('fp-native-select')
+    })
+    scope.querySelectorAll('label').forEach(function (label) { label.classList.add('fp-field') })
+    scope.querySelectorAll('h1, h2, h3, strong, b, dt').forEach(function (item) { item.classList.add('fp-text-title') })
+    scope.querySelectorAll('p, dd').forEach(function (item) { item.classList.add('fp-text-copy') })
+    scope.querySelectorAll('span, small, em, i').forEach(function (item) { item.classList.add('fp-text-meta') })
+    scope.querySelectorAll('svg').forEach(function (item) { item.classList.add('fp-icon') })
+    scope.querySelectorAll('img, video').forEach(function (item) { item.classList.add('fp-media') })
+    scope.querySelectorAll('header').forEach(function (item) { item.classList.add('fp-section-header') })
+    scope.querySelectorAll('footer').forEach(function (item) { item.classList.add('fp-section-footer') })
 
     scope.querySelectorAll('.family-calendar-panel .api-schedule-row, .family-calendar-panel .schedule-row.api-schedule-row').forEach(function (row) {
       row.classList.add('fp-calendar-schedule-row')
