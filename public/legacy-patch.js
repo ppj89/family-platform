@@ -7384,6 +7384,49 @@
     })
   }
 
+  function submitLedgerCreateDirect(form, submitButton) {
+    if (!form || form.dataset.ledgerCreateSubmitting === 'true') return
+    var payload = ledgerPayloadFromForm(form)
+    clearFieldErrors(form)
+    if (!payload.title) {
+      requireField(form, ['@' + '\uB0B4\uC5ED', '@' + '\uC81C\uBAA9', '@' + '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', '[data-field="ledger-title"]'], '\uB0B4\uC5ED')
+      return
+    }
+    if (!payload.amount) {
+      requireField(form, ['@' + '\uAE08\uC561', '[data-field="ledger-amount"]', 'input[inputmode="numeric"]'], '\uAE08\uC561')
+      return
+    }
+    form.dataset.ledgerCreateSubmitting = 'true'
+    if (submitButton) submitButton.disabled = true
+    getReadableFamilyId().then(function (familyId) {
+      return postJson('/ledger-entries?familyId=' + encodeURIComponent(familyId), payload)
+    }).then(function () {
+      showPatchToast('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
+      form.querySelectorAll('input, textarea').forEach(function (field) {
+        if (field.type !== 'hidden' && field.type !== 'date' && field.type !== 'file') setNativeInputValue(field, '')
+      })
+      refreshLedgerAfterMutation()
+    }).catch(function (error) {
+      showPatchToast(apiActionErrorMessage(error, '\uAC00\uACC4\uBD80 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+    }).finally(function () {
+      delete form.dataset.ledgerCreateSubmitting
+      if (submitButton) submitButton.disabled = false
+    })
+  }
+
+  function handleLedgerSubmitControlEvent(event) {
+    var button = event.target && event.target.closest && event.target.closest('.ledger-form button[type="submit"], .ledger-form .submit-action')
+    if (!button || !pageHeadingIs('\uAC00\uACC4\uBD80')) return false
+    var form = button.closest('.ledger-form')
+    if (!form) return false
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    if (form.dataset.apiLedgerEditId) submitLedgerEdit(form)
+    else submitLedgerCreateDirect(form, button)
+    return true
+  }
+
   function deleteLedgerEntry(entryId) {
     if (!entryId) return
     showPatchConfirm('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
@@ -9804,14 +9847,11 @@
   document.addEventListener('submit', function (event) {
     var ledgerForm = event.target && event.target.closest && event.target.closest('.ledger-form')
     if (!ledgerForm) return
-    if (ledgerForm.dataset.apiLedgerEditId) {
-      event.preventDefault()
-      event.stopPropagation()
-      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-      submitLedgerEdit(ledgerForm)
-      return
-    }
-    syncLedgerForm(ledgerForm)
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    if (ledgerForm.dataset.apiLedgerEditId) submitLedgerEdit(ledgerForm)
+    else submitLedgerCreateDirect(ledgerForm, ledgerForm.querySelector('button[type="submit"], .submit-action'))
   }, true)
 
   document.addEventListener('click', function (event) {
@@ -9845,6 +9885,14 @@
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     submitLedgerEdit(form)
+  }, true)
+
+  window.addEventListener('pointerdown', function (event) {
+    handleLedgerSubmitControlEvent(event)
+  }, true)
+
+  window.addEventListener('click', function (event) {
+    handleLedgerSubmitControlEvent(event)
   }, true)
 
   window.addEventListener('pointerdown', function (event) {
