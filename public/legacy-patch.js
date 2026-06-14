@@ -4788,6 +4788,7 @@
       '</form>'
     ].join('')
     if (host) host.appendChild(panel)
+    wireDiarySubmitButtons(panel)
     return panel
   }
 
@@ -8331,6 +8332,26 @@
       setDateFieldToToday(form, ['\uB0A0\uC9DC'])
     })
     removeFeaturePlaceholders()
+    wireDiarySubmitButtons()
+  }
+
+  function wireDiarySubmitButtons(root) {
+    if (!pageHeadingIs('\uC77C\uAE30')) return
+    var scope = root || document
+    scope.querySelectorAll('.diary-form button[type="submit"], .diary-form .submit-action').forEach(function (button) {
+      if (button.dataset.diarySubmitWired === 'true') return
+      button.dataset.diarySubmitWired = 'true'
+      var submit = function (event) {
+        var form = button.closest('.diary-form')
+        if (!form) return
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+        submitExistingDiaryPanel(form, button)
+      }
+      button.addEventListener('pointerdown', submit, true)
+      button.addEventListener('click', submit, true)
+    })
   }
 
   function normalizeBabyEntryForms() {
