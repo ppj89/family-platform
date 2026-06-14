@@ -9308,27 +9308,27 @@ select {
 
 .baby-list-grid .baby-card {
   display: grid !important;
-  grid-template-columns: 52px minmax(0, 1fr) auto !important;
+  grid-template-columns: 52px minmax(0, 1fr) !important;
   align-items: center !important;
   gap: 12px !important;
 }
 
 .baby-list-grid .baby-card > div:nth-of-type(2) {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) auto !important;
-  gap: 6px 18px !important;
-  align-items: center !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 6px !important;
+  align-items: start !important;
 }
 
 .baby-list-grid .baby-card > div:nth-of-type(2) strong {
-  grid-column: 1 !important;
+  grid-column: 1 / -1 !important;
 }
 
 .baby-list-grid .baby-card > div:nth-of-type(2) > span {
-  grid-column: 2 !important;
-  justify-self: end !important;
-  white-space: nowrap !important;
-  margin-left: 18px !important;
+  grid-column: 1 / -1 !important;
+  justify-self: start !important;
+  white-space: normal !important;
+  margin-left: 0 !important;
 }
 
 .baby-list-grid .baby-card > div:nth-of-type(2) p,
@@ -9465,16 +9465,6 @@ select {
   .api-travel-record-form {
     grid-template-columns: 1fr !important;
   }
-}
-
-.diary-api-composer {
-  display: block !important;
-  margin-top: 12px !important;
-}
-
-.diary-api-composer .ledger-form textarea {
-  min-height: 130px !important;
-  resize: vertical !important;
 }
 
 .family-group-list .member-actions button:not(.danger-button):not(.cancel-button):not(.save-button) {

@@ -3904,6 +3904,7 @@
     normalizeTravelEntryForm()
     ensureTravelHeaderActions()
     normalizeDiaryEntryForm()
+    cleanupDiaryApiComposer()
     normalizeBabyEntryForms()
     normalizeTimeInputs()
     removeFeaturePlaceholders()
@@ -4746,7 +4747,8 @@
     createButton.dataset.diaryOpenComposer = 'true'
     createButton.textContent = '\uC77C\uAE30 \uCD94\uAC00'
     createButton.addEventListener('click', function () {
-      var form = document.querySelector('.diary-api-composer') || ensureDiaryApiComposer()
+      cleanupDiaryApiComposer()
+      var form = findExistingDiaryComposer()
       var target = form && (form.closest('form, .panel, aside') || form)
       if (!target) {
         showPatchToast('\uC77C\uAE30 \uC785\uB825 \uC601\uC5ED\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
@@ -4761,72 +4763,25 @@
     header.appendChild(actions)
   }
 
+  function cleanupDiaryApiComposer() {
+    document.querySelectorAll('.diary-api-composer').forEach(function (panel) {
+      panel.remove()
+    })
+  }
+
+  function findExistingDiaryComposer() {
+    return Array.from(document.querySelectorAll('.diary-form, .entry-panel, aside, section.panel')).find(function (panel) {
+      var heading = getCleanText(panel.querySelector('h2'))
+      var text = getCleanText(panel)
+      return (heading === '\uC77C\uAE30 \uCD94\uAC00' || text.indexOf('\uC77C\uAE30 \uCD94\uAC00') >= 0) &&
+        text.indexOf('\uC81C\uBAA9') >= 0 &&
+        text.indexOf('\uB0B4\uC6A9') >= 0
+    }) || null
+  }
+
   function ensureDiaryApiComposer() {
-    if (getCleanText(document.querySelector('.topbar h1')).indexOf('\uC77C\uAE30') < 0) return null
-    var existing = document.querySelector('.diary-api-composer')
-    if (existing) return existing
-    var diaryPanel = Array.from(document.querySelectorAll('.panel, article, section')).find(function (item) {
-      var heading = item.querySelector('h2')
-      return heading && getCleanText(heading) === '\uC77C\uAE30'
-    })
-    var targetParent = diaryPanel && diaryPanel.parentElement
-      ? diaryPanel.parentElement
-      : (document.querySelector('.content-grid') || document.querySelector('main'))
-    if (!targetParent) return null
-    var panel = document.createElement('section')
-    panel.className = 'panel wide full-span diary-api-composer diary-form'
-    panel.innerHTML = [
-      '<div class="panel-header"><div><h2>\uC77C\uAE30 \uCD94\uAC00</h2></div></div>',
-      '<form class="ledger-form">',
-      '<label><span>\uC81C\uBAA9</span><input data-diary-create-title maxlength="80" /></label>',
-      '<label><span>\uB0A0\uC9DC</span><input data-diary-create-date type="date" value="' + todayText() + '" /></label>',
-      '<div class="form-row">',
-      '<label><span>\uB0A0\uC528</span><input data-diary-create-weather maxlength="30" /></label>',
-      '<label><span>\uAE30\uBD84</span><input data-diary-create-mood maxlength="30" /></label>',
-      '</div>',
-      '<label><span>\uB0B4\uC6A9</span><textarea data-diary-create-content rows="5"></textarea></label>',
-      '<button class="submit-action" type="submit">\uC800\uC7A5</button>',
-      '</form>'
-    ].join('')
-    panel.querySelector('form').addEventListener('submit', function (event) {
-      event.preventDefault()
-      var title = getFieldValue(panel, '[data-diary-create-title]')
-      var content = getFieldValue(panel, '[data-diary-create-content]')
-      if (!title) {
-        showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
-        panel.querySelector('[data-diary-create-title]').focus()
-        return
-      }
-      var button = panel.querySelector('.submit-action')
-      button.disabled = true
-      button.textContent = '\uC800\uC7A5 \uC911'
-      getCurrentFamilyId().then(function (familyId) {
-        return postJson('/diaries?familyId=' + encodeURIComponent(familyId), {
-          title: title,
-          body: content,
-          diaryDate: getFieldValue(panel, '[data-diary-create-date]') || todayText(),
-          weather: getFieldValue(panel, '[data-diary-create-weather]') || null,
-          mood: getFieldValue(panel, '[data-diary-create-mood]') || null,
-          photoUrls: [],
-          videoUrls: []
-        })
-      }).then(function () {
-        showPatchToast('\uC77C\uAE30\uB97C \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
-        panel.querySelector('form').reset()
-        panel.querySelector('[data-diary-create-date]').value = todayText()
-        button.disabled = false
-        button.textContent = '\uC800\uC7A5'
-        refreshServerDataViews(true)
-      }).catch(function (error) {
-        button.disabled = false
-        button.textContent = '\uC800\uC7A5'
-        showPatchToast(apiActionErrorMessage(error, '\uC77C\uAE30 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
-      })
-    })
-    if (diaryPanel && diaryPanel.nextSibling) targetParent.insertBefore(panel, diaryPanel.nextSibling)
-    else targetParent.appendChild(panel)
-    removeFeaturePlaceholders(panel)
-    return panel
+    cleanupDiaryApiComposer()
+    return findExistingDiaryComposer()
   }
 
   function getControlValueByLabel(root, labelText) {
@@ -7520,7 +7475,7 @@
     var now = currentTimeText()
     scope.querySelectorAll('input[type="time"], input[name="recordTime"], [data-field="travel-record-time"]').forEach(function (input) {
       if (!input || input.disabled) return
-      if (!input.value || input.value === '00:00' || input.value === '14:00') setInputValue(input, now)
+      if (!input.value || input.value === '00:00' || input.value === '10:00' || input.value === '14:00' || input.value === '19:00') setInputValue(input, now)
     })
   }
 
@@ -7591,8 +7546,13 @@
     if (!pageHeadingIs('\uC5EC\uD589')) return
     document.querySelectorAll('.travel-form, .trip-manager, .entry-panel, form').forEach(function (form) {
       var text = getCleanText(form)
-      if (text.indexOf('\uC2DC\uC791') < 0 && text.indexOf('\uC885\uB8CC') < 0) return
-      setDateFieldToToday(form, ['\uC2DC\uC791\uC77C', '\uC885\uB8CC\uC77C'])
+      var isTravelForm = text.indexOf('\uC2DC\uC791') >= 0 ||
+        text.indexOf('\uC885\uB8CC') >= 0 ||
+        text.indexOf('\uAE30\uB85D \uCD94\uAC00') >= 0 ||
+        text.indexOf('\uC0AC\uC6A9\uAE08\uC561') >= 0 ||
+        !!form.querySelector('[data-field="travel-record-time"]')
+      if (!isTravelForm) return
+      setDateFieldToToday(form, ['\uC2DC\uC791\uC77C', '\uC885\uB8CC\uC77C', '\uB0A0\uC9DC'])
       clearSampleFieldValues(form)
       normalizeTimeInputs(form)
       ensureRequiredMarkForInput(form.querySelector('[data-field="travel-title"]'))
@@ -9262,6 +9222,15 @@
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     submitExistingDiaryPanel(panel, button)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var card = event.target && event.target.closest && event.target.closest('.baby-card[data-api-baby-id]')
+    if (!card || event.target.closest('button, a, input, textarea, select, .custom-select')) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    openBabyApiDetailById(card.dataset.apiBabyId)
   }, true)
 
   document.addEventListener('submit', function (event) {
