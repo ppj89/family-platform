@@ -9484,31 +9484,13 @@ html[data-year-schedule-mode="list"] .year-month-card {
 }
 
 .diary-api-composer {
-  display: grid !important;
-  align-self: start !important;
-  gap: 16px !important;
-  margin-top: 0 !important;
+  display: block !important;
+  margin-top: 12px !important;
 }
 
 .diary-api-composer .ledger-form .fp-textarea {
   min-height: 130px !important;
   resize: vertical !important;
-}
-
-@media (min-width: 1120px) {
-  .content-grid > .diary-api-composer,
-  .fp-workspace-grid > .diary-api-composer {
-    grid-column: 2 !important;
-    grid-row: 1 / span 3 !important;
-  }
-}
-
-@media (max-width: 1119px) {
-  .content-grid > .diary-api-composer,
-  .fp-workspace-grid > .diary-api-composer {
-    grid-column: 1 !important;
-    grid-row: auto !important;
-  }
 }
 
 .family-group-list .member-actions .fp-button:not(.danger-button):not(.cancel-button):not(.save-button) {
@@ -11763,7 +11745,6 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 
 .fp-list-row,
 .fp-travel-row,
-.fp-baby-row,
 .fp-restaurant-row,
 .fp-community-row {
   min-width: 0 !important;
@@ -11824,22 +11805,9 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 }
 
 .fp-travel-row,
-.fp-baby-row,
 .fp-restaurant-row,
 .fp-community-row {
   padding: 14px !important;
-}
-
-.fp-baby-row {
-  display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr) auto !important;
-  gap: 8px 18px !important;
-  align-items: center !important;
-}
-
-.fp-baby-row .fp-row-title,
-.fp-baby-row .fp-card-title {
-  margin-right: 10px !important;
 }
 
 .fp-travel-row {
@@ -11915,7 +11883,6 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 
 .theme-dark .fp-list-row,
 .theme-dark .fp-travel-row,
-.theme-dark .fp-baby-row,
 .theme-dark .fp-restaurant-row,
 .theme-dark .fp-community-row,
 .theme-dark .fp-family-summary-card,
@@ -11939,13 +11906,8 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
 
 @media (max-width: 720px) {
   .fp-ledger-row,
-  .fp-travel-row,
-  .fp-baby-row {
+  .fp-travel-row {
     grid-template-columns: minmax(0, 1fr) auto !important;
-  }
-
-  .fp-baby-row {
-    gap: 8px 12px !important;
   }
 
   .fp-family-summary {

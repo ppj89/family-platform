@@ -3890,6 +3890,7 @@
       return
     }
     cleanupStaleServerPanels()
+    cleanupStaleMenuApiPanels()
     ensureCalendarModeDefaultDates()
     ensureCalendarJumpControl()
     ensureCommunityMenu()
@@ -8010,7 +8011,6 @@
       if (row.classList.contains('schedule-row')) row.classList.add('fp-schedule-row')
       if (row.classList.contains('admin-row')) row.classList.add('fp-admin-row')
       if (row.classList.contains('trip-list-card') || row.classList.contains('api-travel-record-card')) row.classList.add('fp-travel-row')
-      if (row.classList.contains('baby-card') || row.classList.contains('baby-record-row')) row.classList.add('fp-baby-row')
       if (row.classList.contains('restaurant-card')) row.classList.add('fp-restaurant-row')
       if (row.classList.contains('community-post') || row.classList.contains('community-free-row')) row.classList.add('fp-community-row')
       row.querySelectorAll('span, small, em').forEach(function (meta) {
@@ -8407,6 +8407,13 @@
   function cleanupTravelListWorkspace() {
     if (pageHeadingIs('\uC5EC\uD589')) return
     document.querySelectorAll('.travel-trip-create-card').forEach(function (node) { node.remove() })
+  }
+
+  function cleanupStaleMenuApiPanels() {
+    if (!pageHeadingIs('\uC721\uC544')) {
+      document.querySelectorAll('.baby-api-detail, .baby-profile-edit-backdrop').forEach(function (node) { node.remove() })
+    }
+    if (!pageHeadingIs('\uC77C\uAE30')) cleanupDiaryApiComposer()
   }
 
   function normalizeDiaryEntryForm() {
@@ -9970,7 +9977,8 @@
 
   document.addEventListener('click', function (event) {
     var card = event.target && event.target.closest && event.target.closest('.baby-card[data-api-baby-id]')
-    if (!card || event.target.closest('button, a, input, textarea, select, .custom-select')) return
+    var nestedButton = event.target && event.target.closest && event.target.closest('button')
+    if (!card || event.target.closest('a, input, textarea, select, .custom-select') || (nestedButton && nestedButton !== card)) return
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
