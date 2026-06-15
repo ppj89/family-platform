@@ -8362,8 +8362,7 @@
       actions.appendChild(newButton)
       newButton.addEventListener('click', function () {
         panel.classList.add('list-mode')
-        normalizeTravelListWorkspace()
-        var first = document.querySelector('.travel-trip-create-card .trip-add-row input, .trip-add-row input, .travel-form input, .travel-form textarea')
+        var first = panel.querySelector('.trip-add-row input, .travel-form input, .travel-form textarea')
         if (first) {
           first.scrollIntoView({ behavior: 'smooth', block: 'center' })
           window.setTimeout(function () { first.focus() }, 180)
@@ -8389,28 +8388,20 @@
 
   function normalizeTravelListWorkspace() {
     if (!pageHeadingIs('\uC5EC\uD589')) return
-    var grid = document.querySelector('.content-grid')
-    var manager = document.querySelector('.trip-manager.list-mode')
-    if (!grid || !manager) return
+    var manager = document.querySelector('.trip-manager')
+    if (!manager) return
     document.querySelectorAll('.travel-trip-create-card').forEach(function (node) {
-      if (node.parentElement !== grid) node.remove()
+      var row = node.querySelector('.trip-add-row')
+      if (row && !manager.contains(row)) {
+        var list = manager.querySelector('.trip-list')
+        manager.insertBefore(row, list || manager.firstChild)
+      }
+      node.remove()
     })
     var panel = manager.closest('.panel')
     if (!panel) return
     panel.classList.remove('full-span', 'fp-side-panel')
     panel.classList.add('fp-primary-panel', 'fp-wide-panel')
-
-    var row = manager.querySelector('.trip-add-row')
-    if (!row) return
-    var aside = grid.querySelector('.travel-trip-create-card')
-    if (!aside) {
-      aside = document.createElement('aside')
-      aside.className = 'panel entry-panel travel-trip-create-card fp-screen-panel fp-side-panel fp-panel fp-panel-with-form'
-      aside.innerHTML = '<header class="panel-header fp-panel-header fp-section-header"><h2 class="fp-panel-title fp-text-title">\uC5EC\uD589 \uCD94\uAC00</h2></header>'
-      panel.insertAdjacentElement('afterend', aside)
-    }
-    if (row.parentElement !== aside) aside.appendChild(row)
-    row.classList.add('fp-form')
   }
 
   function cleanupTravelListWorkspace() {

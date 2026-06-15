@@ -11980,25 +11980,6 @@ html[data-calendar-mode="year"] body .calendar-bottom-grid .selected-day-card {
   visibility: hidden !important;
 }
 
-/* Common layout repair pass: keep new menu screens aligned with ledger/calendar. */
-.travel-trip-create-card {
-  align-self: start !important;
-}
-
-.travel-trip-create-card .trip-add-row {
-  display: grid !important;
-  grid-template-columns: minmax(0, 1fr) !important;
-  gap: 14px !important;
-}
-
-.travel-trip-create-card .trip-add-row > .fp-control,
-.travel-trip-create-card .trip-add-row > .date-picker-field,
-.travel-trip-create-card .trip-add-row > .fp-button,
-.travel-trip-create-card .trip-add-row > .submit-action {
-  width: 100% !important;
-  min-height: 46px !important;
-}
-
 .community-tabs button,
 .community-board-toolbar > button,
 .community-detail-top button,
