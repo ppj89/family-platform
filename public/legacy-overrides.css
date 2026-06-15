@@ -9561,6 +9561,92 @@ select {
   margin-top: 12px !important;
 }
 
+.entry-panel .diary-form {
+  display: grid !important;
+  gap: 14px !important;
+}
+
+.entry-panel .diary-form label,
+.entry-panel .diary-form .date-picker-field {
+  display: grid !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+.entry-panel .diary-form label > span,
+.entry-panel .diary-form .date-picker-field > span {
+  color: #4e5968 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.entry-panel .diary-form input:not([type="file"]):not([type="hidden"]),
+.entry-panel .diary-form textarea,
+.entry-panel .diary-form .date-picker-trigger,
+.entry-panel .diary-form .custom-select-trigger {
+  width: 100% !important;
+  min-width: 0 !important;
+  border: 1px solid #dfe3e8 !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  color: #191f28 !important;
+  box-shadow: none !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  outline: none !important;
+}
+
+.entry-panel .diary-form input:not([type="file"]):not([type="hidden"]),
+.entry-panel .diary-form .date-picker-trigger,
+.entry-panel .diary-form .custom-select-trigger {
+  height: 52px !important;
+  padding: 0 16px !important;
+}
+
+.entry-panel .diary-form textarea {
+  min-height: 150px !important;
+  padding: 15px 16px !important;
+  resize: vertical !important;
+}
+
+.entry-panel .diary-form input:not([type="file"]):not([type="hidden"]):focus,
+.entry-panel .diary-form textarea:focus,
+.entry-panel .diary-form .date-picker-trigger:focus,
+.entry-panel .diary-form .custom-select-trigger:focus {
+  border-color: #3182f6 !important;
+  box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.12) !important;
+}
+
+.entry-panel .diary-form .date-picker-trigger,
+.entry-panel .diary-form .custom-select-trigger {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+}
+
+.entry-panel .diary-form .submit-action {
+  min-height: 52px !important;
+  border-radius: 16px !important;
+  font-size: 15px !important;
+  font-weight: 900 !important;
+}
+
+.theme-dark .entry-panel .diary-form input:not([type="file"]):not([type="hidden"]),
+.theme-dark .entry-panel .diary-form textarea,
+.theme-dark .entry-panel .diary-form .date-picker-trigger,
+.theme-dark .entry-panel .diary-form .custom-select-trigger {
+  border-color: #525b66 !important;
+  background: #3b424c !important;
+  color: #f3f5f7 !important;
+}
+
+.theme-dark .entry-panel .diary-form label > span,
+.theme-dark .entry-panel .diary-form .date-picker-field > span {
+  color: #c6ced8 !important;
+}
+
 .diary-api-composer .ledger-form {
   display: grid !important;
   gap: 14px !important;
