@@ -4796,7 +4796,7 @@
       '<div class="panel-header"><div><h2>\uC77C\uAE30 \uCD94\uAC00</h2></div></div>',
       '<form class="ledger-form">',
       '<label><span>\uC81C\uBAA9</span><input data-diary-create-title maxlength="80" /></label>',
-      '<label><span>\uB0A0\uC9DC</span><input data-diary-create-date type="date" value="' + todayText() + '" /></label>',
+      '<label class="date-picker-field diary-create-date-field"><span>\uB0A0\uC9DC</span><input data-diary-create-date type="hidden" value="' + todayText() + '" /><button type="button" class="date-picker-trigger diary-create-date-button" data-diary-create-date-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 2v4M16 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label>',
       '<div class="form-row">',
       '<label><span>\uB0A0\uC528</span><input data-diary-create-weather maxlength="30" /></label>',
       '<label><span>\uAE30\uBD84</span><input data-diary-create-mood maxlength="30" /></label>',
@@ -4805,6 +4805,7 @@
       '<button class="submit-action" type="submit">\uC800\uC7A5</button>',
       '</form>'
     ].join('')
+    bindDiaryCreateDate(panel)
     panel.querySelector('form').addEventListener('submit', function (event) {
       event.preventDefault()
       var title = getFieldValue(panel, '[data-diary-create-title]')
@@ -4831,6 +4832,8 @@
         showPatchToast('\uC77C\uAE30\uB97C \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
         panel.querySelector('form').reset()
         panel.querySelector('[data-diary-create-date]').value = todayText()
+        var dateLabel = panel.querySelector('[data-diary-create-date-trigger] span')
+        if (dateLabel) dateLabel.textContent = todayText().replace(/-/g, '.')
         button.disabled = false
         button.textContent = '\uC800\uC7A5'
         refreshServerDataViews(true)
@@ -4844,6 +4847,72 @@
     else targetParent.appendChild(panel)
     removeFeaturePlaceholders(panel)
     return panel
+  }
+
+  function bindDiaryCreateDate(panel) {
+    var input = panel && panel.querySelector('[data-diary-create-date]')
+    var trigger = panel && panel.querySelector('[data-diary-create-date-trigger]')
+    if (!input || !trigger || trigger.dataset.diaryDateBound === 'true') return
+    trigger.dataset.diaryDateBound = 'true'
+    trigger.addEventListener('click', function () {
+      openDiaryCreateDatePopover(input, trigger)
+    })
+  }
+
+  function openDiaryCreateDatePopover(input, trigger) {
+    var old = document.querySelector('.diary-api-composer .calendar-popover')
+    if (old) old.remove()
+    var selected = parseApiDate(input.value) || todayText()
+    var view = new Date(selected + 'T00:00:00')
+    var popover = document.createElement('div')
+    popover.className = 'calendar-popover diary-create-calendar-popover'
+
+    function draw() {
+      var year = view.getFullYear()
+      var month = view.getMonth()
+      var first = new Date(year, month, 1)
+      var last = new Date(year, month + 1, 0).getDate()
+      var html = '<header class="calendar-header"><button type="button" data-diary-date-prev>&lt;</button><strong>' + year + '\uB144 ' + (month + 1) + '\uC6D4</strong><button type="button" data-diary-date-next>&gt;</button></header>'
+      html += '<div class="calendar-today-row"><button type="button" data-diary-date-today>\uC624\uB298</button></div>'
+      html += '<div class="calendar-weekdays"><span>\uC77C</span><span>\uC6D4</span><span>\uD654</span><span>\uC218</span><span>\uBAA9</span><span>\uAE08</span><span>\uD1A0</span></div><div class="calendar-day-grid">'
+      for (var blank = 0; blank < first.getDay(); blank += 1) html += '<span class="calendar-empty"></span>'
+      for (var day = 1; day <= last; day += 1) {
+        var date = new Date(year, month, day)
+        var iso = formatDate(date)
+        var classes = []
+        if (date.getDay() === 0) classes.push('holiday')
+        if (date.getDay() === 6) classes.push('saturday')
+        if (iso === selected) classes.push('selected')
+        html += '<button type="button" class="' + classes.join(' ') + '" data-diary-date="' + iso + '">' + day + '</button>'
+      }
+      popover.innerHTML = html + '</div>'
+    }
+
+    draw()
+    trigger.insertAdjacentElement('afterend', popover)
+    popover.addEventListener('click', function (event) {
+      var target = event.target
+      if (!target || !target.closest) return
+      if (target.closest('[data-diary-date-prev]')) {
+        view.setMonth(view.getMonth() - 1)
+        draw()
+        return
+      }
+      if (target.closest('[data-diary-date-next]')) {
+        view.setMonth(view.getMonth() + 1)
+        draw()
+        return
+      }
+      if (target.closest('[data-diary-date-today]')) selected = todayText()
+      var dayButton = target.closest('[data-diary-date]')
+      if (dayButton) selected = dayButton.dataset.diaryDate
+      if (target.closest('[data-diary-date-today]') || dayButton) {
+        setInputValue(input, selected)
+        var label = trigger.querySelector('span')
+        if (label) label.textContent = selected.replace(/-/g, '.')
+        popover.remove()
+      }
+    })
   }
 
   function getControlValueByLabel(root, labelText) {

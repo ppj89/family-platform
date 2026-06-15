@@ -9561,9 +9561,116 @@ select {
   margin-top: 12px !important;
 }
 
+.diary-api-composer .ledger-form {
+  display: grid !important;
+  gap: 14px !important;
+}
+
+.diary-api-composer .ledger-form label,
+.diary-api-composer .date-picker-field {
+  display: grid !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+.diary-api-composer .ledger-form label > span,
+.diary-api-composer .date-picker-field > span {
+  color: #4e5968 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.diary-api-composer .ledger-form input,
+.diary-api-composer .ledger-form textarea,
+.diary-api-composer .date-picker-trigger {
+  width: 100% !important;
+  min-width: 0 !important;
+  border: 1px solid #dfe3e8 !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  color: #191f28 !important;
+  box-shadow: none !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  outline: none !important;
+}
+
+.diary-api-composer .ledger-form input,
+.diary-api-composer .date-picker-trigger {
+  height: 52px !important;
+  padding: 0 16px !important;
+}
+
+.diary-api-composer .ledger-form textarea {
+  padding: 15px 16px !important;
+}
+
+.diary-api-composer .ledger-form input:focus,
+.diary-api-composer .ledger-form textarea:focus,
+.diary-api-composer .date-picker-trigger:focus {
+  border-color: #3182f6 !important;
+  box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.12) !important;
+}
+
+.diary-api-composer .date-picker-trigger {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  cursor: pointer !important;
+}
+
+.diary-api-composer .date-picker-trigger svg {
+  flex: 0 0 auto !important;
+  color: #3182f6 !important;
+}
+
+.diary-api-composer .calendar-popover {
+  z-index: 100012 !important;
+  width: min(330px, calc(100vw - 48px)) !important;
+  border: 1px solid #e5e8eb !important;
+  border-radius: 20px !important;
+  background: #ffffff !important;
+  box-shadow: 0 20px 48px rgba(25, 31, 40, 0.16) !important;
+}
+
+.diary-api-composer .calendar-header strong {
+  color: #191f28 !important;
+  font-size: 16px !important;
+  font-weight: 900 !important;
+  text-align: center !important;
+}
+
+.diary-api-composer .calendar-header button,
+.diary-api-composer .calendar-today-row button,
+.diary-api-composer .calendar-day-grid button {
+  border: 0 !important;
+  box-shadow: none !important;
+  font: inherit !important;
+}
+
 .diary-api-composer .ledger-form textarea {
   min-height: 130px !important;
   resize: vertical !important;
+}
+
+.theme-dark .diary-api-composer .ledger-form input,
+.theme-dark .diary-api-composer .ledger-form textarea,
+.theme-dark .diary-api-composer .date-picker-trigger,
+.theme-dark .diary-api-composer .calendar-popover {
+  border-color: #525b66 !important;
+  background: #3b424c !important;
+  color: #f3f5f7 !important;
+}
+
+.theme-dark .diary-api-composer .ledger-form label > span,
+.theme-dark .diary-api-composer .date-picker-field > span {
+  color: #c6ced8 !important;
+}
+
+.theme-dark .diary-api-composer .calendar-header strong {
+  color: #f3f5f7 !important;
 }
 
 .family-group-list .member-actions button:not(.danger-button):not(.cancel-button):not(.save-button) {
