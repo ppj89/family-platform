@@ -9165,6 +9165,42 @@ select {
 
 .baby-create-dialog {
   width: min(460px, 100%) !important;
+  gap: 14px !important;
+}
+
+.baby-create-dialog label {
+  display: grid !important;
+  gap: 8px !important;
+  margin: 0 !important;
+  color: #4e5968 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+.baby-create-dialog input,
+.baby-create-dialog textarea {
+  width: 100% !important;
+  height: 52px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #dfe3e8 !important;
+  border-radius: 16px !important;
+  padding: 0 15px !important;
+  background: #ffffff !important;
+  color: #191f28 !important;
+  font: inherit !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+.baby-create-dialog input:focus,
+.baby-create-dialog textarea:focus,
+.baby-create-dialog .baby-create-date-button:focus-visible,
+.baby-create-dialog .baby-create-gender-select .custom-select-trigger:focus-visible,
+.baby-create-dialog .baby-create-gender-select .custom-select-trigger.open {
+  border-color: #3182f6 !important;
+  box-shadow: 0 0 0 4px rgba(49, 130, 246, 0.12) !important;
 }
 
 .baby-create-dialog .field-error {
@@ -9190,23 +9226,28 @@ select {
 
 .baby-create-dialog .baby-create-date-field {
   position: relative !important;
+  width: 100% !important;
 }
 
 .baby-create-dialog .baby-create-date-button,
 .baby-create-dialog .baby-create-gender-select .custom-select-trigger {
   width: 100% !important;
+  height: 52px !important;
   min-height: 52px !important;
+  box-sizing: border-box !important;
   justify-content: space-between !important;
   border-radius: 16px !important;
-  border: 1px solid #d9e0ea !important;
+  border: 1px solid #dfe3e8 !important;
   background: #fff !important;
-  color: #101828 !important;
+  color: #191f28 !important;
   font-size: 15px !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
+  box-shadow: none !important;
 }
 
 .baby-create-dialog .baby-create-gender-select {
   position: relative !important;
+  width: 100% !important;
 }
 
 .baby-create-dialog .baby-create-gender-select .custom-select-list {
@@ -9219,7 +9260,7 @@ select {
   gap: 6px !important;
   padding: 8px !important;
   border-radius: 16px !important;
-  border: 1px solid #dbe4f0 !important;
+  border: 1px solid #e5e8eb !important;
   background: #fff !important;
   box-shadow: 0 18px 40px rgba(15, 23, 42, .16) !important;
 }
@@ -9229,12 +9270,21 @@ select {
 }
 
 .baby-create-dialog .baby-create-gender-select .custom-select-list button {
-  min-height: 42px !important;
+  min-height: 40px !important;
   border: 0 !important;
   border-radius: 12px !important;
-  background: #f4f7fb !important;
-  color: #111827 !important;
-  font-weight: 900 !important;
+  padding: 0 12px !important;
+  background: transparent !important;
+  color: #333d4b !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  text-align: left !important;
+}
+
+.baby-create-dialog .baby-create-gender-select .custom-select-list button:hover {
+  background: #edf4ff !important;
+  color: #1b64da !important;
 }
 
 .baby-create-dialog .calendar-popover {
@@ -9245,6 +9295,7 @@ select {
   width: min(330px, calc(100vw - 56px)) !important;
   max-height: min(430px, calc(100vh - 80px)) !important;
   overflow: auto !important;
+  border: 1px solid #edf0f3 !important;
 }
 
 .baby-create-dialog label > span {
@@ -9287,7 +9338,7 @@ select {
   background: #fff !important;
   color: #191f28 !important;
   font-size: 15px !important;
-  font-weight: 900 !important;
+  font-weight: 800 !important;
   text-align: center !important;
 }
 
@@ -9299,11 +9350,49 @@ select {
   border-radius: 14px !important;
   background: #fff !important;
   color: #191f28 !important;
+  font: inherit !important;
+  font-weight: 800 !important;
 }
 
 .baby-create-dialog .calendar-popover .calendar-today-row {
   justify-content: flex-end !important;
   padding-top: 8px !important;
+}
+
+.baby-create-dialog .calendar-weekdays {
+  margin-top: 10px !important;
+}
+
+.baby-create-dialog .calendar-day-grid button {
+  border: 0 !important;
+  border-radius: 12px !important;
+  background: transparent !important;
+  color: #191f28 !important;
+  font: inherit !important;
+  font-weight: 700 !important;
+}
+
+.baby-create-dialog .calendar-day-grid button:hover {
+  background: #edf4ff !important;
+  color: #1b64da !important;
+}
+
+.baby-create-dialog .calendar-day-grid button.selected {
+  background: #3182f6 !important;
+  color: #ffffff !important;
+}
+
+.theme-dark .baby-create-dialog input,
+.theme-dark .baby-create-dialog textarea,
+.theme-dark .baby-create-dialog .baby-create-date-button,
+.theme-dark .baby-create-dialog .baby-create-gender-select .custom-select-trigger,
+.theme-dark .baby-create-dialog .calendar-popover,
+.theme-dark .baby-create-dialog .baby-create-gender-select .custom-select-list,
+.theme-dark .baby-create-dialog .calendar-popover .calendar-header strong,
+.theme-dark .baby-create-dialog .calendar-popover .calendar-header > button {
+  border-color: #3a4658 !important;
+  background: #111827 !important;
+  color: #f8fafc !important;
 }
 
 .baby-list-grid .baby-card {

@@ -4503,8 +4503,8 @@
       '<button type="button" class="dialog-close">x</button>',
       '<h2>\uC544\uC774 \uCD94\uAC00</h2>',
       '<label><span>\uC774\uB984 <em class="required-mark">*</em></span><input data-baby-create-name maxlength="30" /><small class="field-error" data-baby-create-error="name" hidden></small></label>',
-      '<label><span>\uC131\uBCC4 <em class="required-mark">*</em></span><input data-baby-create-gender type="hidden" /><div class="custom-select baby-create-gender-select" data-baby-create-gender-select><button type="button" class="custom-select-trigger" data-baby-create-gender-trigger>\uC120\uD0DD</button><div class="custom-select-list" hidden><button type="button" data-baby-create-gender-value="\uB0A8">\uB0A8</button><button type="button" data-baby-create-gender-value="\uC5EC">\uC5EC</button></div></div><small class="field-error" data-baby-create-error="gender" hidden></small></label>',
-      '<label class="baby-create-date-field"><span>\uC0DD\uC77C</span><input data-baby-create-birth type="hidden" value="' + todayText() + '" /><button type="button" class="date-picker-trigger baby-create-date-button" data-baby-create-birth-trigger><span>' + todayText().replace(/-/g, '.') + '</span><b>\uD83D\uDCC5</b></button></label>',
+      '<label><span>\uC131\uBCC4 <em class="required-mark">*</em></span><input data-baby-create-gender type="hidden" /><div class="custom-select baby-create-gender-select" data-baby-create-gender-select><button type="button" class="custom-select-trigger" data-baby-create-gender-trigger><span>\uC120\uD0DD</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="custom-select-list" hidden><button type="button" data-baby-create-gender-value="\uB0A8">\uB0A8</button><button type="button" data-baby-create-gender-value="\uC5EC">\uC5EC</button></div></div><small class="field-error" data-baby-create-error="gender" hidden></small></label>',
+      '<label class="date-picker-field baby-create-date-field"><span>\uC0DD\uC77C</span><input data-baby-create-birth type="hidden" value="' + todayText() + '" /><button type="button" class="date-picker-trigger baby-create-date-button" data-baby-create-birth-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 2v4M16 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label>',
       '<label><span>\uBA54\uBAA8</span><input data-baby-create-memo /></label>',
       '<label><span>\uD0A4(cm)</span><input data-baby-create-height inputmode="decimal" /></label>',
       '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input data-baby-create-weight inputmode="decimal" /></label>',
@@ -4632,13 +4632,16 @@
     trigger.addEventListener('click', function () {
       list.hidden = !list.hidden
       wrap.classList.toggle('open', !list.hidden)
+      trigger.classList.toggle('open', !list.hidden)
     })
     list.querySelectorAll('[data-baby-create-gender-value]').forEach(function (button) {
       button.addEventListener('click', function () {
         input.value = button.dataset.babyCreateGenderValue || ''
-        trigger.textContent = input.value || '\uC120\uD0DD'
+        var label = trigger.querySelector('span')
+        if (label) label.textContent = input.value || '\uC120\uD0DD'
         list.hidden = true
         wrap.classList.remove('open')
+        trigger.classList.remove('open')
         hideBabyCreateError(dialog, 'gender')
       })
     })
