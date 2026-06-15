@@ -450,7 +450,6 @@
     if (bar) return bar
     bar = document.createElement('div')
     bar.className = 'global-api-loading'
-    bar.hidden = true
     bar.innerHTML = '<div class="global-api-loading-track"><span></span></div><strong>\uB370\uC774\uD130 \uBD88\uB7EC\uC624\uB294 \uC911</strong>'
     document.body.appendChild(bar)
     return bar
@@ -458,7 +457,6 @@
 
   function setApiLoadingVisible(visible) {
     var bar = ensureApiLoadingBar()
-    bar.hidden = !visible
     bar.classList.toggle('active', !!visible)
     document.body.classList.toggle('api-loading-blocked', !!visible)
   }
@@ -3195,9 +3193,27 @@
   }
 
   function ensureUiCleanupStyles() {
-    document.querySelectorAll('#family-platform-ui-cleanup-style').forEach(function (style) {
-      style.remove()
-    })
+    if (document.getElementById('family-platform-ui-cleanup-style')) return
+    var style = document.createElement('style')
+    style.id = 'family-platform-ui-cleanup-style'
+    style.textContent = [
+      '.passive-header-chip{display:inline-flex;align-items:center;justify-content:center;min-height:34px;padding:0 14px;border-radius:999px;background:#f1f5f9;color:#64748b;font-size:13px;font-weight:700;white-space:nowrap}',
+      '.family-group-panel{display:grid;gap:18px}',
+      '.family-group-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}',
+      '.family-group-summary article,.family-group-list article{background:#f8fafc;border:1px solid #e5eaf2;border-radius:18px;padding:18px}',
+      '.family-group-summary span,.family-group-list span{display:block;color:#7b8794;font-size:13px;font-weight:700}',
+      '.family-group-summary strong,.family-group-list strong{display:block;margin-top:8px;color:#171f2e;font-size:18px}',
+      '.family-group-summary small{display:block;margin-top:7px;color:#7b8794;font-weight:700}',
+      '.family-group-list{display:grid;gap:10px}',
+      '.family-group-list article{display:flex;align-items:center;justify-content:space-between;gap:14px}',
+      '.family-group-list b{display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:999px;background:#eaf3ff;color:#2f7ee6;font-size:13px}',
+      'html.home-clean-header .topbar{margin-bottom:14px}',
+      'html.home-clean-header .topbar .eyebrow,html.home-clean-header .topbar h1{display:none!important}',
+      'html.home-clean-header .topbar>div:first-child{display:none!important}',
+      'html.home-clean-header .top-actions>.custom-select,html.home-clean-header .top-actions>.user-chip{display:none!important}',
+      '@media(max-width:760px){.family-group-summary{grid-template-columns:1fr}.family-group-list article{align-items:flex-start;flex-direction:column}.passive-header-chip{min-height:30px;padding:0 11px;font-size:12px}}'
+    ].join('\n')
+    document.head.appendChild(style)
   }
 
   function syncHomeCleanHeader() {
@@ -3324,6 +3340,20 @@
         panel.remove()
       })
     })
+    var staleForms = [
+      { selector: '.restaurant-form, .restaurant-grid', title: '\uB9DB\uC9D1' },
+      { selector: '.trip-manager', title: '\uC5EC\uD589' },
+      { selector: '.diary-api-composer, .diary-section', title: '\uC77C\uAE30' },
+      { selector: '.baby-api-detail, .baby-profile-edit-backdrop', title: '\uC721\uC544' },
+      { selector: '.schedule-form-card', title: '\uCE98\uB9B0\uB354' }
+    ]
+    staleForms.forEach(function (item) {
+      if (title === item.title) return
+      document.querySelectorAll(item.selector).forEach(function (node) {
+        var panel = node.closest && node.closest('.panel')
+        ;(panel || node).remove()
+      })
+    })
   }
 
   function isFamilyGroupNavItem(nav) {
@@ -3362,15 +3392,6 @@
       })
     }
     normalizeRestaurantFormControls()
-    refreshMapLayouts()
-  }
-
-  function refreshMapLayouts() {
-    ;[0, 120, 420].forEach(function (delay) {
-      window.setTimeout(function () {
-        window.dispatchEvent(new Event('resize'))
-      }, delay)
-    })
   }
 
   function normalizeMenuCaptions() {
@@ -3873,24 +3894,16 @@
   }
 
   function refreshCalendarPatch() {
-    syncCommonUiStateClasses()
-    cleanupTravelListWorkspace()
     if (document.documentElement.dataset.patchPage === 'community') {
       removeFeaturePlaceholders()
-      applyCommonUiStandard()
-      cleanupPassiveButtons()
-      syncCommonUiStateClasses()
       return
     }
     if (document.documentElement.dataset.patchPage === 'family-group') {
       removeFeaturePlaceholders()
-      applyCommonUiStandard()
       cleanupPassiveButtons()
-      syncCommonUiStateClasses()
       return
     }
     cleanupStaleServerPanels()
-    cleanupStaleMenuApiPanels()
     ensureCalendarModeDefaultDates()
     ensureCalendarJumpControl()
     ensureCommunityMenu()
@@ -3907,9 +3920,6 @@
     normalizeDiaryEntryForm()
     normalizeBabyEntryForms()
     normalizeTimeInputs()
-    refreshMapLayouts()
-    applyCommonUiStandard()
-    installCommonRequiredSubmitGuard()
     removeFeaturePlaceholders()
     wireScheduleDetailRows()
     hideSelectedDayPanels()
@@ -3938,7 +3948,6 @@
     enhanceBabyRecordMedia()
     cleanupBabyDetailButtons()
     ensureBabyMainActions()
-    renderBabyApiCards(false)
     normalizeBabyCreateDialog()
     ensureDiaryMainActions()
     ensureBabyApiRecordForm()
@@ -3948,7 +3957,6 @@
     enhanceMediaUploadLimits()
     cleanupPassiveButtons()
     syncSelectedDayHeaderFromState()
-    syncCommonUiStateClasses()
   }
 
   function safeRefreshCalendarPatch() {
@@ -4106,7 +4114,6 @@
             triggerText.textContent = formatDisplayDate(now)
           }
           popover.classList.add('calendar-popover-hidden')
-          syncCommonUiStateClasses()
         })
         row.appendChild(today)
         var header = popover.querySelector('.calendar-header')
@@ -4125,7 +4132,6 @@
               if (date) updateScheduleFormVisibleDate(date)
             }
             if (stillOpen) stillOpen.classList.add('calendar-popover-hidden')
-            syncCommonUiStateClasses()
           }, 120)
         })
       })
@@ -4177,7 +4183,6 @@
       document.querySelectorAll('.date-picker-field .calendar-popover').forEach(function (popover) {
         popover.remove()
       })
-      syncCommonUiStateClasses()
       document.querySelectorAll('.custom-select.open').forEach(function (select) {
         if (select !== current) select.classList.remove('open')
       })
@@ -4212,7 +4217,6 @@
           current.querySelectorAll('.custom-select-trigger.open').forEach(function (trigger) {
             trigger.classList.remove('open')
           })
-          syncCommonUiStateClasses()
         }, 220)
       }
       return
@@ -4227,7 +4231,6 @@
       document.querySelectorAll('.custom-select-trigger.open').forEach(function (trigger) {
         trigger.classList.remove('open')
       })
-      syncCommonUiStateClasses()
     }, 0)
   }
 
@@ -4251,7 +4254,6 @@
       field.querySelectorAll('.calendar-popover-hidden').forEach(function (popover) {
         popover.classList.remove('calendar-popover-hidden')
       })
-      syncCommonUiStateClasses()
     }, 0)
   }, true)
 
@@ -4539,7 +4541,7 @@
       var save = dialog.querySelector('.save-button')
       save.disabled = true
       save.textContent = '\uC800\uC7A5 \uC911'
-      getReadableFamilyId().then(function (familyId) {
+      getCurrentFamilyId().then(function (familyId) {
         return postJson('/babies?familyId=' + encodeURIComponent(familyId), {
           name: name,
           gender: gender,
@@ -4758,11 +4760,11 @@
     createButton.dataset.diaryOpenComposer = 'true'
     createButton.textContent = '\uC77C\uAE30 \uCD94\uAC00'
     createButton.addEventListener('click', function () {
-      cleanupDiaryApiComposer()
-      var form = findExistingDiaryComposer()
+      var form = document.querySelector('.diary-api-composer') || ensureDiaryApiComposer()
       var target = form && (form.closest('form, .panel, aside') || form)
       if (!target) {
-        target = createDiaryApiComposer()
+        showPatchToast('\uC77C\uAE30 \uC785\uB825 \uC601\uC5ED\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
+        return
       }
       target.classList.add('diary-api-composer-open')
       target.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -4773,50 +4775,72 @@
     header.appendChild(actions)
   }
 
-  function createDiaryApiComposer() {
-    var host = document.querySelector('.content-grid') || document.querySelector('.workspace')
-    var panel = document.createElement('aside')
-    panel.className = 'panel entry-panel diary-api-composer diary-api-composer-open fp-screen-panel fp-side-panel fp-panel fp-panel-with-form'
+  function ensureDiaryApiComposer() {
+    if (getCleanText(document.querySelector('.topbar h1')).indexOf('\uC77C\uAE30') < 0) return null
+    var existing = document.querySelector('.diary-api-composer')
+    if (existing) return existing
+    var diaryPanel = Array.from(document.querySelectorAll('.panel, article, section')).find(function (item) {
+      var heading = item.querySelector('h2')
+      return heading && getCleanText(heading) === '\uC77C\uAE30'
+    })
+    var targetParent = diaryPanel && diaryPanel.parentElement
+      ? diaryPanel.parentElement
+      : (document.querySelector('.content-grid') || document.querySelector('main'))
+    if (!targetParent) return null
+    var panel = document.createElement('section')
+    panel.className = 'panel wide full-span diary-api-composer diary-form'
     panel.innerHTML = [
-      '<header class="panel-header fp-panel-header"><h2 class="fp-panel-title">\uC77C\uAE30 \uCD94\uAC00</h2></header>',
-      '<form class="diary-form ledger-form fp-form">',
-      '<label class="fp-field"><span class="fp-field-label">\uC81C\uBAA9 <em class="required-mark">*</em></span><input class="fp-control" data-field="diary-title" /></label>',
-      '<label class="fp-field"><span class="fp-field-label">\uB0A0\uC9DC</span><input class="fp-control" data-field="diary-date" type="date" value="' + todayText() + '" /></label>',
-      '<div class="form-row fp-form-row">',
-      '<label class="fp-field"><span class="fp-field-label">\uB0A0\uC528</span><input class="fp-control" data-field="diary-weather" /></label>',
-      '<label class="fp-field"><span class="fp-field-label">\uAE30\uBD84</span><input class="fp-control" data-field="diary-mood" /></label>',
+      '<div class="panel-header"><div><h2>\uC77C\uAE30 \uCD94\uAC00</h2></div></div>',
+      '<form class="ledger-form">',
+      '<label><span>\uC81C\uBAA9</span><input data-diary-create-title maxlength="80" /></label>',
+      '<label><span>\uB0A0\uC9DC</span><input data-diary-create-date type="date" value="' + todayText() + '" /></label>',
+      '<div class="form-row">',
+      '<label><span>\uB0A0\uC528</span><input data-diary-create-weather maxlength="30" /></label>',
+      '<label><span>\uAE30\uBD84</span><input data-diary-create-mood maxlength="30" /></label>',
       '</div>',
-      '<div class="form-row fp-form-row">',
-      '<label class="fp-field"><span class="fp-field-label">\uCD5C\uC800 \uC628\uB3C4</span><input class="fp-control" data-field="diary-min-temp" inputmode="numeric" /></label>',
-      '<label class="fp-field"><span class="fp-field-label">\uCD5C\uACE0 \uC628\uB3C4</span><input class="fp-control" data-field="diary-max-temp" inputmode="numeric" /></label>',
-      '</div>',
-      '<label class="fp-field"><span class="fp-field-label">\uB0B4\uC6A9 <em class="required-mark">*</em></span><textarea class="fp-control fp-textarea" data-field="diary-body" rows="5"></textarea></label>',
-      '<button class="submit-action fp-button fp-submit-action" type="submit">\uC800\uC7A5</button>',
+      '<label><span>\uB0B4\uC6A9</span><textarea data-diary-create-content rows="5"></textarea></label>',
+      '<button class="submit-action" type="submit">\uC800\uC7A5</button>',
       '</form>'
     ].join('')
-    if (host) host.appendChild(panel)
-    wireDiarySubmitButtons(panel)
-    return panel
-  }
-
-  function cleanupDiaryApiComposer() {
-    document.querySelectorAll('.diary-api-composer').forEach(function (panel) {
-      panel.remove()
+    panel.querySelector('form').addEventListener('submit', function (event) {
+      event.preventDefault()
+      var title = getFieldValue(panel, '[data-diary-create-title]')
+      var content = getFieldValue(panel, '[data-diary-create-content]')
+      if (!title) {
+        showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
+        panel.querySelector('[data-diary-create-title]').focus()
+        return
+      }
+      var button = panel.querySelector('.submit-action')
+      button.disabled = true
+      button.textContent = '\uC800\uC7A5 \uC911'
+      getCurrentFamilyId().then(function (familyId) {
+        return postJson('/diaries?familyId=' + encodeURIComponent(familyId), {
+          title: title,
+          body: content,
+          diaryDate: getFieldValue(panel, '[data-diary-create-date]') || todayText(),
+          weather: getFieldValue(panel, '[data-diary-create-weather]') || null,
+          mood: getFieldValue(panel, '[data-diary-create-mood]') || null,
+          photoUrls: [],
+          videoUrls: []
+        })
+      }).then(function () {
+        showPatchToast('\uC77C\uAE30\uB97C \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
+        panel.querySelector('form').reset()
+        panel.querySelector('[data-diary-create-date]').value = todayText()
+        button.disabled = false
+        button.textContent = '\uC800\uC7A5'
+        refreshServerDataViews(true)
+      }).catch(function (error) {
+        button.disabled = false
+        button.textContent = '\uC800\uC7A5'
+        showPatchToast(apiActionErrorMessage(error, '\uC77C\uAE30 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+      })
     })
-  }
-
-  function findExistingDiaryComposer() {
-    return Array.from(document.querySelectorAll('.diary-form, .entry-panel, aside, section.panel')).find(function (panel) {
-      var heading = getCleanText(panel.querySelector('h2'))
-      var text = getCleanText(panel)
-      return (heading === '\uC77C\uAE30 \uCD94\uAC00' || text.indexOf('\uC77C\uAE30 \uCD94\uAC00') >= 0) &&
-        text.indexOf('\uC81C\uBAA9') >= 0 &&
-        text.indexOf('\uB0B4\uC6A9') >= 0
-    }) || null
-  }
-
-  function ensureDiaryApiComposer() {
-    return findExistingDiaryComposer()
+    if (diaryPanel && diaryPanel.nextSibling) targetParent.insertBefore(panel, diaryPanel.nextSibling)
+    else targetParent.appendChild(panel)
+    removeFeaturePlaceholders(panel)
+    return panel
   }
 
   function getControlValueByLabel(root, labelText) {
@@ -4831,8 +4855,8 @@
 
   function submitExistingDiaryPanel(panel, submitButton) {
     if (!panel || panel.dataset.diaryPanelSubmitting === 'true') return
-    var title = getFieldValue(panel, '[data-field="diary-title"]') || getInputValueByLabel(panel, '\uC81C\uBAA9')
-    var body = getFieldValue(panel, '[data-field="diary-body"]') || getInputValueByLabel(panel, '\uB0B4\uC6A9') || getFieldValue(panel, 'textarea')
+    var title = getInputValueByLabel(panel, '\uC81C\uBAA9')
+    var body = getInputValueByLabel(panel, '\uB0B4\uC6A9') || getFieldValue(panel, 'textarea')
     if (!title) {
       showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
       var titleField = panel.querySelector('label input, input')
@@ -4841,16 +4865,17 @@
     }
     panel.dataset.diaryPanelSubmitting = 'true'
     if (submitButton) submitButton.disabled = true
-    getReadableFamilyId().then(function (familyId) {
+    getCurrentFamilyId().then(function (familyId) {
       return postJson('/diaries?familyId=' + encodeURIComponent(familyId), {
         title: title,
         body: body,
-        diaryDate: getDatePickerValue(panel, '\uB0A0\uC9DC') || getFieldValue(panel, '[data-field="diary-date"]') || todayText(),
-        weather: getControlValueByLabel(panel, '\uB0A0\uC528') || getFieldValue(panel, '[data-field="diary-weather"]') || null,
-        mood: getControlValueByLabel(panel, '\uAE30\uBD84') || getFieldValue(panel, '[data-field="diary-mood"]') || null,
-        minTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uC800 \uC628\uB3C4') || getFieldValue(panel, '[data-field="diary-min-temp"]')),
-        maxTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uACE0 \uC628\uB3C4') || getFieldValue(panel, '[data-field="diary-max-temp"]')),
-        mediaUrls: []
+        diaryDate: getDatePickerValue(panel, '\uB0A0\uC9DC') || todayText(),
+        weather: getControlValueByLabel(panel, '\uB0A0\uC528') || null,
+        mood: getControlValueByLabel(panel, '\uAE30\uBD84') || null,
+        minTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uC800 \uC628\uB3C4')),
+        maxTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uACE0 \uC628\uB3C4')),
+        photoUrls: [],
+        videoUrls: []
       })
     }).then(function () {
       showPatchToast('\uC77C\uAE30\uB97C \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
@@ -5411,9 +5436,13 @@
     var bodyHtml = renderCommunityBoard(tab, admin)
     root.innerHTML = [
       '<section class="panel wide community-panel">',
+      '<div class="community-hero">',
+      '<div><span>Community</span><h2>\uAC00\uC871\uC744 \uB118\uC5B4 \uD568\uAED8 \uB098\uB204\uB294 \uACF5\uAC04</h2><p>\uC790\uC720\uAC8C\uC2DC\uD310\uC740 \uC804\uCCB4 \uC0AC\uC6A9\uC790\uC640 \uACF5\uC720\uD558\uACE0, \uACF5\uC9C0\uC0AC\uD56D\uACFC \uBB38\uC758\uC0AC\uD56D\uC740 \uAD00\uB9AC\uC790 \uAD8C\uD55C\uC73C\uB85C \uC791\uC131\uD569\uB2C8\uB2E4.</p></div>',
+      '<strong>\uBA54\uB274 \uB178\uCD9C\uAD8C\uD55C<br><b>\uAD00\uB9AC\uC790</b></strong>',
+      '</div>',
       '<div class="community-tabs">',
       ['notice', 'free', 'inquiry'].map(function (key) {
-        return '<button type="button" class="fp-button ' + (tab === key ? 'active' : '') + '" data-community-tab="' + key + '">' + communityTabLabel(key) + '</button>'
+        return '<button type="button" class="' + (tab === key ? 'active' : '') + '" data-community-tab="' + key + '">' + communityTabLabel(key) + '</button>'
       }).join(''),
       '</div>',
       bodyHtml,
@@ -5447,7 +5476,7 @@
     return [
       '<div class="community-board-toolbar">',
       '<div><strong>\uC790\uC720\uAC8C\uC2DC\uD310</strong></div>',
-      '<button type="button" class="fp-button community-write-toggle" data-community-compose-toggle>' + (communityState.composing ? '\uC791\uC131 \uB2EB\uAE30' : '\uAE00\uC4F0\uAE30') + '</button>',
+      '<button type="button" data-community-compose-toggle>' + (communityState.composing ? '\uC791\uC131 \uB2EB\uAE30' : '\uAE00\uC4F0\uAE30') + '</button>',
       '</div>',
       communityState.composing ? renderCommunityFreeEditor(null) : '',
       '<div class="community-free-list">',
@@ -5471,7 +5500,7 @@
       '<input name="title" value="' + escapeHtml(post ? post.title : '') + '" />',
       '<textarea name="body" rows="5">' + escapeHtml(post ? post.body : '') + '</textarea>',
       '<label class="community-file-field"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCCA8\uBD80</span><input name="files" type="file" accept="image/*,video/*" multiple /><small>' + ((post && post.files && post.files.length) ? post.files.map(function (file) { return escapeHtml(file.name) }).join(', ') : mediaLimitText()) + '</small></label>',
-      '<div class="community-editor-actions"><button type="button" class="cancel-button fp-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit" class="submit-action fp-button">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
+      '<div class="community-editor-actions"><button type="button" class="cancel-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
       '</form>'
     ].join('')
   }
@@ -5485,7 +5514,7 @@
     }
     return [
       '<div class="community-detail">',
-      '<div class="community-detail-top"><button type="button" class="fp-button" data-community-back-list>\uBAA9\uB85D</button><div><button type="button" class="fp-button" data-community-edit-post="' + escapeHtml(post.id) + '">\uC218\uC815</button><button type="button" class="danger-button fp-button" data-community-delete-post="' + escapeHtml(post.id) + '">\uC0AD\uC81C</button></div></div>',
+      '<div class="community-detail-top"><button type="button" data-community-back-list>\uBAA9\uB85D</button><div><button type="button" data-community-edit-post="' + escapeHtml(post.id) + '">\uC218\uC815</button><button type="button" class="danger-button" data-community-delete-post="' + escapeHtml(post.id) + '">\uC0AD\uC81C</button></div></div>',
       communityState.editingPostId === post.id ? renderCommunityFreeEditor(post) : [
         '<article class="community-detail-article">',
         '<h3>' + escapeHtml(post.title) + '</h3>',
@@ -5527,11 +5556,11 @@
     return [
       '<div class="community-comments">',
       comments.map(function (comment) {
-        return '<div class="community-comment" data-comment-id="' + escapeHtml(comment.id || '') + '"><div><strong>' + escapeHtml(comment.author) + '</strong><small>' + escapeHtml(comment.time || '') + '</small></div><span>' + escapeHtml(comment.text) + '</span><div class="community-comment-actions"><button type="button" class="fp-button" data-edit-comment="' + escapeHtml(comment.id || '') + '">\uC218\uC815</button><button type="button" class="fp-button" data-delete-comment="' + escapeHtml(comment.id || '') + '">\uC0AD\uC81C</button></div></div>'
+        return '<div class="community-comment" data-comment-id="' + escapeHtml(comment.id || '') + '"><div><strong>' + escapeHtml(comment.author) + '</strong><small>' + escapeHtml(comment.time || '') + '</small></div><span>' + escapeHtml(comment.text) + '</span><div class="community-comment-actions"><button type="button" data-edit-comment="' + escapeHtml(comment.id || '') + '">\uC218\uC815</button><button type="button" data-delete-comment="' + escapeHtml(comment.id || '') + '">\uC0AD\uC81C</button></div></div>'
       }).join(''),
       '<form class="community-comment-form" data-comment-post="' + escapeHtml(post.id) + '">',
       '<input name="comment" />',
-      '<button type="submit" class="submit-action fp-button">\uB4F1\uB85D</button>',
+      '<button type="submit">\uB4F1\uB85D</button>',
       '</form>',
       '</div>'
     ].join('')
@@ -5589,7 +5618,7 @@
     return [
       '<div class="community-board-toolbar">',
       '<div><strong>' + communityTabLabel(tab) + '</strong></div>',
-      '<button type="button" class="fp-button community-write-toggle" data-community-compose-toggle>' + (communityState.composing ? '\uC791\uC131 \uB2EB\uAE30' : '\uAE00\uC4F0\uAE30') + '</button>',
+      '<button type="button" data-community-compose-toggle>' + (communityState.composing ? '\uC791\uC131 \uB2EB\uAE30' : '\uAE00\uC4F0\uAE30') + '</button>',
       '</div>',
       communityState.composing ? renderCommunityEditor(tab, null) : '',
       tab === 'free' ? renderCommunityBestPanel() : '',
@@ -5621,7 +5650,7 @@
       '<input name="title" value="' + escapeHtml(post ? post.title : '') + '" />',
       '<textarea name="body" rows="5">' + escapeHtml(post ? post.body : '') + '</textarea>',
       '<label class="community-file-field"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCCA8\uBD80</span><b>\uD30C\uC77C \uC120\uD0DD</b><input name="files" type="file" accept="image/*,video/*" multiple /><small>' + ((post && post.files && post.files.length) ? post.files.map(function (file) { return escapeHtml(file.name) }).join(', ') : mediaLimitText()) + '</small></label>',
-      '<div class="community-editor-actions"><button type="button" class="cancel-button fp-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit" class="submit-action fp-button">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
+      '<div class="community-editor-actions"><button type="button" class="cancel-button" data-community-cancel-edit>\uCDE8\uC18C</button><button type="submit">' + (editing ? '\uC800\uC7A5' : '\uB4F1\uB85D') + '</button></div>',
       '</form>'
     ].join('')
   }
@@ -5643,7 +5672,7 @@
     }
     return [
       '<div class="community-detail">',
-      '<div class="community-detail-top"><button type="button" class="fp-button" data-community-back-list>\uBAA9\uB85D</button><div><button type="button" class="fp-button" data-community-edit-post="' + escapeHtml(post.id) + '">\uC218\uC815</button><button type="button" class="danger-button fp-button" data-community-delete-post="' + escapeHtml(post.id) + '">\uC0AD\uC81C</button></div></div>',
+      '<div class="community-detail-top"><button type="button" data-community-back-list>\uBAA9\uB85D</button><div><button type="button" data-community-edit-post="' + escapeHtml(post.id) + '">\uC218\uC815</button><button type="button" class="danger-button" data-community-delete-post="' + escapeHtml(post.id) + '">\uC0AD\uC81C</button></div></div>',
       communityState.editingPostId === post.id ? renderCommunityEditor(tab, post) : [
         '<article class="community-detail-article">',
         '<h3>' + escapeHtml(post.title) + '</h3>',
@@ -6120,7 +6149,7 @@
     document.querySelectorAll('.panel').forEach(function (panel) {
       var title = getCleanText(panel.querySelector('.panel-header h2'))
       if (title === '\uC544\uC774 \uC120\uD0DD') {
-        panel.remove()
+        hidePatchElement(panel)
       }
     })
   }
@@ -7249,36 +7278,23 @@
     })
   }
 
-  function setFieldValue(root, selector, value) {
-    var field = root && root.querySelector(selector)
-    if (!field) return false
-    setNativeInputValue(field, value)
-    return true
-  }
-
   function fillLedgerFormForEdit(item) {
-    var panel = findLedgerForm()
-    if (!panel || !item) return false
-    var form = panel.matches && panel.matches('.ledger-form') ? panel : panel.querySelector('.ledger-form')
-    var editId = String(item.id || '')
-    panel.dataset.apiLedgerEditId = editId
-    if (form) form.dataset.apiLedgerEditId = editId
-    var scope = form || panel
-    setInputValueByLabel(panel, '\uB0B4\uC5ED', item.title || '')
-      || setInputValueByLabel(panel, '\uC81C\uBAA9', item.title || '')
-      || setInputValueByLabel(panel, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', item.title || '')
-      || setScheduleTextInputAt(panel, 0, item.title || '')
-    setFieldValue(scope, '[data-field="ledger-title"]', item.title || '')
-    setInputValueByLabel(panel, '\uAE08\uC561', Number(item.amount || 0).toLocaleString('ko-KR'))
-    setFieldValue(scope, '[data-field="ledger-amount"]', Number(item.amount || 0).toLocaleString('ko-KR'))
-    setInputValueByLabel(panel, '\uBA54\uBAA8', item.memo || '')
-    setLedgerDateValue(panel, item.transactionDate)
-    setCustomSelectValueByLabel(panel, '\uAD6C\uBD84', item.entryType === 'income' ? '\uC218\uC785' : '\uC9C0\uCD9C')
-    setCustomSelectValueByLabel(panel, '\uCE74\uD14C\uACE0\uB9AC', item.category || '')
-    setCustomSelectValueByLabel(panel, '\uACB0\uC81C\uC218\uB2E8', item.paymentMethod || '')
-    setCustomSelectValueByLabel(panel, '\uC0AC\uC6A9\uC790', item.memberName || '')
-    setCustomSelectValueByLabel(panel, '\uAC00\uC871', item.memberName || '')
-    var submit = scope.querySelector('button[type="submit"], .submit-action')
+    var form = findLedgerForm()
+    if (!form || !item) return false
+    form.dataset.apiLedgerEditId = String(item.id || '')
+    setInputValueByLabel(form, '\uB0B4\uC5ED', item.title || '')
+      || setInputValueByLabel(form, '\uC81C\uBAA9', item.title || '')
+      || setInputValueByLabel(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', item.title || '')
+      || setScheduleTextInputAt(form, 0, item.title || '')
+    setInputValueByLabel(form, '\uAE08\uC561', Number(item.amount || 0).toLocaleString('ko-KR'))
+    setInputValueByLabel(form, '\uBA54\uBAA8', item.memo || '')
+    setLedgerDateValue(form, item.transactionDate)
+    setCustomSelectValueByLabel(form, '\uAD6C\uBD84', item.entryType === 'income' ? '\uC218\uC785' : '\uC9C0\uCD9C')
+    setCustomSelectValueByLabel(form, '\uCE74\uD14C\uACE0\uB9AC', item.category || '')
+    setCustomSelectValueByLabel(form, '\uACB0\uC81C\uC218\uB2E8', item.paymentMethod || '')
+    setCustomSelectValueByLabel(form, '\uC0AC\uC6A9\uC790', item.memberName || '')
+    setCustomSelectValueByLabel(form, '\uAC00\uC871', item.memberName || '')
+    var submit = form.querySelector('button[type="submit"], .submit-action')
     if (submit) {
       submit.textContent = '\uC800\uC7A5'
       submit.dataset.ledgerEditSubmit = 'true'
@@ -7286,13 +7302,13 @@
         event.preventDefault()
         event.stopPropagation()
         if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-        submitLedgerEdit(scope)
+        submitLedgerEdit(form)
         return false
       }
     }
-    var target = scope.querySelector('input, textarea, .custom-select-trigger, .date-picker-trigger')
+    var target = form.querySelector('input, textarea, .custom-select-trigger, .date-picker-trigger')
     if (target) target.focus()
-    panel.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' })
     return true
   }
 
@@ -7393,49 +7409,6 @@
     })
   }
 
-  function submitLedgerCreateDirect(form, submitButton) {
-    if (!form || form.dataset.ledgerCreateSubmitting === 'true') return
-    var payload = ledgerPayloadFromForm(form)
-    clearFieldErrors(form)
-    if (!payload.title) {
-      requireField(form, ['@' + '\uB0B4\uC5ED', '@' + '\uC81C\uBAA9', '@' + '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', '[data-field="ledger-title"]'], '\uB0B4\uC5ED')
-      return
-    }
-    if (!payload.amount) {
-      requireField(form, ['@' + '\uAE08\uC561', '[data-field="ledger-amount"]', 'input[inputmode="numeric"]'], '\uAE08\uC561')
-      return
-    }
-    form.dataset.ledgerCreateSubmitting = 'true'
-    if (submitButton) submitButton.disabled = true
-    getReadableFamilyId().then(function (familyId) {
-      return postJson('/ledger-entries?familyId=' + encodeURIComponent(familyId), payload)
-    }).then(function () {
-      showPatchToast('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
-      form.querySelectorAll('input, textarea').forEach(function (field) {
-        if (field.type !== 'hidden' && field.type !== 'date' && field.type !== 'file') setNativeInputValue(field, '')
-      })
-      refreshLedgerAfterMutation()
-    }).catch(function (error) {
-      showPatchToast(apiActionErrorMessage(error, '\uAC00\uACC4\uBD80 \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
-    }).finally(function () {
-      delete form.dataset.ledgerCreateSubmitting
-      if (submitButton) submitButton.disabled = false
-    })
-  }
-
-  function handleLedgerSubmitControlEvent(event) {
-    var button = event.target && event.target.closest && event.target.closest('.ledger-form button[type="submit"], .ledger-form .submit-action')
-    if (!button || !pageHeadingIs('\uAC00\uACC4\uBD80')) return false
-    var form = button.closest('.ledger-form')
-    if (!form) return false
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    if (form.dataset.apiLedgerEditId) submitLedgerEdit(form)
-    else submitLedgerCreateDirect(form, button)
-    return true
-  }
-
   function deleteLedgerEntry(entryId) {
     if (!entryId) return
     showPatchConfirm('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
@@ -7512,7 +7485,7 @@
         }
         priceInput.removeAttribute('placeholder')
         label.querySelectorAll('.custom-select, select').forEach(function (select) {
-          if (!select.contains(priceInput)) select.remove()
+          if (!select.contains(priceInput)) hidePatchElement(select)
         })
       }
     })
@@ -7561,7 +7534,7 @@
     var now = currentTimeText()
     scope.querySelectorAll('input[type="time"], input[name="recordTime"], [data-field="travel-record-time"]').forEach(function (input) {
       if (!input || input.disabled) return
-      if (!input.value || input.value === '00:00' || input.value === '10:00' || input.value === '14:00' || input.value === '19:00') setInputValue(input, now)
+      if (!input.value || input.value === '00:00' || input.value === '14:00') setInputValue(input, now)
     })
   }
 
@@ -7605,575 +7578,6 @@
     title.appendChild(mark)
   }
 
-  function findFieldByLabel(root, labelText) {
-    if (!root) return null
-    var labels = Array.from(root.querySelectorAll('label, .date-picker-field'))
-    var target = labels.find(function (label) {
-      return getCleanText(label).indexOf(labelText) >= 0
-    })
-    if (!target) return null
-    return target.querySelector('input:not([type="hidden"]), textarea, select, .custom-select-trigger, .date-picker-trigger')
-  }
-
-  function clearFieldErrors(root) {
-    ;(root || document).querySelectorAll('.field-error').forEach(function (item) {
-      item.hidden = true
-      item.textContent = ''
-    })
-    ;(root || document).querySelectorAll('.field-invalid').forEach(function (item) {
-      item.classList.remove('field-invalid')
-      item.classList.remove('fp-field-invalid')
-    })
-  }
-
-  function showRequiredFieldMessage(control, labelText) {
-    var message = labelText + '\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.'
-    var label = control && control.closest && control.closest('label')
-    if (label) {
-      var error = label.querySelector('.field-error')
-      if (!error) {
-        error = document.createElement('small')
-        error.className = 'field-error'
-        label.appendChild(error)
-      }
-      error.textContent = message
-      error.hidden = false
-      label.classList.add('field-invalid')
-      label.classList.add('fp-field-invalid')
-    }
-    showPatchToast(message)
-    if (control && control.focus) {
-      control.focus()
-      control.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
-  }
-
-  function requireField(root, selectors, labelText) {
-    var control = null
-    selectors.some(function (selector) {
-      if (selector.charAt(0) === '@') control = findFieldByLabel(root, selector.slice(1))
-      else control = root && root.querySelector(selector)
-      return !!control
-    })
-    var value = ''
-    if (control) {
-      value = control.classList && control.classList.contains('date-picker-trigger')
-        ? getCleanText(control)
-        : String(control.value || control.textContent || '').trim()
-    }
-    if (value) return true
-    showRequiredFieldMessage(control || root, labelText)
-    return false
-  }
-
-  function applyCommonUiStandard(root) {
-    var scope = root || document
-    var pageTitle = getCleanText(document.querySelector('.topbar h1'))
-    var content = document.querySelector('.content-grid')
-    var standardPages = ['\uAC00\uACC4\uBD80', '\uC5EC\uD589', '\uC721\uC544', '\uC77C\uAE30', '\uB9DB\uC9D1', '\uCE98\uB9B0\uB354', '\uAC00\uC871\uADF8\uB8F9', '\uCEE4\uBBA4\uB2C8\uD2F0', '\uAD00\uB9AC\uC790']
-    if (content) {
-      content.classList.add('fp-content-grid')
-      if (standardPages.indexOf(pageTitle) >= 0) content.classList.add('fp-workspace-grid')
-    }
-
-    scope.querySelectorAll('.sidebar').forEach(function (item) { item.classList.add('fp-sidebar') })
-    scope.querySelectorAll('.workspace').forEach(function (item) { item.classList.add('fp-workspace') })
-    scope.querySelectorAll('.brand').forEach(function (brand) {
-      brand.classList.add('fp-brand')
-      var mark = brand.querySelector('.brand-mark')
-      var title = brand.querySelector('p, strong')
-      var subtitle = brand.querySelector('span, small')
-      if (mark) mark.classList.add('fp-brand-mark')
-      if (title) title.classList.add('fp-brand-title')
-      if (subtitle) subtitle.classList.add('fp-brand-subtitle')
-    })
-    scope.querySelectorAll('.nav-list').forEach(function (item) { item.classList.add('fp-nav-list') })
-    scope.querySelectorAll('.nav-item').forEach(function (item) {
-      item.classList.add('fp-nav-item')
-      item.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-nav-icon') })
-      item.querySelectorAll('span').forEach(function (label) { label.classList.add('fp-nav-label') })
-    })
-    scope.querySelectorAll('.topbar').forEach(function (bar) {
-      bar.classList.add('fp-topbar')
-      var eyebrow = bar.querySelector('.eyebrow')
-      var title = bar.querySelector('h1')
-      if (eyebrow) eyebrow.classList.add('fp-eyebrow')
-      if (title) title.classList.add('fp-page-title')
-    })
-    scope.querySelectorAll('.top-actions').forEach(function (item) { item.classList.add('fp-top-actions') })
-    scope.querySelectorAll('.summary-actions').forEach(function (item) { item.classList.add('fp-summary-actions') })
-    scope.querySelectorAll('.icon-button').forEach(function (item) { item.classList.add('fp-button', 'fp-icon-button') })
-    scope.querySelectorAll('.primary-action').forEach(function (item) { item.classList.add('fp-button', 'fp-primary-action') })
-    scope.querySelectorAll('.secondary-action').forEach(function (item) { item.classList.add('fp-button', 'fp-secondary-action') })
-    scope.querySelectorAll('.summary-band').forEach(function (band) {
-      band.classList.add('fp-summary-band')
-      band.querySelectorAll('h2, h3').forEach(function (title) { title.classList.add('fp-summary-title') })
-      band.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-summary-copy') })
-    })
-    scope.querySelectorAll('.metric-grid').forEach(function (grid) { grid.classList.add('fp-metric-grid') })
-    scope.querySelectorAll('.metric').forEach(function (metric) {
-      metric.classList.add('fp-metric-card')
-      metric.querySelectorAll('span').forEach(function (label) { label.classList.add('fp-metric-label') })
-      metric.querySelectorAll('strong').forEach(function (value) { value.classList.add('fp-metric-value') })
-    })
-    scope.querySelectorAll([
-      '.content-grid > .panel',
-      '.content-grid > .entry-panel',
-      '.patch-family-group-root > .panel',
-      '.patch-community-root > .panel'
-    ].join(',')).forEach(function (panel) {
-      panel.classList.add('fp-screen-panel')
-      var text = getCleanText(panel)
-      var isFormPanel = !!panel.querySelector([
-        '.ledger-form',
-        '.travel-form',
-        '.diary-form',
-        '.baby-form',
-        '.baby-create-form',
-        '.baby-profile-form',
-        '.baby-api-record-form',
-        '.restaurant-form',
-        '.schedule-form-card form',
-        '.family-create-form',
-        '.family-invite-form'
-      ].join(','))
-      var isScheduleFormPanel = panel.classList.contains('schedule-form-card')
-      var isRightFormByTitle = /(\uCD94\uAC00|\uC785\uB825|\uC218\uC815|\uC0C8\s*\uC77C\uC815|\uC77C\uC815\s*\uCD94\uAC00|\uB9DB\uC9D1\s*\uCD94\uAC00|\uAE30\uB85D\s*\uCD94\uAC00)/.test(text)
-      var isPrimaryByContent = !!panel.querySelector([
-        '.ledger-table',
-        '.daily-ledger',
-        '.family-calendar-panel',
-        '.trip-manager',
-        '.trip-list',
-        '.diary-section',
-        '.diary-list',
-        '.baby-list-grid',
-        '.baby-record-list',
-        '.restaurant-grid',
-        '.family-group-list',
-        '.community-list',
-        '.admin-list'
-      ].join(','))
-      var isWidePanel = panel.classList.contains('wide') || panel.classList.contains('full-span')
-      if ((isFormPanel || isScheduleFormPanel || isRightFormByTitle) && !isWidePanel) panel.classList.add('fp-side-panel')
-      if (isPrimaryByContent || isWidePanel) panel.classList.add('fp-primary-panel')
-      if (isWidePanel) panel.classList.add('fp-wide-panel')
-    })
-    scope.querySelectorAll('.ledger-summary').forEach(function (item) { item.classList.add('fp-ledger-summary') })
-    scope.querySelectorAll('.sync-panel').forEach(function (panel) {
-      panel.classList.add('fp-sync-panel')
-      panel.querySelectorAll('strong, h3, h4').forEach(function (title) { title.classList.add('fp-sync-title') })
-      panel.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-panel-copy') })
-      panel.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-panel-icon') })
-    })
-    scope.querySelectorAll('.parser-box').forEach(function (box) {
-      box.classList.add('fp-parser-box')
-      box.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-parser-icon') })
-      box.querySelectorAll('strong, h3, h4').forEach(function (title) { title.classList.add('fp-parser-title') })
-      box.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-parser-copy') })
-    })
-    scope.querySelectorAll('.filter-panel').forEach(function (panel) { panel.classList.add('fp-filter-panel') })
-    scope.querySelectorAll('.family-group-panel').forEach(function (panel) { panel.classList.add('fp-family-group-panel') })
-    scope.querySelectorAll('.family-group-summary').forEach(function (summary) {
-      summary.classList.add('fp-family-summary', 'fp-metric-grid')
-      summary.querySelectorAll('article').forEach(function (card) {
-        card.classList.add('fp-family-summary-card', 'fp-metric-card')
-        card.querySelectorAll('span').forEach(function (label) { label.classList.add('fp-metric-label') })
-        card.querySelectorAll('strong').forEach(function (value) { value.classList.add('fp-metric-value') })
-        card.querySelectorAll('small').forEach(function (copy) { copy.classList.add('fp-card-meta') })
-      })
-    })
-    scope.querySelectorAll('.family-group-list').forEach(function (list) { list.classList.add('fp-family-member-list', 'fp-list') })
-    scope.querySelectorAll('.family-group-list article').forEach(function (row) {
-      row.classList.add('fp-family-member-row', 'fp-list-row')
-      row.querySelectorAll('span, small').forEach(function (meta) { meta.classList.add('fp-row-meta') })
-      row.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-row-title') })
-      row.querySelectorAll('b').forEach(function (badge) { badge.classList.add('fp-status-badge') })
-    })
-    scope.querySelectorAll('.auth-copy').forEach(function (copy) {
-      copy.querySelectorAll('h1, h2').forEach(function (title) { title.classList.add('fp-auth-copy-title') })
-      copy.querySelectorAll('p').forEach(function (text) { text.classList.add('fp-auth-copy-text') })
-    })
-    scope.querySelectorAll('.auth-preview').forEach(function (preview) {
-      preview.querySelectorAll('div').forEach(function (item) { item.classList.add('fp-auth-preview-item') })
-      preview.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-auth-preview-title') })
-      preview.querySelectorAll('span').forEach(function (text) { text.classList.add('fp-auth-preview-text') })
-    })
-    scope.querySelectorAll('.auth-tabs button').forEach(function (button) { button.classList.add('fp-button', 'fp-auth-tab') })
-    scope.querySelectorAll('.auth-heading').forEach(function (heading) {
-      heading.querySelectorAll('strong, h2, h3').forEach(function (title) { title.classList.add('fp-auth-heading-title') })
-      heading.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-auth-heading-copy') })
-    })
-    scope.querySelectorAll('.auth-card label').forEach(function (label) {
-      label.classList.add('fp-auth-field')
-      label.querySelectorAll('span').forEach(function (text) { text.classList.add('fp-auth-field-label') })
-    })
-    scope.querySelectorAll('.auth-card input').forEach(function (input) { input.classList.add('fp-auth-input') })
-    scope.querySelectorAll('.auth-helper button').forEach(function (button) { button.classList.add('fp-button', 'fp-auth-helper-button') })
-    scope.querySelectorAll('.auth-required-consent').forEach(function (consent) {
-      consent.classList.add('fp-auth-consent')
-      consent.querySelectorAll('input').forEach(function (input) { input.classList.add('fp-auth-consent-input') })
-      consent.querySelectorAll('span').forEach(function (text) { text.classList.add('fp-auth-consent-text') })
-      consent.querySelectorAll('strong').forEach(function (text) { text.classList.add('fp-auth-consent-title') })
-    })
-    scope.querySelectorAll('.auth-login-preferences').forEach(function (prefs) {
-      prefs.classList.add('fp-auth-prefs')
-      prefs.querySelectorAll('label').forEach(function (label) { label.classList.add('fp-auth-pref') })
-      prefs.querySelectorAll('input').forEach(function (input) { input.classList.add('fp-auth-pref-input') })
-      prefs.querySelectorAll('span').forEach(function (text) { text.classList.add('fp-auth-pref-text') })
-    })
-    scope.querySelectorAll('.auth-recovery-header').forEach(function (header) {
-      header.querySelectorAll('strong, h2, h3').forEach(function (title) { title.classList.add('fp-auth-recovery-title') })
-      header.querySelectorAll('button').forEach(function (button) { button.classList.add('fp-button', 'fp-auth-recovery-close') })
-    })
-    scope.querySelectorAll('.auth-recovery-panel textarea').forEach(function (textarea) { textarea.classList.add('fp-auth-recovery-textarea') })
-    scope.querySelectorAll('.account-info-list').forEach(function (list) {
-      list.querySelectorAll('span').forEach(function (label) { label.classList.add('fp-account-label') })
-      list.querySelectorAll('strong').forEach(function (value) { value.classList.add('fp-account-value') })
-    })
-    scope.querySelectorAll('.account-password-header').forEach(function (header) {
-      header.querySelectorAll('strong, h2, h3').forEach(function (title) { title.classList.add('fp-account-title') })
-      header.querySelectorAll('button').forEach(function (button) { button.classList.add('fp-button', 'fp-account-close') })
-    })
-    scope.querySelectorAll('.account-password-dialog').forEach(function (dialog) {
-      dialog.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-account-copy') })
-      dialog.querySelectorAll('label').forEach(function (label) { label.classList.add('fp-account-field') })
-      dialog.querySelectorAll('input').forEach(function (input) { input.classList.add('fp-account-input') })
-    })
-    scope.querySelectorAll('.account-password-actions button').forEach(function (button) { button.classList.add('fp-button', 'fp-account-action') })
-    scope.querySelectorAll([
-      '.travel-main',
-      '.travel-summary',
-      '.travel-detail-dialog',
-      '.diary-card',
-      '.diary-list-row',
-      '.diary-detail-card',
-      '.baby-card',
-      '.baby-profile-band',
-      '.baby-metrics',
-      '.baby-record-row',
-      '.baby-api-record-card',
-      '.baby-api-detail-header',
-      '.baby-empty-guide',
-      '.baby-create-dialog',
-      '.baby-profile-edit-dialog',
-      '.restaurant-hero',
-      '.restaurant-card',
-      '.restaurant-card-top',
-      '.restaurant-meta'
-    ].join(',')).forEach(function (card) {
-      card.classList.add('fp-data-card')
-      card.querySelectorAll('h2, h3, strong, b').forEach(function (title) { title.classList.add('fp-card-title') })
-      card.querySelectorAll('span, small, em, i').forEach(function (meta) { meta.classList.add('fp-card-meta') })
-      card.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-card-copy') })
-      card.querySelectorAll('img, video').forEach(function (media) { media.classList.add('fp-card-media') })
-      card.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-card-icon') })
-    })
-    scope.querySelectorAll('.photo-input').forEach(function (field) {
-      field.classList.add('fp-photo-field')
-      field.querySelectorAll('img, video').forEach(function (media) { media.classList.add('fp-card-media') })
-      field.querySelectorAll('input[type="file"]').forEach(function (input) { input.classList.add('fp-file-input') })
-    })
-    scope.querySelectorAll('.media-upload-empty').forEach(function (field) { field.classList.add('fp-media-empty') })
-    scope.querySelectorAll('.travel-form textarea, .diary-form textarea, .restaurant-form textarea, .baby-form textarea, .baby-profile-form textarea').forEach(function (textarea) {
-      textarea.classList.add('fp-textarea')
-    })
-    scope.querySelectorAll('.travel-form input, .travel-form select, .baby-form input, .baby-form select, .restaurant-form input, .restaurant-form select, .diary-form input, .diary-form select').forEach(function (control) {
-      control.classList.add('fp-control')
-    })
-    scope.querySelectorAll('.travel-header-actions button, .baby-main-action-bar button, .diary-main-action-bar button, .restaurant-actions button, .baby-api-record-actions button').forEach(function (button) {
-      button.classList.add('fp-button')
-    })
-    scope.querySelectorAll('.baby-api-record-form label, .baby-create-dialog label, .baby-profile-edit-dialog label').forEach(function (label) {
-      label.classList.add('fp-field')
-      label.querySelectorAll('span, strong, b').forEach(function (text) { text.classList.add('fp-field-label') })
-    })
-    scope.querySelectorAll('.baby-api-record-form input, .baby-api-record-form select, .baby-api-record-form textarea, .baby-create-dialog input, .baby-create-dialog textarea, .baby-profile-edit-dialog input, .baby-profile-edit-dialog select, .baby-create-date-button, .baby-create-gender-select .custom-select-trigger').forEach(function (control) {
-      control.classList.add('fp-control')
-      if (control.tagName === 'TEXTAREA') control.classList.add('fp-textarea')
-    })
-    scope.querySelectorAll('.baby-api-record-actions button, .baby-profile-edit-actions button').forEach(function (button) {
-      button.classList.add('fp-button')
-    })
-    scope.querySelectorAll('.baby-profile-photo-preview img').forEach(function (image) { image.classList.add('fp-card-media') })
-    scope.querySelectorAll('.baby-profile-photo-field input[type="file"]').forEach(function (input) { input.classList.add('fp-file-input') })
-    scope.querySelectorAll('.baby-profile-photo-field > span').forEach(function (label) { label.classList.add('fp-field-label') })
-    scope.querySelectorAll('.calendar-header, .calendar-popover .calendar-header').forEach(function (header) {
-      header.classList.add('fp-calendar-header')
-      header.querySelectorAll('button').forEach(function (button) { button.classList.add('fp-button', 'fp-calendar-nav-button') })
-      header.querySelectorAll('.calendar-title-button').forEach(function (button) { button.classList.add('fp-calendar-title-button') })
-    })
-    scope.querySelectorAll('.calendar-title-button').forEach(function (button) {
-      button.classList.add('fp-calendar-title-button')
-      button.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-calendar-title') })
-      button.querySelectorAll('span').forEach(function (meta) { meta.classList.add('fp-calendar-subtitle') })
-    })
-    scope.querySelectorAll('.calendar-weekdays span').forEach(function (item) { item.classList.add('fp-calendar-weekday') })
-    scope.querySelectorAll('.calendar-day-grid button, .calendar-month-grid button, .calendar-year-grid button').forEach(function (button) {
-      button.classList.add('fp-button', 'fp-calendar-option')
-    })
-    scope.querySelectorAll('.calendar-view-tabs button').forEach(function (button) { button.classList.add('fp-button', 'fp-calendar-view-tab') })
-    scope.querySelectorAll('.calendar-nav > button').forEach(function (button) { button.classList.add('fp-button', 'fp-calendar-nav-button') })
-    scope.querySelectorAll('.calendar-hero').forEach(function (hero) {
-      hero.querySelectorAll('h2, h3').forEach(function (title) { title.classList.add('fp-calendar-hero-title') })
-      hero.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-calendar-hero-copy') })
-    })
-    scope.querySelectorAll('.calendar-hero-card').forEach(function (card) {
-      card.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-card-icon') })
-      card.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-card-title') })
-      card.querySelectorAll('span').forEach(function (meta) { meta.classList.add('fp-card-meta') })
-    })
-    scope.querySelectorAll('.calendar-day-card').forEach(function (card) {
-      card.querySelectorAll('small').forEach(function (meta) { meta.classList.add('fp-card-meta') })
-      card.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-card-title') })
-    })
-    scope.querySelectorAll('.schedule-date-badge').forEach(function (badge) {
-      badge.querySelectorAll('strong').forEach(function (title) { title.classList.add('fp-schedule-badge-title') })
-      badge.querySelectorAll('span').forEach(function (meta) { meta.classList.add('fp-schedule-badge-meta') })
-    })
-    scope.querySelectorAll('.schedule-detail-dialog, .schedule-detail-patch-dialog, .schedule-detail-meta').forEach(function (card) {
-      card.querySelectorAll('h2, h3, strong').forEach(function (title) { title.classList.add('fp-card-title') })
-      card.querySelectorAll('p').forEach(function (copy) { copy.classList.add('fp-card-copy') })
-      card.querySelectorAll('span, small').forEach(function (meta) { meta.classList.add('fp-card-meta') })
-    })
-    scope.querySelectorAll('.schedule-row-actions button, .schedule-detail-patch-actions button, .schedule-day-patch-list button, .calendar-popover .calendar-today-row button, .calendar-jump-control button').forEach(function (button) {
-      button.classList.add('fp-button')
-    })
-    scope.querySelectorAll('.schedule-form-card label').forEach(function (label) {
-      label.classList.add('fp-field')
-      label.querySelectorAll('span, strong, b').forEach(function (text) { text.classList.add('fp-field-label') })
-    })
-    scope.querySelectorAll('.schedule-form-card input, .schedule-form-card textarea, .calendar-jump-control input').forEach(function (control) {
-      control.classList.add('fp-control')
-      if (control.tagName === 'TEXTAREA') control.classList.add('fp-textarea')
-    })
-    scope.querySelectorAll('.patch-ledger-detail-dialog, .patch-confirm-dialog, .confirm-dialog').forEach(function (dialog) {
-      dialog.querySelectorAll('h2, h3, strong, dt').forEach(function (title) { title.classList.add('fp-dialog-title') })
-      dialog.querySelectorAll('p, dd').forEach(function (copy) { copy.classList.add('fp-dialog-copy') })
-      dialog.querySelectorAll('button').forEach(function (button) { button.classList.add('fp-button') })
-      dialog.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-dialog-icon') })
-    })
-    scope.querySelectorAll('.toast-message, .patch-toast-message').forEach(function (toast) {
-      toast.querySelectorAll('svg').forEach(function (icon) { icon.classList.add('fp-toast-icon') })
-    })
-    scope.querySelectorAll('.route-marker, .route-sequence-item, .location-candidates, .invite-row').forEach(function (item) {
-      item.querySelectorAll('span, small, i').forEach(function (meta) { meta.classList.add('fp-card-meta') })
-      item.querySelectorAll('strong, b').forEach(function (title) { title.classList.add('fp-card-title') })
-      item.querySelectorAll('button, a').forEach(function (button) { button.classList.add('fp-button') })
-    })
-    scope.querySelectorAll('.permission-chips button, .location-map-actions button, .location-map-actions a').forEach(function (button) {
-      button.classList.add('fp-button')
-    })
-    scope.querySelectorAll('.schedule-notification-popup').forEach(function (popup) {
-      popup.querySelectorAll('header strong, .schedule-notification-item strong').forEach(function (title) { title.classList.add('fp-card-title') })
-      popup.querySelectorAll('.schedule-notification-list p').forEach(function (copy) { copy.classList.add('fp-card-copy') })
-      popup.querySelectorAll('.schedule-notification-item span, .schedule-notification-item small').forEach(function (meta) { meta.classList.add('fp-card-meta') })
-      popup.querySelectorAll('header button, footer button').forEach(function (button) { button.classList.add('fp-button') })
-    })
-
-    scope.querySelectorAll('.panel, .entry-panel, .summary-band, .metric').forEach(function (panel) {
-      panel.classList.add(panel.classList.contains('metric') ? 'fp-metric-card' : 'fp-panel')
-      panel.querySelectorAll('h2, h3').forEach(function (title) {
-        title.classList.add('fp-panel-title')
-      })
-      panel.querySelectorAll('p').forEach(function (copy) {
-        copy.classList.add('fp-panel-copy')
-      })
-    })
-
-    scope.querySelectorAll('.panel-header').forEach(function (header) {
-      header.classList.add('fp-panel-header')
-      var title = header.querySelector('h2, h3')
-      if (title) title.classList.add('fp-panel-title')
-      header.querySelectorAll('button, [role="button"]').forEach(function (button) {
-        button.classList.add('fp-button', 'fp-panel-header-action')
-      })
-    })
-
-    scope.querySelectorAll('.ledger-table, .timeline, .member-list, .admin-list, .task-list, .diary-list, .family-group-list, .schedule-list').forEach(function (list) {
-      list.classList.add('fp-list')
-    })
-    scope.querySelectorAll([
-      '.trip-list',
-      '.api-trip-record-list',
-      '.baby-list-grid',
-      '.restaurant-grid',
-      '.community-list',
-      '.permission-chips',
-      '.location-candidates'
-    ].join(',')).forEach(function (list) {
-      list.classList.add('fp-list')
-    })
-
-    scope.querySelectorAll('.ledger-row, .timeline-row, .member-row, .admin-row, .schedule-row, .diary-list-row, .baby-record-row, .trip-list-card, .api-travel-record-card, .baby-card, .restaurant-card, .community-post, .community-free-row, .family-group-list article').forEach(function (row) {
-      row.classList.add('fp-list-row')
-      if (row.classList.contains('ledger-row')) row.classList.add('fp-ledger-row')
-      if (row.classList.contains('schedule-row')) row.classList.add('fp-schedule-row')
-      if (row.classList.contains('admin-row')) row.classList.add('fp-admin-row')
-      if (row.classList.contains('trip-list-card') || row.classList.contains('api-travel-record-card')) row.classList.add('fp-travel-row')
-      if (row.classList.contains('restaurant-card')) row.classList.add('fp-restaurant-row')
-      if (row.classList.contains('community-post') || row.classList.contains('community-free-row')) row.classList.add('fp-community-row')
-      row.querySelectorAll('span, small, em').forEach(function (meta) {
-        meta.classList.add('fp-row-meta')
-      })
-      row.querySelectorAll('strong, h2, h3').forEach(function (title) {
-        title.classList.add('fp-row-title')
-      })
-      row.querySelectorAll('b').forEach(function (amount) {
-        amount.classList.add('fp-row-amount')
-      })
-    })
-
-    scope.querySelectorAll([
-      '.ledger-form',
-      '.travel-form',
-      '.diary-form',
-      '.baby-form',
-      '.baby-create-form',
-      '.baby-profile-form',
-      '.baby-api-record-form',
-      '.restaurant-form',
-      '.schedule-form-card form',
-      '.family-group-panel form',
-      '.community-write-card form',
-      '.entry-panel form'
-    ].join(',')).forEach(function (form) {
-      form.classList.add('fp-form')
-      var panel = form.closest('.panel, .entry-panel, aside, section')
-      if (panel) panel.classList.add('fp-panel-with-form')
-    })
-
-    scope.querySelectorAll('.form-row, .baby-api-form-grid, .fc-form-grid, .travel-form-row').forEach(function (row) {
-      if (row.closest('.fp-form')) row.classList.add('fp-form-row')
-    })
-
-    scope.querySelectorAll('.fp-form label, .ledger-form label, .travel-form label, .diary-form label, .baby-form label, .restaurant-form label, .baby-api-record-form label').forEach(function (label) {
-      label.classList.add('fp-field')
-      var title = label.querySelector('span, strong, b')
-      if (title) title.classList.add('fp-field-label')
-      var control = label.querySelector('input:not([type="hidden"]):not([type="file"]), textarea, select, .date-picker-trigger, .custom-select-trigger')
-      if (control) {
-        control.classList.add('fp-control')
-        if (control.tagName === 'TEXTAREA') control.classList.add('fp-textarea')
-        if (control.tagName === 'SELECT') control.classList.add('fp-native-select')
-      }
-    })
-
-    scope.querySelectorAll('.date-picker-field').forEach(function (field) {
-      field.classList.add('fp-field')
-      field.classList.add('fp-datepicker-field')
-      field.querySelectorAll(':scope > span').forEach(function (label) { label.classList.add('fp-field-label') })
-      var trigger = field.querySelector('.date-picker-trigger')
-      if (trigger) trigger.classList.add('fp-control')
-    })
-
-    scope.querySelectorAll('.custom-select-trigger, input:not([type="hidden"]):not([type="file"]), textarea, select, .date-picker-trigger').forEach(function (control) {
-      if (!control.closest('.auth-card')) {
-        control.classList.add('fp-control')
-        if (control.tagName === 'TEXTAREA') control.classList.add('fp-textarea')
-      }
-    })
-
-    scope.querySelectorAll('.custom-select').forEach(function (select) {
-      select.classList.add('fp-select-wrap')
-    })
-
-    scope.querySelectorAll('.custom-select-list').forEach(function (list) {
-      list.classList.add('fp-select-list')
-      list.querySelectorAll('button').forEach(function (button) {
-        button.classList.add('fp-select-option')
-      })
-    })
-
-    scope.querySelectorAll('.fp-form button[type="submit"], .fp-form .submit-action, .fp-form .save-button').forEach(function (button) {
-      button.classList.add('fp-button', 'fp-submit-action')
-    })
-    scope.querySelectorAll('.location-map-box, .route-map, .travel-map, .restaurant-form .location-map-box').forEach(function (map) {
-      map.classList.add('fp-map-box')
-      map.querySelectorAll('.leaflet-container, iframe, .location-map-canvas, .location-map-osm').forEach(function (canvas) {
-        canvas.classList.add('fp-map-canvas')
-      })
-    })
-    scope.querySelectorAll('.photo-input, .media-upload-empty, .community-file-field, .baby-profile-photo-field').forEach(function (field) {
-      field.classList.add('fp-upload-field')
-    })
-
-    scope.querySelectorAll('button, [role="button"]').forEach(function (button) {
-      if (button.closest('.auth-card')) return
-      button.classList.add('fp-button')
-      if (button.classList.contains('danger-button')) button.classList.add('fp-danger-action')
-      if (button.classList.contains('cancel-button')) button.classList.add('fp-cancel-action')
-      if (button.classList.contains('save-button') || button.classList.contains('primary-action')) button.classList.add('fp-primary-action')
-    })
-
-    scope.querySelectorAll('button, [role="button"]').forEach(function (button) {
-      button.classList.add('fp-button')
-    })
-    scope.querySelectorAll('input:not([type="hidden"]):not([type="file"]), select, textarea, .date-picker-trigger, .custom-select-trigger').forEach(function (control) {
-      control.classList.add('fp-control')
-      if (control.tagName === 'TEXTAREA') control.classList.add('fp-textarea')
-      if (control.tagName === 'SELECT') control.classList.add('fp-native-select')
-    })
-    scope.querySelectorAll('label').forEach(function (label) { label.classList.add('fp-field') })
-    scope.querySelectorAll('h1, h2, h3, strong, b, dt').forEach(function (item) { item.classList.add('fp-text-title') })
-    scope.querySelectorAll('p, dd').forEach(function (item) { item.classList.add('fp-text-copy') })
-    scope.querySelectorAll('span, small, em, i').forEach(function (item) { item.classList.add('fp-text-meta') })
-    scope.querySelectorAll('svg').forEach(function (item) { item.classList.add('fp-icon') })
-    scope.querySelectorAll('img, video').forEach(function (item) { item.classList.add('fp-media') })
-    scope.querySelectorAll('header').forEach(function (item) { item.classList.add('fp-section-header') })
-    scope.querySelectorAll('footer').forEach(function (item) { item.classList.add('fp-section-footer') })
-
-    scope.querySelectorAll('.family-calendar-panel .api-schedule-row, .family-calendar-panel .schedule-row.api-schedule-row').forEach(function (row) {
-      row.classList.add('fp-calendar-schedule-row')
-      var badge = row.querySelector('.schedule-date-badge')
-      if (badge) badge.classList.add('fp-schedule-date-badge')
-      var detail = Array.from(row.children).find(function (child) {
-        return child !== badge && !child.classList.contains('schedule-row-actions')
-      })
-      if (detail) detail.classList.add('fp-schedule-row-detail')
-      var actions = row.querySelector('.schedule-row-actions')
-      if (actions) actions.classList.add('fp-schedule-row-actions')
-    })
-
-    scope.querySelectorAll('.fp-form [required], .ledger-form [required], .travel-form [required], .diary-form [required], .baby-form [required], .restaurant-form [required]').forEach(function (control) {
-      ensureRequiredMarkForInput(control)
-    })
-  }
-
-  function syncCommonUiStateClasses() {
-    var isCalendar = !!document.querySelector('.family-calendar-panel')
-    ;[document.documentElement, document.body].forEach(function (node) {
-      if (!node) return
-      node.classList.toggle('fp-page-calendar', isCalendar)
-      node.classList.toggle('fp-page-standard', !isCalendar)
-    })
-
-    document.querySelectorAll('.date-picker-field').forEach(function (field) {
-      field.classList.toggle('fp-datepicker-open', !!field.querySelector('.calendar-popover:not(.calendar-popover-hidden)'))
-    })
-  }
-
-  function installCommonRequiredSubmitGuard() {
-    if (window.__familyCommonRequiredSubmitGuardReady) return
-    window.__familyCommonRequiredSubmitGuardReady = true
-    document.addEventListener('submit', function (event) {
-      var form = event.target && event.target.closest && event.target.closest('.fp-form, .ledger-form, .travel-form, .diary-form, .baby-form, .baby-api-record-form, .restaurant-form')
-      if (!form || form.closest('.auth-card')) return
-      var invalid = Array.from(form.querySelectorAll('[required]')).find(function (control) {
-        if (control.disabled || control.type === 'hidden') return false
-        return !String(control.value || '').trim()
-      })
-      if (!invalid) return
-      var label = invalid.closest('label')
-      var labelText = getCleanText(label && label.querySelector('span, strong, b')) || '\uD544\uC218\uAC12'
-      event.preventDefault()
-      event.stopPropagation()
-      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-      clearFieldErrors(form)
-      showRequiredFieldMessage(invalid, labelText.replace(/\s*\*$/, ''))
-    }, true)
-  }
-
   function normalizeLedgerEntryForm() {
     if (!pageHeadingIs('\uAC00\uACC4\uBD80')) return
     var forms = document.querySelectorAll('.ledger-form, .entry-panel, form')
@@ -8182,8 +7586,6 @@
       if (text.indexOf('\uAC00\uACC4\uBD80') < 0 && text.indexOf('\uAC70\uB798\uC77C') < 0 && text.indexOf('\uAE08\uC561') < 0) return
       removePlaceholdersIn(form, ['\uAC00\uB9F9\uC810', '\uB0B4\uC6A9', '\uAE08\uC561'])
       setDateFieldToToday(form, ['\uAC70\uB798\uC77C'])
-      ensureRequiredMarkForInput(findFieldByLabel(form, '\uB0B4\uC5ED') || findFieldByLabel(form, '\uC81C\uBAA9') || findFieldByLabel(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9'))
-      ensureRequiredMarkForInput(findFieldByLabel(form, '\uAE08\uC561'))
     })
     removeFeaturePlaceholders()
   }
@@ -8203,13 +7605,8 @@
     if (!pageHeadingIs('\uC5EC\uD589')) return
     document.querySelectorAll('.travel-form, .trip-manager, .entry-panel, form').forEach(function (form) {
       var text = getCleanText(form)
-      var isTravelForm = text.indexOf('\uC2DC\uC791') >= 0 ||
-        text.indexOf('\uC885\uB8CC') >= 0 ||
-        text.indexOf('\uAE30\uB85D \uCD94\uAC00') >= 0 ||
-        text.indexOf('\uC0AC\uC6A9\uAE08\uC561') >= 0 ||
-        !!form.querySelector('[data-field="travel-record-time"]')
-      if (!isTravelForm) return
-      setDateFieldToToday(form, ['\uC2DC\uC791\uC77C', '\uC885\uB8CC\uC77C', '\uB0A0\uC9DC'])
+      if (text.indexOf('\uC2DC\uC791') < 0 && text.indexOf('\uC885\uB8CC') < 0) return
+      setDateFieldToToday(form, ['\uC2DC\uC791\uC77C', '\uC885\uB8CC\uC77C'])
       clearSampleFieldValues(form)
       normalizeTimeInputs(form)
       ensureRequiredMarkForInput(form.querySelector('[data-field="travel-title"]'))
@@ -8381,39 +7778,8 @@
       listButton.textContent = '\uBAA9\uB85D'
       actions.appendChild(listButton)
       listButton.addEventListener('click', function () { originalList.click() })
-      originalList.remove()
+      originalList.style.display = 'none'
     }
-    normalizeTravelListWorkspace()
-  }
-
-  function normalizeTravelListWorkspace() {
-    if (!pageHeadingIs('\uC5EC\uD589')) return
-    var manager = document.querySelector('.trip-manager')
-    if (!manager) return
-    document.querySelectorAll('.travel-trip-create-card').forEach(function (node) {
-      var row = node.querySelector('.trip-add-row')
-      if (row && !manager.contains(row)) {
-        var list = manager.querySelector('.trip-list')
-        manager.insertBefore(row, list || manager.firstChild)
-      }
-      node.remove()
-    })
-    var panel = manager.closest('.panel')
-    if (!panel) return
-    panel.classList.remove('full-span', 'fp-side-panel')
-    panel.classList.add('fp-primary-panel', 'fp-wide-panel')
-  }
-
-  function cleanupTravelListWorkspace() {
-    if (pageHeadingIs('\uC5EC\uD589')) return
-    document.querySelectorAll('.travel-trip-create-card').forEach(function (node) { node.remove() })
-  }
-
-  function cleanupStaleMenuApiPanels() {
-    if (!pageHeadingIs('\uC721\uC544')) {
-      document.querySelectorAll('.baby-api-detail, .baby-profile-edit-backdrop').forEach(function (node) { node.remove() })
-    }
-    if (!pageHeadingIs('\uC77C\uAE30')) cleanupDiaryApiComposer()
   }
 
   function normalizeDiaryEntryForm() {
@@ -8425,31 +7791,6 @@
       setDateFieldToToday(form, ['\uB0A0\uC9DC'])
     })
     removeFeaturePlaceholders()
-    wireDiarySubmitButtons()
-  }
-
-  function wireDiarySubmitButtons(root) {
-    if (!pageHeadingIs('\uC77C\uAE30')) return
-    var scope = root || document
-    scope.querySelectorAll('.diary-form button[type="submit"], .diary-form .submit-action').forEach(function (button) {
-      if (button.dataset.diarySubmitWired === 'true') return
-      button.dataset.diarySubmitWired = 'true'
-      var submit = function (event) { handleDiarySubmitControlEvent(event, button) }
-      button.addEventListener('pointerdown', submit, true)
-      button.addEventListener('click', submit, true)
-    })
-  }
-
-  function handleDiarySubmitControlEvent(event, matchedButton) {
-    var button = matchedButton || (event.target && event.target.closest && event.target.closest('.diary-form button[type="submit"], .diary-form .submit-action'))
-    if (!button || !pageHeadingIs('\uC77C\uAE30')) return false
-    var form = button.closest('.diary-form')
-    if (!form) return false
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    submitExistingDiaryPanel(form, button)
-    return true
   }
 
   function normalizeBabyEntryForms() {
@@ -8503,11 +7844,9 @@
     if (!panel && !headerAction) return
     if (!force && panel && panel.dataset.apiBacked === 'true') return
     if (panel) panel.dataset.apiBacked = 'true'
-    normalizeTravelListWorkspace()
     fetchTrips().then(function (trips) {
       if (headerAction) headerAction.textContent = Number(trips.length || 0).toLocaleString('ko-KR') + '\uAC1C'
       if (panel) renderApiTripList(panel, trips)
-      normalizeTravelListWorkspace()
       removeHardcodedDemoData()
     })
   }
@@ -9573,15 +8912,7 @@
         getFieldValue(form, 'input[inputmode="numeric"]')
       )
 
-      clearFieldErrors(form)
-      if (!title) {
-        requireField(form, ['@' + '\uB0B4\uC5ED', '@' + '\uC81C\uBAA9', '@' + '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', '[data-field="ledger-title"]'], '\uB0B4\uC5ED')
-        return
-      }
-      if (!amount) {
-        requireField(form, ['@' + '\uAE08\uC561', '[data-field="ledger-amount"]', 'input[inputmode="numeric"]'], '\uAE08\uC561')
-        return
-      }
+      if (!title || !amount) return
 
       queueApiSync({
         type: 'createLedgerEntry',
@@ -9604,7 +8935,7 @@
     var cachedId = Number(localStorage.getItem(API_TRIP_ID_KEY) || '')
     if (Number.isFinite(cachedId) && cachedId > 0) return Promise.resolve(cachedId)
 
-    return getReadableFamilyId().then(function (familyId) {
+    return getCurrentFamilyId().then(function (familyId) {
       return postJson('/trips?familyId=' + encodeURIComponent(familyId), {
       title: '기본 여행',
       startDate: todayText(),
@@ -9619,7 +8950,7 @@
 
   function trySyncTask(task) {
     if (task.type === 'createTrip') {
-      return getReadableFamilyId().then(function (familyId) {
+      return getCurrentFamilyId().then(function (familyId) {
         return postJson('/trips?familyId=' + encodeURIComponent(familyId), task.payload)
       }).then(function (trip) {
         if (trip && trip.id) localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
@@ -9639,13 +8970,13 @@
     }
 
     if (task.type === 'createLedgerEntry') {
-      return getReadableFamilyId().then(function (familyId) {
+      return getCurrentFamilyId().then(function (familyId) {
         return postJson('/ledger-entries?familyId=' + encodeURIComponent(familyId), task.payload)
       })
     }
 
     if (task.type === 'createDiary') {
-      return getReadableFamilyId().then(function (familyId) {
+      return getCurrentFamilyId().then(function (familyId) {
         return postJson('/diaries?familyId=' + encodeURIComponent(familyId), task.payload)
       })
     }
@@ -9887,11 +9218,14 @@
   document.addEventListener('submit', function (event) {
     var ledgerForm = event.target && event.target.closest && event.target.closest('.ledger-form')
     if (!ledgerForm) return
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    if (ledgerForm.dataset.apiLedgerEditId) submitLedgerEdit(ledgerForm)
-    else submitLedgerCreateDirect(ledgerForm, ledgerForm.querySelector('button[type="submit"], .submit-action'))
+    if (ledgerForm.dataset.apiLedgerEditId) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      submitLedgerEdit(ledgerForm)
+      return
+    }
+    syncLedgerForm(ledgerForm)
   }, true)
 
   document.addEventListener('click', function (event) {
@@ -9927,40 +9261,9 @@
     submitLedgerEdit(form)
   }, true)
 
-  window.addEventListener('pointerdown', function (event) {
-    handleLedgerSubmitControlEvent(event)
-  }, true)
-
-  window.addEventListener('click', function (event) {
-    handleLedgerSubmitControlEvent(event)
-  }, true)
-
-  window.addEventListener('pointerdown', function (event) {
-    handleDiarySubmitControlEvent(event)
-  }, true)
-
-  window.addEventListener('click', function (event) {
-    handleDiarySubmitControlEvent(event)
-  }, true)
-
   document.addEventListener('submit', function (event) {
     var diaryForm = event.target && event.target.closest && event.target.closest('.diary-form')
-    if (!diaryForm || !pageHeadingIs('\uC77C\uAE30')) return
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    submitExistingDiaryPanel(diaryForm, diaryForm.querySelector('button[type="submit"], .submit-action'))
-  }, true)
-
-  document.addEventListener('click', function (event) {
-    var diarySubmit = event.target && event.target.closest && event.target.closest('.diary-form button[type="submit"], .diary-form .submit-action')
-    if (!diarySubmit || !pageHeadingIs('\uC77C\uAE30')) return
-    var diaryForm = diarySubmit.closest('.diary-form')
-    if (!diaryForm) return
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    submitExistingDiaryPanel(diaryForm, diarySubmit)
+    if (diaryForm) syncDiaryForm(diaryForm)
   }, true)
 
   document.addEventListener('click', function (event) {
@@ -9973,16 +9276,6 @@
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     submitExistingDiaryPanel(panel, button)
-  }, true)
-
-  document.addEventListener('click', function (event) {
-    var card = event.target && event.target.closest && event.target.closest('.baby-card[data-api-baby-id]')
-    var nestedButton = event.target && event.target.closest && event.target.closest('button')
-    if (!card || event.target.closest('a, input, textarea, select, .custom-select') || (nestedButton && nestedButton !== card)) return
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    openBabyApiDetailById(card.dataset.apiBabyId)
   }, true)
 
   document.addEventListener('submit', function (event) {
@@ -10120,7 +9413,6 @@
       document.querySelectorAll('.date-picker-field .calendar-popover').forEach(function (popover) {
         popover.classList.add('calendar-popover-hidden')
       })
-      syncCommonUiStateClasses()
     }, 0)
   })
 })()
