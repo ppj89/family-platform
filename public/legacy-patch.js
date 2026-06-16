@@ -8312,6 +8312,7 @@
 
   function renderBabyApiCards(force) {
     if (getCleanText(document.querySelector('.topbar h1')) !== '\uC721\uC544') return
+    if (!getStoredAuthToken()) return
     if (force) {
       document.querySelectorAll('.baby-api-detail, .baby-detail').forEach(function (detail) {
         detail.remove()
@@ -8331,8 +8332,13 @@
     }
     grid.hidden = false
     if (!force && grid.dataset.apiLoaded === 'true') return
+    if (grid.dataset.apiLoading === 'true') return
+    var hasRenderedCards = grid.querySelector('.baby-card[data-api-baby-id]')
     grid.dataset.apiLoaded = 'true'
-    grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>\uC544\uC774 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</strong></div>'
+    grid.dataset.apiLoading = 'true'
+    if (!hasRenderedCards) {
+      grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>\uC544\uC774 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</strong></div>'
+    }
     fetchBabies().then(function (babies) {
       if (!babies.length) {
         grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>\uB4F1\uB85D\uB41C \uC544\uC774\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</strong></div>'
@@ -8357,7 +8363,11 @@
         })
       })
     }).catch(function (error) {
-      grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>' + escapeHtml(apiActionErrorMessage(error, '\uC544\uC774 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</strong></div>'
+      if (!hasRenderedCards) {
+        grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>' + escapeHtml(apiActionErrorMessage(error, '\uC544\uC774 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</strong></div>'
+      }
+    }).finally(function () {
+      delete grid.dataset.apiLoading
     })
   }
 

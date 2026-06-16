@@ -3806,7 +3806,7 @@ body.api-loading-blocked::before {
 
 .baby-list-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 12px;
 }
 
@@ -9406,6 +9406,7 @@ select {
   grid-template-columns: 52px minmax(0, 1fr) auto !important;
   align-items: center !important;
   gap: 12px !important;
+  width: 100% !important;
 }
 
 .baby-list-grid .baby-card > div:nth-of-type(2) {
