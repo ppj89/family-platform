@@ -4763,7 +4763,7 @@
     createButton.dataset.diaryOpenComposer = 'true'
     createButton.textContent = '\uC77C\uAE30 \uCD94\uAC00'
     createButton.addEventListener('click', function () {
-      var form = document.querySelector('.diary-api-composer') || ensureDiaryApiComposer()
+      var form = document.querySelector('.entry-panel .diary-form') || ensureDiaryApiComposer()
       var target = form && (form.closest('form, .panel, aside') || form)
       if (!target) {
         showPatchToast('\uC77C\uAE30 \uC785\uB825 \uC601\uC5ED\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
@@ -4780,6 +4780,13 @@
 
   function ensureDiaryApiComposer() {
     if (getCleanText(document.querySelector('.topbar h1')).indexOf('\uC77C\uAE30') < 0) return null
+    var entryForm = document.querySelector('.entry-panel .diary-form')
+    if (entryForm) {
+      document.querySelectorAll('.diary-api-composer').forEach(function (panel) {
+        panel.remove()
+      })
+      return entryForm
+    }
     var existing = document.querySelector('.diary-api-composer')
     if (existing) return existing
     var diaryPanel = Array.from(document.querySelectorAll('.panel, article, section')).find(function (item) {
@@ -5168,14 +5175,18 @@
 
   function openCommunityPage(force) {
     pausePatchObserver()
-    document.documentElement.dataset.patchPage = 'community'
-    document.querySelectorAll('.nav-item.active').forEach(function (item) {
-      item.classList.remove('active')
-    })
-    var nav = findNavButtonContains('\uCEE4\uBBA4\uB2C8\uD2F0')
-    if (!nav) nav = document.querySelector('.community-nav-item')
-    if (nav) nav.classList.add('active')
-    renderCommunityPage(force)
+    try {
+      document.documentElement.dataset.patchPage = 'community'
+      document.querySelectorAll('.nav-item.active').forEach(function (item) {
+        item.classList.remove('active')
+      })
+      var nav = findNavButtonContains('\uCEE4\uBBA4\uB2C8\uD2F0')
+      if (!nav) nav = document.querySelector('.community-nav-item')
+      if (nav) nav.classList.add('active')
+      renderCommunityPage(force)
+    } finally {
+      resumePatchObserver()
+    }
   }
 
   function communityTabLabel(tab) {

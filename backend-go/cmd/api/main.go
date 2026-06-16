@@ -4236,6 +4236,8 @@ func writeOAuthCallbackHTML(w http.ResponseWriter, status int, publicBaseURL str
         window.setTimeout(function () { window.location.replace(redirect); }, 1800);
         return;
       }
+      sessionStorage.setItem('family-platform-access-token', token);
+      sessionStorage.setItem('family-platform-user', JSON.stringify(user));
       localStorage.setItem('family-platform-access-token', token);
       localStorage.setItem('family-platform-user', JSON.stringify(user));
       localStorage.setItem('family-platform-sso-complete', String(Date.now()));

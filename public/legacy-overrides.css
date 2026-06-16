@@ -9556,9 +9556,29 @@ select {
   }
 }
 
+.content-grid:has(.diary-section) {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px) !important;
+  align-items: start !important;
+  gap: 18px !important;
+}
+
+.content-grid:has(.diary-section) .diary-section,
+.content-grid:has(.diary-section) > .panel.wide:not(.entry-panel) {
+  grid-column: 1 !important;
+  min-width: 0 !important;
+}
+
+.content-grid:has(.diary-section) > .entry-panel {
+  grid-column: 2 !important;
+  width: 100% !important;
+  max-width: 340px !important;
+}
+
 .diary-api-composer {
-  display: block !important;
-  margin-top: 12px !important;
+  grid-column: 2 !important;
+  width: 100% !important;
+  max-width: 340px !important;
+  margin-top: 0 !important;
 }
 
 .entry-panel .diary-form {
@@ -9645,6 +9665,20 @@ select {
 .theme-dark .entry-panel .diary-form label > span,
 .theme-dark .entry-panel .diary-form .date-picker-field > span {
   color: #c6ced8 !important;
+}
+
+@media (max-width: 860px) {
+  .content-grid:has(.diary-section) {
+    grid-template-columns: 1fr !important;
+  }
+
+  .content-grid:has(.diary-section) .diary-section,
+  .content-grid:has(.diary-section) > .panel.wide:not(.entry-panel),
+  .content-grid:has(.diary-section) > .entry-panel,
+  .diary-api-composer {
+    grid-column: 1 !important;
+    max-width: none !important;
+  }
 }
 
 .diary-api-composer .ledger-form {
@@ -9757,6 +9791,65 @@ select {
 
 .theme-dark .diary-api-composer .calendar-header strong {
   color: #f3f5f7 !important;
+}
+
+.community-tabs,
+.community-board-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.community-tabs {
+  padding: 5px !important;
+  border-radius: 16px !important;
+  background: #f2f4f6 !important;
+}
+
+.community-tabs button,
+.community-board-toolbar button,
+.community-editor-actions button,
+.community-detail-top button,
+.community-comment-actions button,
+.community-comment-form button {
+  min-height: 42px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  padding: 0 16px !important;
+  background: #eef2f7 !important;
+  color: #4e5968 !important;
+  box-shadow: none !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  cursor: pointer !important;
+}
+
+.community-tabs button {
+  flex: 1 1 0 !important;
+  background: transparent !important;
+}
+
+.community-tabs button.active,
+.community-board-toolbar button,
+.community-editor-actions button[type="submit"],
+.community-comment-form button {
+  background: #3182f6 !important;
+  color: #ffffff !important;
+}
+
+.community-editor-actions .cancel-button,
+.community-detail-top button,
+.community-comment-actions button {
+  background: #eef6ff !important;
+  color: #1b64da !important;
+}
+
+.community-editor-actions .danger-button,
+.community-detail-top .danger-button,
+.community-comment-actions [data-delete-comment] {
+  background: #fff0f3 !important;
+  color: #e54861 !important;
 }
 
 .family-group-list .member-actions button:not(.danger-button):not(.cancel-button):not(.save-button) {
@@ -10470,6 +10563,16 @@ select {
   body:not(:has(.family-calendar-panel)) .content-grid {
     grid-template-columns: minmax(0, 1fr) !important;
     align-items: start !important;
+  }
+
+  body:has(.diary-section) .content-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px) !important;
+    align-items: start !important;
+  }
+
+  body:has(.diary-section) .content-grid > .entry-panel {
+    grid-column: 2 !important;
+    max-width: 320px !important;
   }
 
   body:not(:has(.family-calendar-panel)) .metric-grid {
