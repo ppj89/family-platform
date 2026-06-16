@@ -2368,7 +2368,7 @@ body.api-loading-blocked::before {
 
 .daily-ledger {
   display: grid;
-  gap: 20px;
+  gap: 26px;
   margin-top: 18px;
 }
 
@@ -2383,7 +2383,7 @@ body.api-loading-blocked::before {
 
 .daily-group {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
 .daily-group > header {
@@ -2420,6 +2420,8 @@ body.api-loading-blocked::before {
 
 .api-ledger-row {
   grid-template-columns: minmax(0, 1fr) auto auto !important;
+  margin-top: 2px !important;
+  margin-bottom: 4px !important;
   cursor: pointer !important;
 }
 

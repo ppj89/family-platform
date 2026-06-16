@@ -8562,6 +8562,7 @@
     removeHardcodedDemoData()
     renderHomeMetricsFromApi(force)
     renderLedgerPageFromApi(force)
+    renderBabyApiCards(force)
     renderRestaurantPageFromApi()
     if (!getStoredAuthToken()) return
     renderHomeSchedulesFromApi(force)
