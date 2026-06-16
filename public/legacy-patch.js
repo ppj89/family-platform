@@ -9,6 +9,7 @@
   var AUTH_REMEMBER_EMAIL_STORAGE_KEY = 'family-platform-remember-email'
   var AUTH_REMEMBER_EMAIL_ENABLED_STORAGE_KEY = 'family-platform-remember-email-enabled'
   var AUTH_AUTO_LOGIN_STORAGE_KEY = 'family-platform-auto-login'
+  var PENDING_NAV_STORAGE_KEY = 'family-platform-pending-nav-label'
   var protectedAuthUntil = 0
   var protectedAuthSnapshot = null
 
@@ -3933,6 +3934,7 @@
     ensureAuthRegisterFields()
     normalizeAuthLanding()
     cleanupAuthActions()
+    consumePendingNavLabel()
     enhanceAuthApi()
     consumeSsoFragment()
     restoreAuthSession()
@@ -5014,6 +5016,47 @@
     if (button) button.click()
   }
 
+  function setPendingNavLabel(label) {
+    try {
+      sessionStorage.setItem(PENDING_NAV_STORAGE_KEY, label)
+    } catch {}
+  }
+
+  function clearPendingNavLabel(label) {
+    try {
+      if (!label || sessionStorage.getItem(PENDING_NAV_STORAGE_KEY) === label) {
+        sessionStorage.removeItem(PENDING_NAV_STORAGE_KEY)
+      }
+    } catch {}
+  }
+
+  function consumePendingNavLabel() {
+    if (document.querySelector('.auth-card') || !document.querySelector('.app-shell')) return
+    if (document.documentElement.dataset.pendingNavApplying === 'true') return
+    var label = ''
+    try {
+      label = sessionStorage.getItem(PENDING_NAV_STORAGE_KEY) || ''
+    } catch {
+      label = ''
+    }
+    if (!label) return
+    var currentTitle = getCleanText(document.querySelector('.topbar h1, h1'))
+    if (currentTitle === label) {
+      clearPendingNavLabel(label)
+      return
+    }
+    var target = findNavButton(label)
+    if (!target) return
+    clearPendingNavLabel(label)
+    document.documentElement.dataset.pendingNavApplying = 'true'
+    window.setTimeout(function () {
+      target.click()
+      window.setTimeout(function () {
+        delete document.documentElement.dataset.pendingNavApplying
+      }, 500)
+    }, 150)
+  }
+
   var communityState = {
     activeTab: 'notice',
     view: 'list',
@@ -5108,6 +5151,7 @@
     var wasFamilyGroup = document.documentElement.dataset.patchPage === 'family-group'
     if (wasCommunity || wasFamilyGroup) {
       var label = getCleanText(nav)
+      setPendingNavLabel(label)
       event.preventDefault()
       event.stopPropagation()
       if (event.stopImmediatePropagation) event.stopImmediatePropagation()
@@ -5117,6 +5161,8 @@
         if (!target) return
         target.click()
         window.setTimeout(function () {
+          var currentTitle = getCleanText(document.querySelector('.topbar h1, h1'))
+          if (currentTitle === label) clearPendingNavLabel(label)
           cleanupPatchRootsForCurrentMenu()
         }, 120)
       }, 120)
