@@ -4,6 +4,7 @@ declare global {
   interface Window {
     FAMILY_PLATFORM_API_BASE_URL?: string
     __familyLegacyRetryStarted?: boolean
+    __familyLegacyRetryCount?: number
     __familyPatchLoading?: boolean
   }
 }
@@ -16,9 +17,6 @@ const legacyPatchScriptPath = '/legacy-patch.js?v=20260616-06'
 const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260614-11'
 
 const root = document.getElementById('root')
-if (root) {
-  root.innerHTML = ''
-}
 
 if (!document.querySelector(`link[href="${legacyCssPath}"]`)) {
   const link = document.createElement('link')
@@ -76,7 +74,16 @@ if (!document.querySelector('script[data-family-legacy="true"]')) {
 window.setTimeout(() => {
   if (hasLegacyApp() || window.__familyLegacyRetryStarted) return
   window.__familyLegacyRetryStarted = true
+  window.__familyLegacyRetryCount = (window.__familyLegacyRetryCount || 0) + 1
   loadLegacyScript(`${legacyScriptPath}&retry=${Date.now()}`)
 }, 2500)
 
 window.setTimeout(loadPatchScript, 4000)
+
+let rescueChecks = 0
+window.setInterval(() => {
+  rescueChecks += 1
+  if (hasLegacyApp() || rescueChecks > 12 || (window.__familyLegacyRetryCount || 0) >= 3) return
+  window.__familyLegacyRetryCount = (window.__familyLegacyRetryCount || 0) + 1
+  loadLegacyScript(`${legacyScriptPath}&rescue=${Date.now()}`)
+}, 1500)
