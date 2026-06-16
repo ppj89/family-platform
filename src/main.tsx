@@ -79,9 +79,9 @@ window.setInterval(() => {
     return
   }
   window.__familyEmptyRootSince = window.__familyEmptyRootSince || Date.now()
-  if (Date.now() - window.__familyEmptyRootSince < 2500 || (window.__familyEmptyRootRecoverCount || 0) >= 2) return
+  if (Date.now() - window.__familyEmptyRootSince < 700 || (window.__familyEmptyRootRecoverCount || 0) >= 2) return
   window.__familyEmptyRootRecoverCount = (window.__familyEmptyRootRecoverCount || 0) + 1
   const url = new URL(window.location.href)
   url.searchParams.set('recover', String(Date.now()))
   window.location.replace(url.toString())
-}, 1500)
+}, 500)
