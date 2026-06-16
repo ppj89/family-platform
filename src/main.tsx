@@ -12,8 +12,8 @@ declare global {
 window.FAMILY_PLATFORM_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const legacyCssPath = '/legacy/assets/index-CkWNYWFk.css'
-const legacyOverridesCssPath = '/legacy-overrides.css?v=20260616-10'
-const legacyPatchScriptPath = '/legacy-patch.js?v=20260616-10'
+const legacyOverridesCssPath = '/legacy-overrides.css?v=20260616-11'
+const legacyPatchScriptPath = '/legacy-patch.js?v=20260616-11'
 const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260614-11'
 
 const root = document.getElementById('root')
@@ -83,5 +83,11 @@ window.setInterval(() => {
   window.__familyEmptyRootRecoverCount = (window.__familyEmptyRootRecoverCount || 0) + 1
   const url = new URL(window.location.href)
   url.searchParams.set('recover', String(Date.now()))
+  try {
+    const pendingNav = window.sessionStorage.getItem('family-platform-pending-nav-label')
+    if (pendingNav) url.searchParams.set('recoverNav', pendingNav)
+  } catch {
+    // Ignore storage access issues during emergency recovery.
+  }
   window.location.replace(url.toString())
 }, 500)

@@ -5039,6 +5039,13 @@
     } catch {
       label = ''
     }
+    if (!label) {
+      try {
+        label = new URL(window.location.href).searchParams.get('recoverNav') || ''
+      } catch {
+        label = ''
+      }
+    }
     if (!label) return
     var currentTitle = getCleanText(document.querySelector('.topbar h1, h1'))
     if (currentTitle === label) {
