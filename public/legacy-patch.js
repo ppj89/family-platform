@@ -5107,8 +5107,8 @@
     var wasCommunity = document.documentElement.dataset.patchPage === 'community'
     var wasFamilyGroup = document.documentElement.dataset.patchPage === 'family-group'
     if (wasCommunity || wasFamilyGroup) {
-      clearCustomPatchPageNow()
       clearCustomPatchPageAfterReact(wasCommunity, wasFamilyGroup)
+      window.setTimeout(cleanupPatchRootsForCurrentMenu, 160)
     }
   }, true)
 
