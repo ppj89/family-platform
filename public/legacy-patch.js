@@ -3466,7 +3466,7 @@
     window.setTimeout(function () {
       if (wasCommunity) clearCommunityPatchPage()
       if (wasFamilyGroup) clearFamilyGroupPage()
-    }, 0)
+    }, 260)
   }
 
   function clearCustomPatchPageNow() {
@@ -5108,7 +5108,7 @@
     var wasFamilyGroup = document.documentElement.dataset.patchPage === 'family-group'
     if (wasCommunity || wasFamilyGroup) {
       clearCustomPatchPageAfterReact(wasCommunity, wasFamilyGroup)
-      window.setTimeout(cleanupPatchRootsForCurrentMenu, 160)
+      window.setTimeout(cleanupPatchRootsForCurrentMenu, 420)
     }
   }, true)
 
