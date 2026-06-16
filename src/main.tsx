@@ -80,10 +80,8 @@ window.setTimeout(() => {
 
 window.setTimeout(loadPatchScript, 4000)
 
-let rescueChecks = 0
 window.setInterval(() => {
-  rescueChecks += 1
-  if (hasLegacyApp() || rescueChecks > 12 || (window.__familyLegacyRetryCount || 0) >= 3) return
+  if (hasLegacyApp() || (window.__familyLegacyRetryCount || 0) >= 3) return
   window.__familyLegacyRetryCount = (window.__familyLegacyRetryCount || 0) + 1
   loadLegacyScript(`${legacyScriptPath}&rescue=${Date.now()}`)
 }, 1500)
