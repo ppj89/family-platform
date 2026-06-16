@@ -5121,8 +5121,8 @@
         window.setTimeout(function () {
           window.__familyPatchNavReplay = false
           cleanupPatchRootsForCurrentMenu()
-        }, 0)
-      }, 0)
+        }, 120)
+      }, 120)
     }
   }, true)
 
