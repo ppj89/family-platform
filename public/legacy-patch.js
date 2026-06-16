@@ -6401,8 +6401,19 @@
   }
 
   function optionalDecimal(value) {
-    var text = String(value || '').replace(/[^\d.-]/g, '')
+    var text = String(value || '').replace(/[^\d.]/g, '')
+    var firstDot = text.indexOf('.')
+    if (firstDot >= 0) {
+      text = text.slice(0, firstDot + 1) + text.slice(firstDot + 1).replace(/\./g, '')
+    }
     return text ? Number(text) : null
+  }
+
+  function sanitizeDecimalText(value) {
+    var text = String(value || '').replace(/[^\d.]/g, '')
+    var firstDot = text.indexOf('.')
+    if (firstDot < 0) return text
+    return text.slice(0, firstDot + 1) + text.slice(firstDot + 1).replace(/\./g, '')
   }
 
   function setBabyApiRecordBusy(form, busy) {
@@ -6432,8 +6443,8 @@
       '<label><span>\uB0A0\uC9DC</span><input name="recordDate" type="date" required value="' + todayText() + '" /></label>',
       '<label><span>\uC2DC\uAC04</span><input name="recordTime" type="time" value="' + String(new Date().getHours()).padStart(2, '0') + ':' + String(new Date().getMinutes()).padStart(2, '0') + '" /></label>',
       '<label><span>\uC218\uC720\uB7C9(ml)</span><input name="amountMl" type="text" inputmode="numeric" /></label>',
-      '<label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" /></label>',
-      '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" /></label>',
+      '<label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" autocomplete="off" /></label>',
+      '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" autocomplete="off" /></label>',
       '</div>',
       '<label class="baby-api-memo"><span>\uBA54\uBAA8</span><textarea name="memo" rows="3"></textarea></label>',
       '<label class="community-file-field baby-api-file-field"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCCA8\uBD80</span><b>\uD30C\uC77C \uC120\uD0DD</b><input name="files" type="file" accept="image/*,video/*" multiple /><small>' + mediaLimitText() + '</small></label>',
@@ -8347,21 +8358,17 @@
       grid.innerHTML = babies.map(function (baby) {
         var growth = [baby.latestHeightCm ? baby.latestHeightCm + 'cm' : '', baby.latestWeightKg ? baby.latestWeightKg + 'kg' : ''].filter(Boolean).join(' \u00B7 ')
         return [
-          '<button type="button" class="baby-card" data-api-baby-id="' + escapeHtml(baby.id) + '">',
+          '<article class="baby-card" role="button" tabindex="0" data-api-baby-id="' + escapeHtml(baby.id) + '">',
           '<div><span class="baby-card-avatar">\uC544\uC774</span></div>',
           '<div><strong>' + escapeHtml(baby.name || '-') + '</strong>',
           '<span>' + escapeHtml([baby.gender || '', baby.birthDate || ''].filter(Boolean).join(' \u00B7 ')) + '</span>',
           '<p>' + escapeHtml(baby.memo || '') + '</p>',
           '<small>' + escapeHtml(growth || '\uC131\uC7A5 \uAE30\uB85D \uC5C6\uC74C') + '</small>',
-          '</div></button>'
+          '</div>',
+          '<span class="baby-card-actions"><span>\uC0C1\uC138</span><button type="button" class="danger-button baby-card-delete-button" data-api-baby-delete-id="' + escapeHtml(baby.id) + '">\uC0AD\uC81C</button></span>',
+          '</article>'
         ].join('')
       }).join('')
-      grid.querySelectorAll('.baby-card[data-api-baby-id]').forEach(function (card) {
-        card.addEventListener('click', function (event) {
-          if (event.target && event.target.closest && event.target.closest('.baby-card-edit-button')) return
-          openBabyApiDetailById(card.dataset.apiBabyId)
-        })
-      })
     }).catch(function (error) {
       if (!hasRenderedCards) {
         grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>' + escapeHtml(apiActionErrorMessage(error, '\uC544\uC774 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</strong></div>'
@@ -8429,6 +8436,7 @@
       '<span class="baby-avatar large">\uC544\uC774</span>',
       '<div><strong>' + escapeHtml(baby.name || '-') + '</strong><span>' + escapeHtml(babyMetaText(baby)) + '</span><p>' + escapeHtml(baby.memo || '') + '</p><small>' + escapeHtml(babyGrowthText(baby)) + '</small></div>',
       '</article>',
+      '<section class="baby-growth-api-panel"><header><h3>\uD0A4/\uBAB8\uBB34\uAC8C \uAE30\uB85D</h3><span>\uACFC\uAC70 \uAE30\uB85D</span></header><form class="baby-growth-api-form"><label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" autocomplete="off" /></label><label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" autocomplete="off" /></label><button type="submit" class="save-button">\uC800\uC7A5</button></form><div class="baby-growth-api-history"></div></section>',
       '<section class="baby-record-list"></section>'
     ].join('')
     grid.insertAdjacentElement('afterend', detail)
@@ -8442,6 +8450,50 @@
     ensureBabyApiRecordForm()
     normalizeTimeInputs(detail)
     renderBabyApiRecordRows(detail, baby.id)
+    renderBabyGrowthHistory(detail, baby.id)
+  }
+
+  function renderBabyGrowthHistory(detail, babyId) {
+    var history = detail && detail.querySelector('.baby-growth-api-history')
+    if (!history) return
+    history.innerHTML = '<div class="api-empty-row">\uC131\uC7A5 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</div>'
+    fetchBabyRecords(babyId, '2000-01-01', '2099-12-31').then(function (records) {
+      var growthRecords = records.filter(function (record) {
+        return record.heightCm || record.weightKg
+      })
+      if (!growthRecords.length) {
+        history.innerHTML = '<div class="api-empty-row">\uC131\uC7A5 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</div>'
+        return
+      }
+      history.innerHTML = growthRecords.map(function (record) {
+        var metrics = [
+          record.heightCm ? record.heightCm + 'cm' : '',
+          record.weightKg ? record.weightKg + 'kg' : ''
+        ].filter(Boolean).join(' \u00B7 ')
+        return '<article class="baby-growth-history-row"><strong>' + escapeHtml(record.recordDate || '-') + '</strong><span>' + escapeHtml(metrics || '-') + '</span><small>' + escapeHtml(record.memo || '') + '</small></article>'
+      }).join('')
+    }).catch(function (error) {
+      history.innerHTML = '<div class="api-empty-row">' + escapeHtml(apiActionErrorMessage(error, '\uC131\uC7A5 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</div>'
+    })
+  }
+
+  function deleteBabyProfile(babyId) {
+    if (!babyId) return
+    apiRequest('/babies/' + encodeURIComponent(babyId), { method: 'DELETE' }).then(function () {
+      document.querySelectorAll('.baby-api-detail').forEach(function (detail) {
+        if (String(detail.dataset.apiBabyId || '') === String(babyId)) detail.remove()
+      })
+      var grid = document.querySelector('.baby-list-grid')
+      if (grid) {
+        delete grid.dataset.apiLoaded
+        delete grid.dataset.apiLoading
+        grid.hidden = false
+      }
+      renderBabyApiCards(true)
+      showPatchToast('\uC544\uC774 \uC815\uBCF4\uB97C \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
+    }).catch(function (error) {
+      showPatchToast(apiActionErrorMessage(error, '\uC544\uC774 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+    })
   }
 
   function renderBabyServerEntries(force) {
@@ -9344,8 +9396,17 @@
         })
       })
     }).then(function () {
+      var detail = form.closest('.baby-api-detail')
+      var babyId = detail && detail.dataset.apiBabyId
       resetBabyApiRecordForm(form)
-      refreshServerDataViews(true)
+      if (detail && babyId) {
+        renderBabyApiRecordRows(detail, babyId)
+        renderBabyGrowthHistory(detail, babyId)
+        var grid = document.querySelector('.baby-list-grid')
+        if (grid) delete grid.dataset.apiLoaded
+      } else {
+        refreshServerDataViews(true)
+      }
       showPatchToast('\uC721\uC544 \uAE30\uB85D\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
     }).catch(function (error) {
       if (String(error && error.message || '').indexOf('INVALID_MEDIA') < 0) {
@@ -9454,6 +9515,81 @@
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     submitBabyApiRecordForm(babyForm)
+  }, true)
+
+  document.addEventListener('submit', function (event) {
+    var growthForm = event.target && event.target.closest && event.target.closest('.baby-growth-api-form')
+    if (!growthForm) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    var detail = growthForm.closest('.baby-api-detail')
+    var babyId = detail && detail.dataset.apiBabyId
+    var height = optionalDecimal(getFieldValue(growthForm, '[name="heightCm"]'))
+    var weight = optionalDecimal(getFieldValue(growthForm, '[name="weightKg"]'))
+    if (!height && !weight) {
+      var target = growthForm.querySelector('[name="heightCm"]')
+      if (target) target.focus()
+      showPatchToast('\uD0A4 \uB610\uB294 \uBAB8\uBB34\uAC8C\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.')
+      return
+    }
+    if (!babyId || growthForm.dataset.submitting === 'true') return
+    growthForm.dataset.submitting = 'true'
+    setBabyApiRecordBusy(growthForm, true)
+    postJson('/babies/' + encodeURIComponent(babyId) + '/records', {
+      recordType: '\uC131\uC7A5',
+      recordDate: todayText(),
+      recordTime: currentTimeText(),
+      heightCm: height,
+      weightKg: weight,
+      memo: ''
+    }).then(function () {
+      growthForm.reset()
+      var grid = document.querySelector('.baby-list-grid')
+      if (grid) delete grid.dataset.apiLoaded
+      renderBabyApiRecordRows(detail, babyId)
+      renderBabyGrowthHistory(detail, babyId)
+      showPatchToast('\uC131\uC7A5 \uAE30\uB85D\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
+    }).catch(function (error) {
+      showPatchToast(apiActionErrorMessage(error, '\uC131\uC7A5 \uAE30\uB85D \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+    }).finally(function () {
+      delete growthForm.dataset.submitting
+      setBabyApiRecordBusy(growthForm, false)
+    })
+  }, true)
+
+  document.addEventListener('input', function (event) {
+    var input = event.target && event.target.closest && event.target.closest('input[name="heightCm"], input[name="weightKg"], [data-baby-create-height], [data-baby-create-weight]')
+    if (!input) return
+    var next = sanitizeDecimalText(input.value)
+    if (input.value !== next) input.value = next
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var deleteButton = event.target && event.target.closest && event.target.closest('[data-api-baby-delete-id]')
+    if (deleteButton) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      var babyId = deleteButton.dataset.apiBabyDeleteId
+      showPatchConfirm('\uC544\uC774 \uC815\uBCF4\uB97C \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
+        deleteBabyProfile(babyId)
+      })
+      return
+    }
+    var card = event.target && event.target.closest && event.target.closest('.baby-card[data-api-baby-id]')
+    if (!card || getCleanText(document.querySelector('.topbar h1')) !== '\uC721\uC544') return
+    if (event.target.closest('button, a, input, select, textarea')) return
+    event.preventDefault()
+    openBabyApiDetailById(card.dataset.apiBabyId)
+  }, true)
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Enter' && event.key !== ' ') return
+    var card = event.target && event.target.closest && event.target.closest('.baby-card[data-api-baby-id]')
+    if (!card || getCleanText(document.querySelector('.topbar h1')) !== '\uC721\uC544') return
+    event.preventDefault()
+    openBabyApiDetailById(card.dataset.apiBabyId)
   }, true)
 
   document.addEventListener('click', function (event) {
