@@ -5103,12 +5103,26 @@
 
   document.addEventListener('click', function (event) {
     var nav = event.target && event.target.closest && event.target.closest('.nav-item')
+    if (window.__familyPatchNavReplay) return
     if (!nav || isCommunityNavItem(nav) || isFamilyGroupNavItem(nav)) return
     var wasCommunity = document.documentElement.dataset.patchPage === 'community'
     var wasFamilyGroup = document.documentElement.dataset.patchPage === 'family-group'
     if (wasCommunity || wasFamilyGroup) {
-      clearCustomPatchPageAfterReact(wasCommunity, wasFamilyGroup)
-      window.setTimeout(cleanupPatchRootsForCurrentMenu, 420)
+      var label = getCleanText(nav)
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      clearCustomPatchPageNow()
+      window.setTimeout(function () {
+        var target = findNavButton(label)
+        if (!target) return
+        window.__familyPatchNavReplay = true
+        target.click()
+        window.setTimeout(function () {
+          window.__familyPatchNavReplay = false
+          cleanupPatchRootsForCurrentMenu()
+        }, 0)
+      }, 0)
     }
   }, true)
 
