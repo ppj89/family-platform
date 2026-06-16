@@ -3,8 +3,8 @@ import './index.css'
 declare global {
   interface Window {
     FAMILY_PLATFORM_API_BASE_URL?: string
-    __familyLegacyRetryStarted?: boolean
-    __familyLegacyRetryCount?: number
+    __familyEmptyRootSince?: number
+    __familyEmptyRootRecoverCount?: number
     __familyPatchLoading?: boolean
   }
 }
@@ -71,17 +71,17 @@ if (!document.querySelector('script[data-family-legacy="true"]')) {
   loadPatchScript()
 }
 
-window.setTimeout(() => {
-  if (hasLegacyApp() || window.__familyLegacyRetryStarted) return
-  window.__familyLegacyRetryStarted = true
-  window.__familyLegacyRetryCount = (window.__familyLegacyRetryCount || 0) + 1
-  loadLegacyScript(`${legacyScriptPath}&retry=${Date.now()}`)
-}, 2500)
-
 window.setTimeout(loadPatchScript, 4000)
 
 window.setInterval(() => {
-  if (hasLegacyApp() || (window.__familyLegacyRetryCount || 0) >= 3) return
-  window.__familyLegacyRetryCount = (window.__familyLegacyRetryCount || 0) + 1
-  loadLegacyScript(`${legacyScriptPath}&rescue=${Date.now()}`)
+  if (hasLegacyApp()) {
+    window.__familyEmptyRootSince = undefined
+    return
+  }
+  window.__familyEmptyRootSince = window.__familyEmptyRootSince || Date.now()
+  if (Date.now() - window.__familyEmptyRootSince < 2500 || (window.__familyEmptyRootRecoverCount || 0) >= 2) return
+  window.__familyEmptyRootRecoverCount = (window.__familyEmptyRootRecoverCount || 0) + 1
+  const url = new URL(window.location.href)
+  url.searchParams.set('recover', String(Date.now()))
+  window.location.replace(url.toString())
 }, 1500)
