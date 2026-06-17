@@ -8374,6 +8374,7 @@
           '</article>'
         ].join('')
       }).join('')
+      bindBabyCardDetailEvents(grid)
     }).catch(function (error) {
       if (!hasRenderedCards) {
         grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>' + escapeHtml(apiActionErrorMessage(error, '\uC544\uC774 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</strong></div>'
@@ -8432,6 +8433,31 @@
     })
   }
 
+  function openBabyCardDetail(card, event) {
+    if (!card || !card.dataset.apiBabyId) return
+    if (event && event.target && event.target.closest && event.target.closest('button, a, input, select, textarea')) return
+    if (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    }
+    openBabyApiDetailById(card.dataset.apiBabyId)
+  }
+
+  function bindBabyCardDetailEvents(root) {
+    ;(root || document).querySelectorAll('.baby-card[data-api-baby-id]').forEach(function (card) {
+      if (card.dataset.detailClickReady === 'true') return
+      card.dataset.detailClickReady = 'true'
+      card.addEventListener('click', function (event) {
+        openBabyCardDetail(card, event)
+      }, true)
+      card.addEventListener('keydown', function (event) {
+        if (event.key !== 'Enter' && event.key !== ' ') return
+        openBabyCardDetail(card, event)
+      }, true)
+    })
+  }
+
   function openBabyApiDetail(baby) {
     var grid = document.querySelector('.baby-list-grid')
     if (!grid) return
@@ -8462,6 +8488,9 @@
     normalizeTimeInputs(detail)
     renderBabyApiRecordRows(detail, baby.id)
     renderBabyGrowthHistory(detail, baby.id)
+    window.setTimeout(function () {
+      detail.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 0)
   }
 
   function renderBabyGrowthHistory(detail, babyId) {
@@ -9589,18 +9618,15 @@
       return
     }
     var card = event.target && event.target.closest && event.target.closest('.baby-card[data-api-baby-id]')
-    if (!card || getCleanText(document.querySelector('.topbar h1')) !== '\uC721\uC544') return
-    if (event.target.closest('button, a, input, select, textarea')) return
-    event.preventDefault()
-    openBabyApiDetailById(card.dataset.apiBabyId)
+    if (!card) return
+    openBabyCardDetail(card, event)
   }, true)
 
   document.addEventListener('keydown', function (event) {
     if (event.key !== 'Enter' && event.key !== ' ') return
     var card = event.target && event.target.closest && event.target.closest('.baby-card[data-api-baby-id]')
-    if (!card || getCleanText(document.querySelector('.topbar h1')) !== '\uC721\uC544') return
-    event.preventDefault()
-    openBabyApiDetailById(card.dataset.apiBabyId)
+    if (!card) return
+    openBabyCardDetail(card, event)
   }, true)
 
   document.addEventListener('click', function (event) {
