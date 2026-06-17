@@ -8249,20 +8249,18 @@ select {
 
 .baby-card {
   position: relative !important;
-  padding-right: 74px !important;
+  padding-right: 16px !important;
 }
 
 .baby-card-edit-button {
-  position: absolute !important;
-  top: 14px !important;
-  right: 14px !important;
-  z-index: 2 !important;
-  min-height: 32px !important;
-  border: 0 !important;
-  border-radius: 12px !important;
+  position: static !important;
+  min-height: 34px !important;
+  border: 1px solid #cfe2ff !important;
+  border-radius: 999px !important;
   padding: 0 12px !important;
   background: #edf4ff !important;
   color: #1b64da !important;
+  box-shadow: none !important;
   cursor: pointer !important;
   font: inherit !important;
   font-size: 12px !important;
@@ -9443,16 +9441,6 @@ select {
   justify-content: flex-end !important;
   gap: 8px !important;
   white-space: nowrap !important;
-}
-
-.baby-card-actions > span {
-  min-height: 34px !important;
-  border-radius: 999px !important;
-  padding: 8px 12px !important;
-  background: #e8f1ff !important;
-  color: #1b64da !important;
-  font-size: 12px !important;
-  font-weight: 900 !important;
 }
 
 .baby-card-delete-button {

@@ -4482,16 +4482,19 @@
     document.querySelectorAll('.baby-card').forEach(function (card) {
       if (card.dataset.profileEditReady) return
       card.dataset.profileEditReady = 'true'
-      var button = document.createElement('button')
-      button.type = 'button'
-      button.className = 'baby-card-edit-button'
-      button.textContent = '\uC218\uC815'
+      var button = card.querySelector('.baby-card-edit-button')
+      if (!button) {
+        button = document.createElement('button')
+        button.type = 'button'
+        button.className = 'baby-card-edit-button'
+        button.textContent = '\uC218\uC815'
+        card.appendChild(button)
+      }
       button.addEventListener('click', function (event) {
         event.preventDefault()
         event.stopPropagation()
         openBabyProfileEditor(card)
       }, true)
-      card.appendChild(button)
     })
   }
 
@@ -8351,11 +8354,13 @@
       grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>\uC544\uC774 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</strong></div>'
     }
     fetchBabies().then(function (babies) {
+      window.__familyBabyItemsById = Object.create(null)
       if (!babies.length) {
         grid.innerHTML = '<div class="api-empty-row baby-api-empty"><strong>\uB4F1\uB85D\uB41C \uC544\uC774\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</strong></div>'
         return
       }
       grid.innerHTML = babies.map(function (baby) {
+        window.__familyBabyItemsById[String(baby.id)] = baby
         var growth = [baby.latestHeightCm ? baby.latestHeightCm + 'cm' : '', baby.latestWeightKg ? baby.latestWeightKg + 'kg' : ''].filter(Boolean).join(' \u00B7 ')
         return [
           '<article class="baby-card" role="button" tabindex="0" data-api-baby-id="' + escapeHtml(baby.id) + '">',
@@ -8365,7 +8370,7 @@
           '<p>' + escapeHtml(baby.memo || '') + '</p>',
           '<small>' + escapeHtml(growth || '\uC131\uC7A5 \uAE30\uB85D \uC5C6\uC74C') + '</small>',
           '</div>',
-          '<span class="baby-card-actions"><span>\uC0C1\uC138</span><button type="button" class="danger-button baby-card-delete-button" data-api-baby-delete-id="' + escapeHtml(baby.id) + '">\uC0AD\uC81C</button></span>',
+          '<span class="baby-card-actions"><button type="button" class="baby-card-edit-button">\uC218\uC815</button><button type="button" class="danger-button baby-card-delete-button" data-api-baby-delete-id="' + escapeHtml(baby.id) + '">\uC0AD\uC81C</button></span>',
           '</article>'
         ].join('')
       }).join('')
@@ -8415,9 +8420,15 @@
 
   function openBabyApiDetailById(babyId) {
     if (!babyId) return
+    var cached = window.__familyBabyItemsById && window.__familyBabyItemsById[String(babyId)]
+    if (cached) {
+      openBabyApiDetail(cached)
+      return
+    }
     fetchBabies().then(function (babies) {
       var baby = babies.find(function (item) { return String(item.id) === String(babyId) })
       if (baby) openBabyApiDetail(baby)
+      else showPatchToast('\uC544\uC774 \uC815\uBCF4\uB97C \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
     })
   }
 
