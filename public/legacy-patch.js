@@ -4655,15 +4655,30 @@
   function bindBabyCreateBirthDate(dialog) {
     var input = dialog && dialog.querySelector('[data-baby-create-birth]')
     var trigger = dialog && dialog.querySelector('[data-baby-create-birth-trigger]')
-    if (!input || !trigger) return
-    trigger.addEventListener('click', function () {
-      openCommonBirthDatePopover(input, trigger)
+    if (!input || !trigger || trigger.dataset.babyBirthReady === 'true') return
+    trigger.dataset.babyBirthReady = 'true'
+    trigger.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      toggleCommonDatePopover(input, trigger)
     })
   }
 
+  function toggleCommonDatePopover(input, trigger) {
+    var field = trigger && trigger.closest && trigger.closest('.date-picker-field')
+    var current = field && field.querySelector('.calendar-popover')
+    if (current) {
+      current.remove()
+      return
+    }
+    openCommonBirthDatePopover(input, trigger)
+  }
+
   function openCommonBirthDatePopover(input, trigger) {
-    var old = document.querySelector('.baby-create-dialog .calendar-popover')
-    if (old) old.remove()
+    document.querySelectorAll('.date-picker-field .calendar-popover').forEach(function (old) {
+      old.remove()
+    })
     var selected = parseApiDate(input.value) || todayText()
     var view = new Date(selected + 'T00:00:00')
     var popover = document.createElement('div')
@@ -4718,6 +4733,18 @@
       }
     })
   }
+
+  document.addEventListener('click', function (event) {
+    var trigger = event.target && event.target.closest && event.target.closest('[data-baby-create-birth-trigger]')
+    if (!trigger) return
+    var dialog = trigger.closest('.baby-create-dialog')
+    var input = dialog && dialog.querySelector('[data-baby-create-birth]')
+    if (!input) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    toggleCommonDatePopover(input, trigger)
+  }, true)
 
   document.addEventListener('pointerdown', function (event) {
     var dialog = document.querySelector('.baby-create-dialog')
