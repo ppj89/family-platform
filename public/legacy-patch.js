@@ -6435,7 +6435,8 @@
     var detail = document.querySelector('.baby-detail')
     if (!detail || detail.querySelector('.baby-api-record-card')) return
 
-    var anchor = detail.querySelector('.record-filter-bar') || detail.querySelector('.baby-record-list') || detail.lastElementChild
+    var side = detail.querySelector('.baby-api-detail-side')
+    var anchor = side || detail.querySelector('.record-filter-bar') || detail.querySelector('.baby-record-list') || detail.lastElementChild
     var card = document.createElement('section')
     card.className = 'baby-api-record-card'
     card.innerHTML = [
@@ -6443,8 +6444,8 @@
       '<form class="baby-api-record-form">',
       '<div class="baby-api-form-grid">',
       '<label><span>\uAE30\uB85D\uC885\uB958</span><select name="recordType" required><option value="\uC218\uC720">\uC218\uC720</option><option value="\uB300\uBCC0">\uB300\uBCC0</option><option value="\uC18C\uBCC0">\uC18C\uBCC0</option><option value="\uC218\uBA74">\uC218\uBA74</option><option value="\uC131\uC7A5">\uC131\uC7A5</option><option value="\uBCD1\uC6D0">\uBCD1\uC6D0</option><option value="\uBA54\uBAA8">\uBA54\uBAA8</option></select></label>',
-      '<label><span>\uB0A0\uC9DC</span><input name="recordDate" type="date" required value="' + todayText() + '" /></label>',
-      '<label><span>\uC2DC\uAC04</span><input name="recordTime" type="time" value="' + String(new Date().getHours()).padStart(2, '0') + ':' + String(new Date().getMinutes()).padStart(2, '0') + '" /></label>',
+      '<label class="date-picker-field baby-api-date-field"><span>\uB0A0\uC9DC</span><input name="recordDate" type="hidden" required value="' + todayText() + '" /><button type="button" class="date-picker-trigger baby-api-date-button" data-baby-api-record-date-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 2v4M16 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label>',
+      '<label><span>\uC2DC\uAC04</span><input name="recordTime" type="time" value="' + currentTimeText() + '" /></label>',
       '<label><span>\uC218\uC720\uB7C9(ml)</span><input name="amountMl" type="text" inputmode="numeric" /></label>',
       '<label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" autocomplete="off" /></label>',
       '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" autocomplete="off" /></label>',
@@ -6455,11 +6456,27 @@
       '</form>'
     ].join('')
 
-    if (anchor && anchor.parentElement) {
+    if (side) {
+      side.appendChild(card)
+    } else if (anchor && anchor.parentElement) {
       anchor.parentElement.insertBefore(card, anchor)
     } else {
       detail.appendChild(card)
     }
+    bindBabyApiRecordDateField(card)
+  }
+
+  function bindBabyApiRecordDateField(scope) {
+    var input = scope && scope.querySelector('[name="recordDate"]')
+    var trigger = scope && scope.querySelector('[data-baby-api-record-date-trigger]')
+    if (!input || !trigger || trigger.dataset.babyApiDateReady === 'true') return
+    trigger.dataset.babyApiDateReady = 'true'
+    trigger.addEventListener('click', function () {
+      document.querySelectorAll('.baby-api-record-card .calendar-popover').forEach(function (popover) {
+        popover.remove()
+      })
+      openCommonBirthDatePopover(input, trigger)
+    })
   }
 
   function enhanceBabyEditMediaHelper() {
@@ -8469,12 +8486,15 @@
     detail.dataset.apiBabyId = baby.id
     detail.innerHTML = [
       '<header class="baby-api-detail-header"><h2>' + escapeHtml(baby.name || '\uC544\uC774') + '</h2><button type="button" class="back-button">\uBAA9\uB85D</button></header>',
+      '<div class="baby-api-detail-layout"><div class="baby-api-detail-main">',
       '<article class="baby-profile-band">',
       '<span class="baby-avatar large">\uC544\uC774</span>',
       '<div><strong>' + escapeHtml(baby.name || '-') + '</strong><span>' + escapeHtml(babyMetaText(baby)) + '</span><p>' + escapeHtml(baby.memo || '') + '</p><small>' + escapeHtml(babyGrowthText(baby)) + '</small></div>',
       '</article>',
-      '<section class="baby-growth-api-panel"><header><h3>\uD0A4/\uBAB8\uBB34\uAC8C \uAE30\uB85D</h3><span>\uACFC\uAC70 \uAE30\uB85D</span></header><form class="baby-growth-api-form"><label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" autocomplete="off" /></label><label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" autocomplete="off" /></label><button type="submit" class="save-button">\uC800\uC7A5</button></form><div class="baby-growth-api-history"></div></section>',
-      '<section class="baby-record-list"></section>'
+      '<section class="baby-growth-api-panel"><header><h3>\uC131\uC7A5 \uAE30\uB85D</h3><span>\uCC28\uD2B8/\uACFC\uAC70 \uAE30\uB85D</span></header><form class="baby-growth-api-form"><label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" autocomplete="off" /></label><label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" autocomplete="off" /></label><button type="submit" class="save-button">\uC800\uC7A5</button></form><div class="baby-growth-api-history"></div></section>',
+      '<section class="baby-pattern-api-panel"><header><h3>\uC0DD\uD65C \uD328\uD134</h3><span>\uC774\uBC88 \uB2EC</span></header><div class="baby-pattern-api-summary"></div></section>',
+      '<section class="baby-record-list"></section>',
+      '</div><aside class="baby-api-detail-side"></aside></div>'
     ].join('')
     grid.insertAdjacentElement('afterend', detail)
     var back = detail.querySelector('.back-button')
@@ -8500,21 +8520,119 @@
     fetchBabyRecords(babyId, '2000-01-01', '2099-12-31').then(function (records) {
       var growthRecords = records.filter(function (record) {
         return record.heightCm || record.weightKg
-      })
+      }).sort(compareBabyRecordDate)
+      renderBabyPatternSummary(detail, records)
       if (!growthRecords.length) {
         history.innerHTML = '<div class="api-empty-row">\uC131\uC7A5 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</div>'
         return
       }
-      history.innerHTML = growthRecords.map(function (record) {
+      history.innerHTML = buildBabyGrowthChart(growthRecords) + '<div class="growth-history detailed baby-growth-history-list">' + growthRecords.slice().reverse().map(function (record) {
         var metrics = [
           record.heightCm ? record.heightCm + 'cm' : '',
           record.weightKg ? record.weightKg + 'kg' : ''
         ].filter(Boolean).join(' \u00B7 ')
-        return '<article class="baby-growth-history-row"><strong>' + escapeHtml(record.recordDate || '-') + '</strong><span>' + escapeHtml(metrics || '-') + '</span><small>' + escapeHtml(record.memo || '') + '</small></article>'
-      }).join('')
+        return '<article class="baby-growth-history-row"><strong>' + escapeHtml(formatBabyRecordDateTime(record)) + '</strong><span>' + escapeHtml(metrics || '-') + '</span><small>' + escapeHtml(record.memo || '') + '</small></article>'
+      }).join('') + '</div>'
     }).catch(function (error) {
       history.innerHTML = '<div class="api-empty-row">' + escapeHtml(apiActionErrorMessage(error, '\uC131\uC7A5 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</div>'
     })
+  }
+
+  function compareBabyRecordDate(a, b) {
+    return String((a.recordDate || '') + ' ' + (a.recordTime || '')).localeCompare(String((b.recordDate || '') + ' ' + (b.recordTime || '')))
+  }
+
+  function formatBabyRecordDateTime(record) {
+    var date = String(record.recordDate || '').replace(/-/g, '.')
+    return [date, record.recordTime || ''].filter(Boolean).join(' ')
+  }
+
+  function babyGrowthNumber(value) {
+    var number = Number(value)
+    return Number.isFinite(number) ? number : null
+  }
+
+  function buildBabyGrowthChart(records) {
+    var heightPoints = records.map(function (record, index) {
+      return { index: index, value: babyGrowthNumber(record.heightCm), label: String(record.recordDate || '').slice(5).replace('-', '.') }
+    }).filter(function (point) { return point.value !== null })
+    var weightPoints = records.map(function (record, index) {
+      return { index: index, value: babyGrowthNumber(record.weightKg), label: String(record.recordDate || '').slice(5).replace('-', '.') }
+    }).filter(function (point) { return point.value !== null })
+    var values = heightPoints.concat(weightPoints).map(function (point) { return point.value })
+    if (!values.length) return ''
+    var min = Math.min.apply(null, values)
+    var max = Math.max.apply(null, values)
+    if (min === max) {
+      min = Math.max(0, min - 1)
+      max += 1
+    }
+    var width = 360
+    var height = 220
+    var left = 44
+    var right = 18
+    var top = 22
+    var bottom = 38
+    var chartWidth = width - left - right
+    var chartHeight = height - top - bottom
+    var maxIndex = Math.max(records.length - 1, 1)
+    function xy(point) {
+      var x = left + chartWidth * (point.index / maxIndex)
+      var y = top + chartHeight * (1 - ((point.value - min) / (max - min)))
+      return { x: x, y: y }
+    }
+    function line(points) {
+      return points.map(function (point) {
+        var pos = xy(point)
+        return pos.x.toFixed(1) + ',' + pos.y.toFixed(1)
+      }).join(' ')
+    }
+    function dots(points, cls) {
+      return points.map(function (point) {
+        var pos = xy(point)
+        return '<circle class="' + cls + '" cx="' + pos.x.toFixed(1) + '" cy="' + pos.y.toFixed(1) + '" r="4"><title>' + escapeHtml(point.label + ' ' + point.value) + '</title></circle>'
+      }).join('')
+    }
+    var labels = [0, 0.5, 1].map(function (rate) {
+      var value = max - ((max - min) * rate)
+      var y = top + chartHeight * rate
+      return '<line class="grid-line" x1="' + left + '" x2="' + (width - right) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"/><text class="axis-label" x="8" y="' + (y + 4).toFixed(1) + '">' + value.toFixed(1) + '</text>'
+    }).join('')
+    var xLabels = records.filter(function (_, index) {
+      return records.length <= 4 || index === 0 || index === records.length - 1 || index === Math.floor((records.length - 1) / 2)
+    }).map(function (record, index, filtered) {
+      var originalIndex = records.indexOf(record)
+      var x = left + chartWidth * (originalIndex / maxIndex)
+      return '<text class="x-label" x="' + x.toFixed(1) + '" y="' + (height - 10) + '">' + escapeHtml(String(record.recordDate || '').slice(5).replace('-', '.')) + '</text>'
+    }).join('')
+    return [
+      '<div class="growth-chart baby-growth-chart"><svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="\uD0A4\uC640 \uBAB8\uBB34\uAC8C \uC131\uC7A5 \uCC28\uD2B8">',
+      labels,
+      '<line class="axis-line" x1="' + left + '" x2="' + (width - right) + '" y1="' + (height - bottom) + '" y2="' + (height - bottom) + '"/>',
+      heightPoints.length ? '<polyline class="height-line" points="' + line(heightPoints) + '"/>' + dots(heightPoints, 'height-dot') : '',
+      weightPoints.length ? '<polyline class="weight-line" points="' + line(weightPoints) + '"/>' + dots(weightPoints, 'weight-dot') : '',
+      xLabels,
+      '<text class="unit-label" x="' + left + '" y="14">cm / kg</text>',
+      '</svg><div class="growth-legend"><span><i class="height-dot"></i>\uD0A4</span><span><i class="weight-dot"></i>\uBAB8\uBB34\uAC8C</span></div></div>'
+    ].join('')
+  }
+
+  function renderBabyPatternSummary(detail, records) {
+    var target = detail && detail.querySelector('.baby-pattern-api-summary')
+    if (!target) return
+    var range = monthRangeFor(todayText())
+    var monthRecords = records.filter(function (record) {
+      return record.recordDate >= range.start && record.recordDate <= range.end
+    })
+    var types = ['\uC218\uC720', '\uB300\uBCC0', '\uC18C\uBCC0', '\uC218\uBA74', '\uC131\uC7A5', '\uBCD1\uC6D0', '\uBA54\uBAA8']
+    if (!monthRecords.length) {
+      target.innerHTML = '<div class="api-empty-row">\uC774\uBC88 \uB2EC \uD328\uD134 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</div>'
+      return
+    }
+    target.innerHTML = '<div class="pattern-grid">' + types.map(function (type) {
+      var count = monthRecords.filter(function (record) { return record.recordType === type }).length
+      return '<article><strong>' + escapeHtml(type) + '</strong><span>' + count + '\uAC74</span></article>'
+    }).join('') + '</div>'
   }
 
   function deleteBabyProfile(babyId) {
@@ -9393,7 +9511,11 @@
     form.reset()
     var date = form.querySelector('[name="recordDate"]')
     var time = form.querySelector('[name="recordTime"]')
-    if (date) date.value = todayText()
+    if (date) {
+      date.value = todayText()
+      var triggerText = form.querySelector('[data-baby-api-record-date-trigger] span')
+      if (triggerText) triggerText.textContent = todayText().replace(/-/g, '.')
+    }
     if (time) {
       var now = new Date()
       time.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
@@ -9413,7 +9535,7 @@
       return
     }
     if (!date) {
-      var dateField = form.querySelector('[name="recordDate"]')
+      var dateField = form.querySelector('[data-baby-api-record-date-trigger]') || form.querySelector('[name="recordDate"]')
       if (dateField) dateField.focus()
       showPatchToast('\uB0A0\uC9DC\uB294 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
       return
