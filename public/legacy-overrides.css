@@ -4377,6 +4377,64 @@ body.api-loading-blocked::before {
   padding: 0 13px !important;
 }
 
+.baby-api-record-form .custom-select,
+.baby-api-record-form .date-picker-field,
+.baby-growth-api-form .date-picker-field {
+  position: relative !important;
+  width: 100% !important;
+}
+
+.baby-api-record-form .custom-select-trigger,
+.baby-growth-api-form .date-picker-trigger {
+  width: 100% !important;
+  min-height: 46px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  padding: 0 13px !important;
+  background: #ffffff !important;
+  color: #191f28 !important;
+  box-shadow: inset 0 0 0 1px #dfe4ea !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+}
+
+.baby-api-record-form .custom-select-list {
+  position: absolute !important;
+  z-index: 100012 !important;
+  top: calc(100% + 8px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  display: grid !important;
+  gap: 6px !important;
+  border-radius: 16px !important;
+  padding: 8px !important;
+  background: #ffffff !important;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, .16) !important;
+}
+
+.baby-api-record-form .custom-select-list[hidden] {
+  display: none !important;
+}
+
+.baby-api-record-form .custom-select-list button {
+  min-height: 40px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  padding: 0 12px !important;
+  background: transparent !important;
+  color: #333d4b !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  text-align: left !important;
+}
+
+.baby-api-record-form .custom-select-list button:hover {
+  background: #edf4ff !important;
+  color: #1b64da !important;
+}
+
 .baby-api-record-form textarea {
   min-height: 92px !important;
   resize: vertical !important;
@@ -4423,7 +4481,10 @@ body.api-loading-blocked::before {
 .theme-dark .baby-api-record-card,
 .theme-dark .baby-api-record-form input,
 .theme-dark .baby-api-record-form select,
-.theme-dark .baby-api-record-form textarea {
+.theme-dark .baby-api-record-form textarea,
+.theme-dark .baby-api-record-form .custom-select-trigger,
+.theme-dark .baby-growth-api-form .date-picker-trigger,
+.theme-dark .baby-api-record-form .custom-select-list {
   background: #333942 !important;
   color: #f3f5f7 !important;
   box-shadow: inset 0 0 0 1px #454d58 !important;
@@ -9644,7 +9705,7 @@ select {
 
 .baby-growth-api-form {
   display: grid !important;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto !important;
+  grid-template-columns: minmax(130px, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto !important;
   align-items: end !important;
   gap: 10px !important;
 }
@@ -9674,8 +9735,107 @@ select {
 
 .baby-growth-api-form .save-button {
   min-height: 44px !important;
-  border-radius: 8px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
   padding: 0 18px !important;
+  background: #3182f6 !important;
+  color: #ffffff !important;
+  font: inherit !important;
+  font-weight: 900 !important;
+}
+
+.baby-growth-history-button {
+  min-height: 36px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  padding: 0 12px !important;
+  background: #edf4ff !important;
+  color: #1b64da !important;
+  font: inherit !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.baby-growth-history-dialog {
+  width: min(560px, calc(100vw - 36px)) !important;
+}
+
+.baby-growth-history-dialog header {
+  display: grid !important;
+  gap: 6px !important;
+}
+
+.baby-growth-history-dialog header h2 {
+  margin: 0 !important;
+}
+
+.baby-growth-history-dialog header p {
+  margin: 0 !important;
+  color: #6b7684 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+}
+
+.baby-growth-history-dialog-list {
+  display: grid !important;
+  gap: 10px !important;
+  max-height: min(58vh, 520px) !important;
+  overflow: auto !important;
+  padding-right: 2px !important;
+}
+
+.baby-growth-history-dialog-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
+  gap: 12px !important;
+  border-radius: 16px !important;
+  padding: 14px !important;
+  background: #f7f8fa !important;
+  box-shadow: inset 0 0 0 1px #e5e8eb !important;
+}
+
+.baby-growth-history-dialog-row strong,
+.baby-growth-history-dialog-row span {
+  display: block !important;
+}
+
+.baby-growth-history-dialog-row strong {
+  color: #191f28 !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+}
+
+.baby-growth-history-dialog-row span {
+  margin-top: 5px !important;
+  color: #6b7684 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+}
+
+.baby-growth-history-dialog-actions {
+  display: inline-flex !important;
+  gap: 8px !important;
+}
+
+.baby-growth-history-dialog-actions button {
+  min-height: 36px !important;
+  border: 0 !important;
+  border-radius: 12px !important;
+  padding: 0 12px !important;
+  font: inherit !important;
+  font-size: 13px !important;
+  font-weight: 900 !important;
+}
+
+.baby-growth-history-dialog-actions .edit-button {
+  background: #edf4ff !important;
+  color: #1b64da !important;
+}
+
+.baby-growth-history-dialog-actions .danger-button {
+  background: #fff1f2 !important;
+  color: #e42939 !important;
 }
 
 .baby-growth-api-history {
@@ -9726,6 +9886,20 @@ select {
   .baby-growth-history-row {
     grid-template-columns: 1fr !important;
   }
+}
+
+.theme-dark .baby-growth-history-dialog-row {
+  background: #333942 !important;
+  box-shadow: inset 0 0 0 1px #454d58 !important;
+}
+
+.theme-dark .baby-growth-history-dialog-row strong {
+  color: #f3f5f7 !important;
+}
+
+.theme-dark .baby-growth-history-dialog-row span,
+.theme-dark .baby-growth-history-dialog header p {
+  color: #aeb7c2 !important;
 }
 
 .travel-header-actions {

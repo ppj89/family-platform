@@ -499,17 +499,12 @@
     }, 180)
   }
 
-  function apiRequestMethod(input, init) {
-    return String((init && init.method) || (input && input.method) || 'GET').toUpperCase()
-  }
-
   function shouldTrackApiRequest(input, init) {
-    var method = apiRequestMethod(input, init)
-    if (['POST', 'PUT', 'PATCH', 'DELETE'].indexOf(method) < 0) return false
     var url = typeof input === 'string' ? input : (input && input.url) || ''
     if (!url) return false
     try {
       var parsed = new URL(url, window.location.origin)
+      if (parsed.pathname.indexOf('/api/notifications') === 0) return false
       return parsed.pathname.indexOf('/api/') === 0
     } catch (error) {
       return String(url).indexOf('/api/') >= 0
@@ -4544,6 +4539,8 @@
         return
       }
       var save = dialog.querySelector('.save-button')
+      var initialHeight = optionalDecimal(getFieldValue(dialog, '[data-baby-create-height]'))
+      var initialWeight = optionalDecimal(getFieldValue(dialog, '[data-baby-create-weight]'))
       save.disabled = true
       save.textContent = '\uC800\uC7A5 \uC911'
       getCurrentFamilyId().then(function (familyId) {
@@ -4553,9 +4550,20 @@
           birthDate: getFieldValue(dialog, '[data-baby-create-birth]') || todayText(),
           memo: getFieldValue(dialog, '[data-baby-create-memo]') || '',
           photoUrl: null,
-          latestHeightCm: optionalDecimal(getFieldValue(dialog, '[data-baby-create-height]')),
-          latestWeightKg: optionalDecimal(getFieldValue(dialog, '[data-baby-create-weight]'))
+          latestHeightCm: initialHeight,
+          latestWeightKg: initialWeight
         })
+      }).then(function (baby) {
+        if (!baby || !baby.id || (!initialHeight && !initialWeight)) return baby
+        return postJson('/babies/' + encodeURIComponent(baby.id) + '/records', {
+          recordType: '\uC131\uC7A5',
+          recordDate: todayText(),
+          recordTime: currentTimeText(),
+          heightCm: initialHeight,
+          weightKg: initialWeight,
+          memo: '',
+          mediaUrls: []
+        }).then(function () { return baby })
       }).then(function () {
         closeDialog()
         showPatchToast('\uC544\uC774\uB97C \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
@@ -6470,7 +6478,7 @@
       '<header><div><span>\uC721\uC544 \uAE30\uB85D</span><strong>\uC0C8 \uAE30\uB85D \uCD94\uAC00</strong></div><small>\uC800\uC7A5 \uD6C4 \uAE30\uB85D\uC5D0 \uBC18\uC601\uB429\uB2C8\uB2E4.</small></header>',
       '<form class="baby-api-record-form">',
       '<div class="baby-api-form-grid">',
-      '<label><span>\uAE30\uB85D\uC885\uB958</span><select name="recordType" required><option value="\uC218\uC720">\uC218\uC720</option><option value="\uB300\uBCC0">\uB300\uBCC0</option><option value="\uC18C\uBCC0">\uC18C\uBCC0</option><option value="\uC218\uBA74">\uC218\uBA74</option><option value="\uC131\uC7A5">\uC131\uC7A5</option><option value="\uBCD1\uC6D0">\uBCD1\uC6D0</option><option value="\uBA54\uBAA8">\uBA54\uBAA8</option></select></label>',
+      '<label><span>\uAE30\uB85D\uC885\uB958</span><input name="recordType" type="hidden" required value="\uC218\uC720" /><div class="custom-select baby-api-record-type-select"><button type="button" class="custom-select-trigger" data-baby-record-type-trigger><span>\uC218\uC720</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="custom-select-list" hidden><button type="button" data-baby-record-type="\uC218\uC720">\uC218\uC720</button><button type="button" data-baby-record-type="\uB300\uBCC0">\uB300\uBCC0</button><button type="button" data-baby-record-type="\uC18C\uBCC0">\uC18C\uBCC0</button><button type="button" data-baby-record-type="\uC218\uBA74">\uC218\uBA74</button><button type="button" data-baby-record-type="\uC131\uC7A5">\uC131\uC7A5</button><button type="button" data-baby-record-type="\uBCD1\uC6D0">\uBCD1\uC6D0</button><button type="button" data-baby-record-type="\uBA54\uBAA8">\uBA54\uBAA8</button></div></div></label>',
       '<label class="date-picker-field baby-api-date-field"><span>\uB0A0\uC9DC</span><input name="recordDate" type="hidden" required value="' + todayText() + '" /><button type="button" class="date-picker-trigger baby-api-date-button" data-baby-api-record-date-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 2v4M16 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label>',
       '<label><span>\uC2DC\uAC04</span><input name="recordTime" type="time" value="' + currentTimeText() + '" /></label>',
       '<label><span>\uC218\uC720\uB7C9(ml)</span><input name="amountMl" type="text" inputmode="numeric" /></label>',
@@ -6491,6 +6499,42 @@
       detail.appendChild(card)
     }
     bindBabyApiRecordDateField(card)
+    bindBabyApiRecordTypeSelect(card)
+  }
+
+  function bindBabyApiRecordTypeSelect(scope) {
+    var select = scope && scope.querySelector('.baby-api-record-type-select')
+    if (!select || select.dataset.ready === 'true') return
+    select.dataset.ready = 'true'
+    var trigger = select.querySelector('[data-baby-record-type-trigger]')
+    var list = select.querySelector('.custom-select-list')
+    var input = scope.querySelector('[name="recordType"]')
+    if (!trigger || !list || !input) return
+    trigger.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      var open = list.hidden
+      document.querySelectorAll('.custom-select.open').forEach(function (item) {
+        item.classList.remove('open')
+        var itemList = item.querySelector('.custom-select-list')
+        if (itemList) itemList.hidden = true
+      })
+      list.hidden = !open
+      select.classList.toggle('open', open)
+      trigger.classList.toggle('open', open)
+    })
+    list.querySelectorAll('[data-baby-record-type]').forEach(function (button) {
+      button.addEventListener('click', function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        input.value = button.dataset.babyRecordType || ''
+        var label = trigger.querySelector('span')
+        if (label) label.textContent = input.value || '\uC120\uD0DD'
+        list.hidden = true
+        select.classList.remove('open')
+        trigger.classList.remove('open')
+      })
+    })
   }
 
   function bindBabyApiRecordDateField(scope) {
@@ -6503,6 +6547,19 @@
         popover.remove()
       })
       openCommonBirthDatePopover(input, trigger)
+    })
+  }
+
+  function bindBabyGrowthDateField(scope) {
+    var input = scope && scope.querySelector('.baby-growth-api-form [name="recordDate"]')
+    var trigger = scope && scope.querySelector('[data-baby-growth-date-trigger]')
+    if (!input || !trigger || trigger.dataset.babyGrowthDateReady === 'true') return
+    trigger.dataset.babyGrowthDateReady = 'true'
+    trigger.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      toggleCommonDatePopover(input, trigger)
     })
   }
 
@@ -8518,7 +8575,7 @@
       '<span class="baby-avatar large">\uC544\uC774</span>',
       '<div><strong>' + escapeHtml(baby.name || '-') + '</strong><span>' + escapeHtml(babyMetaText(baby)) + '</span><p>' + escapeHtml(baby.memo || '') + '</p><small>' + escapeHtml(babyGrowthText(baby)) + '</small></div>',
       '</article>',
-      '<section class="baby-growth-api-panel"><header><h3>\uC131\uC7A5 \uAE30\uB85D</h3><span>\uCC28\uD2B8/\uACFC\uAC70 \uAE30\uB85D</span></header><form class="baby-growth-api-form"><label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" autocomplete="off" /></label><label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" autocomplete="off" /></label><button type="submit" class="save-button">\uC800\uC7A5</button></form><div class="baby-growth-api-history"></div></section>',
+      '<section class="baby-growth-api-panel"><header><h3>\uC131\uC7A5 \uAE30\uB85D</h3><button type="button" class="secondary-action baby-growth-history-button" data-baby-growth-history>\uACFC\uAC70\uC131\uC7A5\uAE30\uB85D</button></header><form class="baby-growth-api-form"><label class="date-picker-field baby-growth-date-field"><span>\uB0A0\uC9DC</span><input name="recordDate" type="hidden" required value="' + todayText() + '" /><button type="button" class="date-picker-trigger baby-growth-date-button" data-baby-growth-date-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 2v4M16 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label><label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" autocomplete="off" /></label><label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" autocomplete="off" /></label><button type="submit" class="save-button">\uC800\uC7A5</button></form><div class="baby-growth-api-history"></div></section>',
       '<section class="baby-pattern-api-panel"><header><h3>\uC0DD\uD65C \uD328\uD134</h3><span>\uC774\uBC88 \uB2EC</span></header><div class="baby-pattern-api-summary"></div></section>',
       '<section class="baby-record-list"></section>',
       '</div><aside class="baby-api-detail-side"></aside></div>'
@@ -8532,6 +8589,7 @@
       })
     }
     ensureBabyApiRecordForm()
+    bindBabyGrowthDateField(detail)
     normalizeTimeInputs(detail)
     renderBabyApiRecordRows(detail, baby.id)
     renderBabyGrowthHistory(detail, baby.id)
@@ -8548,6 +8606,8 @@
       var growthRecords = records.filter(function (record) {
         return record.heightCm || record.weightKg
       }).sort(compareBabyRecordDate)
+      window.__familyBabyGrowthRecordsByBabyId = window.__familyBabyGrowthRecordsByBabyId || Object.create(null)
+      window.__familyBabyGrowthRecordsByBabyId[String(babyId)] = growthRecords
       renderBabyPatternSummary(detail, records)
       if (!growthRecords.length) {
         history.innerHTML = '<div class="api-empty-row">\uC131\uC7A5 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</div>'
@@ -8563,6 +8623,100 @@
     }).catch(function (error) {
       history.innerHTML = '<div class="api-empty-row">' + escapeHtml(apiActionErrorMessage(error, '\uC131\uC7A5 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</div>'
     })
+  }
+
+  function openBabyGrowthHistoryDialog(detail, babyId) {
+    if (!detail || !babyId) return
+    var old = document.querySelector('.baby-growth-history-backdrop')
+    if (old) old.remove()
+    var backdrop = document.createElement('div')
+    backdrop.className = 'baby-profile-edit-backdrop baby-growth-history-backdrop'
+    var dialog = document.createElement('section')
+    dialog.className = 'baby-profile-edit-dialog baby-growth-history-dialog'
+    dialog.innerHTML = [
+      '<button type="button" class="dialog-close">x</button>',
+      '<header><h2>\uACFC\uAC70\uC131\uC7A5\uAE30\uB85D</h2><p>\uB0A0\uC9DC\uBCC4 \uD0A4\uC640 \uBAB8\uBB34\uAC8C\uB97C \uD655\uC778\uD558\uACE0 \uC218\uC815\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.</p></header>',
+      '<div class="baby-growth-history-dialog-list"><div class="api-empty-row">\uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</div></div>'
+    ].join('')
+    backdrop.appendChild(dialog)
+    document.body.appendChild(backdrop)
+    var close = function () { backdrop.remove() }
+    dialog.querySelector('.dialog-close').addEventListener('click', close)
+    backdrop.addEventListener('click', function (event) {
+      if (event.target === backdrop) close()
+    })
+    var list = dialog.querySelector('.baby-growth-history-dialog-list')
+    fetchBabyRecords(babyId, '2000-01-01', '2099-12-31').then(function (records) {
+      var growthRecords = records.filter(function (record) {
+        return record.heightCm || record.weightKg
+      }).sort(compareBabyRecordDate).reverse()
+      window.__familyBabyGrowthRecordsByBabyId = window.__familyBabyGrowthRecordsByBabyId || Object.create(null)
+      window.__familyBabyGrowthRecordsByBabyId[String(babyId)] = growthRecords.slice().reverse()
+      if (!growthRecords.length) {
+        list.innerHTML = '<div class="api-empty-row">\uC131\uC7A5 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</div>'
+        return
+      }
+      list.innerHTML = growthRecords.map(function (record) {
+        var metrics = [
+          record.heightCm ? record.heightCm + 'cm' : '',
+          record.weightKg ? record.weightKg + 'kg' : ''
+        ].filter(Boolean).join(' \u00B7 ')
+        return '<article class="baby-growth-history-dialog-row" data-growth-record-id="' + escapeHtml(record.id) + '"><div><strong>' + escapeHtml(formatBabyRecordDateTime(record)) + '</strong><span>' + escapeHtml(metrics || '-') + '</span></div><div class="baby-growth-history-dialog-actions"><button type="button" class="edit-button" data-growth-edit-id="' + escapeHtml(record.id) + '">\uC218\uC815</button><button type="button" class="danger-button" data-growth-delete-id="' + escapeHtml(record.id) + '">\uC0AD\uC81C</button></div></article>'
+      }).join('')
+    }).catch(function (error) {
+      list.innerHTML = '<div class="api-empty-row">' + escapeHtml(apiActionErrorMessage(error, '\uC131\uC7A5 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</div>'
+    })
+    list.addEventListener('click', function (event) {
+      var edit = event.target && event.target.closest && event.target.closest('[data-growth-edit-id]')
+      var del = event.target && event.target.closest && event.target.closest('[data-growth-delete-id]')
+      if (edit) {
+        var record = findBabyGrowthRecord(babyId, edit.dataset.growthEditId)
+        if (record) {
+          close()
+          fillBabyGrowthFormForEdit(detail, record)
+        }
+        return
+      }
+      if (del) {
+        var deleteId = del.dataset.growthDeleteId
+        showPatchConfirm('\uC131\uC7A5 \uAE30\uB85D\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
+          apiRequest('/baby-records/' + encodeURIComponent(deleteId), { method: 'DELETE' }).then(function () {
+            showPatchToast('\uC131\uC7A5 \uAE30\uB85D\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
+            close()
+            renderBabyApiRecordRows(detail, babyId)
+            renderBabyGrowthHistory(detail, babyId)
+          }).catch(function (error) {
+            showPatchToast(apiActionErrorMessage(error, '\uC131\uC7A5 \uAE30\uB85D \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+          })
+        })
+      }
+    })
+  }
+
+  function findBabyGrowthRecord(babyId, recordId) {
+    var records = window.__familyBabyGrowthRecordsByBabyId && window.__familyBabyGrowthRecordsByBabyId[String(babyId)]
+    return (records || []).find(function (record) { return String(record.id) === String(recordId) })
+  }
+
+  function fillBabyGrowthFormForEdit(detail, record) {
+    var form = detail && detail.querySelector('.baby-growth-api-form')
+    if (!form || !record) return
+    form.dataset.growthEditId = record.id
+    var dateInput = form.querySelector('[name="recordDate"]')
+    var dateText = form.querySelector('[data-baby-growth-date-trigger] span')
+    if (dateInput) dateInput.value = record.recordDate || todayText()
+    if (dateText) dateText.textContent = String(record.recordDate || todayText()).replace(/-/g, '.')
+    var height = form.querySelector('[name="heightCm"]')
+    var weight = form.querySelector('[name="weightKg"]')
+    if (height) height.value = record.heightCm || ''
+    if (weight) weight.value = record.weightKg || ''
+    var submit = form.querySelector('button[type="submit"]')
+    if (submit) submit.textContent = '\uC218\uC815 \uC800\uC7A5'
+    form.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    window.setTimeout(function () {
+      var target = height || weight || form.querySelector('[data-baby-growth-date-trigger]')
+      if (target) target.focus()
+    }, 160)
   }
 
   function compareBabyRecordDate(a, b) {
@@ -9547,6 +9701,10 @@
       var now = new Date()
       time.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
     }
+    var type = form.querySelector('[name="recordType"]')
+    var typeText = form.querySelector('[data-baby-record-type-trigger] span')
+    if (type) type.value = '\uC218\uC720'
+    if (typeText) typeText.textContent = '\uC218\uC720'
     var hint = form.querySelector('.baby-api-file-field small')
     if (hint) hint.textContent = mediaLimitText()
   }
@@ -9714,6 +9872,7 @@
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     var detail = growthForm.closest('.baby-api-detail')
     var babyId = detail && detail.dataset.apiBabyId
+    var recordDate = getFieldValue(growthForm, '[name="recordDate"]') || todayText()
     var height = optionalDecimal(getFieldValue(growthForm, '[name="heightCm"]'))
     var weight = optionalDecimal(getFieldValue(growthForm, '[name="weightKg"]'))
     if (!height && !weight) {
@@ -9725,20 +9884,36 @@
     if (!babyId || growthForm.dataset.submitting === 'true') return
     growthForm.dataset.submitting = 'true'
     setBabyApiRecordBusy(growthForm, true)
-    postJson('/babies/' + encodeURIComponent(babyId) + '/records', {
+    var editId = growthForm.dataset.growthEditId
+    var payload = {
       recordType: '\uC131\uC7A5',
-      recordDate: todayText(),
+      recordDate: recordDate,
       recordTime: currentTimeText(),
       heightCm: height,
       weightKg: weight,
       memo: ''
-    }).then(function () {
+    }
+    var request = editId
+      ? apiRequest('/baby-records/' + encodeURIComponent(editId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+      : postJson('/babies/' + encodeURIComponent(babyId) + '/records', payload)
+    request.then(function () {
       growthForm.reset()
+      delete growthForm.dataset.growthEditId
+      var dateInput = growthForm.querySelector('[name="recordDate"]')
+      var dateText = growthForm.querySelector('[data-baby-growth-date-trigger] span')
+      if (dateInput) dateInput.value = todayText()
+      if (dateText) dateText.textContent = todayText().replace(/-/g, '.')
+      var submit = growthForm.querySelector('button[type="submit"]')
+      if (submit) submit.textContent = '\uC800\uC7A5'
       var grid = document.querySelector('.baby-list-grid')
       if (grid) delete grid.dataset.apiLoaded
       renderBabyApiRecordRows(detail, babyId)
       renderBabyGrowthHistory(detail, babyId)
-      showPatchToast('\uC131\uC7A5 \uAE30\uB85D\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
+      showPatchToast(editId ? '\uC131\uC7A5 \uAE30\uB85D\uC744 \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.' : '\uC131\uC7A5 \uAE30\uB85D\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
     }).catch(function (error) {
       showPatchToast(apiActionErrorMessage(error, '\uC131\uC7A5 \uAE30\uB85D \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
     }).finally(function () {
@@ -9783,6 +9958,14 @@
     if (!clearButton) return
     var form = clearButton.closest('.baby-api-record-form')
     resetBabyApiRecordForm(form)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var button = event.target && event.target.closest && event.target.closest('[data-baby-growth-history]')
+    if (!button) return
+    var detail = button.closest('.baby-api-detail')
+    var babyId = detail && detail.dataset.apiBabyId
+    openBabyGrowthHistoryDialog(detail, babyId)
   }, true)
 
   document.addEventListener('change', function (event) {
