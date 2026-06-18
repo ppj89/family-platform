@@ -440,6 +440,7 @@
 
   var apiLoadingState = {
     count: 0,
+    blockingCount: 0,
     showTimer: 0,
     hideTimer: 0,
     watchdogTimer: 0,
@@ -459,14 +460,16 @@
   function setApiLoadingVisible(visible) {
     var bar = ensureApiLoadingBar()
     bar.classList.toggle('active', !!visible)
-    document.body.classList.toggle('api-loading-blocked', !!visible)
+    document.body.classList.toggle('api-loading-blocked', !!visible && apiLoadingState.blockingCount > 0)
   }
 
-  function beginApiLoading() {
+  function beginApiLoading(blocking) {
     apiLoadingState.count += 1
+    if (blocking) apiLoadingState.blockingCount += 1
     if (apiLoadingState.watchdogTimer) window.clearTimeout(apiLoadingState.watchdogTimer)
     apiLoadingState.watchdogTimer = window.setTimeout(function () {
       apiLoadingState.count = 0
+      apiLoadingState.blockingCount = 0
       apiLoadingState.showTimer = 0
       apiLoadingState.hideTimer = 0
       setApiLoadingVisible(false)
@@ -483,8 +486,10 @@
     }
   }
 
-  function endApiLoading() {
+  function endApiLoading(blocking) {
     apiLoadingState.count = Math.max(0, apiLoadingState.count - 1)
+    if (blocking) apiLoadingState.blockingCount = Math.max(0, apiLoadingState.blockingCount - 1)
+    document.body.classList.toggle('api-loading-blocked', apiLoadingState.count > 0 && apiLoadingState.blockingCount > 0)
     if (apiLoadingState.count > 0) return
     if (apiLoadingState.watchdogTimer) {
       window.clearTimeout(apiLoadingState.watchdogTimer)
@@ -499,15 +504,18 @@
     }, 180)
   }
 
-  function shouldTrackApiRequest(input, init) {
+  function getApiRequestLoadingMeta(input, init) {
     var url = typeof input === 'string' ? input : (input && input.url) || ''
-    if (!url) return false
+    if (!url) return { tracked: false, blocking: false }
     try {
       var parsed = new URL(url, window.location.origin)
-      if (parsed.pathname.indexOf('/api/notifications') === 0) return false
-      return parsed.pathname.indexOf('/api/') === 0
+      if (parsed.pathname.indexOf('/api/notifications') === 0) return { tracked: false, blocking: false }
+      if (parsed.pathname.indexOf('/api/') !== 0) return { tracked: false, blocking: false }
+      var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase()
+      return { tracked: true, blocking: method !== 'GET' && method !== 'HEAD' }
     } catch (error) {
-      return String(url).indexOf('/api/') >= 0
+      var methodFallback = String((init && init.method) || (input && input.method) || 'GET').toUpperCase()
+      return { tracked: String(url).indexOf('/api/') >= 0, blocking: methodFallback !== 'GET' && methodFallback !== 'HEAD' }
     }
   }
 
@@ -516,10 +524,10 @@
     apiLoadingState.installed = true
     var originalFetch = window.fetch.bind(window)
     window.fetch = function (input, init) {
-      var tracked = shouldTrackApiRequest(input, init)
-      if (tracked) beginApiLoading()
+      var loadingMeta = getApiRequestLoadingMeta(input, init)
+      if (loadingMeta.tracked) beginApiLoading(loadingMeta.blocking)
       return originalFetch(input, init).finally(function () {
-        if (tracked) endApiLoading()
+        if (loadingMeta.tracked) endApiLoading(loadingMeta.blocking)
       })
     }
     ;['click', 'submit', 'keydown', 'touchstart', 'pointerdown'].forEach(function (type) {
