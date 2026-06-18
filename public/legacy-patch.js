@@ -3209,18 +3209,29 @@
       '.family-group-list article{display:flex;align-items:center;justify-content:space-between;gap:14px}',
       '.family-group-list b{display:inline-flex;align-items:center;min-height:30px;padding:0 12px;border-radius:999px;background:#eaf3ff;color:#2f7ee6;font-size:13px}',
       'html.home-clean-header .topbar{margin-bottom:14px}',
-      'html.home-clean-header .topbar .eyebrow,html.home-clean-header .topbar h1{display:none!important}',
-      'html.home-clean-header .topbar>div:first-child{display:none!important}',
-      'html.home-clean-header .top-actions>.custom-select,html.home-clean-header .top-actions>.user-chip{display:none!important}',
       '@media(max-width:760px){.family-group-summary{grid-template-columns:1fr}.family-group-list article{align-items:flex-start;flex-direction:column}.passive-header-chip{min-height:30px;padding:0 11px;font-size:12px}}'
     ].join('\n')
     document.head.appendChild(style)
+  }
+
+  function removeHomeHeaderChrome() {
+    var topbar = document.querySelector('.topbar')
+    if (!topbar) return
+    var title = getCleanText(topbar.querySelector('h1'))
+    var isCustomPatchPage = document.documentElement.dataset.patchPage === 'community' || document.documentElement.dataset.patchPage === 'family-group'
+    if (title !== '\uD648' || isCustomPatchPage) return
+    var titleGroup = topbar.querySelector(':scope > div:first-child')
+    if (titleGroup) titleGroup.remove()
+    topbar.querySelectorAll('.top-actions > .custom-select, .top-actions > .user-chip').forEach(function (item) {
+      item.remove()
+    })
   }
 
   function syncHomeCleanHeader() {
     var title = getCleanText(document.querySelector('.topbar h1'))
     var isCustomPatchPage = document.documentElement.dataset.patchPage === 'community' || document.documentElement.dataset.patchPage === 'family-group'
     document.documentElement.classList.toggle('home-clean-header', title === '\uD648' && !isCustomPatchPage)
+    removeHomeHeaderChrome()
   }
 
   function cleanupPassiveButtons() {
