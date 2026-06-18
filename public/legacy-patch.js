@@ -979,7 +979,7 @@
 
   function isActiveSessionError(error) {
     var text = String(error && error.message ? error.message : error || '')
-    return (error && error.status === 409) || text.indexOf('Active session exists') >= 0
+    return (error && error.status === 409) || text.toLowerCase().indexOf('active session exists') >= 0
   }
 
   function setAuthSubmitBusy(submit, mode, busy) {
@@ -1010,7 +1010,7 @@
 
   function submitAuthRequest(mode, payload, submit, forceLogin) {
     setAuthSubmitBusy(submit, mode, true)
-    apiJson(mode === 'register' ? '/auth/register' : '/auth/login', getAuthRequestBody(mode, payload, forceLogin))
+    return apiJson(mode === 'register' ? '/auth/register' : '/auth/login', getAuthRequestBody(mode, payload, forceLogin))
       .then(function (response) {
         if (mode === 'register' && response && response.emailVerificationRequired) {
           showPatchToast('\uD68C\uC6D0\uAC00\uC785\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC774\uBA54\uC77C \uC778\uC99D \uB9C1\uD06C\uB97C \uD655\uC778\uD55C \uB4A4 \uB85C\uADF8\uC778\uD574\uC8FC\uC138\uC694.')
@@ -1023,10 +1023,7 @@
         completeAuth(submit, response)
       }).catch(function (error) {
         if (mode === 'login' && isActiveSessionError(error) && !forceLogin) {
-          showPatchConfirm('\uD604\uC7AC \uB85C\uADF8\uC778\uC774 \uB418\uC5B4\uC788\uC2B5\uB2C8\uB2E4. \uB85C\uADF8\uC778\uC744 \uD558\uC2DC\uACA0\uC2B5\uB2C8\uAE4C?', function () {
-            submitAuthRequest(mode, payload, submit, true)
-          })
-          return
+          return submitAuthRequest(mode, payload, submit, true)
         }
         if (mode === 'login' && isEmailVerificationError(error)) {
           ensureVerificationResendAction(submit && submit.closest('.auth-card'), payload.email)
