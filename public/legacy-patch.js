@@ -8840,7 +8840,7 @@
     var labels = [0, 0.5, 1].map(function (rate) {
       var value = max - ((max - min) * rate)
       var y = top + chartHeight * rate
-      return '<line class="grid-line" x1="' + left + '" x2="' + (width - right) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"/><text class="axis-label" x="8" y="' + (y + 4).toFixed(1) + '">' + value.toFixed(1) + '</text>'
+      return '<line class="grid-line" x1="' + left + '" x2="' + (width - right) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"/><text class="axis-label" x="' + (left - 8) + '" y="' + (y + 4).toFixed(1) + '">' + value.toFixed(1) + '</text>'
     }).join('')
     var xLabels = records.filter(function (_, index) {
       return records.length <= 4 || index === 0 || index === records.length - 1 || index === Math.floor((records.length - 1) / 2)
