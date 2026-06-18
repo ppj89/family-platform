@@ -8457,6 +8457,7 @@
     if (getCleanText(document.querySelector('.topbar h1')) !== '\uC721\uC544') return
     if (!getStoredAuthToken()) return
     if (force) {
+      restoreBabyListGrid()
       document.querySelectorAll('.baby-api-detail, .baby-detail').forEach(function (detail) {
         detail.remove()
       })
@@ -8573,6 +8574,28 @@
     openBabyApiDetailById(card.dataset.apiBabyId)
   }
 
+  function detachBabyListGrid(grid) {
+    if (!grid || !grid.parentElement) return
+    if (window.__familyDetachedBabyListGrid && window.__familyDetachedBabyListGrid.grid === grid) return window.__familyDetachedBabyListGrid.marker
+    var marker = document.createComment('family-baby-list-grid')
+    grid.parentElement.insertBefore(marker, grid)
+    grid.remove()
+    window.__familyDetachedBabyListGrid = { grid: grid, marker: marker }
+    return marker
+  }
+
+  function restoreBabyListGrid() {
+    var detached = window.__familyDetachedBabyListGrid
+    if (!detached || !detached.grid || !detached.marker) return document.querySelector('.baby-list-grid')
+    if (detached.marker.parentElement) {
+      detached.marker.parentElement.insertBefore(detached.grid, detached.marker)
+      detached.marker.remove()
+    }
+    detached.grid.hidden = false
+    delete window.__familyDetachedBabyListGrid
+    return detached.grid
+  }
+
   function bindBabyCardDetailEvents(root) {
     ;(root || document).querySelectorAll('.baby-card[data-api-baby-id]').forEach(function (card) {
       if (card.dataset.detailClickReady === 'true') return
@@ -8592,12 +8615,12 @@
     if (!grid) return
     var old = document.querySelector('.baby-api-detail')
     if (old) old.remove()
-    grid.hidden = true
+    var listMarker = detachBabyListGrid(grid)
     var detail = document.createElement('section')
     detail.className = 'baby-detail baby-api-detail'
     detail.dataset.apiBabyId = baby.id
     detail.innerHTML = [
-      '<header class="baby-api-detail-header"><h2>' + escapeHtml(baby.name || '\uC544\uC774') + '</h2><button type="button" class="back-button">\uBAA9\uB85D</button></header>',
+      '<button type="button" class="back-button">\uBAA9\uB85D</button>',
       '<div class="baby-api-detail-layout"><div class="baby-api-detail-main">',
       '<article class="baby-profile-band">',
       '<span class="baby-avatar large">\uC544\uC774</span>',
@@ -8608,12 +8631,16 @@
       '<section class="baby-record-list"></section>',
       '</div><aside class="baby-api-detail-side"></aside></div>'
     ].join('')
-    grid.insertAdjacentElement('afterend', detail)
+    if (listMarker && listMarker.parentElement) {
+      listMarker.parentElement.insertBefore(detail, listMarker.nextSibling)
+    } else {
+      grid.insertAdjacentElement('afterend', detail)
+    }
     var back = detail.querySelector('.back-button')
     if (back) {
       back.addEventListener('click', function () {
         detail.remove()
-        grid.hidden = false
+        restoreBabyListGrid()
       })
     }
     ensureBabyApiRecordForm()
@@ -8761,14 +8788,18 @@
     return Number.isFinite(number) ? number : null
   }
 
-  function buildBabyGrowthChart(records) {
+  function buildBabyGrowthChart(records, mode) {
     var heightPoints = records.map(function (record, index) {
       return { index: index, value: babyGrowthNumber(record.heightCm), label: String(record.recordDate || '').slice(5).replace('-', '.') }
     }).filter(function (point) { return point.value !== null })
     var weightPoints = records.map(function (record, index) {
       return { index: index, value: babyGrowthNumber(record.weightKg), label: String(record.recordDate || '').slice(5).replace('-', '.') }
     }).filter(function (point) { return point.value !== null })
-    var values = heightPoints.concat(weightPoints).map(function (point) { return point.value })
+    var selectedMode = mode === 'weight' ? 'weight' : 'height'
+    if (selectedMode === 'height' && !heightPoints.length && weightPoints.length) selectedMode = 'weight'
+    if (selectedMode === 'weight' && !weightPoints.length && heightPoints.length) selectedMode = 'height'
+    var selectedPoints = selectedMode === 'weight' ? weightPoints : heightPoints
+    var values = selectedPoints.map(function (point) { return point.value })
     if (!values.length) return ''
     var min = Math.min.apply(null, values)
     var max = Math.max.apply(null, values)
@@ -8802,6 +8833,10 @@
         return '<circle class="' + cls + '" cx="' + pos.x.toFixed(1) + '" cy="' + pos.y.toFixed(1) + '" r="4"><title>' + escapeHtml(point.label + ' ' + point.value) + '</title></circle>'
       }).join('')
     }
+    function chartButton(buttonMode, label, hasData) {
+      var active = selectedMode === buttonMode
+      return '<button type="button" data-baby-growth-chart-mode="' + buttonMode + '" class="' + (active ? 'active' : '') + '" aria-pressed="' + (active ? 'true' : 'false') + '"' + (hasData ? '' : ' disabled') + '>' + label + '</button>'
+    }
     var labels = [0, 0.5, 1].map(function (rate) {
       var value = max - ((max - min) * rate)
       var y = top + chartHeight * rate
@@ -8814,15 +8849,23 @@
       var x = left + chartWidth * (originalIndex / maxIndex)
       return '<text class="x-label" x="' + x.toFixed(1) + '" y="' + (height - 10) + '">' + escapeHtml(String(record.recordDate || '').slice(5).replace('-', '.')) + '</text>'
     }).join('')
+    var lineClass = selectedMode === 'weight' ? 'weight-line' : 'height-line'
+    var dotClass = selectedMode === 'weight' ? 'weight-dot' : 'height-dot'
+    var unit = selectedMode === 'weight' ? 'kg' : 'cm'
+    var label = selectedMode === 'weight' ? '\uBAB8\uBB34\uAC8C' : '\uD0A4'
     return [
-      '<div class="growth-chart baby-growth-chart"><svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="\uD0A4\uC640 \uBAB8\uBB34\uAC8C \uC131\uC7A5 \uCC28\uD2B8">',
+      '<div class="growth-chart baby-growth-chart">',
+      '<div class="growth-chart-toggle" role="group" aria-label="\uC131\uC7A5 \uCC28\uD2B8 \uC9C0\uD45C">',
+      chartButton('height', '\uD0A4', !!heightPoints.length),
+      chartButton('weight', '\uBAB8\uBB34\uAC8C', !!weightPoints.length),
+      '</div>',
+      '<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' + label + ' \uC131\uC7A5 \uCC28\uD2B8">',
       labels,
       '<line class="axis-line" x1="' + left + '" x2="' + (width - right) + '" y1="' + (height - bottom) + '" y2="' + (height - bottom) + '"/>',
-      heightPoints.length ? '<polyline class="height-line" points="' + line(heightPoints) + '"/>' + dots(heightPoints, 'height-dot') : '',
-      weightPoints.length ? '<polyline class="weight-line" points="' + line(weightPoints) + '"/>' + dots(weightPoints, 'weight-dot') : '',
+      '<polyline class="' + lineClass + '" points="' + line(selectedPoints) + '"/>' + dots(selectedPoints, dotClass),
       xLabels,
-      '<text class="unit-label" x="' + left + '" y="14">cm / kg</text>',
-      '</svg><div class="growth-legend"><span><i class="height-dot"></i>\uD0A4</span><span><i class="weight-dot"></i>\uBAB8\uBB34\uAC8C</span></div></div>'
+      '<text class="unit-label" x="' + left + '" y="14">' + unit + '</text>',
+      '</svg></div>'
     ].join('')
   }
 
@@ -9955,6 +9998,20 @@
     if (!input) return
     var next = sanitizeDecimalText(input.value)
     if (input.value !== next) input.value = next
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var button = event.target && event.target.closest && event.target.closest('[data-baby-growth-chart-mode]')
+    if (!button || button.disabled) return
+    var chart = button.closest('.baby-growth-chart')
+    var detail = button.closest('.baby-api-detail')
+    var babyId = detail && detail.dataset.apiBabyId
+    var records = window.__familyBabyGrowthRecordsByBabyId && window.__familyBabyGrowthRecordsByBabyId[String(babyId)]
+    if (!chart || !records) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    chart.outerHTML = buildBabyGrowthChart(records, button.dataset.babyGrowthChartMode)
   }, true)
 
   document.addEventListener('click', function (event) {

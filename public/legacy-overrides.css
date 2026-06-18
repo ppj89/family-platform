@@ -4017,6 +4017,40 @@ body.api-loading-blocked::before {
   gap: 8px;
 }
 
+.growth-chart-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 4px;
+  border-radius: 999px;
+  background: #eef3f8;
+}
+
+.growth-chart-toggle button {
+  min-height: 32px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 13px;
+  background: transparent;
+  color: #4e5968;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.growth-chart-toggle button.active {
+  background: #ffffff;
+  color: #1b64da;
+  box-shadow: 0 1px 2px rgba(25, 31, 40, 0.08), inset 0 0 0 1px #dcecff;
+}
+
+.growth-chart-toggle button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
 .growth-chart svg {
   width: 100%;
   height: auto;
