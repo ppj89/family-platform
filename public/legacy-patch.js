@@ -6568,6 +6568,18 @@
     })
   }
 
+  document.addEventListener('click', function (event) {
+    var trigger = event.target && event.target.closest && event.target.closest('[data-baby-growth-date-trigger]')
+    if (!trigger) return
+    var form = trigger.closest('.baby-growth-api-form')
+    var input = form && form.querySelector('[name="recordDate"]')
+    if (!input) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    toggleCommonDatePopover(input, trigger)
+  }, true)
+
   function enhanceBabyEditMediaHelper() {
     document.querySelectorAll('.baby-record-row .edit-button').forEach(function (button) {
       if (button.dataset.mediaEditReady) return

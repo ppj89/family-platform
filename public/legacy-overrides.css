@@ -9751,26 +9751,35 @@ select {
   gap: 7px !important;
 }
 
-.baby-growth-api-form label span {
+.baby-growth-api-form label > span {
   color: #6b7684 !important;
   font-size: 12px !important;
   font-weight: 900 !important;
 }
 
 .baby-growth-api-form input {
-  min-height: 44px !important;
-  border: 1px solid #d9e1e8 !important;
-  border-radius: 8px !important;
-  padding: 0 14px !important;
+  min-height: 46px !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  padding: 0 13px !important;
   background: #ffffff !important;
   color: #191f28 !important;
   font: inherit !important;
+  font-size: 14px !important;
   font-weight: 800 !important;
+  box-shadow: inset 0 0 0 1px #dfe4ea !important;
   outline: none !important;
 }
 
+.baby-api-record-form .date-picker-trigger span,
+.baby-growth-api-form .date-picker-trigger span {
+  color: #191f28 !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+}
+
 .baby-growth-api-form .save-button {
-  min-height: 44px !important;
+  min-height: 46px !important;
   border: 0 !important;
   border-radius: 14px !important;
   padding: 0 18px !important;
