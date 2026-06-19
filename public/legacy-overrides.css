@@ -4296,6 +4296,21 @@ body.api-loading-blocked::before {
   line-height: 1.5;
 }
 
+.api-baby-record-row {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+.api-baby-record-row > div {
+  min-width: 0 !important;
+}
+
+.api-baby-record-row span {
+  white-space: normal !important;
+  word-break: keep-all !important;
+  overflow-wrap: normal !important;
+  line-height: 1.45 !important;
+}
+
 .record-row-actions {
   display: inline-flex;
   align-items: center;
@@ -9643,6 +9658,63 @@ select {
   color: #191f28 !important;
   font: inherit !important;
   font-weight: 800 !important;
+}
+
+.baby-common-date-popover {
+  z-index: 100012 !important;
+  max-height: min(430px, calc(100vh - 24px)) !important;
+  overflow: auto !important;
+  border: 1px solid #edf0f3 !important;
+  transform: none !important;
+  overscroll-behavior: contain !important;
+}
+
+.baby-common-date-popover .calendar-header,
+.baby-create-dialog .baby-common-date-popover .calendar-header {
+  display: grid !important;
+  grid-template-columns: 40px minmax(150px, 1fr) 40px !important;
+  align-items: center !important;
+  gap: 10px !important;
+  padding: 0 !important;
+  background: #ffffff !important;
+}
+
+.baby-common-date-popover .calendar-header > button:not(.calendar-title-button),
+.baby-create-dialog .baby-common-date-popover .calendar-header > button:not(.calendar-title-button) {
+  width: 40px !important;
+  min-width: 40px !important;
+  height: 40px !important;
+  padding: 0 !important;
+}
+
+.baby-common-date-popover .calendar-header > button.calendar-title-button,
+.baby-create-dialog .baby-common-date-popover .calendar-header > button.calendar-title-button {
+  display: inline-flex !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  height: 40px !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 0 12px !important;
+  border: 1px solid #e5e8eb !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  color: #191f28 !important;
+  text-align: center !important;
+}
+
+.baby-common-date-popover .calendar-title-button span,
+.baby-create-dialog .baby-common-date-popover .calendar-title-button span {
+  display: block !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  color: #191f28 !important;
+  font-size: 14px !important;
+  font-weight: 900 !important;
+  line-height: 1 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  word-break: keep-all !important;
 }
 
 .baby-create-dialog .calendar-popover .calendar-today-row {

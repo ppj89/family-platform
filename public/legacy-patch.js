@@ -4694,7 +4694,7 @@
   }
 
   function openCommonBirthDatePopover(input, trigger) {
-    document.querySelectorAll('.date-picker-field .calendar-popover').forEach(function (old) {
+    document.querySelectorAll('.baby-common-date-popover, .date-picker-field .calendar-popover').forEach(function (old) {
       old.remove()
     })
     var selected = parseApiDate(input.value) || todayText()
@@ -4744,10 +4744,19 @@
         html += '</div>'
       }
       popover.innerHTML = html
+      if (popover.isConnected) {
+        window.setTimeout(function () {
+          positionBabyCommonDatePopover(popover, trigger)
+        }, 0)
+      }
     }
 
     draw()
-    trigger.insertAdjacentElement('afterend', popover)
+    document.body.appendChild(popover)
+    positionBabyCommonDatePopover(popover, trigger)
+    window.setTimeout(function () {
+      positionBabyCommonDatePopover(popover, trigger)
+    }, 0)
     function handleCommonDatePopoverAction(event, skipRecentPointer) {
       var target = event.target
       if (!target || !target.closest) return false
@@ -4821,6 +4830,35 @@
     }, true)
   }
 
+  function positionBabyCommonDatePopover(popover, trigger) {
+    if (!popover || !trigger || !trigger.getBoundingClientRect) return
+    var viewport = window.visualViewport || null
+    var viewportLeft = viewport ? viewport.offsetLeft : 0
+    var viewportTop = viewport ? viewport.offsetTop : 0
+    var viewportWidth = viewport ? viewport.width : window.innerWidth
+    var viewportHeight = viewport ? viewport.height : window.innerHeight
+    var rect = trigger.getBoundingClientRect()
+    var width = Math.min(330, Math.max(280, viewportWidth - 32))
+    var height = Math.min(popover.scrollHeight || popover.offsetHeight || 360, viewportHeight - 24)
+    var belowTop = rect.bottom + 8
+    var aboveTop = rect.top - height - 8
+    var top = belowTop
+    var minTop = viewportTop + 12
+    var maxBottom = viewportTop + viewportHeight - 12
+    if (belowTop + height > maxBottom && aboveTop >= minTop) {
+      top = aboveTop
+    } else if (belowTop + height > maxBottom) {
+      top = Math.max(minTop, maxBottom - height)
+    }
+    var minLeft = viewportLeft + 16
+    var maxLeft = viewportLeft + viewportWidth - width - 16
+    var left = Math.max(minLeft, Math.min(maxLeft, rect.left + rect.width / 2 - width / 2))
+    popover.style.setProperty('position', 'fixed', 'important')
+    popover.style.setProperty('width', width + 'px', 'important')
+    popover.style.setProperty('left', left + 'px', 'important')
+    popover.style.setProperty('top', top + 'px', 'important')
+  }
+
   function handleBabyCreateBirthTrigger(event, skipRecentPointer) {
     var trigger = event.target && event.target.closest && event.target.closest('[data-baby-create-birth-trigger]')
     if (!trigger) return false
@@ -4858,7 +4896,7 @@
       if (list) list.hidden = true
       gender.classList.remove('open')
     }
-    var popover = dialog.querySelector('.calendar-popover')
+    var popover = document.querySelector('.baby-common-date-popover') || dialog.querySelector('.calendar-popover')
     if (!popover) return
     if (event.target && event.target.closest && event.target.closest('.calendar-popover, [data-baby-create-birth-trigger]')) return
     popover.remove()
@@ -6575,7 +6613,7 @@
       '<div class="baby-api-form-grid">',
       '<label><span>\uAE30\uB85D\uC885\uB958</span><input name="recordType" type="hidden" required value="\uC218\uC720" /><div class="custom-select baby-api-record-type-select"><button type="button" class="custom-select-trigger" data-baby-record-type-trigger><span>\uC218\uC720</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="custom-select-list" hidden><button type="button" data-baby-record-type="\uC218\uC720">\uC218\uC720</button><button type="button" data-baby-record-type="\uB300\uBCC0">\uB300\uBCC0</button><button type="button" data-baby-record-type="\uC18C\uBCC0">\uC18C\uBCC0</button><button type="button" data-baby-record-type="\uC218\uBA74">\uC218\uBA74</button><button type="button" data-baby-record-type="\uC131\uC7A5">\uC131\uC7A5</button><button type="button" data-baby-record-type="\uBCD1\uC6D0">\uBCD1\uC6D0</button><button type="button" data-baby-record-type="\uBA54\uBAA8">\uBA54\uBAA8</button></div></div></label>',
       '<label class="date-picker-field baby-api-date-field"><span>\uB0A0\uC9DC</span><input name="recordDate" type="hidden" required value="' + todayText() + '" /><button type="button" class="date-picker-trigger baby-api-date-button" data-baby-api-record-date-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 2v4M16 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label>',
-      '<label><span>\uC2DC\uAC04</span><input name="recordTime" type="time" value="' + currentTimeText() + '" /></label>',
+      '<label><span>\uC2DC\uAC04</span><input name="recordTime" type="text" inputmode="numeric" autocomplete="off" maxlength="5" value="' + currentTimeText() + '" /></label>',
       '<label><span>\uC218\uC720\uB7C9(ml)</span><input name="amountMl" type="text" inputmode="numeric" /></label>',
       '<label><span>\uD0A4(cm)</span><input name="heightCm" type="text" inputmode="decimal" autocomplete="off" /></label>',
       '<label><span>\uBAB8\uBB34\uAC8C(kg)</span><input name="weightKg" type="text" inputmode="decimal" autocomplete="off" /></label>',
@@ -7930,8 +7968,38 @@
     scope.querySelectorAll('input[type="time"], input[name="recordTime"], [data-field="travel-record-time"]').forEach(function (input) {
       if (!input || input.disabled) return
       if (!input.value || input.value === '00:00' || input.value === '14:00') setInputValue(input, now)
+      if (input.matches && input.matches('input[name="recordTime"]')) setInputValue(input, formatClockText(input.value, now))
     })
   }
+
+  function formatClockTyping(value) {
+    var digits = String(value || '').replace(/\D/g, '').slice(0, 4)
+    if (digits.length <= 2) return digits
+    return digits.slice(0, 2) + ':' + digits.slice(2)
+  }
+
+  function formatClockText(value, fallback) {
+    var digits = String(value || '').replace(/\D/g, '').slice(0, 4)
+    if (!digits) return fallback || ''
+    if (digits.length <= 2) digits += '00'
+    if (digits.length === 3) digits = '0' + digits
+    var hour = Math.min(23, Number(digits.slice(0, 2)) || 0)
+    var minute = Math.min(59, Number(digits.slice(2, 4)) || 0)
+    return String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0')
+  }
+
+  document.addEventListener('input', function (event) {
+    var input = event.target && event.target.closest && event.target.closest('input[name="recordTime"]')
+    if (!input) return
+    var next = formatClockTyping(input.value)
+    if (input.value !== next) setInputValue(input, next)
+  }, true)
+
+  document.addEventListener('blur', function (event) {
+    var input = event.target && event.target.closest && event.target.closest('input[name="recordTime"]')
+    if (!input) return
+    setInputValue(input, formatClockText(input.value, currentTimeText()))
+  }, true)
 
   function clearSampleFieldValues(root) {
     if (!root) return
@@ -9910,7 +9978,7 @@
         return postJson('/babies/' + encodeURIComponent(babyId) + '/records', {
           recordType: type,
           recordDate: date,
-          recordTime: getFieldValue(form, '[name="recordTime"]') || null,
+          recordTime: formatClockText(getFieldValue(form, '[name="recordTime"]'), currentTimeText()) || null,
           amountMl: optionalInteger(getFieldValue(form, '[name="amountMl"]')),
           heightCm: optionalDecimal(getFieldValue(form, '[name="heightCm"]')),
           weightKg: optionalDecimal(getFieldValue(form, '[name="weightKg"]')),
