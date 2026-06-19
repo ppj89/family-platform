@@ -7815,6 +7815,8 @@
     window.__familyEditingLedgerId = editId
     var ledgerShell = form.closest('.ledger-form, .entry-panel, aside, section, article')
     if (ledgerShell) ledgerShell.dataset.apiLedgerEditId = editId
+    var ledgerInner = form.classList && form.classList.contains('ledger-form') ? form : form.querySelector('.ledger-form')
+    if (ledgerInner) ledgerInner.dataset.apiLedgerEditId = editId
     setInputValueByLabel(form, '\uB0B4\uC5ED', item.title || '')
       || setInputValueByLabel(form, '\uC81C\uBAA9', item.title || '')
       || setInputValueByLabel(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', item.title || '')
@@ -7943,15 +7945,27 @@
 
   function getLedgerEditId(form) {
     if (!form) return ''
-    var shell = form.closest && form.closest('.ledger-form, .entry-panel, aside, section, article')
-    return form.dataset.apiLedgerEditId || (shell && shell.dataset.apiLedgerEditId) || window.__familyEditingLedgerId || ''
+    var node = form
+    while (node && node !== document) {
+      if (node.dataset && node.dataset.apiLedgerEditId) return node.dataset.apiLedgerEditId
+      node = node.parentElement
+    }
+    var inner = form.querySelector && form.querySelector('.ledger-form[data-api-ledger-edit-id]')
+    return (inner && inner.dataset.apiLedgerEditId) || window.__familyEditingLedgerId || ''
   }
 
   function clearLedgerEditMode(form) {
     if (!form) return
-    delete form.dataset.apiLedgerEditId
-    var shell = form.closest && form.closest('.ledger-form, .entry-panel, aside, section, article')
-    if (shell) delete shell.dataset.apiLedgerEditId
+    var node = form
+    while (node && node !== document) {
+      if (node.dataset) delete node.dataset.apiLedgerEditId
+      node = node.parentElement
+    }
+    if (form.querySelectorAll) {
+      form.querySelectorAll('[data-api-ledger-edit-id]').forEach(function (item) {
+        delete item.dataset.apiLedgerEditId
+      })
+    }
     window.__familyEditingLedgerId = ''
     var submit = form.querySelector('button[type="submit"], .submit-action')
     if (submit) {
