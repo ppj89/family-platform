@@ -8494,10 +8494,27 @@
     document.querySelectorAll('.diary-form, .entry-panel, form').forEach(function (form) {
       var text = getCleanText(form)
       if (text.indexOf('\uC81C\uBAA9') < 0 && text.indexOf('\uB0B4\uC6A9') < 0) return
+      bindVisibleDiarySubmit(form)
       removePlaceholdersIn(form, ['\uC81C\uBAA9', '\uCD5C\uC800 \uC628\uB3C4', '\uCD5C\uACE0 \uC628\uB3C4', '\uB0B4\uC6A9'])
       setDateFieldToToday(form, ['\uB0A0\uC9DC'])
     })
     removeFeaturePlaceholders()
+  }
+
+  function bindVisibleDiarySubmit(form) {
+    if (!form || form.dataset.diaryDirectSubmitBound === 'true') return
+    if (!form.matches || !form.matches('.diary-form')) return
+    form.dataset.diaryDirectSubmitBound = 'true'
+    var submit = form.querySelector('button[type="submit"], .submit-action')
+    var submitDirectly = function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      var panel = form.closest('aside, section, article, .panel, .entry-panel') || form
+      submitExistingDiaryPanel(panel, submit)
+    }
+    form.addEventListener('submit', submitDirectly, true)
+    if (submit) submit.addEventListener('click', submitDirectly, true)
   }
 
   function normalizeBabyEntryForms() {
