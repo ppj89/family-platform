@@ -9775,14 +9775,20 @@ select {
 
 .baby-growth-api-form {
   display: grid !important;
-  grid-template-columns: minmax(130px, 1fr) minmax(0, 1fr) minmax(0, 1fr) auto !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(88px, auto) !important;
   align-items: end !important;
   gap: 10px !important;
+}
+
+.baby-growth-api-form .baby-growth-date-field {
+  grid-column: 1 / -1 !important;
+  width: min(180px, 100%) !important;
 }
 
 .baby-growth-api-form label {
   display: grid !important;
   gap: 7px !important;
+  min-width: 0 !important;
 }
 
 .baby-growth-api-form label > span {
@@ -9792,6 +9798,8 @@ select {
 }
 
 .baby-growth-api-form input {
+  width: 100% !important;
+  min-width: 0 !important;
   min-height: 46px !important;
   border: 0 !important;
   border-radius: 14px !important;
@@ -9802,6 +9810,7 @@ select {
   font-size: 14px !important;
   font-weight: 800 !important;
   box-shadow: inset 0 0 0 1px #dfe4ea !important;
+  box-sizing: border-box !important;
   outline: none !important;
 }
 
@@ -9813,6 +9822,8 @@ select {
 }
 
 .baby-growth-api-form .save-button {
+  width: 100% !important;
+  min-width: 88px !important;
   min-height: 46px !important;
   border: 0 !important;
   border-radius: 14px !important;
@@ -9964,6 +9975,10 @@ select {
   .baby-growth-api-form,
   .baby-growth-history-row {
     grid-template-columns: 1fr !important;
+  }
+
+  .baby-growth-api-form .baby-growth-date-field {
+    width: 100% !important;
   }
 }
 

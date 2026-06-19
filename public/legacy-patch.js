@@ -6571,24 +6571,34 @@
     var trigger = scope && scope.querySelector('[data-baby-growth-date-trigger]')
     if (!input || !trigger || trigger.dataset.babyGrowthDateReady === 'true') return
     trigger.dataset.babyGrowthDateReady = 'true'
-    trigger.addEventListener('click', function (event) {
+  }
+
+  function handleBabyGrowthDateTrigger(event, skipRecentPointer) {
+    var trigger = event.target && event.target.closest && event.target.closest('[data-baby-growth-date-trigger]')
+    if (!trigger) return false
+    if (skipRecentPointer && trigger.dataset.babyGrowthPointerAt && Date.now() - Number(trigger.dataset.babyGrowthPointerAt) < 600) {
       event.preventDefault()
       event.stopPropagation()
       if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-      toggleCommonDatePopover(input, trigger)
-    })
-  }
-
-  document.addEventListener('click', function (event) {
-    var trigger = event.target && event.target.closest && event.target.closest('[data-baby-growth-date-trigger]')
-    if (!trigger) return
+      return true
+    }
     var form = trigger.closest('.baby-growth-api-form')
     var input = form && form.querySelector('[name="recordDate"]')
-    if (!input) return
+    if (!input) return false
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    if (event.type === 'pointerdown') trigger.dataset.babyGrowthPointerAt = String(Date.now())
     toggleCommonDatePopover(input, trigger)
+    return true
+  }
+
+  document.addEventListener('pointerdown', function (event) {
+    handleBabyGrowthDateTrigger(event, false)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    handleBabyGrowthDateTrigger(event, true)
   }, true)
 
   function enhanceBabyEditMediaHelper() {
