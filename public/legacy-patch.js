@@ -9690,6 +9690,8 @@
     removeHardcodedDemoData()
     renderHomeMetricsFromApi(force)
     renderLedgerPageFromApi(force)
+    renderTravelPageFromApi(force)
+    renderDiaryPageFromApi(force)
     renderBabyApiCards(force)
     renderRestaurantPageFromApi()
     if (!getStoredAuthToken()) return
