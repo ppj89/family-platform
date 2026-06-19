@@ -5355,9 +5355,55 @@
       }, delay)
     })
     window.setTimeout(function () {
-      if (getCleanText(document.querySelector('.topbar h1, h1')) === label) clearPendingNavLabel(label)
+      if (getCleanText(document.querySelector('.topbar h1, h1')) === label) {
+        clearPendingNavLabel(label)
+      } else if (label === '\uC721\uC544') {
+        openRecoveredBabyPage()
+        clearPendingNavLabel(label)
+      }
       delete document.documentElement.dataset.pendingNavApplying
     }, 3200)
+  }
+
+  function openRecoveredBabyPage() {
+    if (document.querySelector('.auth-card') || !document.querySelector('.app-shell')) return
+    pausePatchObserver()
+    clearCustomPatchPageNow()
+    delete document.documentElement.dataset.patchPage
+    setNavActive('\uC721\uC544')
+
+    var eyebrow = document.querySelector('.topbar .eyebrow')
+    var title = document.querySelector('.topbar h1')
+    if (eyebrow) eyebrow.textContent = '\uC218\uC720, \uBC30\uBCC0, \uC131\uC7A5 \uAE30\uB85D'
+    if (title) title.textContent = '\uC721\uC544'
+
+    var workspace = document.querySelector('.workspace') || document.querySelector('main')
+    if (!workspace) return
+    var content = document.querySelector('.content-grid')
+    if (!content) {
+      content = document.createElement('div')
+      content.className = 'content-grid'
+      workspace.appendChild(content)
+    }
+    content.className = 'content-grid baby-recovered-grid'
+    delete content.dataset.communityReady
+    content.innerHTML = [
+      '<section class="panel wide baby-main-panel">',
+      '<header class="panel-header"><h2>\uC721\uC544 \uAE30\uB85D</h2></header>',
+      '<div class="baby-list-grid"></div>',
+      '</section>'
+    ].join('')
+
+    renderBabyApiCards(true)
+    ensureBabyMainActions()
+    normalizeBabyCreateDialog()
+    window.setTimeout(function () {
+      renderBabyApiCards(true)
+      ensureBabyMainActions()
+      enhanceBabyProfileEdit()
+      cleanupBabyDetailButtons()
+      resumePatchObserver()
+    }, 250)
   }
 
   var communityState = {
@@ -5471,6 +5517,10 @@
         if (document.documentElement.dataset.patchPage) return
         var currentTitle = getCleanText(document.querySelector('.topbar h1, h1'))
         if (currentTitle === label) return
+        if (label === '\uC721\uC544') {
+          openRecoveredBabyPage()
+          return
+        }
         try {
           var reloadState = JSON.parse(sessionStorage.getItem('family-platform-nav-reload-state') || '{}')
           if (reloadState.label === label && Date.now() - Number(reloadState.at || 0) < 10000) return
