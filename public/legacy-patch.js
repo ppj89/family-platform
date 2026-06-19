@@ -5414,8 +5414,17 @@
     var wasCommunity = document.documentElement.dataset.patchPage === 'community'
     var wasFamilyGroup = document.documentElement.dataset.patchPage === 'family-group'
     if (wasCommunity || wasFamilyGroup) {
+      var label = getCleanText(nav)
       clearCustomPatchPageNow()
-      window.setTimeout(cleanupPatchRootsForCurrentMenu, 160)
+      window.setTimeout(function () {
+        cleanupPatchRootsForCurrentMenu()
+        if (!label || document.querySelector('.auth-card')) return
+        if (document.documentElement.dataset.patchPage) return
+        var currentTitle = getCleanText(document.querySelector('.topbar h1, h1'))
+        if (currentTitle === label) return
+        var target = findNavButton(label)
+        if (target) target.click()
+      }, 420)
     }
   }, true)
 
