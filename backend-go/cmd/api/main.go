@@ -311,6 +311,10 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("PUT /api/travel-records/{recordId}", a.requireAuth(a.updateTravelRecord))
 	mux.HandleFunc("DELETE /api/travel-records/{recordId}", a.requireAuth(a.deleteTravelRecord))
 	mux.HandleFunc("GET /api/places/search", a.requireAuth(a.searchPlaces))
+	mux.HandleFunc("GET /api/restaurants", a.requireAuth(a.listRestaurants))
+	mux.HandleFunc("POST /api/restaurants", a.requireAuth(a.createRestaurant))
+	mux.HandleFunc("PUT /api/restaurants/{restaurantId}", a.requireAuth(a.updateRestaurant))
+	mux.HandleFunc("DELETE /api/restaurants/{restaurantId}", a.requireAuth(a.deleteRestaurant))
 	mux.HandleFunc("GET /api/babies", a.requireAuth(a.listBabies))
 	mux.HandleFunc("POST /api/babies", a.requireAuth(a.createBaby))
 	mux.HandleFunc("PUT /api/babies/{babyId}", a.requireAuth(a.updateBaby))
@@ -2262,6 +2266,119 @@ func (a *app) deleteTravelRecord(w http.ResponseWriter, r *http.Request, user au
 	w.WriteHeader(http.StatusNoContent)
 }
 
+type restaurantItem struct {
+	ID        int64    `json:"id"`
+	FamilyID  int64    `json:"familyId"`
+	Name      string   `json:"name"`
+	Menu      *string  `json:"menu,omitempty"`
+	Price     *float64 `json:"price,omitempty"`
+	Rating    *float64 `json:"rating,omitempty"`
+	VisitDate string   `json:"visitDate"`
+	Location  *string  `json:"location,omitempty"`
+	Address   *string  `json:"address,omitempty"`
+	Latitude  *float64 `json:"latitude,omitempty"`
+	Longitude *float64 `json:"longitude,omitempty"`
+	Scope     *string  `json:"scope,omitempty"`
+	Memo      *string  `json:"memo,omitempty"`
+	MediaURLs []string `json:"mediaUrls"`
+	CreatedAt string   `json:"createdAt"`
+}
+
+type restaurantPayload struct {
+	Name      string   `json:"name"`
+	Menu      *string  `json:"menu"`
+	Price     *float64 `json:"price"`
+	Rating    *float64 `json:"rating"`
+	VisitDate string   `json:"visitDate"`
+	Location  *string  `json:"location"`
+	Address   *string  `json:"address"`
+	Latitude  *float64 `json:"latitude"`
+	Longitude *float64 `json:"longitude"`
+	Scope     *string  `json:"scope"`
+	Memo      *string  `json:"memo"`
+	MediaURLs []string `json:"mediaUrls"`
+}
+
+func (a *app) listRestaurants(w http.ResponseWriter, r *http.Request, user authUser) {
+	familyID := queryFamilyID(r)
+	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
+		return
+	}
+	rows, err := a.db.Query(r.Context(), `
+		select id, family_id, name, menu, price, rating, visit_date, location, address, latitude, longitude, scope, memo, created_at
+		from restaurants
+		where deleted_at is null
+		  and (
+		    created_by_user_id = $2
+		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
+		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
+		  )
+		order by visit_date desc, created_at desc
+	`, familyID, user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	defer rows.Close()
+	items, ok := a.scanRestaurants(w, r.Context(), rows)
+	if !ok {
+		return
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
+func (a *app) createRestaurant(w http.ResponseWriter, r *http.Request, user authUser) {
+	familyID := queryFamilyID(r)
+	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
+		return
+	}
+	req, ok := readRestaurantPayload(w, r)
+	if !ok {
+		return
+	}
+	item, ok := a.saveRestaurant(w, r, 0, familyID, req, user.ID)
+	if !ok {
+		return
+	}
+	a.recordDataChange(r.Context(), "restaurant", item.ID, familyID, user.ID, "create", item)
+	writeJSON(w, http.StatusCreated, item)
+}
+
+func (a *app) updateRestaurant(w http.ResponseWriter, r *http.Request, user authUser) {
+	restaurantID, ok := pathID(w, r, "restaurantId")
+	if !ok {
+		return
+	}
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from restaurants where id = $1 and deleted_at is null", restaurantID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
+		return
+	}
+	req, ok := readRestaurantPayload(w, r)
+	if !ok {
+		return
+	}
+	item, ok := a.saveRestaurant(w, r, restaurantID, familyID, req, user.ID)
+	if !ok {
+		return
+	}
+	a.recordDataChange(r.Context(), "restaurant", item.ID, familyID, user.ID, "update", item)
+	writeJSON(w, http.StatusOK, item)
+}
+
+func (a *app) deleteRestaurant(w http.ResponseWriter, r *http.Request, user authUser) {
+	restaurantID, ok := pathID(w, r, "restaurantId")
+	if !ok {
+		return
+	}
+	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from restaurants where id = $1 and deleted_at is null", restaurantID)
+	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
+		return
+	}
+	_, _ = a.db.Exec(r.Context(), "update restaurants set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", restaurantID)
+	a.recordDataChange(r.Context(), "restaurant", restaurantID, familyID, user.ID, "delete", map[string]any{"id": restaurantID})
+	w.WriteHeader(http.StatusNoContent)
+}
+
 type babyProfileItem struct {
 	ID             int64    `json:"id"`
 	FamilyID       int64    `json:"familyId"`
@@ -3612,6 +3729,34 @@ alter table if exists travel_records add column if not exists deleted_at timesta
 alter table if exists travel_records add column if not exists created_by_user_id bigint;
 create table if not exists travel_record_media_urls (
   travel_record_id bigint not null,
+  media_urls varchar(2048)
+);
+create table if not exists restaurants (
+  id bigint generated by default as identity primary key,
+  family_id bigint,
+  name varchar(255),
+  menu varchar(255),
+  price numeric(38,2),
+  rating numeric(4,2),
+  visit_date date,
+  location varchar(255),
+  address varchar(255),
+  latitude double precision,
+  longitude double precision,
+  scope varchar(255),
+  memo text,
+  created_at timestamp with time zone,
+  updated_at timestamp with time zone,
+  deleted_at timestamp with time zone,
+  created_by_user_id bigint
+);
+alter table if exists restaurants add column if not exists updated_at timestamp with time zone;
+alter table if exists restaurants add column if not exists deleted_at timestamp with time zone;
+alter table if exists restaurants add column if not exists created_by_user_id bigint;
+alter table if exists restaurants add column if not exists address varchar(255);
+alter table if exists restaurants add column if not exists scope varchar(255);
+create table if not exists restaurant_media_urls (
+  restaurant_id bigint not null,
   media_urls varchar(2048)
 );
 create table if not exists common_code_groups (
@@ -5078,6 +5223,108 @@ func nullFloat(value sql.NullFloat64) *float64 {
 		return nil
 	}
 	return &value.Float64
+}
+
+func readRestaurantPayload(w http.ResponseWriter, r *http.Request) (restaurantPayload, bool) {
+	var req restaurantPayload
+	if !readJSON(w, r, &req) {
+		return req, false
+	}
+	req.Name = strings.TrimSpace(req.Name)
+	if req.Name == "" || !validDate(req.VisitDate) {
+		writeError(w, http.StatusBadRequest, "name and visitDate are required")
+		return req, false
+	}
+	return req, true
+}
+
+func (a *app) saveRestaurant(w http.ResponseWriter, r *http.Request, id int64, familyID int64, req restaurantPayload, userID int64) (restaurantItem, bool) {
+	mediaURLs, ok := a.validateMediaReferences(w, req.MediaURLs)
+	if !ok {
+		return restaurantItem{}, false
+	}
+	tx, err := a.db.Begin(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database transaction failed")
+		return restaurantItem{}, false
+	}
+	defer tx.Rollback(r.Context())
+
+	var item restaurantItem
+	var menu, location, address, scope, memo sql.NullString
+	var price, rating, latitude, longitude sql.NullFloat64
+	var visitDate, createdAt time.Time
+	if id == 0 {
+		err = tx.QueryRow(r.Context(), `
+			insert into restaurants (family_id, name, menu, price, rating, visit_date, location, address, latitude, longitude, scope, memo, created_at, updated_at, created_by_user_id)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now(),now(),$13)
+			returning id, family_id, name, menu, price, rating, visit_date, location, address, latitude, longitude, scope, memo, created_at
+		`, familyID, req.Name, req.Menu, req.Price, req.Rating, req.VisitDate, req.Location, req.Address, req.Latitude, req.Longitude, req.Scope, req.Memo, userID).
+			Scan(&item.ID, &item.FamilyID, &item.Name, &menu, &price, &rating, &visitDate, &location, &address, &latitude, &longitude, &scope, &memo, &createdAt)
+	} else {
+		err = tx.QueryRow(r.Context(), `
+			update restaurants set name=$1, menu=$2, price=$3, rating=$4, visit_date=$5, location=$6, address=$7, latitude=$8, longitude=$9, scope=$10, memo=$11, updated_at=now()
+			where id=$12 and family_id=$13 and deleted_at is null
+			returning id, family_id, name, menu, price, rating, visit_date, location, address, latitude, longitude, scope, memo, created_at
+		`, req.Name, req.Menu, req.Price, req.Rating, req.VisitDate, req.Location, req.Address, req.Latitude, req.Longitude, req.Scope, req.Memo, id, familyID).
+			Scan(&item.ID, &item.FamilyID, &item.Name, &menu, &price, &rating, &visitDate, &location, &address, &latitude, &longitude, &scope, &memo, &createdAt)
+	}
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "restaurant save failed")
+		return item, false
+	}
+	_, _ = tx.Exec(r.Context(), "delete from restaurant_media_urls where restaurant_id = $1", item.ID)
+	for _, mediaURL := range mediaURLs {
+		if _, err := tx.Exec(r.Context(), "insert into restaurant_media_urls (restaurant_id, media_urls) values ($1,$2)", item.ID, mediaURL); err != nil {
+			writeError(w, http.StatusInternalServerError, "media save failed")
+			return item, false
+		}
+	}
+	if err := tx.Commit(r.Context()); err != nil {
+		writeError(w, http.StatusInternalServerError, "database commit failed")
+		return item, false
+	}
+	item.Menu = nullString(menu)
+	item.Price = nullFloat(price)
+	item.Rating = nullFloat(rating)
+	item.VisitDate = formatDate(visitDate)
+	item.Location = nullString(location)
+	item.Address = nullString(address)
+	item.Latitude = nullFloat(latitude)
+	item.Longitude = nullFloat(longitude)
+	item.Scope = nullString(scope)
+	item.Memo = nullString(memo)
+	item.MediaURLs = mediaURLs
+	item.CreatedAt = formatTime(createdAt)
+	return item, true
+}
+
+func (a *app) scanRestaurants(w http.ResponseWriter, ctx context.Context, rows pgx.Rows) ([]restaurantItem, bool) {
+	items := []restaurantItem{}
+	for rows.Next() {
+		var item restaurantItem
+		var menu, location, address, scope, memo sql.NullString
+		var price, rating, latitude, longitude sql.NullFloat64
+		var visitDate, createdAt time.Time
+		if err := rows.Scan(&item.ID, &item.FamilyID, &item.Name, &menu, &price, &rating, &visitDate, &location, &address, &latitude, &longitude, &scope, &memo, &createdAt); err != nil {
+			writeError(w, http.StatusInternalServerError, "database scan failed")
+			return nil, false
+		}
+		item.Menu = nullString(menu)
+		item.Price = nullFloat(price)
+		item.Rating = nullFloat(rating)
+		item.VisitDate = formatDate(visitDate)
+		item.Location = nullString(location)
+		item.Address = nullString(address)
+		item.Latitude = nullFloat(latitude)
+		item.Longitude = nullFloat(longitude)
+		item.Scope = nullString(scope)
+		item.Memo = nullString(memo)
+		item.MediaURLs = a.mediaURLs(ctx, "restaurant_media_urls", "restaurant_id", item.ID)
+		item.CreatedAt = formatTime(createdAt)
+		items = append(items, item)
+	}
+	return items, true
 }
 
 func envInt(key string, fallback int) int {
