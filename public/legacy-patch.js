@@ -36,26 +36,26 @@
   var MEDIA_MAX_VIDEO_BYTES = 30 * 1024 * 1024
   var MEDIA_MAX_TOTAL_BYTES = 40 * 1024 * 1024
   var HOLIDAY_DATES = {
-    '2026-01-01': true,
-    '2026-02-16': true,
-    '2026-02-17': true,
-    '2026-02-18': true,
-    '2026-03-01': true,
-    '2026-03-02': true,
-    '2026-05-05': true,
-    '2026-05-24': true,
-    '2026-05-25': true,
-    '2026-06-03': true,
-    '2026-06-06': true,
-    '2026-08-15': true,
-    '2026-08-17': true,
-    '2026-09-24': true,
-    '2026-09-25': true,
-    '2026-09-26': true,
-    '2026-10-03': true,
-    '2026-10-05': true,
-    '2026-10-09': true,
-    '2026-12-25': true
+    '2026-01-01': '\uC2E0\uC815',
+    '2026-02-16': '\uC124\uC5F0\uD734',
+    '2026-02-17': '\uC124\uB0A0',
+    '2026-02-18': '\uC124\uC5F0\uD734',
+    '2026-03-01': '3\u00B71\uC808',
+    '2026-03-02': '\uB300\uCCB4\uACF5\uD734\uC77C',
+    '2026-05-05': '\uC5B4\uB9B0\uC774\uB0A0',
+    '2026-05-24': '\uBD80\uCC98\uB2D8\uC624\uC2E0\uB0A0',
+    '2026-05-25': '\uB300\uCCB4\uACF5\uD734\uC77C',
+    '2026-06-03': '\uC9C0\uBC29\uC120\uAC70',
+    '2026-06-06': '\uD604\uCDA9\uC77C',
+    '2026-08-15': '\uAD11\uBCF5\uC808',
+    '2026-08-17': '\uB300\uCCB4\uACF5\uD734\uC77C',
+    '2026-09-24': '\uCD94\uC11D\uC5F0\uD734',
+    '2026-09-25': '\uCD94\uC11D',
+    '2026-09-26': '\uCD94\uC11D\uC5F0\uD734',
+    '2026-10-03': '\uAC1C\uCC9C\uC808',
+    '2026-10-05': '\uB300\uCCB4\uACF5\uD734\uC77C',
+    '2026-10-09': '\uD55C\uAE00\uB0A0',
+    '2026-12-25': '\uC131\uD0C4\uC808'
   }
 
   function parseDate(value) {
@@ -78,6 +78,31 @@
 
   function formatDotDate(date) {
     return formatDate(date).replace(/-/g, '.')
+  }
+
+  function getHolidayName(date) {
+    var key = typeof date === 'string' ? date : formatDate(date)
+    return HOLIDAY_DATES[key] || ''
+  }
+
+  function syncHolidayNameLabel(card, dateKey) {
+    if (!card) return
+    var name = getHolidayName(dateKey)
+    var label = card.querySelector('.holiday-name')
+    if (!name) {
+      if (label) label.remove()
+      card.removeAttribute('data-holiday-name')
+      return
+    }
+    if (!label) {
+      label = document.createElement('span')
+      label.className = 'holiday-name'
+      var anchor = card.querySelector('.day-chip-stack, .fc-day-schedules')
+      if (anchor && anchor.parentElement === card) card.insertBefore(label, anchor)
+      else card.appendChild(label)
+    }
+    label.textContent = name
+    card.dataset.holidayName = name
   }
 
   function addDays(date, amount) {
@@ -2045,8 +2070,10 @@
       var date = inferDateForCalendarCard(card, day)
       if (!date) return
       var dateKey = formatDate(date)
-      card.classList.toggle('holiday', !!HOLIDAY_DATES[dateKey] || date.getDay() === 0)
+      var holidayName = getHolidayName(dateKey)
+      card.classList.toggle('holiday', !!holidayName || date.getDay() === 0)
       card.classList.toggle('saturday', date.getDay() === 6)
+      syncHolidayNameLabel(card, dateKey)
     })
     document.querySelectorAll('.fc-day, .agenda-day-column').forEach(function (card) {
       var title = card.querySelector('strong')
@@ -2055,8 +2082,10 @@
       var focused = getFocusedDate()
       var date = nums.length >= 2 ? new Date(focused.getFullYear(), nums[0] - 1, nums[1]) : new Date(focused.getFullYear(), focused.getMonth(), nums[0])
       var dateKey = formatDate(date)
-      card.classList.toggle('holiday', !!HOLIDAY_DATES[dateKey] || date.getDay() === 0)
+      var holidayName = getHolidayName(dateKey)
+      card.classList.toggle('holiday', !!holidayName || date.getDay() === 0)
       card.classList.toggle('saturday', date.getDay() === 6)
+      syncHolidayNameLabel(card, dateKey)
     })
   }
 
