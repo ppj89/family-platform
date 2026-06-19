@@ -8827,6 +8827,8 @@
           deleteApiTravelRecord(detail, button.dataset.apiTravelRecordDelete)
         })
       })
+    }).catch(function (error) {
+      list.innerHTML = '<p class="empty-note">' + escapeHtml(apiActionErrorMessage(error, '\uC5EC\uD589 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</p>'
     })
   }
 
@@ -8960,9 +8962,11 @@
   function fetchTripRecords(tripId) {
     if (!tripId || !getStoredAuthToken()) return Promise.resolve([])
     return apiRequest('/trips/' + encodeURIComponent(tripId) + '/records').then(function (items) {
+      window.__familyLastTripRecordsError = ''
       return Array.isArray(items) ? items : []
-    }).catch(function () {
-      return []
+    }).catch(function (error) {
+      window.__familyLastTripRecordsError = apiActionErrorMessage(error, '\uC5EC\uD589 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
+      throw error
     })
   }
 
