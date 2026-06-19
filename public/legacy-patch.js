@@ -10822,7 +10822,7 @@
   }, true)
 
   document.addEventListener('submit', function (event) {
-    var ledgerForm = event.target && event.target.closest && event.target.closest('.ledger-form')
+    var ledgerForm = event.target && event.target.closest && event.target.closest('.ledger-form, .entry-panel')
     if (!ledgerForm) return
     if (!isLedgerEntryForm(ledgerForm)) return
     if (getLedgerEditId(ledgerForm)) {
@@ -10861,9 +10861,9 @@
   }, true)
 
   document.addEventListener('click', function (event) {
-    var button = event.target && event.target.closest && event.target.closest('.ledger-form button[type="submit"], .ledger-form .submit-action')
+    var button = event.target && event.target.closest && event.target.closest('.ledger-form button[type="submit"], .ledger-form .submit-action, .entry-panel button[type="submit"], .entry-panel .submit-action')
     if (!button) return
-    var form = button.closest('.ledger-form')
+    var form = button.closest('.ledger-form, .entry-panel')
     if (!form || !isLedgerEntryForm(form)) return
     event.preventDefault()
     event.stopPropagation()
