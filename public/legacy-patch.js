@@ -8895,6 +8895,9 @@
       window.setTimeout(function () {
         markTravelRecordEditFromButton(edit)
       }, 40)
+      window.setTimeout(function () {
+        markTravelRecordEditFromButton(edit)
+      }, 220)
     }, true)
   }
 
