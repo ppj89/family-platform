@@ -10332,6 +10332,22 @@
     if (diaryForm) syncDiaryForm(diaryForm)
   }, true)
 
+  function handleDiaryDirectSubmitEvent(event) {
+    var button = event.target && event.target.closest && event.target.closest('form.diary-form button[type="submit"], form.diary-form .submit-action')
+    if (!button || getCleanText(button) !== '\uC77C\uAE30 \uCD94\uAC00') return
+    var form = button.closest('form.diary-form')
+    var panel = form && (form.closest('aside, section, article, .panel, .entry-panel') || form)
+    if (!panel || getCleanText(panel.querySelector('h2')) !== '\uC77C\uAE30 \uCD94\uAC00') return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitExistingDiaryPanel(panel, button)
+  }
+
+  document.addEventListener('pointerdown', handleDiaryDirectSubmitEvent, true)
+  document.addEventListener('mousedown', handleDiaryDirectSubmitEvent, true)
+  document.addEventListener('click', handleDiaryDirectSubmitEvent, true)
+
   document.addEventListener('click', function (event) {
     var button = event.target && event.target.closest && event.target.closest('button')
     if (!button || getCleanText(button) !== '\uC77C\uAE30 \uCD94\uAC00') return
