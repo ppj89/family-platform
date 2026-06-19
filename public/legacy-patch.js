@@ -5015,7 +5015,7 @@
     createButton.dataset.diaryOpenComposer = 'true'
     createButton.textContent = '\uC77C\uAE30 \uCD94\uAC00'
     createButton.addEventListener('click', function () {
-      var form = document.querySelector('.entry-panel .diary-form') || ensureDiaryApiComposer()
+      var form = ensureDiaryApiComposer()
       var target = form && (form.closest('form, .panel, aside') || form)
       if (!target) {
         showPatchToast('\uC77C\uAE30 \uC785\uB825 \uC601\uC5ED\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
@@ -5033,7 +5033,7 @@
   function ensureDiaryApiComposer() {
     if (getCleanText(document.querySelector('.topbar h1')).indexOf('\uC77C\uAE30') < 0) return null
     var entryForm = document.querySelector('.entry-panel .diary-form')
-    if (entryForm) {
+    if (entryForm && entryForm.getClientRects && entryForm.getClientRects().length) {
       document.querySelectorAll('.diary-api-composer').forEach(function (panel) {
         panel.remove()
       })
