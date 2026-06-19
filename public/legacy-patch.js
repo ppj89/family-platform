@@ -8516,12 +8516,24 @@
       form.dataset.diaryDirectSubmitBound = 'true'
       form.addEventListener('submit', submitDirectly, true)
     }
-    if (submit && submit.dataset.diaryDirectClickBound !== 'true') {
-      submit.dataset.diaryDirectClickBound = 'true'
-      submit.addEventListener('pointerdown', submitDirectly, true)
-      submit.addEventListener('mousedown', submitDirectly, true)
-      submit.addEventListener('click', submitDirectly, true)
-      submit.onclick = submitDirectly
+    if (submit) {
+      var directButton = form.querySelector('[data-diary-direct-submit-button="true"]')
+      if (!directButton) {
+        directButton = document.createElement('button')
+        directButton.type = 'button'
+        directButton.className = submit.className || 'submit-action'
+        directButton.textContent = submit.textContent || '\uC77C\uAE30 \uCD94\uAC00'
+        directButton.dataset.diaryDirectSubmitButton = 'true'
+        submit.style.display = 'none'
+        submit.parentNode.insertBefore(directButton, submit.nextSibling)
+      }
+      if (directButton.dataset.diaryDirectClickBound !== 'true') {
+        directButton.dataset.diaryDirectClickBound = 'true'
+        directButton.addEventListener('pointerdown', submitDirectly, true)
+        directButton.addEventListener('mousedown', submitDirectly, true)
+        directButton.addEventListener('click', submitDirectly, true)
+        directButton.onclick = submitDirectly
+      }
     }
   }
 
