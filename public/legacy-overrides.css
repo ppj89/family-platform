@@ -12483,3 +12483,29 @@ body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-
 .baby-api-record-form .custom-select-trigger span {
   font-weight: 500 !important;
 }
+
+.baby-growth-api-history .baby-growth-chart {
+  width: min(100%, 760px) !important;
+  max-width: 760px !important;
+  gap: 10px !important;
+}
+
+.baby-growth-api-history .baby-growth-chart svg {
+  width: 100% !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: 300px !important;
+}
+
+@media (min-width: 1280px) {
+  .baby-growth-api-history .baby-growth-chart {
+    width: min(72%, 760px) !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .baby-growth-api-history .baby-growth-chart {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}

@@ -9025,12 +9025,12 @@
       min = Math.max(0, min - 1)
       max += 1
     }
-    var width = 360
-    var height = 220
-    var left = 44
-    var right = 18
-    var top = 22
-    var bottom = 38
+    var width = 720
+    var height = 280
+    var left = 58
+    var right = 26
+    var top = 28
+    var bottom = 48
     var chartWidth = width - left - right
     var chartHeight = height - top - bottom
     var maxIndex = Math.max(records.length - 1, 1)
@@ -9048,7 +9048,7 @@
     function dots(points, cls) {
       return points.map(function (point) {
         var pos = xy(point)
-        return '<circle class="' + cls + '" cx="' + pos.x.toFixed(1) + '" cy="' + pos.y.toFixed(1) + '" r="4"><title>' + escapeHtml(point.label + ' ' + point.value) + '</title></circle>'
+        return '<circle class="' + cls + '" cx="' + pos.x.toFixed(1) + '" cy="' + pos.y.toFixed(1) + '" r="5"><title>' + escapeHtml(point.label + ' ' + point.value) + '</title></circle>'
       }).join('')
     }
     function chartButton(buttonMode, label, hasData) {
