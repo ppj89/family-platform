@@ -6,6 +6,7 @@ declare global {
     __familyEmptyRootSince?: number
     __familyEmptyRootRecoverCount?: number
     __familyPatchLoading?: boolean
+    __familyRecoverQueryCleaned?: boolean
   }
 }
 
@@ -34,6 +35,22 @@ if (!document.querySelector(`link[href="${legacyOverridesCssPath}"]`)) {
 
 function hasLegacyApp() {
   return Boolean(root?.children.length || document.querySelector('.auth-card, .app-shell'))
+}
+
+function clearRecoverQuery() {
+  if (window.__familyRecoverQueryCleaned) return
+  if (!window.location.search || !/[?&]recover(?:Nav)?=/.test(window.location.search)) return
+  window.__familyRecoverQueryCleaned = true
+  window.setTimeout(() => {
+    try {
+      const url = new URL(window.location.href)
+      url.searchParams.delete('recover')
+      url.searchParams.delete('recoverNav')
+      window.history.replaceState({}, document.title, url.pathname + url.search + url.hash)
+    } catch {
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }, 1200)
 }
 
 function loadPatchScript() {
@@ -76,6 +93,7 @@ window.setTimeout(loadPatchScript, 4000)
 window.setInterval(() => {
   if (hasLegacyApp()) {
     window.__familyEmptyRootSince = undefined
+    clearRecoverQuery()
     return
   }
   window.__familyEmptyRootSince = window.__familyEmptyRootSince || Date.now()
