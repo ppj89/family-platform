@@ -5093,8 +5093,7 @@
           diaryDate: getFieldValue(panel, '[data-diary-create-date]') || todayText(),
           weather: getFieldValue(panel, '[data-diary-create-weather]') || null,
           mood: getFieldValue(panel, '[data-diary-create-mood]') || null,
-          photoUrls: [],
-          videoUrls: []
+          mediaUrls: []
         })
       }).then(function () {
         showPatchToast('\uC77C\uAE30\uB97C \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
@@ -5214,8 +5213,7 @@
         mood: getControlValueByLabel(panel, '\uAE30\uBD84') || null,
         minTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uC800 \uC628\uB3C4')),
         maxTemperature: optionalInteger(getInputValueByLabel(panel, '\uCD5C\uACE0 \uC628\uB3C4')),
-        photoUrls: [],
-        videoUrls: []
+        mediaUrls: []
       })
     }).then(function () {
       showPatchToast('\uC77C\uAE30\uB97C \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
