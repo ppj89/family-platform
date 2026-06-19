@@ -1275,7 +1275,7 @@
       emailInput.type = 'text'
       emailInput.autocomplete = 'username'
       emailInput.inputMode = 'email'
-      emailInput.placeholder = '이메일 또는 관리자 아이디'
+      emailInput.placeholder = '이메일'
     }
     if (passwordInput) {
       passwordInput.dataset.field = 'auth-password'
