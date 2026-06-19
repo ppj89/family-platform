@@ -12443,3 +12443,43 @@ body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-
     margin-left: 0 !important;
   }
 }
+
+.form-field {
+  display: grid !important;
+  gap: 8px !important;
+  min-width: 0 !important;
+}
+
+.form-field .form-label {
+  color: #6b7684 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.35 !important;
+}
+
+.form-field .form-control,
+.form-field input.form-control,
+.form-field textarea.form-control,
+.form-field .date-picker-trigger.form-control,
+.form-field .custom-select-trigger.form-control {
+  font-weight: 500 !important;
+}
+
+.form-field .form-control span,
+.form-field .date-picker-trigger.form-control span,
+.form-field .custom-select-trigger.form-control span {
+  font-weight: 500 !important;
+}
+
+.baby-api-record-form .form-label,
+.baby-growth-api-form .form-label {
+  font-weight: 600 !important;
+}
+
+.baby-api-record-form .form-control,
+.baby-growth-api-form .form-control,
+.baby-api-record-form .date-picker-trigger span,
+.baby-growth-api-form .date-picker-trigger span,
+.baby-api-record-form .custom-select-trigger span {
+  font-weight: 500 !important;
+}
