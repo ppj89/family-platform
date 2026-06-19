@@ -6,15 +6,14 @@ declare global {
     __familyEmptyRootSince?: number
     __familyEmptyRootRecoverCount?: number
     __familyPatchLoading?: boolean
-    __familyRecoverQueryCleaned?: boolean
   }
 }
 
 window.FAMILY_PLATFORM_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const legacyCssPath = '/legacy/assets/index-CkWNYWFk.css'
-const legacyOverridesCssPath = '/legacy-overrides.css?v=20260619-04'
-const legacyPatchScriptPath = '/legacy-patch.js?v=20260619-04'
+const legacyOverridesCssPath = '/legacy-overrides.css?v=20260620-01'
+const legacyPatchScriptPath = '/legacy-patch.js?v=20260620-01'
 const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260614-11'
 
 const root = document.getElementById('root')
@@ -37,21 +36,20 @@ function hasLegacyApp() {
   return Boolean(root?.children.length || document.querySelector('.auth-card, .app-shell'))
 }
 
-function clearRecoverQuery() {
-  if (window.__familyRecoverQueryCleaned) return
-  if (!window.location.search || !/[?&]recover(?:Nav)?=/.test(window.location.search)) return
-  window.__familyRecoverQueryCleaned = true
-  window.setTimeout(() => {
-    try {
-      const url = new URL(window.location.href)
-      url.searchParams.delete('recover')
-      url.searchParams.delete('recoverNav')
-      window.history.replaceState({}, document.title, url.pathname + url.search + url.hash)
-    } catch {
-      window.history.replaceState({}, document.title, window.location.pathname)
-    }
-  }, 1200)
+function clearTransientQuery() {
+  if (!window.location.search || !/[?&](loggedOut|recover|recoverNav)=/.test(window.location.search)) return
+  try {
+    const url = new URL(window.location.href)
+    url.searchParams.delete('loggedOut')
+    url.searchParams.delete('recover')
+    url.searchParams.delete('recoverNav')
+    window.history.replaceState({}, document.title, url.pathname + url.search + url.hash)
+  } catch {
+    window.history.replaceState({}, document.title, window.location.pathname)
+  }
 }
+
+clearTransientQuery()
 
 function loadPatchScript() {
   if (window.__familyPatchLoading || document.querySelector('script[data-family-patch="true"]')) return
@@ -93,17 +91,31 @@ window.setTimeout(loadPatchScript, 4000)
 window.setInterval(() => {
   if (hasLegacyApp()) {
     window.__familyEmptyRootSince = undefined
-    clearRecoverQuery()
+    try {
+      window.sessionStorage.removeItem('family-platform-recover-count')
+      window.sessionStorage.removeItem('family-platform-recover-at')
+    } catch {
+      // Ignore storage access issues while cleaning recovery state.
+    }
+    clearTransientQuery()
     return
   }
   window.__familyEmptyRootSince = window.__familyEmptyRootSince || Date.now()
-  if (Date.now() - window.__familyEmptyRootSince < 700 || (window.__familyEmptyRootRecoverCount || 0) >= 2) return
+  let storedRecoverCount = 0
+  try {
+    storedRecoverCount = Number(window.sessionStorage.getItem('family-platform-recover-count') || '0') || 0
+  } catch {
+    storedRecoverCount = window.__familyEmptyRootRecoverCount || 0
+  }
+  if (Date.now() - window.__familyEmptyRootSince < 700 || storedRecoverCount >= 2) return
   window.__familyEmptyRootRecoverCount = (window.__familyEmptyRootRecoverCount || 0) + 1
   const url = new URL(window.location.href)
-  url.searchParams.set('recover', String(Date.now()))
+  url.searchParams.delete('recover')
+  url.searchParams.delete('recoverNav')
+  url.searchParams.delete('loggedOut')
   try {
-    const pendingNav = window.sessionStorage.getItem('family-platform-pending-nav-label')
-    if (pendingNav) url.searchParams.set('recoverNav', pendingNav)
+    window.sessionStorage.setItem('family-platform-recover-count', String(storedRecoverCount + 1))
+    window.sessionStorage.setItem('family-platform-recover-at', String(Date.now()))
   } catch {
     // Ignore storage access issues during emergency recovery.
   }

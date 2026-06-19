@@ -15,10 +15,12 @@
     <div id="root"></div>
     <script>
       ;(function () {
-        if (!window.location.search || window.location.search.indexOf('loggedOut=') < 0) return
+        if (!window.location.search || !/[?&](loggedOut|recover|recoverNav)=/.test(window.location.search)) return
         try {
           var url = new URL(window.location.href)
           url.searchParams.delete('loggedOut')
+          url.searchParams.delete('recover')
+          url.searchParams.delete('recoverNav')
           window.history.replaceState({}, document.title, url.pathname + url.search + url.hash)
         } catch (error) {
           window.history.replaceState({}, document.title, window.location.pathname)
