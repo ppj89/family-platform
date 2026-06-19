@@ -5195,8 +5195,8 @@
 
   function submitExistingDiaryPanel(panel, submitButton) {
     if (!panel || panel.dataset.diaryPanelSubmitting === 'true') return
-    var title = getInputValueByLabel(panel, '\uC81C\uBAA9')
-    var body = getInputValueByLabel(panel, '\uB0B4\uC6A9') || getFieldValue(panel, 'textarea')
+    var title = getInputValueByLabel(panel, '\uC81C\uBAA9') || getFieldValue(panel, 'form.diary-form input') || getFieldValue(panel, 'input')
+    var body = getInputValueByLabel(panel, '\uB0B4\uC6A9') || getFieldValue(panel, 'form.diary-form textarea') || getFieldValue(panel, 'textarea')
     if (!title) {
       showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uC785\uB825\uC785\uB2C8\uB2E4.')
       var titleField = panel.querySelector('label input, input')
@@ -10356,9 +10356,11 @@
   function handleDiaryDirectSubmitEvent(event) {
     var button = event.target && event.target.closest && event.target.closest('form.diary-form button[type="submit"], form.diary-form .submit-action')
     if (!button || getCleanText(button) !== '\uC77C\uAE30 \uCD94\uAC00') return false
+    document.documentElement.dataset.diarySubmitEventSeen = String(Date.now())
     var form = button.closest('form.diary-form')
     var panel = form && (form.closest('aside, section, article, .panel, .entry-panel') || form)
     if (!panel || getCleanText(panel.querySelector('h2')) !== '\uC77C\uAE30 \uCD94\uAC00') return false
+    document.documentElement.dataset.diarySubmitEventMatched = String(Date.now())
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
