@@ -8812,8 +8812,8 @@
         return '<article class="travel-record-card api-travel-record-card" data-api-travel-record-id="' + escapeHtml(record.id) + '"><div><strong>' + escapeHtml(record.title || '') + '</strong>' +
           '<span>' + escapeHtml([record.recordDate || '', record.recordTime || '', record.category || '', record.location || ''].filter(Boolean).join(' \u00B7 ')) + '</span>' +
           '<p>' + escapeHtml(record.note || '') + '</p></div><div class="travel-record-actions">' +
-          '<span role="button" tabindex="0" class="record-action-link" data-api-travel-record-edit="' + escapeHtml(record.id) + '">\uC218\uC815</span>' +
-          '<span role="button" tabindex="0" class="record-action-link danger-action" data-api-travel-record-delete="' + escapeHtml(record.id) + '">\uC0AD\uC81C</span>' +
+          '<span role="button" tabindex="0" class="record-action-link" data-api-travel-record-edit="' + escapeHtml(record.id) + '">\uC218\uC815\uD558\uAE30</span>' +
+          '<span role="button" tabindex="0" class="record-action-link danger-action" data-api-travel-record-delete="' + escapeHtml(record.id) + '">\uC0AD\uC81C\uD558\uAE30</span>' +
           '</div></article>'
       }).join('')
       var activateByKeyboard = function (button, handler) {
