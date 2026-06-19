@@ -4859,6 +4859,17 @@
     popover.style.setProperty('top', top + 'px', 'important')
   }
 
+  function isBabyCommonDateTarget(target) {
+    return !!(target && target.closest && target.closest('.baby-common-date-popover, [data-baby-create-birth-trigger], [data-baby-api-record-date-trigger], [data-baby-growth-date-trigger]'))
+  }
+
+  function closeBabyCommonDatePopoverOnOutsideEvent(event) {
+    var popover = document.querySelector('.baby-common-date-popover')
+    if (!popover) return
+    if (isBabyCommonDateTarget(event.target)) return
+    popover.remove()
+  }
+
   function handleBabyCreateBirthTrigger(event, skipRecentPointer) {
     var trigger = event.target && event.target.closest && event.target.closest('[data-baby-create-birth-trigger]')
     if (!trigger) return false
@@ -6734,6 +6745,9 @@
     handleBabyGrowthDateTrigger(event, true)
   }, true)
 
+  document.addEventListener('pointerdown', closeBabyCommonDatePopoverOnOutsideEvent, true)
+  document.addEventListener('focusin', closeBabyCommonDatePopoverOnOutsideEvent, true)
+
   function enhanceBabyEditMediaHelper() {
     document.querySelectorAll('.baby-record-row .edit-button').forEach(function (button) {
       if (button.dataset.mediaEditReady) return
@@ -7967,8 +7981,11 @@
     var now = currentTimeText()
     scope.querySelectorAll('input[type="time"], input[name="recordTime"], [data-field="travel-record-time"]').forEach(function (input) {
       if (!input || input.disabled) return
+      if (input.matches && input.matches('input[name="recordTime"]')) {
+        if (input.value) setInputValue(input, formatClockText(input.value, ''))
+        return
+      }
       if (!input.value || input.value === '00:00' || input.value === '14:00') setInputValue(input, now)
-      if (input.matches && input.matches('input[name="recordTime"]')) setInputValue(input, formatClockText(input.value, now))
     })
   }
 
@@ -7998,7 +8015,8 @@
   document.addEventListener('blur', function (event) {
     var input = event.target && event.target.closest && event.target.closest('input[name="recordTime"]')
     if (!input) return
-    setInputValue(input, formatClockText(input.value, currentTimeText()))
+    var next = formatClockText(input.value, '')
+    if (input.value !== next) setInputValue(input, next)
   }, true)
 
   function clearSampleFieldValues(root) {
@@ -9941,10 +9959,7 @@
       var triggerText = form.querySelector('[data-baby-api-record-date-trigger] span')
       if (triggerText) triggerText.textContent = todayText().replace(/-/g, '.')
     }
-    if (time) {
-      var now = new Date()
-      time.value = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0')
-    }
+    if (time) time.value = ''
     var type = form.querySelector('[name="recordType"]')
     var typeText = form.querySelector('[data-baby-record-type-trigger] span')
     if (type) type.value = '\uC218\uC720'
@@ -9978,7 +9993,7 @@
         return postJson('/babies/' + encodeURIComponent(babyId) + '/records', {
           recordType: type,
           recordDate: date,
-          recordTime: formatClockText(getFieldValue(form, '[name="recordTime"]'), currentTimeText()) || null,
+          recordTime: formatClockText(getFieldValue(form, '[name="recordTime"]'), '') || null,
           amountMl: optionalInteger(getFieldValue(form, '[name="amountMl"]')),
           heightCm: optionalDecimal(getFieldValue(form, '[name="heightCm"]')),
           weightKg: optionalDecimal(getFieldValue(form, '[name="weightKg"]')),
