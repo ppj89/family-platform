@@ -1212,11 +1212,38 @@
     if (!visual || visual.dataset.authLandingReady === 'true') return
     visual.dataset.authLandingReady = 'true'
 
+    var brand = visual.querySelector('.auth-brand')
+    if (brand) {
+      var title = brand.querySelector('p, strong')
+      var subtitle = brand.querySelector('span, small')
+      if (title) title.textContent = 'Family Platform'
+      if (subtitle) subtitle.textContent = '\uAC00\uC871 \uC6B4\uC601 \uC6CC\uD06C\uC2A4\uD398\uC774\uC2A4'
+    }
+
     var copy = visual.querySelector('.auth-copy')
-    if (copy) copy.remove()
+    if (!copy) {
+      copy = document.createElement('section')
+      copy.className = 'auth-copy'
+      if (brand) brand.insertAdjacentElement('afterend', copy)
+      else visual.prepend(copy)
+    }
+    copy.innerHTML = [
+      '<span class="auth-kicker">\uAC00\uC871\uC744 \uC704\uD55C \uD558\uB098\uC758 \uACF5\uAC04</span>',
+      '<h1>\uAC00\uC871 \uAE30\uB85D\uC744<br />\uD55C\uACF3\uC5D0\uC11C \uD3B8\uD558\uAC8C</h1>',
+      '<p>\uC77C\uC815, \uAC00\uACC4\uBD80, \uC5EC\uD589, \uC721\uC544, \uC77C\uAE30\uB97C \uAC00\uC871\uB07C\uB9AC \uACF5\uC720\uD558\uACE0 \uAD8C\uD55C\uC5D0 \uB9DE\uAC8C \uAD00\uB9AC\uD569\uB2C8\uB2E4.</p>'
+    ].join('')
 
     var preview = visual.querySelector('.auth-preview')
-    if (preview) preview.remove()
+    if (!preview) {
+      preview = document.createElement('div')
+      preview.className = 'auth-preview'
+      copy.insertAdjacentElement('afterend', preview)
+    }
+    preview.innerHTML = [
+      '<div><strong>\uACF5\uC720 \uCE98\uB9B0\uB354</strong><span>\uC0DD\uC77C, \uBCD1\uC6D0, \uD559\uAD50, \uAC00\uC871 \uC77C\uC815\uC744 \uD55C \uB2EC\uB825\uC5D0\uC11C \uD655\uC778</span></div>',
+      '<div><strong>\uAC00\uC871 \uAC00\uACC4\uBD80</strong><span>\uC9C0\uCD9C\uACFC \uC218\uC785\uC744 \uBA54\uB274\uBCC4\uB85C \uC815\uB9AC\uD558\uACE0 \uAE30\uAC04\uBCC4\uB85C \uC870\uD68C</span></div>',
+      '<div><strong>\uC721\uC544 \uAE30\uB85D</strong><span>\uC218\uC720, \uBC30\uBCC0, \uD0A4, \uBAB8\uBB34\uAC8C \uBCC0\uD654\uB97C \uAE30\uB85D</span></div>'
+    ].join('')
   }
 
   function cleanupAuthActions() {
