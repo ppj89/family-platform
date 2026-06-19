@@ -10354,11 +10354,9 @@
   function handleDiaryDirectSubmitEvent(event) {
     var button = event.target && event.target.closest && event.target.closest('form.diary-form button[type="submit"], form.diary-form .submit-action')
     if (!button || getCleanText(button) !== '\uC77C\uAE30 \uCD94\uAC00') return false
-    document.documentElement.dataset.diarySubmitEventSeen = String(Date.now())
     var form = button.closest('form.diary-form')
     var panel = form && (form.closest('aside, section, article, .panel, .entry-panel') || form)
     if (!panel || getCleanText(panel.querySelector('h2')) !== '\uC77C\uAE30 \uCD94\uAC00') return false
-    document.documentElement.dataset.diarySubmitEventMatched = String(Date.now())
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
