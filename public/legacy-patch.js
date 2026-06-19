@@ -8502,9 +8502,8 @@
   }
 
   function bindVisibleDiarySubmit(form) {
-    if (!form || form.dataset.diaryDirectSubmitBound === 'true') return
+    if (!form) return
     if (!form.matches || !form.matches('.diary-form')) return
-    form.dataset.diaryDirectSubmitBound = 'true'
     var submit = form.querySelector('button[type="submit"], .submit-action')
     var submitDirectly = function (event) {
       event.preventDefault()
@@ -8513,8 +8512,12 @@
       var panel = form.closest('aside, section, article, .panel, .entry-panel') || form
       submitExistingDiaryPanel(panel, submit)
     }
-    form.addEventListener('submit', submitDirectly, true)
-    if (submit) {
+    if (form.dataset.diaryDirectSubmitBound !== 'true') {
+      form.dataset.diaryDirectSubmitBound = 'true'
+      form.addEventListener('submit', submitDirectly, true)
+    }
+    if (submit && submit.dataset.diaryDirectClickBound !== 'true') {
+      submit.dataset.diaryDirectClickBound = 'true'
       submit.addEventListener('pointerdown', submitDirectly, true)
       submit.addEventListener('mousedown', submitDirectly, true)
       submit.addEventListener('click', submitDirectly, true)
