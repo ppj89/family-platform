@@ -5304,6 +5304,14 @@
       }
     }
     if (!label) return
+    try {
+      var navUrl = new URL(window.location.href)
+      if (navUrl.searchParams.has('recoverNav')) {
+        navUrl.searchParams.delete('recoverNav')
+        navUrl.searchParams.delete('navRecoverAt')
+        window.history.replaceState({}, document.title, navUrl.pathname + navUrl.search + navUrl.hash)
+      }
+    } catch {}
     var currentTitle = getCleanText(document.querySelector('.topbar h1, h1'))
     if (currentTitle === label) {
       clearPendingNavLabel(label)
@@ -5438,7 +5446,14 @@
           sessionStorage.setItem('family-platform-nav-reload-state', JSON.stringify({ label: label, at: Date.now() }))
         } catch {}
         setPendingNavLabel(label)
-        window.location.reload()
+        try {
+          var url = new URL(window.location.href)
+          url.searchParams.set('recoverNav', label)
+          url.searchParams.set('navRecoverAt', String(Date.now()))
+          window.location.replace(url.toString())
+        } catch {
+          window.location.reload()
+        }
       }, 2200)
     }
   }, true)

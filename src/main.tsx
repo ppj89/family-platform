@@ -12,8 +12,8 @@ declare global {
 window.FAMILY_PLATFORM_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const legacyCssPath = '/legacy/assets/index-CkWNYWFk.css'
-const legacyOverridesCssPath = '/legacy-overrides.css?v=20260620-39'
-const legacyPatchScriptPath = '/legacy-patch.js?v=20260620-39'
+const legacyOverridesCssPath = '/legacy-overrides.css?v=20260620-40'
+const legacyPatchScriptPath = '/legacy-patch.js?v=20260620-40'
 const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260614-11'
 
 const root = document.getElementById('root')
@@ -37,12 +37,11 @@ function hasLegacyApp() {
 }
 
 function clearTransientQuery() {
-  if (!window.location.search || !/[?&](loggedOut|recover|recoverNav)=/.test(window.location.search)) return
+  if (!window.location.search || !/[?&](loggedOut|recover)=/.test(window.location.search)) return
   try {
     const url = new URL(window.location.href)
     url.searchParams.delete('loggedOut')
     url.searchParams.delete('recover')
-    url.searchParams.delete('recoverNav')
     window.history.replaceState({}, document.title, url.pathname + url.search + url.hash)
   } catch {
     window.history.replaceState({}, document.title, window.location.pathname)
