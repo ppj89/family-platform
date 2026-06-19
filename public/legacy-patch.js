@@ -8858,7 +8858,6 @@
           if (shouldSkipApiRecordAction('delete:' + button.dataset.apiTravelRecordDelete)) return
           deleteApiTravelRecord(detail, button.dataset.apiTravelRecordDelete)
         }
-        button.addEventListener('pointerdown', onDelete, true)
         button.addEventListener('click', onDelete, true)
         activateByKeyboard(button, onDelete)
       })
