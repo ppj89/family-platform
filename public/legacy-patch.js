@@ -5416,15 +5416,23 @@
     if (wasCommunity || wasFamilyGroup) {
       var label = getCleanText(nav)
       clearCustomPatchPageNow()
+      ;[450, 1100, 1800].forEach(function (delay) {
+        window.setTimeout(function () {
+          cleanupPatchRootsForCurrentMenu()
+          if (!label || document.querySelector('.auth-card')) return
+          if (document.documentElement.dataset.patchPage) return
+          var currentTitle = getCleanText(document.querySelector('.topbar h1, h1'))
+          if (currentTitle === label) return
+          var target = findNavButton(label)
+          if (target) target.click()
+        }, delay)
+      })
       window.setTimeout(function () {
-        cleanupPatchRootsForCurrentMenu()
         if (!label || document.querySelector('.auth-card')) return
         if (document.documentElement.dataset.patchPage) return
         var currentTitle = getCleanText(document.querySelector('.topbar h1, h1'))
-        if (currentTitle === label) return
-        var target = findNavButton(label)
-        if (target) target.click()
-      }, 420)
+        if (currentTitle !== label) setNavActive(label)
+      }, 2200)
     }
   }, true)
 
