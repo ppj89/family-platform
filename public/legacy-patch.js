@@ -4339,6 +4339,18 @@
     return element ? element.textContent.replace(/\s+/g, ' ').trim() : ''
   }
 
+  function normalizeLabelText(text) {
+    return String(text || '').replace(/\*/g, '').replace(/\s+/g, ' ').trim()
+  }
+
+  function getLabelTitle(label) {
+    return label ? label.querySelector('span, strong, b') : null
+  }
+
+  function getLabelText(label) {
+    return normalizeLabelText(getCleanText(getLabelTitle(label)))
+  }
+
   function hidePatchElement(element) {
     if (!element) return
     element.style.display = 'none'
@@ -7765,7 +7777,8 @@
   function setLedgerDateValue(form, value) {
     var date = parseApiDate(value) || todayText()
     Array.from(form.querySelectorAll('.date-picker-field, label')).forEach(function (field) {
-      if (getCleanText(field).indexOf('\uAC70\uB798\uC77C') < 0) return
+      var fieldText = getCleanText(field)
+      if (fieldText.indexOf('\uAC70\uB798\uC77C') < 0 && fieldText.indexOf('\uB0A0\uC9DC') < 0) return
       var triggerText = field.querySelector('.date-picker-trigger span')
       if (triggerText) triggerText.textContent = date.replace(/-/g, '.')
       field.querySelectorAll('input').forEach(function (input) {
@@ -7777,7 +7790,7 @@
   function findLedgerForm() {
     return Array.from(document.querySelectorAll('.ledger-form, .entry-panel, form')).find(function (form) {
       var text = getCleanText(form)
-      return text.indexOf('\uAC70\uB798\uC77C') >= 0 && text.indexOf('\uAE08\uC561') >= 0
+      return (text.indexOf('\uAC70\uB798\uC77C') >= 0 || text.indexOf('\uB0A0\uC9DC') >= 0) && text.indexOf('\uAE08\uC561') >= 0
     })
   }
 
@@ -7864,13 +7877,13 @@
 
   function ledgerPayloadFromForm(form) {
     return {
-      title: getInputValueByLabel(form, '\uB0B4\uC5ED') || getInputValueByLabel(form, '\uC81C\uBAA9') || getInputValueByLabel(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9') || firstInputValue(form),
+      title: getInputValueByLabel(form, '\uB0B4\uC6A9') || getInputValueByLabel(form, '\uB0B4\uC5ED') || getInputValueByLabel(form, '\uC81C\uBAA9') || getInputValueByLabel(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9') || firstInputValue(form),
       entryType: normalizeLedgerType(getCustomSelectValue('\uAD6C\uBD84')),
       category: getCustomSelectValue('\uCE74\uD14C\uACE0\uB9AC') || null,
       paymentMethod: getCustomSelectValue('\uACB0\uC81C\uC218\uB2E8') || null,
       memberName: getCustomSelectValue('\uC0AC\uC6A9\uC790') || getCustomSelectValue('\uAC00\uC871') || null,
       amount: parseAmountValue(getInputValueByLabel(form, '\uAE08\uC561') || getFieldValue(form, '[data-field="ledger-amount"]') || getFieldValue(form, 'input[inputmode="numeric"]')),
-      transactionDate: getDatePickerValue(form, '\uAC70\uB798\uC77C'),
+      transactionDate: getDatePickerValue(form, '\uB0A0\uC9DC') || getDatePickerValue(form, '\uAC70\uB798\uC77C'),
       memo: getInputValueByLabel(form, '\uBA54\uBAA8') || ''
     }
   }
@@ -7885,14 +7898,83 @@
     renderHomeLedgerFromApi(true)
   }
 
+  function isLedgerEntryForm(form) {
+    if (!form || !pageHeadingIs('\uAC00\uACC4\uBD80')) return false
+    var text = getCleanText(form)
+    return text.indexOf('\uAE08\uC561') >= 0 && (text.indexOf('\uB0B4\uC6A9') >= 0 || text.indexOf('\uAC00\uB9F9\uC810/\uB0B4\uC6A9') >= 0)
+  }
+
+  function focusLedgerField(form, labelText) {
+    var label = findLabelByText(form, labelText)
+    var target = label && label.querySelector('input, textarea, button')
+    if (!target) return
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    window.setTimeout(function () {
+      target.focus()
+    }, 120)
+  }
+
+  function resetLedgerCreateForm(form) {
+    setInputValueByLabel(form, '\uB0B4\uC6A9', '')
+      || setInputValueByLabel(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', '')
+      || setScheduleTextInputAt(form, 0, '')
+    setInputValueByLabel(form, '\uAE08\uC561', '')
+    setInputValueByLabel(form, '\uBA54\uBAA8', '')
+    setLedgerDateValue(form, todayText())
+    normalizeLedgerEntryForm()
+  }
+
+  function validateLedgerPayload(form, payload) {
+    if (!payload.title) {
+      showPatchToast('\uB0B4\uC6A9\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+      focusLedgerField(form, '\uB0B4\uC6A9')
+      return false
+    }
+    if (!payload.amount) {
+      showPatchToast('\uAE08\uC561\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+      focusLedgerField(form, '\uAE08\uC561')
+      return false
+    }
+    if (!parseApiDate(payload.transactionDate)) {
+      showPatchToast('\uB0A0\uC9DC\uB294 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+      focusLedgerField(form, '\uB0A0\uC9DC')
+      return false
+    }
+    return true
+  }
+
+  function submitLedgerCreate(form) {
+    if (!isLedgerEntryForm(form) || form.dataset.ledgerCreateSubmitting === 'true') return
+    var payload = ledgerPayloadFromForm(form)
+    if (!validateLedgerPayload(form, payload)) return
+    var submit = form.querySelector('button[type="submit"], .submit-action')
+    form.dataset.ledgerCreateSubmitting = 'true'
+    if (submit) {
+      submit.disabled = true
+      submit.textContent = '\uCD94\uAC00 \uC911'
+    }
+    getReadableFamilyId().then(function (familyId) {
+      return postJson('/ledger-entries?familyId=' + encodeURIComponent(familyId), payload)
+    }).then(function () {
+      showPatchToast('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
+      resetLedgerCreateForm(form)
+      refreshLedgerAfterMutation()
+    }).catch(function (error) {
+      showPatchToast(apiActionErrorMessage(error, '\uAC00\uACC4\uBD80 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+    }).finally(function () {
+      delete form.dataset.ledgerCreateSubmitting
+      if (submit) {
+        submit.disabled = false
+        submit.textContent = '\uCD94\uAC00'
+      }
+    })
+  }
+
   function submitLedgerEdit(form) {
     var entryId = form && form.dataset.apiLedgerEditId
     if (!entryId || form.dataset.ledgerEditSubmitting === 'true') return
     var payload = ledgerPayloadFromForm(form)
-    if (!payload.title || !payload.amount) {
-      showPatchToast('\uB0B4\uC5ED\uACFC \uAE08\uC561\uC744 \uC785\uB825\uD574\uC8FC\uC138\uC694.')
-      return
-    }
+    if (!validateLedgerPayload(form, payload)) return
     showPatchConfirm('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uC218\uC815\uD560\uAE4C\uC694?', function () {
       form.dataset.ledgerEditSubmitting = 'true'
       getCurrentFamilyId().then(function (familyId) {
@@ -8111,7 +8193,11 @@
   function ensureRequiredMarkForInput(input) {
     if (!input) return
     var label = input.closest('label')
-    var title = label && label.querySelector('span, strong, b')
+    ensureRequiredMarkForLabel(label)
+  }
+
+  function ensureRequiredMarkForLabel(label) {
+    var title = getLabelTitle(label)
     if (!title || title.querySelector('.required-mark')) return
     var mark = document.createElement('em')
     mark.className = 'required-mark'
@@ -8120,14 +8206,38 @@
     title.appendChild(mark)
   }
 
+  function renameLabelTitle(form, fromText, toText) {
+    var labels = Array.from(form.querySelectorAll('label'))
+    var label = labels.find(function (item) {
+      return getLabelText(item) === fromText
+    })
+    var title = getLabelTitle(label)
+    if (title) title.textContent = toText
+    return label || null
+  }
+
+  function findLabelByText(form, text) {
+    return Array.from(form.querySelectorAll('label')).find(function (label) {
+      return getLabelText(label) === text
+    }) || null
+  }
+
   function normalizeLedgerEntryForm() {
     if (!pageHeadingIs('\uAC00\uACC4\uBD80')) return
     var forms = document.querySelectorAll('.ledger-form, .entry-panel, form')
     forms.forEach(function (form) {
       var text = getCleanText(form)
       if (text.indexOf('\uAC00\uACC4\uBD80') < 0 && text.indexOf('\uAC70\uB798\uC77C') < 0 && text.indexOf('\uAE08\uC561') < 0) return
+      renameLabelTitle(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', '\uB0B4\uC6A9')
+      renameLabelTitle(form, '\uAC70\uB798\uC77C', '\uB0A0\uC9DC')
+      var requiredLedgerLabels = ['\uB0B4\uC6A9', '\uAE08\uC561', '\uB0A0\uC9DC']
+      requiredLedgerLabels.forEach(function (labelText) {
+        ensureRequiredMarkForLabel(findLabelByText(form, labelText))
+      })
+      var submit = form.querySelector('button[type="submit"], .submit-action')
+      if (submit && !form.dataset.apiLedgerEditId) submit.textContent = '\uCD94\uAC00'
       removePlaceholdersIn(form, ['\uAC00\uB9F9\uC810', '\uB0B4\uC6A9', '\uAE08\uC561'])
-      setDateFieldToToday(form, ['\uAC70\uB798\uC77C'])
+      setDateFieldToToday(form, ['\uAC70\uB798\uC77C', '\uB0A0\uC9DC'])
     })
     removeFeaturePlaceholders()
   }
@@ -9460,7 +9570,7 @@
   function getCustomSelectValue(label) {
     var labels = Array.from(document.querySelectorAll('.travel-form label, .schedule-form-card label, .ledger-form label, .diary-form label'))
     var target = labels.find(function (item) {
-      return getCleanText(item.querySelector('span')) === label
+      return getLabelText(item) === label
     })
     if (!target) return ''
     var trigger = target.querySelector('.custom-select-trigger, button')
@@ -9470,7 +9580,7 @@
   function getDatePickerValue(root, labelText) {
     var fields = Array.from(root.querySelectorAll('.date-picker-field'))
     var target = fields.find(function (field) {
-      return getCleanText(field.querySelector('span')) === labelText
+      return getLabelText(field) === labelText
     }) || fields[0]
     return parseApiDate(getCleanText(target)) || todayText()
   }
@@ -9495,7 +9605,7 @@
   function getInputValueByLabel(root, labelText) {
     var labels = Array.from(root.querySelectorAll('label'))
     var target = labels.find(function (item) {
-      return getCleanText(item.querySelector('span')) === labelText
+      return getLabelText(item) === labelText
     })
     var input = target && target.querySelector('input, textarea')
     return input ? String(input.value || '').trim() : ''
@@ -9504,7 +9614,7 @@
   function setInputValueByLabel(root, labelText, value) {
     var labels = Array.from(root.querySelectorAll('label'))
     var target = labels.find(function (item) {
-      return getCleanText(item.querySelector('span')) === labelText
+      return getLabelText(item) === labelText
     })
     var input = target && target.querySelector('input, textarea')
     if (input) setNativeInputValue(input, value == null ? '' : String(value))
@@ -9514,7 +9624,7 @@
   function setCustomSelectValueByLabel(root, labelText, value) {
     var labels = Array.from(root.querySelectorAll('label'))
     var target = labels.find(function (item) {
-      return getCleanText(item.querySelector('span')) === labelText
+      return getLabelText(item) === labelText
     })
     if (!target) return
     var text = target.querySelector('.custom-select-trigger span')
@@ -9774,32 +9884,8 @@
 
   function syncLedgerForm(form) {
     window.setTimeout(function () {
-      var title = getInputValueByLabel(form, '\uB0B4\uC5ED') ||
-        getInputValueByLabel(form, '\uC81C\uBAA9') ||
-        getFieldValue(form, '[data-field="ledger-title"]') ||
-        firstInputValue(form)
-      var amount = parseAmountValue(
-        getInputValueByLabel(form, '\uAE08\uC561') ||
-        getFieldValue(form, '[data-field="ledger-amount"]') ||
-        getFieldValue(form, 'input[inputmode="numeric"]')
-      )
-
-      if (!title || !amount) return
-
-      queueApiSync({
-        type: 'createLedgerEntry',
-        payload: {
-          title: title,
-          entryType: normalizeLedgerType(getCustomSelectValue('\uAD6C\uBD84')),
-          category: getCustomSelectValue('\uCE74\uD14C\uACE0\uB9AC') || null,
-          paymentMethod: getCustomSelectValue('\uACB0\uC81C\uC218\uB2E8') || null,
-          memberName: getCustomSelectValue('\uC0AC\uC6A9\uC790') || getCustomSelectValue('\uAC00\uC871') || null,
-          amount: amount,
-          transactionDate: getDatePickerValue(form, '\uAC70\uB798\uC77C'),
-          memo: getInputValueByLabel(form, '\uBA54\uBAA8') || ''
-        }
-      })
-      flushApiQueue()
+      if (!isLedgerEntryForm(form)) return
+      submitLedgerCreate(form)
     }, 450)
   }
 
@@ -10104,6 +10190,7 @@
   document.addEventListener('submit', function (event) {
     var ledgerForm = event.target && event.target.closest && event.target.closest('.ledger-form')
     if (!ledgerForm) return
+    if (!isLedgerEntryForm(ledgerForm)) return
     if (ledgerForm.dataset.apiLedgerEditId) {
       event.preventDefault()
       event.stopPropagation()
@@ -10111,7 +10198,10 @@
       submitLedgerEdit(ledgerForm)
       return
     }
-    syncLedgerForm(ledgerForm)
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitLedgerCreate(ledgerForm)
   }, true)
 
   document.addEventListener('click', function (event) {
@@ -10140,11 +10230,12 @@
     var button = event.target && event.target.closest && event.target.closest('.ledger-form button[type="submit"], .ledger-form .submit-action')
     if (!button) return
     var form = button.closest('.ledger-form')
-    if (!form || !form.dataset.apiLedgerEditId) return
+    if (!form || !isLedgerEntryForm(form)) return
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    submitLedgerEdit(form)
+    if (form.dataset.apiLedgerEditId) submitLedgerEdit(form)
+    else submitLedgerCreate(form)
   }, true)
 
   document.addEventListener('submit', function (event) {
