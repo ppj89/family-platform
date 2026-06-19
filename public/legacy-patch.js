@@ -7810,7 +7810,11 @@
   function fillLedgerFormForEdit(item) {
     var form = findLedgerForm()
     if (!form || !item) return false
-    form.dataset.apiLedgerEditId = String(item.id || '')
+    var editId = String(item.id || '')
+    form.dataset.apiLedgerEditId = editId
+    window.__familyEditingLedgerId = editId
+    var ledgerShell = form.closest('.ledger-form, .entry-panel, aside, section, article')
+    if (ledgerShell) ledgerShell.dataset.apiLedgerEditId = editId
     setInputValueByLabel(form, '\uB0B4\uC5ED', item.title || '')
       || setInputValueByLabel(form, '\uC81C\uBAA9', item.title || '')
       || setInputValueByLabel(form, '\uAC00\uB9F9\uC810/\uB0B4\uC6A9', item.title || '')
@@ -7937,6 +7941,25 @@
     normalizeLedgerEntryForm()
   }
 
+  function getLedgerEditId(form) {
+    if (!form) return ''
+    var shell = form.closest && form.closest('.ledger-form, .entry-panel, aside, section, article')
+    return form.dataset.apiLedgerEditId || (shell && shell.dataset.apiLedgerEditId) || window.__familyEditingLedgerId || ''
+  }
+
+  function clearLedgerEditMode(form) {
+    if (!form) return
+    delete form.dataset.apiLedgerEditId
+    var shell = form.closest && form.closest('.ledger-form, .entry-panel, aside, section, article')
+    if (shell) delete shell.dataset.apiLedgerEditId
+    window.__familyEditingLedgerId = ''
+    var submit = form.querySelector('button[type="submit"], .submit-action')
+    if (submit) {
+      submit.textContent = '\uCD94\uAC00'
+      delete submit.dataset.ledgerEditSubmit
+    }
+  }
+
   function validateLedgerPayload(form, payload) {
     if (!payload.title) {
       showPatchToast('\uB0B4\uC6A9\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
@@ -7984,7 +8007,7 @@
   }
 
   function submitLedgerEdit(form) {
-    var entryId = form && form.dataset.apiLedgerEditId
+    var entryId = getLedgerEditId(form)
     if (!entryId || form.dataset.ledgerEditSubmitting === 'true') return
     var payload = ledgerPayloadFromForm(form)
     if (!validateLedgerPayload(form, payload)) return
@@ -7996,7 +8019,7 @@
           body: JSON.stringify(payload)
         })
       }).then(function () {
-        delete form.dataset.apiLedgerEditId
+        clearLedgerEditMode(form)
         showPatchToast('\uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC744 \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.')
         refreshLedgerAfterMutation()
       }).catch(function (error) {
@@ -10218,7 +10241,7 @@
     var ledgerForm = event.target && event.target.closest && event.target.closest('.ledger-form')
     if (!ledgerForm) return
     if (!isLedgerEntryForm(ledgerForm)) return
-    if (ledgerForm.dataset.apiLedgerEditId) {
+    if (getLedgerEditId(ledgerForm)) {
       event.preventDefault()
       event.stopPropagation()
       if (event.stopImmediatePropagation) event.stopImmediatePropagation()
@@ -10261,7 +10284,7 @@
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    if (form.dataset.apiLedgerEditId) submitLedgerEdit(form)
+    if (getLedgerEditId(form)) submitLedgerEdit(form)
     else submitLedgerCreate(form)
   }, true)
 
