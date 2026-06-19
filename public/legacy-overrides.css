@@ -10991,6 +10991,48 @@ select {
   color: #f04452 !important;
 }
 
+.diary-detail-edit label {
+  display: grid !important;
+  gap: 8px !important;
+}
+
+.diary-detail-edit label > span {
+  color: #6b7684 !important;
+  font-size: 12px !important;
+  font-weight: 600 !important;
+}
+
+.diary-detail-edit input,
+.diary-detail-edit textarea {
+  width: 100% !important;
+  border: 1px solid #d8e0ea !important;
+  border-radius: 14px !important;
+  padding: 12px 14px !important;
+  background: #ffffff !important;
+  color: #191f28 !important;
+  font: inherit !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  outline: 0 !important;
+}
+
+.diary-detail-edit textarea {
+  resize: vertical !important;
+  min-height: 110px !important;
+}
+
+.diary-detail-edit .form-row.two {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+}
+
+@media (max-width: 640px) {
+  .diary-detail-edit .form-row.two {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 .community-detail-comments {
   display: grid !important;
   gap: 10px !important;
