@@ -5077,7 +5077,7 @@
       var button = panel.querySelector('.submit-action')
       button.disabled = true
       button.textContent = '\uC800\uC7A5 \uC911'
-      getCurrentFamilyId().then(function (familyId) {
+      getReadableFamilyId().then(function (familyId) {
         return postJson('/diaries?familyId=' + encodeURIComponent(familyId), {
           title: title,
           body: content,
@@ -5196,7 +5196,7 @@
     }
     panel.dataset.diaryPanelSubmitting = 'true'
     if (submitButton) submitButton.disabled = true
-    getCurrentFamilyId().then(function (familyId) {
+    getReadableFamilyId().then(function (familyId) {
       return postJson('/diaries?familyId=' + encodeURIComponent(familyId), {
         title: title,
         body: body,
