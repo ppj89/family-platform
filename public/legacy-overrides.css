@@ -1070,7 +1070,7 @@ body.api-loading-blocked::before {
   overflow-wrap: anywhere;
   color: #191f28;
   font-size: 16px;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .account-password-header {
@@ -1096,6 +1096,10 @@ body.api-loading-blocked::before {
   font: inherit;
   font-weight: 900;
   cursor: pointer;
+}
+
+.account-info-dialog .account-password-header button {
+  font-weight: 500;
 }
 
 .account-password-dialog p {
