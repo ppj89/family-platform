@@ -8822,14 +8822,23 @@
           handler(event)
         }, true)
       }
+      var lastApiRecordAction = { key: '', at: 0 }
+      var shouldSkipApiRecordAction = function (key) {
+        var now = Date.now()
+        if (lastApiRecordAction.key === key && now - lastApiRecordAction.at < 500) return true
+        lastApiRecordAction = { key: key, at: now }
+        return false
+      }
       list.querySelectorAll('[data-api-travel-record-edit]').forEach(function (button) {
         var onEdit = function (event) {
           event.preventDefault()
           event.stopPropagation()
           if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+          if (shouldSkipApiRecordAction('edit:' + button.dataset.apiTravelRecordEdit)) return
           var record = records.find(function (item) { return String(item.id) === String(button.dataset.apiTravelRecordEdit) })
           if (record) fillTravelRecordForm(detail, record)
         }
+        button.addEventListener('pointerdown', onEdit, true)
         button.addEventListener('click', onEdit, true)
         activateByKeyboard(button, onEdit)
       })
@@ -8838,8 +8847,10 @@
           event.preventDefault()
           event.stopPropagation()
           if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+          if (shouldSkipApiRecordAction('delete:' + button.dataset.apiTravelRecordDelete)) return
           deleteApiTravelRecord(detail, button.dataset.apiTravelRecordDelete)
         }
+        button.addEventListener('pointerdown', onDelete, true)
         button.addEventListener('click', onDelete, true)
         activateByKeyboard(button, onDelete)
       })
