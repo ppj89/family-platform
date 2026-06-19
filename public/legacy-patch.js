@@ -5270,7 +5270,30 @@
 
   function goMenu(label) {
     var button = findNavButton(label)
-    if (button) button.click()
+    if (button) triggerNavButton(button)
+  }
+
+  function triggerNavButton(button) {
+    if (!button) return
+    ;['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click'].forEach(function (type) {
+      try {
+        var EventCtor = type.indexOf('pointer') === 0 && window.PointerEvent ? window.PointerEvent : window.MouseEvent
+        button.dispatchEvent(new EventCtor(type, {
+          bubbles: true,
+          cancelable: true,
+          view: window,
+          pointerId: 1,
+          pointerType: 'mouse',
+          isPrimary: true
+        }))
+      } catch {
+        try {
+          var event = document.createEvent('MouseEvents')
+          event.initMouseEvent(type, true, true, window, 1, 0, 0, 0, 0, false, false, false, false, 0, null)
+          button.dispatchEvent(event)
+        } catch {}
+      }
+    })
   }
 
   function setPendingNavLabel(label) {
@@ -5328,7 +5351,7 @@
           return
         }
         var nextTarget = findNavButton(label)
-        if (nextTarget) nextTarget.click()
+        if (nextTarget) triggerNavButton(nextTarget)
       }, delay)
     })
     window.setTimeout(function () {
@@ -5440,7 +5463,7 @@
           var currentTitle = getCleanText(document.querySelector('.topbar h1, h1'))
           if (currentTitle === label) return
           var target = findNavButton(label)
-          if (target) target.click()
+          if (target) triggerNavButton(target)
         }, delay)
       })
       window.setTimeout(function () {
@@ -6635,7 +6658,7 @@
       backButton.textContent = '\uBAA9\uB85D'
       backButton.addEventListener('click', function () {
         var nav = findNavButton('\uC721\uC544') || findNavButtonContains('\uC721\uC544')
-        if (nav) nav.click()
+        if (nav) triggerNavButton(nav)
       })
       mainHeader.appendChild(backButton)
     }
