@@ -4701,26 +4701,49 @@
     var view = new Date(selected + 'T00:00:00')
     var popover = document.createElement('div')
     popover.className = 'calendar-popover baby-common-date-popover'
+    var level = 'day'
 
     function draw() {
       var year = view.getFullYear()
       var month = view.getMonth()
-      var first = new Date(year, month, 1)
-      var last = new Date(year, month + 1, 0).getDate()
-      var html = '<header class="calendar-header"><button type="button" data-baby-date-prev>&lt;</button><strong>' + year + '\uB144 ' + (month + 1) + '\uC6D4</strong><button type="button" data-baby-date-next>&gt;</button></header>'
+      var selectedDate = parseApiDate(selected) || todayText()
+      var selectedYear = Number(selectedDate.slice(0, 4))
+      var selectedMonth = Number(selectedDate.slice(5, 7)) - 1
+      var title = level === 'year' ? year + '\uB144' : (level === 'month' ? year + '\uB144' : year + '\uB144 ' + (month + 1) + '\uC6D4')
+      var html = '<header class="calendar-header"><button type="button" data-baby-date-prev>&lt;</button><button type="button" class="calendar-title-button" data-baby-date-title><span>' + title + '</span></button><button type="button" data-baby-date-next>&gt;</button></header>'
       html += '<div class="calendar-today-row"><button type="button" data-baby-date-today>\uC624\uB298</button></div>'
-      html += '<div class="calendar-weekdays"><span>\uC77C</span><span>\uC6D4</span><span>\uD654</span><span>\uC218</span><span>\uBAA9</span><span>\uAE08</span><span>\uD1A0</span></div><div class="calendar-day-grid">'
-      for (var blank = 0; blank < first.getDay(); blank += 1) html += '<span class="calendar-empty"></span>'
-      for (var day = 1; day <= last; day += 1) {
-        var date = new Date(year, month, day)
-        var iso = formatDate(date)
-        var classes = []
-        if (date.getDay() === 0) classes.push('holiday')
-        if (date.getDay() === 6) classes.push('saturday')
-        if (iso === selected) classes.push('selected')
-        html += '<button type="button" class="' + classes.join(' ') + '" data-baby-date="' + iso + '">' + day + '</button>'
+      if (level === 'year') {
+        var startYear = Math.floor(year / 12) * 12
+        html += '<div class="calendar-year-grid">'
+        for (var yearIndex = 0; yearIndex < 12; yearIndex += 1) {
+          var itemYear = startYear + yearIndex
+          html += '<button type="button" class="' + (selectedYear === itemYear ? 'selected' : '') + '" data-baby-year="' + itemYear + '">' + itemYear + '\uB144</button>'
+        }
+        html += '</div>'
+      } else if (level === 'month') {
+        html += '<div class="calendar-month-grid">'
+        for (var monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+          var isSelectedMonth = selectedYear === year && selectedMonth === monthIndex
+          html += '<button type="button" class="' + (isSelectedMonth ? 'selected' : '') + '" data-baby-month="' + monthIndex + '">' + (monthIndex + 1) + '\uC6D4</button>'
+        }
+        html += '</div>'
+      } else {
+        var first = new Date(year, month, 1)
+        var last = new Date(year, month + 1, 0).getDate()
+        html += '<div class="calendar-weekdays"><span>\uC77C</span><span>\uC6D4</span><span>\uD654</span><span>\uC218</span><span>\uBAA9</span><span>\uAE08</span><span>\uD1A0</span></div><div class="calendar-day-grid">'
+        for (var blank = 0; blank < first.getDay(); blank += 1) html += '<span class="calendar-empty"></span>'
+        for (var day = 1; day <= last; day += 1) {
+          var date = new Date(year, month, day)
+          var iso = formatDate(date)
+          var classes = []
+          if (date.getDay() === 0) classes.push('holiday')
+          if (date.getDay() === 6) classes.push('saturday')
+          if (iso === selected) classes.push('selected')
+          html += '<button type="button" class="' + classes.join(' ') + '" data-baby-date="' + iso + '">' + day + '</button>'
+        }
+        html += '</div>'
       }
-      popover.innerHTML = html + '</div>'
+      popover.innerHTML = html
     }
 
     draw()
@@ -4728,7 +4751,7 @@
     function handleCommonDatePopoverAction(event, skipRecentPointer) {
       var target = event.target
       if (!target || !target.closest) return false
-      var control = target.closest('[data-baby-date-prev], [data-baby-date-next], [data-baby-date-today], [data-baby-date]')
+      var control = target.closest('[data-baby-date-prev], [data-baby-date-next], [data-baby-date-title], [data-baby-date-today], [data-baby-year], [data-baby-month], [data-baby-date]')
       if (!control) return false
       if (skipRecentPointer && popover.dataset.babyDatePointerAt && Date.now() - Number(popover.dataset.babyDatePointerAt) < 600) {
         event.preventDefault()
@@ -4741,17 +4764,43 @@
       if (event.stopImmediatePropagation) event.stopImmediatePropagation()
       if (event.type === 'pointerdown') popover.dataset.babyDatePointerAt = String(Date.now())
       if (target.closest('[data-baby-date-prev]')) {
-        view.setMonth(view.getMonth() - 1)
+        if (level === 'year') view.setFullYear(view.getFullYear() - 12)
+        else if (level === 'month') view.setFullYear(view.getFullYear() - 1)
+        else view.setMonth(view.getMonth() - 1)
         draw()
         return true
       }
       if (target.closest('[data-baby-date-next]')) {
-        view.setMonth(view.getMonth() + 1)
+        if (level === 'year') view.setFullYear(view.getFullYear() + 12)
+        else if (level === 'month') view.setFullYear(view.getFullYear() + 1)
+        else view.setMonth(view.getMonth() + 1)
+        draw()
+        return true
+      }
+      if (target.closest('[data-baby-date-title]')) {
+        if (level === 'day') level = 'month'
+        else if (level === 'month') level = 'year'
         draw()
         return true
       }
       if (target.closest('[data-baby-date-today]')) {
         selected = todayText()
+        view = new Date(selected + 'T00:00:00')
+        level = 'day'
+      }
+      var yearButton = target.closest('[data-baby-year]')
+      if (yearButton) {
+        view.setFullYear(Number(yearButton.dataset.babyYear))
+        level = 'month'
+        draw()
+        return true
+      }
+      var monthButton = target.closest('[data-baby-month]')
+      if (monthButton) {
+        view.setMonth(Number(monthButton.dataset.babyMonth))
+        level = 'day'
+        draw()
+        return true
       }
       var dayButton = target.closest('[data-baby-date]')
       if (dayButton) selected = dayButton.dataset.babyDate
@@ -6588,12 +6637,26 @@
     var trigger = scope && scope.querySelector('[data-baby-api-record-date-trigger]')
     if (!input || !trigger || trigger.dataset.babyApiDateReady === 'true') return
     trigger.dataset.babyApiDateReady = 'true'
-    trigger.addEventListener('click', function () {
-      document.querySelectorAll('.baby-api-record-card .calendar-popover').forEach(function (popover) {
-        popover.remove()
-      })
-      openCommonBirthDatePopover(input, trigger)
-    })
+  }
+
+  function handleBabyApiRecordDateTrigger(event, skipRecentPointer) {
+    var trigger = event.target && event.target.closest && event.target.closest('[data-baby-api-record-date-trigger]')
+    if (!trigger) return false
+    if (skipRecentPointer && trigger.dataset.babyApiPointerAt && Date.now() - Number(trigger.dataset.babyApiPointerAt) < 600) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      return true
+    }
+    var form = trigger.closest('.baby-api-record-form')
+    var input = form && form.querySelector('[name="recordDate"]')
+    if (!input) return false
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    if (event.type === 'pointerdown') trigger.dataset.babyApiPointerAt = String(Date.now())
+    toggleCommonDatePopover(input, trigger)
+    return true
   }
 
   function bindBabyGrowthDateField(scope) {
@@ -6624,10 +6687,12 @@
   }
 
   document.addEventListener('pointerdown', function (event) {
+    handleBabyApiRecordDateTrigger(event, false)
     handleBabyGrowthDateTrigger(event, false)
   }, true)
 
   document.addEventListener('click', function (event) {
+    handleBabyApiRecordDateTrigger(event, true)
     handleBabyGrowthDateTrigger(event, true)
   }, true)
 
