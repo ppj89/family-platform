@@ -3046,6 +3046,7 @@ body.api-loading-blocked::before {
 
 .trip-card-actions button,
 .travel-record-actions button,
+.travel-record-actions .record-action-link,
 .api-trip-detail-actions button {
   min-height: 34px;
   border: 1px solid #cfe1ff;
@@ -3057,6 +3058,9 @@ body.api-loading-blocked::before {
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .trip-card-actions .danger-action,
@@ -10376,6 +10380,7 @@ select {
 
   .trip-card-actions button,
   .travel-record-actions button,
+  .travel-record-actions .record-action-link,
   .api-trip-detail-actions button {
     flex: 1;
   }

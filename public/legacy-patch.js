@@ -8812,26 +8812,36 @@
         return '<article class="travel-record-card api-travel-record-card" data-api-travel-record-id="' + escapeHtml(record.id) + '"><div><strong>' + escapeHtml(record.title || '') + '</strong>' +
           '<span>' + escapeHtml([record.recordDate || '', record.recordTime || '', record.category || '', record.location || ''].filter(Boolean).join(' \u00B7 ')) + '</span>' +
           '<p>' + escapeHtml(record.note || '') + '</p></div><div class="travel-record-actions">' +
-          '<button type="button" data-api-travel-record-edit="' + escapeHtml(record.id) + '">\uC218\uC815</button>' +
-          '<button type="button" class="danger-action" data-api-travel-record-delete="' + escapeHtml(record.id) + '">\uC0AD\uC81C</button>' +
+          '<span role="button" tabindex="0" class="record-action-link" data-api-travel-record-edit="' + escapeHtml(record.id) + '">\uC218\uC815</span>' +
+          '<span role="button" tabindex="0" class="record-action-link danger-action" data-api-travel-record-delete="' + escapeHtml(record.id) + '">\uC0AD\uC81C</span>' +
           '</div></article>'
       }).join('')
+      var activateByKeyboard = function (button, handler) {
+        button.addEventListener('keydown', function (event) {
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          handler(event)
+        }, true)
+      }
       list.querySelectorAll('[data-api-travel-record-edit]').forEach(function (button) {
-        button.addEventListener('click', function (event) {
+        var onEdit = function (event) {
           event.preventDefault()
           event.stopPropagation()
           if (event.stopImmediatePropagation) event.stopImmediatePropagation()
           var record = records.find(function (item) { return String(item.id) === String(button.dataset.apiTravelRecordEdit) })
           if (record) fillTravelRecordForm(detail, record)
-        }, true)
+        }
+        button.addEventListener('click', onEdit, true)
+        activateByKeyboard(button, onEdit)
       })
       list.querySelectorAll('[data-api-travel-record-delete]').forEach(function (button) {
-        button.addEventListener('click', function (event) {
+        var onDelete = function (event) {
           event.preventDefault()
           event.stopPropagation()
           if (event.stopImmediatePropagation) event.stopImmediatePropagation()
           deleteApiTravelRecord(detail, button.dataset.apiTravelRecordDelete)
-        }, true)
+        }
+        button.addEventListener('click', onDelete, true)
+        activateByKeyboard(button, onDelete)
       })
     }).catch(function (error) {
       list.innerHTML = '<p class="empty-note">' + escapeHtml(apiActionErrorMessage(error, '\uC5EC\uD589 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</p>'
