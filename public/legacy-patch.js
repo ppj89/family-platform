@@ -5414,22 +5414,8 @@
     var wasCommunity = document.documentElement.dataset.patchPage === 'community'
     var wasFamilyGroup = document.documentElement.dataset.patchPage === 'family-group'
     if (wasCommunity || wasFamilyGroup) {
-      var label = getCleanText(nav)
-      setPendingNavLabel(label)
-      event.preventDefault()
-      event.stopPropagation()
-      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
       clearCustomPatchPageNow()
-      window.setTimeout(function () {
-        var target = findNavButton(label)
-        if (!target) return
-        target.click()
-        window.setTimeout(function () {
-          var currentTitle = getCleanText(document.querySelector('.topbar h1, h1'))
-          if (currentTitle === label) clearPendingNavLabel(label)
-          cleanupPatchRootsForCurrentMenu()
-        }, 120)
-      }, 120)
+      window.setTimeout(cleanupPatchRootsForCurrentMenu, 160)
     }
   }, true)
 
