@@ -8514,7 +8514,12 @@
       submitExistingDiaryPanel(panel, submit)
     }
     form.addEventListener('submit', submitDirectly, true)
-    if (submit) submit.addEventListener('click', submitDirectly, true)
+    if (submit) {
+      submit.addEventListener('pointerdown', submitDirectly, true)
+      submit.addEventListener('mousedown', submitDirectly, true)
+      submit.addEventListener('click', submitDirectly, true)
+      submit.onclick = submitDirectly
+    }
   }
 
   function normalizeBabyEntryForms() {
