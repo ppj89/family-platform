@@ -9033,7 +9033,7 @@
 
   function fetchTripRecords(tripId) {
     if (!tripId || !getStoredAuthToken()) return Promise.resolve([])
-    return apiRequest('/trips/' + encodeURIComponent(tripId) + '/records').then(function (items) {
+    return apiRequest('/trips/' + encodeURIComponent(tripId) + '/records?_=' + encodeURIComponent(Date.now())).then(function (items) {
       window.__familyLastTripRecordsError = ''
       return Array.isArray(items) ? items : []
     }).catch(function (error) {
