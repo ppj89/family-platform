@@ -8009,7 +8009,13 @@
     scope.querySelectorAll('input[type="time"], input[name="recordTime"], [data-field="travel-record-time"]').forEach(function (input) {
       if (!input || input.disabled) return
       if (input.matches && input.matches('input[name="recordTime"]')) {
-        if (input.value) setInputValue(input, formatClockText(input.value, ''))
+        var value = String(input.value || '').trim()
+        if (document.activeElement === input) return
+        if (!value || value === '00:00' || value === '14:00') {
+          setInputValue(input, now)
+        } else {
+          setInputValue(input, formatClockText(value, ''))
+        }
         return
       }
       if (!input.value || input.value === '00:00' || input.value === '14:00') setInputValue(input, now)
@@ -8035,14 +8041,13 @@
   document.addEventListener('input', function (event) {
     var input = event.target && event.target.closest && event.target.closest('input[name="recordTime"]')
     if (!input) return
-    var next = formatClockTyping(input.value)
-    if (input.value !== next) setInputValue(input, next)
+    input.value = String(input.value || '').replace(/[^\d:]/g, '').slice(0, 5)
   }, true)
 
   document.addEventListener('blur', function (event) {
     var input = event.target && event.target.closest && event.target.closest('input[name="recordTime"]')
     if (!input) return
-    var next = formatClockText(input.value, '')
+    var next = formatClockText(input.value, currentTimeText())
     if (input.value !== next) setInputValue(input, next)
   }, true)
 
@@ -9986,7 +9991,7 @@
       var triggerText = form.querySelector('[data-baby-api-record-date-trigger] span')
       if (triggerText) triggerText.textContent = todayText().replace(/-/g, '.')
     }
-    if (time) time.value = ''
+    if (time) time.value = currentTimeText()
     var type = form.querySelector('[name="recordType"]')
     var typeText = form.querySelector('[data-baby-record-type-trigger] span')
     if (type) type.value = '\uC218\uC720'
