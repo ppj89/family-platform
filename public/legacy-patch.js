@@ -7657,6 +7657,18 @@
     window.__familyLedgerItemsById[String(item.id)] = item
   }
 
+  function resolveLedgerItemForDetail(entryId) {
+    var id = String(entryId || '')
+    if (!id) return Promise.resolve(null)
+    var cached = window.__familyLedgerItemsById && window.__familyLedgerItemsById[id]
+    if (cached) return Promise.resolve(cached)
+    var range = getLedgerPageRange()
+    return fetchLedgerEntries(range.start, range.end).then(function (items) {
+      ;(items || []).forEach(storeLedgerItemForDetail)
+      return (window.__familyLedgerItemsById && window.__familyLedgerItemsById[id]) || null
+    })
+  }
+
   function getLedgerPageRange() {
     var text = getCleanText(document.querySelector('.filter-panel'))
     var monthMatch = text.match(/(\d{4})\uB144\s*(\d{1,2})\uC6D4/)
@@ -7734,6 +7746,7 @@
       daily.dataset.apiLoading = 'false'
       daily.dataset.apiBacked = 'true'
       daily.dataset.apiRangeKey = key
+      window.__familyLedgerItemsById = {}
       if (!items.length) {
         daily.innerHTML = emptyRow('\uD574\uB2F9 \uAE30\uAC04\uC758 \uAC00\uACC4\uBD80 \uB0B4\uC5ED\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
         return
@@ -8119,17 +8132,21 @@
     var now = currentTimeText()
     scope.querySelectorAll('input[type="time"], input[name="recordTime"], [data-field="travel-record-time"]').forEach(function (input) {
       if (!input || input.disabled) return
+      if (document.activeElement === input) return
       if (input.matches && input.matches('input[name="recordTime"]')) {
         var value = String(input.value || '').trim()
-        if (document.activeElement === input) return
-        if (!value || value === '00:00' || value === '14:00') {
+        if (!value || ((value === '00:00' || value === '14:00') && input.dataset.timeDefaulted !== 'true')) {
           setInputValue(input, now)
+          input.dataset.timeDefaulted = 'true'
         } else {
           setInputValue(input, formatClockText(value, ''))
         }
         return
       }
-      if (!input.value || input.value === '00:00' || input.value === '14:00') setInputValue(input, now)
+      if (!input.value || ((input.value === '00:00' || input.value === '14:00') && input.dataset.timeDefaulted !== 'true')) {
+        setInputValue(input, now)
+        input.dataset.timeDefaulted = 'true'
+      }
     })
   }
 
@@ -8152,6 +8169,7 @@
   document.addEventListener('input', function (event) {
     var input = event.target && event.target.closest && event.target.closest('input[name="recordTime"]')
     if (!input) return
+    input.dataset.timeTouched = 'true'
     input.value = String(input.value || '').replace(/[^\d:]/g, '').slice(0, 5)
   }, true)
 
@@ -10221,8 +10239,9 @@
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     if (editButton) {
-      var item = window.__familyLedgerItemsById && window.__familyLedgerItemsById[String(editButton.dataset.ledgerEditId)]
-      if (!fillLedgerFormForEdit(item)) showPatchToast('\uC218\uC815\uD560 \uB300\uC0C1\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
+      resolveLedgerItemForDetail(editButton.dataset.ledgerEditId).then(function (item) {
+        if (!fillLedgerFormForEdit(item)) showPatchToast('\uC218\uC815\uD560 \uB300\uC0C1\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
+      })
       return
     }
     deleteLedgerEntry(deleteButton.dataset.ledgerDeleteId)
@@ -10231,8 +10250,7 @@
   document.addEventListener('click', function (event) {
     var row = event.target && event.target.closest && event.target.closest('.api-ledger-row[data-api-ledger-id]')
     if (!row || event.target.closest('button, a, input, textarea, select, .custom-select')) return
-    var item = window.__familyLedgerItemsById && window.__familyLedgerItemsById[String(row.dataset.apiLedgerId)]
-    showLedgerDetail(item)
+    resolveLedgerItemForDetail(row.dataset.apiLedgerId).then(showLedgerDetail)
   }, true)
 
   document.addEventListener('click', function (event) {
