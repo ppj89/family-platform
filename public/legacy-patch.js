@@ -8890,14 +8890,27 @@
     if (apiTravelRecordActionDelegatesReady) return
     apiTravelRecordActionDelegatesReady = true
     document.addEventListener('pointerup', function (event) {
-      var edit = event.target && event.target.closest && event.target.closest('[data-api-travel-record-edit]')
-      if (!edit) return
+      var target = event.target
+      if (!target || !target.closest) return
+      var edit = target.closest('[data-api-travel-record-edit]')
+      var remove = target.closest('[data-api-travel-record-delete]')
+      if (!edit && !remove) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      if (edit) {
+        window.setTimeout(function () {
+          markTravelRecordEditFromButton(edit)
+        }, 40)
+        window.setTimeout(function () {
+          markTravelRecordEditFromButton(edit)
+        }, 220)
+        return
+      }
+      var detail = remove.closest && remove.closest('.api-trip-detail')
       window.setTimeout(function () {
-        markTravelRecordEditFromButton(edit)
+        deleteApiTravelRecord(detail, remove.dataset.apiTravelRecordDelete)
       }, 40)
-      window.setTimeout(function () {
-        markTravelRecordEditFromButton(edit)
-      }, 220)
     }, true)
   }
 
