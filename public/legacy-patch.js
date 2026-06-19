@@ -10354,12 +10354,13 @@
 
   function travelRecordPayloadFromForm(form, files, coords) {
     coords = coords || { latitude: 0, longitude: 0 }
+    var editCard = findApiTravelRecordCardById(form && form.dataset.apiTravelRecordEditId)
     return {
       sortOrder: null,
       title: getFieldValue(form, '[data-field="travel-title"]'),
       category: getCustomSelectValue('\uBE44\uC6A9 \uAD6C\uBD84') || '\uAE30\uD0C0',
       amount: parseAmountValue(getFieldValue(form, '[data-field="travel-amount"]')) || 0,
-      note: getFieldValue(form, 'textarea'),
+      note: getFieldValue(form, 'textarea') || (editCard && editCard.dataset.apiTravelRecordNote) || '',
       location: getFieldValue(form, '[data-field="travel-location"]') || '',
       latitude: Number(coords.latitude || 0),
       longitude: Number(coords.longitude || 0),
@@ -10367,6 +10368,13 @@
       recordTime: formatClockText(getFieldValue(form, '[data-field="travel-record-time"]'), currentTimeText()),
       mediaUrls: communityMediaUrls(files || [])
     }
+  }
+
+  function findApiTravelRecordCardById(recordId) {
+    if (!recordId) return null
+    return Array.from(document.querySelectorAll('.api-travel-record-card')).find(function (card) {
+      return String(card.dataset.apiTravelRecordId || '') === String(recordId)
+    }) || null
   }
 
   function syncTravelForm(form) {
