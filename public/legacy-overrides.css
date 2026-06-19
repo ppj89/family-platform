@@ -3016,6 +3016,53 @@ body.api-loading-blocked::before {
   text-align: left;
 }
 
+.trip-card-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trip-card-actions,
+.travel-record-actions,
+.api-trip-detail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.trip-card-actions button,
+.travel-record-actions button,
+.api-trip-detail-actions button {
+  min-height: 34px;
+  border: 1px solid #cfe1ff;
+  border-radius: 12px;
+  padding: 0 13px;
+  background: #edf4ff;
+  color: #1b64da;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.trip-card-actions .danger-action,
+.travel-record-actions .danger-action,
+.api-trip-detail-actions .danger-action {
+  border-color: #ffd3db;
+  background: #fff1f3;
+  color: #e0314f;
+}
+
 .trip-list-card:hover {
   background: #edf4ff;
 }
@@ -10229,7 +10276,7 @@ select {
   font-weight: 700 !important;
 }
 
-.api-trip-detail-header button {
+.api-trip-detail-header > button {
   min-height: 38px !important;
   border: 0 !important;
   border-radius: 14px !important;
@@ -10297,6 +10344,8 @@ select {
 
 .api-travel-record-card {
   display: grid !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
+  align-items: center !important;
   gap: 5px !important;
   border-radius: 16px !important;
   padding: 14px !important;
@@ -10307,6 +10356,24 @@ select {
 @media (max-width: 860px) {
   .api-travel-record-form {
     grid-template-columns: 1fr !important;
+  }
+
+  .trip-list-card,
+  .trip-card-main,
+  .api-travel-record-card {
+    grid-template-columns: 1fr !important;
+  }
+
+  .trip-card-actions,
+  .travel-record-actions,
+  .api-trip-detail-actions {
+    justify-content: stretch;
+  }
+
+  .trip-card-actions button,
+  .travel-record-actions button,
+  .api-trip-detail-actions button {
+    flex: 1;
   }
 }
 
