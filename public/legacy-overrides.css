@@ -3563,7 +3563,7 @@ body.api-loading-blocked::before {
   border-radius: 14px;
   padding: 13px 14px;
   resize: vertical;
-  background: #f7f8fa;
+  background: #fff;
   color: #191f28;
   outline: none;
   box-shadow: inset 0 0 0 1px #e2e6ea;
@@ -3971,6 +3971,10 @@ body.api-loading-blocked::before {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: 12px;
+}
+
+.api-trip-detail-actions [data-api-trip-back] {
+  display: none;
 }
 
 .baby-card {

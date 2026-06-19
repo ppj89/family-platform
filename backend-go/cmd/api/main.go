@@ -282,7 +282,9 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("PUT /api/families/{familyId}/members/{memberId}", a.requireAuth(a.updateFamilyMember))
 	mux.HandleFunc("DELETE /api/families/{familyId}/members/{memberId}", a.requireAuth(a.deleteFamilyMember))
 	mux.HandleFunc("GET /api/family-invitations", a.requireAuth(a.listFamilyInvitations))
+	mux.HandleFunc("GET /api/families/{familyId}/invitations", a.requireAuth(a.listSentFamilyInvitations))
 	mux.HandleFunc("POST /api/families/{familyId}/invitations", a.requireAuth(a.createFamilyInvitation))
+	mux.HandleFunc("DELETE /api/family-invitations/{invitationId}", a.requireAuth(a.cancelFamilyInvitation))
 	mux.HandleFunc("POST /api/family-invitations/{invitationId}/accept", a.requireAuth(a.acceptFamilyInvitation))
 	mux.HandleFunc("POST /api/family-invitations/{invitationId}/reject", a.requireAuth(a.rejectFamilyInvitation))
 	mux.HandleFunc("GET /api/ledger-entries", a.requireAuth(a.listLedgerEntries))
@@ -1500,6 +1502,38 @@ func (a *app) listFamilyInvitations(w http.ResponseWriter, r *http.Request, user
 	writeJSON(w, http.StatusOK, items)
 }
 
+func (a *app) listSentFamilyInvitations(w http.ResponseWriter, r *http.Request, user authUser) {
+	familyID, ok := pathID(w, r, "familyId")
+	if !ok || !a.requireFamilyAdmin(w, r.Context(), user, familyID) {
+		return
+	}
+	rows, err := a.db.Query(r.Context(), `
+		select i.id, i.family_id, coalesce(f.name, ''), i.inviter_user_id, coalesce(inviter.nickname, ''), i.invitee_user_id,
+		       coalesce(invitee.email, ''), coalesce(invitee.nickname, ''), i.role, i.can_read, i.can_create, i.can_update, i.can_delete,
+		       i.status, i.created_at, i.responded_at
+		from family_invitations i
+		left join family_groups f on f.id = i.family_id
+		left join app_users inviter on inviter.id = i.inviter_user_id
+		left join app_users invitee on invitee.id = i.invitee_user_id
+		where i.family_id = $1 and i.inviter_user_id = $2 and i.status = 'PENDING'
+		order by i.created_at desc
+	`, familyID, user.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	defer rows.Close()
+	items := []familyInvitation{}
+	for rows.Next() {
+		item, ok := scanFamilyInvitation(w, rows)
+		if !ok {
+			return
+		}
+		items = append(items, item)
+	}
+	writeJSON(w, http.StatusOK, items)
+}
+
 func (a *app) createFamilyInvitation(w http.ResponseWriter, r *http.Request, user authUser) {
 	familyID, ok := pathID(w, r, "familyId")
 	if !ok || !a.requireFamilyAdmin(w, r.Context(), user, familyID) {
@@ -1564,6 +1598,23 @@ func (a *app) createFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 	writeJSON(w, http.StatusCreated, item)
 }
 
+func (a *app) cancelFamilyInvitation(w http.ResponseWriter, r *http.Request, user authUser) {
+	invitationID, ok := pathID(w, r, "invitationId")
+	if !ok {
+		return
+	}
+	tag, err := a.db.Exec(r.Context(), `
+		update family_invitations
+		set status = 'CANCELED', responded_at = now()
+		where id = $1 and inviter_user_id = $2 and status = 'PENDING'
+	`, invitationID, user.ID)
+	if err != nil || tag.RowsAffected() == 0 {
+		writeError(w, http.StatusNotFound, "invitation not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "CANCELED"})
+}
+
 func (a *app) lookupInvitee(ctx context.Context, invite string) (int64, bool, bool) {
 	invite = strings.TrimSpace(invite)
 	if invite == "" {
@@ -1611,14 +1662,15 @@ func (a *app) acceptFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 	defer tx.Rollback(r.Context())
 
 	var familyID int64
+	var inviterUserID int64
 	var role string
 	var canRead, canCreate, canUpdate, canDelete bool
 	err = tx.QueryRow(r.Context(), `
-		select family_id, role, can_read, can_create, can_update, can_delete
+		select family_id, inviter_user_id, role, can_read, can_create, can_update, can_delete
 		from family_invitations
 		where id = $1 and invitee_user_id = $2 and status = 'PENDING'
 		for update
-	`, invitationID, user.ID).Scan(&familyID, &role, &canRead, &canCreate, &canUpdate, &canDelete)
+	`, invitationID, user.ID).Scan(&familyID, &inviterUserID, &role, &canRead, &canCreate, &canUpdate, &canDelete)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "invitation not found")
 		return
@@ -1643,6 +1695,11 @@ func (a *app) acceptFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 		writeError(w, http.StatusInternalServerError, "invitation update failed")
 		return
 	}
+	acceptedName := a.displayName(r.Context(), user)
+	_, _ = tx.Exec(r.Context(), `
+		insert into app_notifications (user_id, family_id, type, title, body, target_date, created_at)
+		values ($1, $2, 'FAMILY_INVITE_ACCEPTED', $3, $4, current_date, now())
+	`, inviterUserID, familyID, acceptedName+" 님이 초대를 수락하셨습니다.", acceptedName+" 님이 가족그룹 초대를 수락했습니다.")
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "database commit failed")
 		return

@@ -545,11 +545,10 @@
       var parsed = new URL(url, window.location.origin)
       if (parsed.pathname.indexOf('/api/notifications') === 0) return { tracked: false, blocking: false }
       if (parsed.pathname.indexOf('/api/') !== 0) return { tracked: false, blocking: false }
-      var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase()
-      return { tracked: true, blocking: method !== 'GET' && method !== 'HEAD' }
+      return { tracked: true, blocking: true }
     } catch (error) {
-      var methodFallback = String((init && init.method) || (input && input.method) || 'GET').toUpperCase()
-      return { tracked: String(url).indexOf('/api/') >= 0, blocking: methodFallback !== 'GET' && methodFallback !== 'HEAD' }
+      var tracked = String(url).indexOf('/api/') >= 0
+      return { tracked: tracked, blocking: tracked }
     }
   }
 
@@ -3617,10 +3616,15 @@
       }
       var family = list[0]
       localStorage.setItem(AUTH_FAMILY_STORAGE_KEY, String(family.id))
-      return apiRequest('/families/' + encodeURIComponent(family.id) + '/members').then(function (members) {
-        renderFamilyManagePage(root, family, Array.isArray(members) ? members : [], invitations)
+      return Promise.all([
+        apiRequest('/families/' + encodeURIComponent(family.id) + '/members').catch(function () { return [] }),
+        apiRequest('/families/' + encodeURIComponent(family.id) + '/invitations').catch(function () { return [] })
+      ]).then(function (familyResults) {
+        var members = Array.isArray(familyResults[0]) ? familyResults[0] : []
+        var sentInvitations = Array.isArray(familyResults[1]) ? familyResults[1] : []
+        renderFamilyManagePage(root, family, members, invitations, sentInvitations)
       }).catch(function () {
-        renderFamilyManagePage(root, family, [], invitations)
+        renderFamilyManagePage(root, family, [], invitations, [])
       })
     }).catch(function (error) {
       var message = error && error.status === 401 ? '로그인 세션이 필요합니다.' : '가족 정보를 불러오지 못했습니다.'
@@ -3684,6 +3688,25 @@
     ].join('')
   }
 
+  function renderSentFamilyInvitationList(invitations) {
+    if (!invitations || !invitations.length) return ''
+    return [
+      '<section class="family-invitation-panel sent-family-invitation-panel">',
+      '<header><strong>\uBCF4\uB0B8 \uCD08\uB300</strong><span>' + invitations.length + '\uAC74</span></header>',
+      invitations.map(function (item) {
+        var invitee = item.inviteeName || item.inviteeEmail || '\uCD08\uB300\uB300\uC0C1'
+        return [
+          '<article data-family-sent-invitation-id="' + escapeHtml(item.id) + '">',
+          '<div><strong>' + escapeHtml(invitee) + '</strong>',
+          '<span>' + escapeHtml(roleText(item.role)) + ' \u00B7 ' + escapeHtml(permissionText(item)) + '</span></div>',
+          '<div class="member-actions"><button type="button" class="danger-button" data-family-invite-cancel="' + escapeHtml(item.id) + '">\uCD08\uB300 \uCDE8\uC18C</button></div>',
+          '</article>'
+        ].join('')
+      }).join(''),
+      '</section>'
+    ].join('')
+  }
+
   function bindFamilyInvitationActions(root) {
     root.querySelectorAll('[data-family-invite-accept], [data-family-invite-reject]').forEach(function (button) {
       button.addEventListener('click', function () {
@@ -3699,9 +3722,22 @@
         })
       })
     })
+    root.querySelectorAll('[data-family-invite-cancel]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var id = button.dataset.familyInviteCancel
+        showPatchConfirm('\uBCF4\uB0B8 \uCD08\uB300\uB97C \uCDE8\uC18C\uD560\uAE4C\uC694?', function () {
+          apiRequest('/family-invitations/' + encodeURIComponent(id), { method: 'DELETE' }).then(function () {
+            showPatchToast('\uCD08\uB300\uB97C \uCDE8\uC18C\uD588\uC2B5\uB2C8\uB2E4.')
+            loadFamilyGroupPage(root)
+          }).catch(function (error) {
+            showPatchToast(apiActionErrorMessage(error, '\uCD08\uB300 \uCDE8\uC18C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+          })
+        })
+      })
+    })
   }
 
-  function renderFamilyManagePage(root, family, members, invitations) {
+  function renderFamilyManagePage(root, family, members, invitations, sentInvitations) {
     var currentUser = readStoredAuthUser() || {}
     var canManage = canManageFamily(members)
     window.__familyLastMembers = members || []
@@ -3752,6 +3788,7 @@
       '<section class="panel wide family-group-panel">',
       '<header class="panel-header"><h2>가족그룹</h2></header>',
       renderFamilyInvitationList(invitations || []),
+      canManage ? renderSentFamilyInvitationList(sentInvitations || []) : '',
       '<div class="family-group-summary">',
       '<article><strong>' + escapeHtml(family.name || '-') + '</strong></article>',
       '<article><span>구성원</span><strong>' + members.length + '명</strong><small>읽기/쓰기/수정/삭제 권한 관리</small></article>',
@@ -3824,6 +3861,7 @@
         postJson('/families/' + encodeURIComponent(family.id) + '/invitations', payload).then(function () {
           showPatchToast('초대를 보냈습니다. 상대방이 수락하면 구성원으로 추가됩니다.')
           if (input) input.value = ''
+          loadFamilyGroupPage(root)
         }).catch(function (error) {
           showPatchToast(apiActionErrorMessage(error, '초대에 실패했습니다.'))
         }).finally(function () {
@@ -7218,7 +7256,8 @@
     })
     popup.querySelectorAll('.schedule-notification-item').forEach(function (item) {
       item.addEventListener('click', function () {
-        if (item.dataset.type === 'family-invitation') {
+        if (item.dataset.type === 'family-invitation' || String(item.dataset.type || '').indexOf('FAMILY_') === 0) {
+          if (item.dataset.type !== 'family-invitation') markNotificationRead(item.dataset.id)
           popup.remove()
           goMenu('\uAC00\uC871\uADF8\uB8F9')
           return
@@ -7274,9 +7313,15 @@
         notificationState.items = inviteItems.concat(scheduleItems)
         notificationState.loadedAt = Date.now()
         renderNotificationBell()
+        var acceptedInvite = scheduleItems.find(function (item) {
+          return String(item.type || '') === 'FAMILY_INVITE_ACCEPTED'
+        })
         if (inviteItems.length && !sessionStorage.getItem('family-platform-invitation-notification-seen')) {
           sessionStorage.setItem('family-platform-invitation-notification-seen', 'true')
           showPatchToast('\uAC00\uC871\uADF8\uB8F9 \uCD08\uB300\uAC00 \uC788\uC2B5\uB2C8\uB2E4.')
+        } else if (acceptedInvite && !sessionStorage.getItem('family-platform-invite-accepted-seen')) {
+          sessionStorage.setItem('family-platform-invite-accepted-seen', 'true')
+          showPatchToast(acceptedInvite.title || '\uCD08\uB300\uAC00 \uC218\uB77D\uB418\uC5C8\uC2B5\uB2C8\uB2E4.')
         } else if (scheduleItems.length && !sessionStorage.getItem('family-platform-schedule-notification-seen')) {
           sessionStorage.setItem('family-platform-schedule-notification-seen', 'true')
           showPatchToast('\uB4F1\uB85D\uB41C \uC77C\uC815\uC774 \uC788\uC2B5\uB2C8\uB2E4.')
@@ -9013,6 +9058,41 @@
     })
   }
 
+  function activateTravelListMode(panel) {
+    panel = panel || document.querySelector('.trip-manager')
+    if (!panel) return
+    var detail = panel.querySelector('.api-trip-detail')
+    if (detail) detail.remove()
+    panel.classList.add('list-mode')
+    var titleInput = panel.querySelector('.trip-add-row [data-field="trip-title"], .trip-add-row input')
+    if (titleInput) window.setTimeout(function () { titleInput.focus() }, 80)
+  }
+
+  function activateTravelDetailList(panel) {
+    panel = panel || document.querySelector('.trip-manager')
+    if (!panel) return
+    var detail = panel.querySelector('.api-trip-detail')
+    if (detail) detail.remove()
+    panel.classList.add('list-mode')
+  }
+
+  document.addEventListener('click', function (event) {
+    if (!pageHeadingIs('\uC5EC\uD589')) return
+    var button = event.target && event.target.closest && event.target.closest('button')
+    if (!button) return
+    if (button.closest('.api-trip-detail-actions')) return
+    var text = getCleanText(button)
+    if (text.indexOf('\uC2E0\uADDC\uC785\uB825') >= 0) {
+      event.preventDefault()
+      activateTravelListMode(document.querySelector('.trip-manager'))
+      return
+    }
+    if (text === '\uBAA9\uB85D') {
+      event.preventDefault()
+      activateTravelDetailList(document.querySelector('.trip-manager'))
+    }
+  }, true)
+
   function renderApiTripList(panel, trips) {
     var list = panel.querySelector('.trip-list')
     if (!list) {
@@ -10231,7 +10311,7 @@
   }
 
   function readWithReadableFamily(pathFactory) {
-    return getReadableFamilyId().then(function (familyId) {
+    return getReadableFamilyId(true).then(function (familyId) {
       return apiRequest(pathFactory(familyId)).catch(function (error) {
         if (familyId > 0 && error && (error.status === 403 || error.status === 404)) {
           localStorage.removeItem(API_FAMILY_ID_KEY)
@@ -10976,7 +11056,19 @@
 
   document.addEventListener('click', function (event) {
     var tripButton = event.target && event.target.closest && event.target.closest('.trip-add-row .submit-action')
-    if (tripButton) syncTripAddRow(tripButton.closest('.trip-add-row'))
+    if (tripButton) {
+      event.preventDefault()
+      syncTripAddRow(tripButton.closest('.trip-add-row'))
+    }
+  }, true)
+
+  document.addEventListener('submit', function (event) {
+    var tripRow = event.target && event.target.closest && event.target.closest('.trip-add-row')
+    if (!tripRow) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    submitApiTripRow(tripRow)
   }, true)
 
   document.addEventListener('submit', function (event) {
