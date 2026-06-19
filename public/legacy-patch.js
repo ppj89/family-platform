@@ -13,6 +13,15 @@
   var protectedAuthUntil = 0
   var protectedAuthSnapshot = null
 
+  function callEarlyDiarySubmitHandler(event) {
+    var handler = window.__familyDiaryDirectSubmitHandler
+    if (typeof handler === 'function') handler(event)
+  }
+
+  ;['pointerdown', 'mousedown', 'click', 'submit'].forEach(function (type) {
+    document.addEventListener(type, callEarlyDiarySubmitHandler, true)
+  })
+
   window.setInterval(function () {
     var existingToken = getStoredAuthToken()
     var existingUser = readStoredAuthUser()
@@ -10346,15 +10355,18 @@
 
   function handleDiaryDirectSubmitEvent(event) {
     var button = event.target && event.target.closest && event.target.closest('form.diary-form button[type="submit"], form.diary-form .submit-action')
-    if (!button || getCleanText(button) !== '\uC77C\uAE30 \uCD94\uAC00') return
+    if (!button || getCleanText(button) !== '\uC77C\uAE30 \uCD94\uAC00') return false
     var form = button.closest('form.diary-form')
     var panel = form && (form.closest('aside, section, article, .panel, .entry-panel') || form)
-    if (!panel || getCleanText(panel.querySelector('h2')) !== '\uC77C\uAE30 \uCD94\uAC00') return
+    if (!panel || getCleanText(panel.querySelector('h2')) !== '\uC77C\uAE30 \uCD94\uAC00') return false
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     submitExistingDiaryPanel(panel, button)
+    return true
   }
+
+  window.__familyDiaryDirectSubmitHandler = handleDiaryDirectSubmitEvent
 
   document.addEventListener('pointerdown', handleDiaryDirectSubmitEvent, true)
   document.addEventListener('mousedown', handleDiaryDirectSubmitEvent, true)
