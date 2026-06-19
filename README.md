@@ -47,6 +47,8 @@ Frontend:
 npm run build
 ```
 
+Responsive UI changes must be checked against the project viewport matrix before release. See [docs/responsive-qa.md](./docs/responsive-qa.md).
+
 Backend:
 
 ```bash
