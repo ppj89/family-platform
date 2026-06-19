@@ -2904,6 +2904,10 @@ body.api-loading-blocked::before {
   display: none;
 }
 
+.trip-manager .trip-add-row[data-api-trip-edit-id] {
+  display: grid;
+}
+
 .list-mode {
   margin-bottom: 0;
 }

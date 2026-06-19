@@ -8703,6 +8703,7 @@
   function startTripEdit(panel, trip) {
     var detail = panel && panel.querySelector('.api-trip-detail')
     if (detail) detail.remove()
+    if (panel) panel.classList.add('list-mode')
     var row = findTripAddRow(panel)
     if (!fillTripRow(row, trip)) showPatchToast('\uC218\uC815\uD560 \uC5EC\uD589\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
   }
