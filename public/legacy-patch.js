@@ -8817,15 +8817,21 @@
           '</div></article>'
       }).join('')
       list.querySelectorAll('[data-api-travel-record-edit]').forEach(function (button) {
-        button.addEventListener('click', function () {
+        button.addEventListener('click', function (event) {
+          event.preventDefault()
+          event.stopPropagation()
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation()
           var record = records.find(function (item) { return String(item.id) === String(button.dataset.apiTravelRecordEdit) })
           if (record) fillTravelRecordForm(detail, record)
-        })
+        }, true)
       })
       list.querySelectorAll('[data-api-travel-record-delete]').forEach(function (button) {
-        button.addEventListener('click', function () {
+        button.addEventListener('click', function (event) {
+          event.preventDefault()
+          event.stopPropagation()
+          if (event.stopImmediatePropagation) event.stopImmediatePropagation()
           deleteApiTravelRecord(detail, button.dataset.apiTravelRecordDelete)
-        })
+        }, true)
       })
     }).catch(function (error) {
       list.innerHTML = '<p class="empty-note">' + escapeHtml(apiActionErrorMessage(error, '\uC5EC\uD589 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</p>'
