@@ -8371,7 +8371,12 @@
     if (Number.isFinite(latitude) && Number.isFinite(longitude) && latitude !== 0 && longitude !== 0) {
       return { latitude: latitude, longitude: longitude }
     }
-    return Gv(String(input.value || ''))
+    var match = String(input.value || '').trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/)
+    if (!match) return null
+    latitude = Number(match[1])
+    longitude = Number(match[2])
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null
+    return { latitude: latitude, longitude: longitude }
   }
 
   function resolveTravelLocationForSubmit(form, location) {
