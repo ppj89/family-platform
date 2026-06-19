@@ -5431,7 +5431,14 @@
         if (!label || document.querySelector('.auth-card')) return
         if (document.documentElement.dataset.patchPage) return
         var currentTitle = getCleanText(document.querySelector('.topbar h1, h1'))
-        if (currentTitle !== label) setNavActive(label)
+        if (currentTitle === label) return
+        try {
+          var reloadState = JSON.parse(sessionStorage.getItem('family-platform-nav-reload-state') || '{}')
+          if (reloadState.label === label && Date.now() - Number(reloadState.at || 0) < 10000) return
+          sessionStorage.setItem('family-platform-nav-reload-state', JSON.stringify({ label: label, at: Date.now() }))
+        } catch {}
+        setPendingNavLabel(label)
+        window.location.reload()
       }, 2200)
     }
   }, true)
