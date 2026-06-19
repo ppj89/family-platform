@@ -4110,7 +4110,7 @@
   }
 
   function enhanceDatepickers() {
-    document.querySelectorAll('.calendar-popover:not(.jump-datepicker-popover)').forEach(function (popover) {
+    document.querySelectorAll('.calendar-popover:not(.jump-datepicker-popover):not(.baby-common-date-popover)').forEach(function (popover) {
       if (!popover.querySelector('.calendar-today-row')) {
         var row = document.createElement('div')
         row.className = 'calendar-today-row'
@@ -4681,12 +4681,6 @@
     var trigger = dialog && dialog.querySelector('[data-baby-create-birth-trigger]')
     if (!input || !trigger || trigger.dataset.babyBirthReady === 'true') return
     trigger.dataset.babyBirthReady = 'true'
-    trigger.addEventListener('click', function (event) {
-      event.preventDefault()
-      event.stopPropagation()
-      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-      toggleCommonDatePopover(input, trigger)
-    })
   }
 
   function toggleCommonDatePopover(input, trigger) {
@@ -4706,7 +4700,7 @@
     var selected = parseApiDate(input.value) || todayText()
     var view = new Date(selected + 'T00:00:00')
     var popover = document.createElement('div')
-    popover.className = 'calendar-popover'
+    popover.className = 'calendar-popover baby-common-date-popover'
 
     function draw() {
       var year = view.getFullYear()
@@ -4731,18 +4725,30 @@
 
     draw()
     trigger.insertAdjacentElement('afterend', popover)
-    popover.addEventListener('click', function (event) {
+    function handleCommonDatePopoverAction(event, skipRecentPointer) {
       var target = event.target
-      if (!target || !target.closest) return
+      if (!target || !target.closest) return false
+      var control = target.closest('[data-baby-date-prev], [data-baby-date-next], [data-baby-date-today], [data-baby-date]')
+      if (!control) return false
+      if (skipRecentPointer && popover.dataset.babyDatePointerAt && Date.now() - Number(popover.dataset.babyDatePointerAt) < 600) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+        return true
+      }
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      if (event.type === 'pointerdown') popover.dataset.babyDatePointerAt = String(Date.now())
       if (target.closest('[data-baby-date-prev]')) {
         view.setMonth(view.getMonth() - 1)
         draw()
-        return
+        return true
       }
       if (target.closest('[data-baby-date-next]')) {
         view.setMonth(view.getMonth() + 1)
         draw()
-        return
+        return true
       }
       if (target.closest('[data-baby-date-today]')) {
         selected = todayText()
@@ -4755,19 +4761,43 @@
         if (label) label.textContent = selected.replace(/-/g, '.')
         popover.remove()
       }
-    })
+      return true
+    }
+
+    popover.addEventListener('pointerdown', function (event) {
+      handleCommonDatePopoverAction(event, false)
+    }, true)
+    popover.addEventListener('click', function (event) {
+      handleCommonDatePopoverAction(event, true)
+    }, true)
   }
 
-  document.addEventListener('click', function (event) {
+  function handleBabyCreateBirthTrigger(event, skipRecentPointer) {
     var trigger = event.target && event.target.closest && event.target.closest('[data-baby-create-birth-trigger]')
-    if (!trigger) return
+    if (!trigger) return false
+    if (skipRecentPointer && trigger.dataset.babyBirthPointerAt && Date.now() - Number(trigger.dataset.babyBirthPointerAt) < 600) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      return true
+    }
     var dialog = trigger.closest('.baby-create-dialog')
     var input = dialog && dialog.querySelector('[data-baby-create-birth]')
-    if (!input) return
+    if (!input) return false
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    if (event.type === 'pointerdown') trigger.dataset.babyBirthPointerAt = String(Date.now())
     toggleCommonDatePopover(input, trigger)
+    return true
+  }
+
+  document.addEventListener('pointerdown', function (event) {
+    handleBabyCreateBirthTrigger(event, false)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    handleBabyCreateBirthTrigger(event, true)
   }, true)
 
   document.addEventListener('pointerdown', function (event) {
