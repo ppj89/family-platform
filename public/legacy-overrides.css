@@ -10075,14 +10075,14 @@ select {
 .baby-growth-history-dialog-row strong {
   color: #191f28 !important;
   font-size: 14px !important;
-  font-weight: 900 !important;
+  font-weight: 500 !important;
 }
 
 .baby-growth-history-dialog-row span {
   margin-top: 5px !important;
   color: #6b7684 !important;
   font-size: 13px !important;
-  font-weight: 800 !important;
+  font-weight: 500 !important;
 }
 
 .baby-growth-history-dialog-actions {
@@ -10117,11 +10117,11 @@ select {
 
 .baby-growth-history-row {
   display: grid !important;
-  grid-template-columns: 112px minmax(0, 1fr) minmax(0, 1fr) !important;
+  grid-template-columns: minmax(178px, 0.72fr) minmax(120px, 0.42fr) minmax(0, 1fr) !important;
   align-items: center !important;
-  gap: 10px !important;
-  border-radius: 8px !important;
-  padding: 12px !important;
+  gap: 28px !important;
+  border-radius: 10px !important;
+  padding: 13px 16px !important;
   background: #ffffff !important;
   box-shadow: inset 0 0 0 1px #e5e8eb !important;
 }
@@ -10129,19 +10129,24 @@ select {
 .baby-growth-history-row strong {
   color: #1b64da !important;
   font-size: 13px !important;
-  font-weight: 900 !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
 }
 
 .baby-growth-history-row span {
   color: #191f28 !important;
   font-size: 14px !important;
-  font-weight: 900 !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
 }
 
 .baby-growth-history-row small {
   color: #6b7684 !important;
   font-size: 12px !important;
-  font-weight: 700 !important;
+  font-weight: 400 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
 @media (max-width: 720px) {

@@ -9141,7 +9141,16 @@
   }
 
   function formatBabyRecordDateTime(record) {
-    var date = String(record.recordDate || '').replace(/-/g, '.')
+    var source = String(record.recordDate || '')
+    var parts = source.split('-')
+    var date = source.replace(/-/g, '.')
+    if (parts.length === 3) {
+      var parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      var weekdays = ['일', '월', '화', '수', '목', '금', '토']
+      if (!Number.isNaN(parsed.getTime())) {
+        date = parts[0] + '. ' + parts[1] + '. ' + parts[2] + '(' + weekdays[parsed.getDay()] + ')'
+      }
+    }
     return [date, record.recordTime || ''].filter(Boolean).join(' ')
   }
 
