@@ -5319,14 +5319,22 @@
     }
     var target = findNavButton(label)
     if (!target) return
-    clearPendingNavLabel(label)
     document.documentElement.dataset.pendingNavApplying = 'true'
-    window.setTimeout(function () {
-      target.click()
+    ;[250, 800, 1500, 2400].forEach(function (delay) {
       window.setTimeout(function () {
-        delete document.documentElement.dataset.pendingNavApplying
-      }, 500)
-    }, 150)
+        var current = getCleanText(document.querySelector('.topbar h1, h1'))
+        if (current === label) {
+          clearPendingNavLabel(label)
+          return
+        }
+        var nextTarget = findNavButton(label)
+        if (nextTarget) nextTarget.click()
+      }, delay)
+    })
+    window.setTimeout(function () {
+      if (getCleanText(document.querySelector('.topbar h1, h1')) === label) clearPendingNavLabel(label)
+      delete document.documentElement.dataset.pendingNavApplying
+    }, 3200)
   }
 
   var communityState = {
