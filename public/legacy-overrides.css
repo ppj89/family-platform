@@ -2967,6 +2967,9 @@ body.api-loading-blocked::before {
   min-height: 40px;
   border-radius: 14px;
   padding: 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
   white-space: nowrap;
 }
 
