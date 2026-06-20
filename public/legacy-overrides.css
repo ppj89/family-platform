@@ -12681,22 +12681,11 @@ body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-
   }
 }
 
-body:has(.baby-api-detail) .content-grid {
+html body:has(.baby-api-detail) main.app-shell .workspace > .content-grid:has(.baby-api-detail) {
   grid-template-columns: minmax(0, 1fr) !important;
 }
 
-.content-grid:has(.baby-api-detail) {
-  grid-template-columns: minmax(0, 1fr) !important;
-}
-
-body:has(.baby-api-detail) .content-grid > .panel:has(.baby-api-detail) {
-  grid-column: 1 / -1 !important;
-  width: 100% !important;
-  max-width: none !important;
-  min-width: 0 !important;
-}
-
-.content-grid:has(.baby-api-detail) > .panel:has(.baby-api-detail) {
+html body:has(.baby-api-detail) main.app-shell .workspace > .content-grid:has(.baby-api-detail) > article.panel.wide:has(.baby-api-detail) {
   grid-column: 1 / -1 !important;
   width: 100% !important;
   max-width: none !important;
