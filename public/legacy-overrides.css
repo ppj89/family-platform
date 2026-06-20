@@ -12737,3 +12737,15 @@ html body:has(.baby-api-detail) main.app-shell .workspace > .content-grid:has(.b
     grid-template-columns: minmax(0, 1fr) !important;
   }
 }
+
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]):not(#family-input-weight-a):not(#family-input-weight-b),
+textarea:not(#family-input-weight-a):not(#family-input-weight-b),
+select:not(#family-input-weight-a):not(#family-input-weight-b),
+.form-control:not(#family-input-weight-a):not(#family-input-weight-b),
+.date-picker-trigger:not(#family-input-weight-a):not(#family-input-weight-b),
+.date-picker-trigger span:not(#family-input-weight-a):not(#family-input-weight-b),
+.custom-select-trigger:not(#family-input-weight-a):not(#family-input-weight-b),
+.custom-select-trigger span:not(#family-input-weight-a):not(#family-input-weight-b),
+.custom-select-list button:not(#family-input-weight-a):not(#family-input-weight-b) {
+  font-weight: 500 !important;
+}
