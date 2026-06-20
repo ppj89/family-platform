@@ -1,55 +1,46 @@
 # 메뉴별 소스 구조 기준
 
-이 프로젝트의 운영 화면은 현재 `public/legacy/assets/index-DFjbaB-2.js` 레거시 번들과 `public/legacy-patch.js` 보정 스크립트가 함께 만든다. 원본 React 메뉴 컴포넌트 소스가 저장소에 분리되어 있지 않기 때문에, 기능을 바로 큰 폭으로 분해하면 여행/육아/일기/맛집처럼 서로 다른 메뉴가 같이 깨질 수 있다.
+운영 화면은 아직 레거시 번들과 `public/legacy-patch.js` 조합으로 동작한다. 하지만 수정 원본은 메뉴별 feature 디렉터리에 둔다.
 
-따라서 메뉴 수정은 아래 구조와 소유권 기준을 먼저 적용한다.
+## 원본 위치
 
-## 필수 원칙
+- 공통 legacy patch: `src/shared/legacy-patch`
+- 여행: `src/features/travel/legacy-patch`
+- 육아: `src/features/baby/legacy-patch`
+- 일기: `src/features/diary/legacy-patch`
+- 맛집: `src/features/restaurant/legacy-patch`
+- 가계부: `src/features/ledger/legacy-patch`
+- 캘린더: `src/features/calendar/legacy-patch`
+- 가족그룹: `src/features/family/legacy-patch`
+- 홈: `src/features/home/legacy-patch`
+- 커뮤니티: `src/features/community/legacy-patch`
 
-- 메뉴 하나를 수정할 때 다른 메뉴의 렌더링, 이벤트, API 흐름을 같이 변경하지 않는다.
-- 공통으로 쓸 수 있는 datepicker, form, filter, button, loading 처리는 `src/legacy-patch-modules/common` 기준으로 분리한다.
-- 메뉴별 동작은 `src/legacy-patch-modules/menus/<menu>` 기준으로 분리한다.
-- 운영에 적용되는 파일은 `public/legacy-patch.js`지만, 새 변경의 원본은 `src/legacy-patch-modules` 아래 메뉴별 파일로 관리한다.
-- 메뉴별 파일을 수정한 뒤 `npm run build:legacy-patch`를 실행해 `public/legacy-patch.js`를 다시 생성한다.
-- `public/legacy-patch.js`가 메뉴별 원본과 같은지 확인할 때는 `npm run check:legacy-patch`를 실행한다.
-- `src/legacy-patch-modules/**/*.js` 파일은 하나의 IIFE를 순서대로 나눈 조각이므로 단독 실행/단독 lint 대상이 아니다. 문법/동기화 검증은 재조합된 `public/legacy-patch.js`와 `check:legacy-patch` 기준으로 진행한다.
-- 기존 `public/legacy-patch.js`에서 코드를 더 옮길 때는 한 번에 한 메뉴만 옮기고, 옮긴 뒤 PC/태블릿/모바일/앱 화면을 확인한다.
-- 기존 동작 원복이 필요하면 메뉴별 커밋 단위로 되돌릴 수 있게 변경 범위를 작게 유지한다.
-- 사용자 요청 없이 전체 메뉴 공통 리팩터링을 진행하지 않는다.
+`src/legacy-patch-modules`는 더 이상 원본 위치로 사용하지 않는다.
 
-## 디렉터리 기준
+## 빌드 흐름
 
-- `src/legacy-patch-modules/common`: 공통 loading, datepicker, form, filter, button, API helper 후보
-- `src/legacy-patch-modules/menus/travel`: 여행 목록, 여행 상세, 여행 코스/지도/비용 기록
-- `src/legacy-patch-modules/menus/baby`: 육아 아이 목록, 상세, 기록, 성장 기록
-- `src/legacy-patch-modules/menus/diary`: 일기 목록, 상세, 작성/수정
-- `src/legacy-patch-modules/menus/restaurant`: 맛집 목록, 상세, 기록
-- `src/legacy-patch-modules/menus/ledger`: 가계부 목록, 필터, 입력폼
-- `src/legacy-patch-modules/menus/calendar`: 캘린더 일정/필터/date UI
-- `src/legacy-patch-modules/menus/family`: 가족그룹, 초대, 권한 흐름
-- `src/legacy-patch-modules/menus/home`: 홈 요약/대시보드
-- `src/legacy-patch-modules/menus/community`: 커뮤니티 게시판/파일/댓글
+- 조립 순서: `src/legacy-patch-manifest.mjs`
+- 생성 파일: `public/legacy-patch.js`
+- 생성 명령: `npm run build:legacy-patch`
+- 동기화 확인: `npm run check:legacy-patch`
 
-## 현재 레거시 소유권 맵
+`public/legacy-patch.js`는 생성물이다. 직접 수정하지 말고 feature/shared 원본을 수정한 뒤 다시 생성한다.
 
-현재 운영 반영 파일은 `public/legacy-patch.js`이고, 원본 분리 파일은 `src/legacy-patch-modules/manifest.mjs` 순서대로 합쳐진다. 아래 함수가 보이면 해당 메뉴 소유권으로 판단한다.
+## 수정 원칙
 
-- 공통: `installApiLoadingInterceptor`, `setApiLoadingVisible`, `beginApiLoading`, `endApiLoading`, `openCommonDatePopover`, `pageHeadingIs`
-- 가계부: `renderLedgerPageFromApi`, `normalizeLedgerEntryForm`
-- 맛집: `renderRestaurantPageFromApi`
-- 여행: `normalizeTravelEntryForm`, `renderTravelPageFromApi`
-- 육아: `normalizeBabyEntryForms`
-- 일기: `renderDiaryPageFromApi`
-- 서버 화면 갱신 연결: `refreshServerDataViews`
+- 한 메뉴를 수정할 때는 해당 메뉴의 `src/features/<menu>` 아래만 수정한다.
+- 여러 메뉴가 같이 쓰는 동작만 `src/shared`로 뺀다.
+- 목록, 상세, 입력, 필터, datepicker 같은 반복 구조는 공통 패턴을 먼저 확인한다.
+- 필요 없는 UI는 `display:none`으로 숨기지 말고 렌더링 원본에서 제거한다.
+- 여행 목록 row 클릭은 상세 진입이고, 수정/삭제는 별도 버튼 또는 팝업으로 분리한다.
 
-여행 메뉴는 원본 레거시 화면 안에 목록, 상세, 코스 순서, 지도 입력, 비용/장소 기록 UI가 들어 있다. 여행 목록 화면은 큰 여행 단위만 보여주고, row 클릭은 상세 진입이어야 한다. 수정/삭제는 목록 버튼 또는 팝업으로 분리하고 row 클릭 동작을 수정으로 바꾸지 않는다.
+## 검증
 
-## 변경 절차
+변경 후 기본 검증은 아래 순서로 진행한다.
 
-1. `AGENTS.md`, `docs/common-ui-guidelines.md`, `docs/component-source-structure.md`, 이 문서를 먼저 읽는다.
-2. `src/README.md`에서 전체 소스 구조를 확인한다.
-3. 기존 운영 동작 위치가 `src/legacy-patch-modules`의 어느 메뉴 파일인지, 아니면 레거시 번들인지 확인한다.
-4. 한 메뉴의 변경만 적용한다.
-5. 메뉴별 파일을 수정했다면 `npm run build:legacy-patch`와 `npm run check:legacy-patch`를 실행한다.
-6. `npm run lint`, `npm run build`, 브라우저 PC/태블릿/모바일 확인을 진행한다.
-7. 운영 반영 대상이면 배포 후 운영 URL에서 동일하게 확인한다.
+```bash
+npm run build:legacy-patch
+npm run check:legacy-patch
+npm run lint
+npm run build
+```
