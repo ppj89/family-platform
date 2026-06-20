@@ -8776,14 +8776,46 @@
     if (!pageHeadingIs('\uC5EC\uD589')) return
     var panel = document.querySelector('.trip-manager')
     if (!panel) return
+    cleanupTravelPageCaption()
     var header = panel.querySelector('.panel-header') || panel.closest('.panel') && panel.closest('.panel').querySelector('.panel-header')
     if (!header) return
+    var isListMode = panel.classList.contains('list-mode')
+    var actions = header.querySelector('.travel-header-actions')
+
+    if (isListMode) {
+      if (!actions) {
+        actions = document.createElement('div')
+        actions.className = 'travel-header-actions'
+        header.appendChild(actions)
+      }
+      actions.querySelectorAll('[data-travel-list-back]').forEach(function (button) { button.remove() })
+      if (!actions.querySelector('[data-travel-new-entry]')) {
+        var newButton = document.createElement('button')
+        newButton.type = 'button'
+        newButton.className = 'save-button travel-new-entry-button'
+        newButton.dataset.travelNewEntry = 'true'
+        newButton.textContent = '\uC2E0\uADDC\uC785\uB825'
+        newButton.addEventListener('click', function () {
+          var first = panel.querySelector('.trip-add-row input, .trip-add-row textarea')
+          if (first) {
+            first.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            window.setTimeout(function () { first.focus() }, 180)
+          }
+        })
+        actions.appendChild(newButton)
+      }
+      normalizeTravelListWorkspace()
+      return
+    }
+
     var originalList = Array.from(panel.querySelectorAll('button')).find(function (button) {
       return getCleanText(button) === '\uBAA9\uB85D' && !button.dataset.travelListBack
     })
-    var actions = header.querySelector('.travel-header-actions')
     if (!originalList) {
-      if (actions && !actions.querySelector('[data-travel-list-back]')) actions.remove()
+      if (actions) {
+        actions.querySelectorAll('[data-travel-new-entry]').forEach(function (button) { button.remove() })
+        if (!actions.children.length) actions.remove()
+      }
       normalizeTravelListWorkspace()
       return
     }
@@ -8792,18 +8824,20 @@
       actions.className = 'travel-header-actions'
       header.appendChild(actions)
     }
-    var listButton = actions.querySelector('[data-travel-list-back]')
-    if (!listButton && originalList) {
-      listButton = document.createElement('button')
-      listButton.type = 'button'
-      listButton.className = originalList.className || 'cancel-button'
-      listButton.dataset.travelListBack = 'true'
-      listButton.textContent = '\uBAA9\uB85D'
-      actions.appendChild(listButton)
-      listButton.addEventListener('click', function () { originalList.click() })
-      originalList.remove()
-    }
+    actions.querySelectorAll('[data-travel-new-entry]').forEach(function (button) { button.remove() })
+    actions.querySelectorAll('[data-travel-list-back]').forEach(function (button) {
+      if (button !== originalList) button.remove()
+    })
+    originalList.dataset.travelListBack = 'true'
+    actions.appendChild(originalList)
     normalizeTravelListWorkspace()
+  }
+
+  function cleanupTravelPageCaption() {
+    document.querySelectorAll('body *').forEach(function (node) {
+      if (node.children.length) return
+      if (getCleanText(node) === '\uC7A5\uC18C, \uB3D9\uC120, \uBE44\uC6A9') node.remove()
+    })
   }
 
   function normalizeTravelListWorkspace() {
