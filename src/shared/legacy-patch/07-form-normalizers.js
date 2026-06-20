@@ -41,6 +41,9 @@
     var now = currentTimeText()
     scope.querySelectorAll('input[type="time"], input[name="recordTime"], [data-field="travel-record-time"]').forEach(function (input) {
       if (!input || input.disabled) return
+      input.setAttribute('maxlength', '5')
+      input.setAttribute('inputmode', 'numeric')
+      input.setAttribute('pattern', '[0-2][0-9]:[0-5][0-9]')
       if (document.activeElement === input) return
       if (input.matches && input.matches('input[name="recordTime"]')) {
         var value = String(input.value || '').trim()
@@ -65,6 +68,17 @@
     return digits.slice(0, 2) + ':' + digits.slice(2)
   }
 
+  function normalizeClockTypingValue(value) {
+    var digits = String(value || '').replace(/\D/g, '').slice(0, 4)
+    if (digits.length >= 2 && Number(digits.slice(0, 2)) > 23) {
+      digits = '0' + digits.slice(0, 1) + digits.slice(2)
+    }
+    if (digits.length >= 4 && Number(digits.slice(2, 4)) > 59) {
+      digits = digits.slice(0, 2) + '59'
+    }
+    return formatClockTyping(digits)
+  }
+
   function formatClockText(value, fallback) {
     var digits = String(value || '').replace(/\D/g, '').slice(0, 4)
     if (!digits) return fallback || ''
@@ -79,7 +93,8 @@
     var input = event.target && event.target.closest && event.target.closest('input[name="recordTime"], [data-field="travel-record-time"]')
     if (!input) return
     input.dataset.timeTouched = 'true'
-    input.value = String(input.value || '').replace(/[^\d:]/g, '').slice(0, 5)
+    var next = normalizeClockTypingValue(input.value)
+    if (input.value !== next) input.value = next
   }, true)
 
   document.addEventListener('blur', function (event) {
