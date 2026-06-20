@@ -3002,52 +3002,13 @@ body.api-loading-blocked::before {
 
 .trip-list {
   display: grid;
-  gap: 8px;
-}
-
-.api-trip-range-filter {
-  display: grid;
-  grid-template-columns: auto minmax(154px, max-content) minmax(180px, 260px) auto;
-  gap: 10px;
-  align-items: end;
-}
-
-.api-trip-mode-tabs {
-  position: relative;
-  z-index: 1301;
-}
-
-.api-trip-date-fields {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: end;
-  gap: 10px;
-}
-
-.api-trip-date-fields:has(.api-trip-date-field:only-child) {
-  grid-template-columns: minmax(0, 1fr);
-}
-
-.api-trip-date-field {
-  min-width: 154px;
-  margin: 0;
-}
-
-.api-trip-date-field .date-picker-trigger {
-  width: 154px;
-  min-height: 38px;
-}
-
-.api-trip-query-button {
-  min-height: 38px;
-  padding: 0 18px;
+  gap: 12px;
 }
 
 .api-trip-search {
   display: grid;
-  gap: 6px;
-  margin: 0;
-  min-width: 0;
+  gap: 8px;
+  margin-bottom: 2px;
 }
 
 .api-trip-search span {
@@ -3058,10 +3019,10 @@ body.api-loading-blocked::before {
 
 .api-trip-search input {
   width: 100%;
-  min-height: 38px;
+  min-height: 46px;
   border: 1px solid #d9e0ea;
-  border-radius: 12px;
-  padding: 0 12px;
+  border-radius: 14px;
+  padding: 0 14px;
   background: #fff;
   color: #191f28;
   font: inherit;
@@ -3075,14 +3036,11 @@ body.api-loading-blocked::before {
 }
 
 .trip-list-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  min-height: 74px;
-  gap: 12px;
+  display: block;
+  min-height: 116px;
   border: 0;
   border-radius: 8px;
-  padding: 12px;
+  padding: 0;
   background: #f7f8fa;
   color: #191f28;
   font: inherit;
@@ -3093,15 +3051,24 @@ body.api-loading-blocked::before {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+  width: 100%;
+  min-height: 116px;
   min-width: 0;
   border: 0;
-  padding: 0;
+  border-radius: 8px;
+  padding: 22px 24px;
   background: transparent;
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
+}
+
+.trip-card-copy {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
 }
 
 .trip-card-actions,
@@ -3145,22 +3112,29 @@ body.api-loading-blocked::before {
 }
 
 .trip-list-card strong {
+  display: block;
+  overflow: hidden;
   color: #191f28;
-  font-size: 17px;
-  font-weight: 800;
+  font-size: 22px;
+  font-weight: 900;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .trip-list-card span {
+  display: block;
   color: #6b7684;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .trip-list-card small {
-  align-self: end;
+  align-self: center;
   color: #1b64da;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .trip-open-button {
@@ -10440,68 +10414,23 @@ select {
     grid-template-columns: 1fr !important;
   }
 
-  .api-trip-range-filter {
-    display: grid;
-    grid-template-columns: 1fr;
-    align-items: stretch;
-  }
-
-  .api-trip-mode-tabs {
-    width: 100%;
-  }
-
-  .api-trip-mode-tabs button {
-    flex: 1;
-  }
-
-  .api-trip-date-fields {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    width: 100%;
-  }
-
-  .api-trip-date-field {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .api-trip-date-field .date-picker-trigger {
-    width: 100%;
-  }
-
-  .api-trip-search,
-  .api-trip-query-button {
-    width: 100%;
-  }
-
+  .trip-list-card,
+  .trip-card-main,
   .api-travel-record-card {
     grid-template-columns: 1fr !important;
   }
 
-  .trip-list-card,
-  .trip-card-main {
-    grid-template-columns: minmax(0, 1fr) auto !important;
-  }
-
+  .trip-card-actions,
   .travel-record-actions,
   .api-trip-detail-actions {
     justify-content: stretch;
   }
 
+  .trip-card-actions button,
   .travel-record-actions button,
   .travel-record-actions .record-action-link,
   .api-trip-detail-actions button {
     flex: 1;
-  }
-
-  .trip-card-actions {
-    justify-content: flex-end;
-  }
-
-  .trip-card-actions button {
-    flex: 0 0 auto;
-    min-height: 32px;
-    padding: 0 10px;
   }
 }
 

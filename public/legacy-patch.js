@@ -4975,7 +4975,7 @@
   }
 
   function isBabyCommonDateTarget(target) {
-    return !!(target && target.closest && target.closest('.baby-common-date-popover, [data-baby-create-birth-trigger], [data-baby-api-record-date-trigger], [data-baby-growth-date-trigger], [data-api-trip-date-trigger]'))
+    return !!(target && target.closest && target.closest('.baby-common-date-popover, [data-baby-create-birth-trigger], [data-baby-api-record-date-trigger], [data-baby-growth-date-trigger]'))
   }
 
   function closeBabyCommonDatePopoverOnOutsideEvent(event) {
@@ -9069,16 +9069,8 @@
     if (detail) detail.remove()
     var list = panel.querySelector('.trip-list')
     if (list) list.hidden = false
-    setApiTripListControlsHidden(panel, false)
     delete panel.dataset.apiKeepDetail
     delete panel.dataset.apiOpenTripId
-  }
-
-  function setApiTripListControlsHidden(panel, hidden) {
-    if (!panel) return
-    panel.querySelectorAll('.api-trip-range-filter, .api-trip-search').forEach(function (node) {
-      node.hidden = !!hidden
-    })
   }
 
   var detachedTripAddRow = null
@@ -9156,7 +9148,7 @@
   function renderApiTripList(panel, trips) {
     trips = trips || []
     panel.__apiTrips = trips || []
-    ensureTripRangeFilter(panel)
+    ensureTripListSearch(panel)
     var list = panel.querySelector('.trip-list')
     if (!list) {
       list = document.createElement('div')
@@ -9164,14 +9156,11 @@
       panel.appendChild(list)
     }
     if (panel.dataset.apiKeepDetail !== 'true') list.hidden = false
-    var groupedTrips = groupApiTrips(trips)
-    if (!groupedTrips.length) {
-      updateApiTripListCount(0)
+    if (!trips.length) {
       list.innerHTML = emptyRow('\uB4F1\uB85D\uB41C \uC5EC\uD589\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
       return
     }
-    var filteredTrips = filterApiTripsByRange(panel, filterApiTrips(panel, groupedTrips))
-    updateApiTripListCount(filteredTrips.length)
+    var filteredTrips = filterApiTrips(panel, trips)
     if (!filteredTrips.length) {
       list.innerHTML = emptyRow('\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
       return
@@ -9179,14 +9168,10 @@
     list.innerHTML = filteredTrips.map(function (trip) {
       return '<article class="trip-list-card api-trip-card" data-api-trip-id="' + escapeHtml(trip.id) + '">' +
         '<button type="button" class="trip-card-main" data-api-trip-open="' + escapeHtml(trip.id) + '">' +
-        '<div><strong>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</strong>' +
+        '<div class="trip-card-copy"><strong>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</strong>' +
         '<span>' + escapeHtml(tripPeriodText(trip)) + '</span></div>' +
         '<small>\uC0C1\uC138 \uBCF4\uAE30</small>' +
         '</button>' +
-        '<div class="trip-card-actions">' +
-        '<button type="button" data-api-trip-edit="' + escapeHtml(trip.id) + '">\uC218\uC815</button>' +
-        '<button type="button" class="danger-action" data-api-trip-delete="' + escapeHtml(trip.id) + '">\uC0AD\uC81C</button>' +
-        '</div>' +
         '</article>'
     }).join('')
     list.querySelectorAll('[data-api-trip-open]').forEach(function (card) {
@@ -9195,207 +9180,24 @@
         if (trip) openApiTripDetail(panel, trip)
       })
     })
-    list.querySelectorAll('[data-api-trip-edit]').forEach(function (button) {
-      button.addEventListener('click', function (event) {
-        event.preventDefault()
-        event.stopPropagation()
-        var trip = filteredTrips.find(function (item) { return String(item.id) === String(button.dataset.apiTripEdit) })
-        if (trip) startTripEdit(panel, trip)
-      })
-    })
-    list.querySelectorAll('[data-api-trip-delete]').forEach(function (button) {
-      button.addEventListener('click', function (event) {
-        event.preventDefault()
-        event.stopPropagation()
-        deleteApiTrip(panel, getTripGroupIds(button.dataset.apiTripDelete, filteredTrips))
-      })
-    })
-  }
-
-  function groupApiTrips(trips) {
-    var groups = []
-    var byKey = {}
-    ;(trips || []).forEach(function (trip) {
-      if (!trip) return
-      var key = normalizeTripGroupKey(trip)
-      var group = byKey[key]
-      if (!group) {
-        group = Object.assign({}, trip)
-        group.__groupTripIds = []
-        group.__groupedTrips = []
-        byKey[key] = group
-        groups.push(group)
-      }
-      group.__groupTripIds.push(trip.id)
-      group.__groupedTrips.push(trip)
-    })
-    return groups
-  }
-
-  function normalizeTripGroupKey(trip) {
-    return [
-      String((trip && trip.title) || '').trim().toLowerCase(),
-      trip && trip.startDate ? trip.startDate : '',
-      trip && trip.endDate ? trip.endDate : ''
-    ].join('|')
-  }
-
-  function getTripGroupIds(tripId, trips) {
-    var trip = (trips || []).find(function (item) { return String(item && item.id) === String(tripId) })
-    return trip && trip.__groupTripIds && trip.__groupTripIds.length ? trip.__groupTripIds : [tripId]
-  }
-
-  function ensureTripRangeFilter(panel) {
-    if (!panel) return
-    if (!panel.dataset.apiTripRangeMode) {
-      var current = todayText()
-      var currentRange = monthRangeFor(current)
-      panel.dataset.apiTripRangeMode = 'month'
-      panel.dataset.apiTripMonth = current
-      panel.dataset.apiTripStart = currentRange.start
-      panel.dataset.apiTripEnd = currentRange.end
-    }
-    var filter = panel.querySelector('.api-trip-range-filter')
-    if (!filter) {
-      filter = document.createElement('section')
-      filter.className = 'filter-panel api-trip-range-filter'
-      var search = panel.querySelector('.api-trip-search')
-      var list = panel.querySelector('.trip-list')
-      panel.insertBefore(filter, search || list || null)
-    } else {
-      filter.classList.add('filter-panel')
-    }
-    renderTripRangeFilter(panel, filter)
-  }
-
-  function renderTripRangeFilter(panel, filter) {
-    var mode = panel.dataset.apiTripRangeMode === 'period' ? 'period' : 'month'
-    filter.innerHTML = '<div class="segmented-control api-trip-mode-tabs" role="group" aria-label="\uC5EC\uD589 \uC870\uD68C \uBC29\uC2DD">' +
-      '<button type="button" class="' + (mode === 'month' ? 'active' : '') + '" data-api-trip-range-mode="month">\uC6D4\uBCC4</button>' +
-      '<button type="button" class="' + (mode === 'period' ? 'active' : '') + '" data-api-trip-range-mode="period">\uAE30\uAC04\uBCC4</button>' +
-      '</div><div class="api-trip-date-fields">' +
-      (mode === 'month'
-        ? tripDateFieldHtml('\uC870\uD68C \uC6D4', 'month', panel.dataset.apiTripMonth || todayText(), true)
-        : tripDateFieldHtml('\uC2DC\uC791\uC77C', 'start', panel.dataset.apiTripStart || todayText(), false) +
-          tripDateFieldHtml('\uC885\uB8CC\uC77C', 'end', panel.dataset.apiTripEnd || panel.dataset.apiTripStart || todayText(), false)) +
-      '</div><label class="api-trip-search"><span>\uC5EC\uD589 \uCC3E\uAE30</span><input type="search" autocomplete="off" value="' + escapeHtml(panel.dataset.apiTripSearch || '') + '" data-api-trip-search /></label>' +
-      '<button type="button" class="submit-action api-trip-query-button" data-api-trip-range-submit>\uC870\uD68C</button>'
-    filter.querySelectorAll('[data-api-trip-range-mode]').forEach(function (button) {
-      button.addEventListener('click', function () {
-        panel.dataset.apiTripRangeMode = button.dataset.apiTripRangeMode || 'month'
-        renderTripRangeFilter(panel, filter)
-      })
-    })
-    filter.querySelectorAll('[data-api-trip-date-trigger]').forEach(function (trigger) {
-      trigger.addEventListener('click', function () {
-        var field = trigger.closest('.date-picker-field')
-        var input = field && field.querySelector('[data-api-trip-date]')
-        if (!input) return
-        openApiTripRangeDatePicker(trigger)
-      })
-    })
-    filter.querySelectorAll('[data-api-trip-date]').forEach(function (input) {
-      input.addEventListener('change', function () {
-        updateApiTripRangeDate(panel, input.dataset.apiTripDate, input.value)
-        renderTripRangeFilter(panel, filter)
-      })
-    })
-    var submit = filter.querySelector('[data-api-trip-range-submit]')
-    if (submit) {
-      submit.addEventListener('click', function () {
-        renderApiTripList(panel, panel.__apiTrips || [])
-      })
-    }
-    var searchInput = filter.querySelector('[data-api-trip-search]')
-    if (searchInput) {
-      searchInput.addEventListener('input', function () {
-        panel.dataset.apiTripSearch = searchInput.value || ''
-      })
-      searchInput.addEventListener('keydown', function (event) {
-        if (event.key !== 'Enter') return
-        event.preventDefault()
-        renderApiTripList(panel, panel.__apiTrips || [])
-      })
-    }
-  }
-
-  function tripDateFieldHtml(label, key, value, monthOnly) {
-    var dateValue = parseApiDate(value) || todayText()
-    var display = monthOnly ? dateValue.slice(0, 7).replace('-', '.') : dateValue.replace(/-/g, '.')
-    return '<label class="date-picker-field api-trip-date-field">' +
-      '<span>' + escapeHtml(label) + '</span>' +
-      '<input type="hidden" value="' + escapeHtml(dateValue) + '" data-api-trip-date="' + escapeHtml(key) + '" />' +
-      '<button type="button" class="date-picker-trigger" data-api-trip-date-trigger="' + escapeHtml(key) + '">' +
-      '<span>' + escapeHtml(display) + '</span>' + commonCalendarIconHtml() +
-      '</button></label>'
-  }
-
-  function commonCalendarIconHtml() {
-    return '<svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 2v4M16 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>'
-  }
-
-  function openApiTripRangeDatePicker(trigger) {
-    var field = trigger && trigger.closest && trigger.closest('.date-picker-field')
-    var input = field && field.querySelector('[data-api-trip-date]')
-    if (!input) return
-    toggleCommonDatePopover(input, trigger)
-  }
-
-  function updateApiTripRangeDate(panel, key, value) {
-    var selected = parseApiDate(value) || todayText()
-    if (key === 'month') {
-      var range = monthRangeFor(selected)
-      panel.dataset.apiTripMonth = selected
-      panel.dataset.apiTripStart = range.start
-      panel.dataset.apiTripEnd = range.end
-    } else if (key === 'start') {
-      panel.dataset.apiTripStart = selected
-      if ((panel.dataset.apiTripEnd || selected) < selected) panel.dataset.apiTripEnd = selected
-    } else if (key === 'end') {
-      panel.dataset.apiTripEnd = selected
-      if ((panel.dataset.apiTripStart || selected) > selected) panel.dataset.apiTripStart = selected
-    }
-  }
-
-  function filterApiTripsByRange(panel, trips) {
-    if (!panel) return trips
-    var range = getApiTripRange(panel)
-    return trips.filter(function (trip) {
-      var start = parseApiDate(trip && (trip.startDate || trip.endDate || trip.createdAt))
-      var end = parseApiDate(trip && (trip.endDate || trip.startDate || trip.createdAt)) || start
-      if (!start) return false
-      return start <= range.end && end >= range.start
-    })
-  }
-
-  function getApiTripRange(panel) {
-    if (panel && panel.dataset.apiTripRangeMode === 'period') {
-      var start = parseApiDate(panel.dataset.apiTripStart) || todayText()
-      var end = parseApiDate(panel.dataset.apiTripEnd) || start
-      if (end < start) end = start
-      return { start: start, end: end }
-    }
-    var monthDate = parseApiDate(panel && panel.dataset.apiTripMonth) || todayText()
-    return monthRangeFor(monthDate)
-  }
-
-  function updateApiTripListCount(count) {
-    var headerAction = document.querySelector('.panel-header .passive-header-chip, .panel.wide.full-span .panel-header button')
-    if (headerAction && pageHeadingIs('\uC5EC\uD589')) {
-      headerAction.textContent = Number(count || 0).toLocaleString('ko-KR') + '\uAC1C'
-    }
   }
 
   function ensureTripListSearch(panel) {
-    if (!panel) return
-    panel.querySelectorAll(':scope > .api-trip-search').forEach(function (search) {
-      search.remove()
+    if (!panel || panel.querySelector('.api-trip-search')) return
+    var search = document.createElement('label')
+    search.className = 'api-trip-search'
+    search.innerHTML = '<span>\uC5EC\uD589 \uCC3E\uAE30</span><input type="search" autocomplete="off" data-api-trip-search />'
+    var list = panel.querySelector('.trip-list')
+    panel.insertBefore(search, list || null)
+    var input = search.querySelector('input')
+    input.addEventListener('input', function () {
+      renderApiTripList(panel, panel.__apiTrips || [])
     })
   }
 
   function filterApiTrips(panel, trips) {
     var input = panel && panel.querySelector('[data-api-trip-search]')
-    var query = String(panel && panel.dataset.apiTripSearch || input && input.value || '').trim().toLowerCase()
+    var query = String(input && input.value || '').trim().toLowerCase()
     if (!query) return trips
     return trips.filter(function (trip) {
       return [
@@ -9506,14 +9308,11 @@
   }
 
   function deleteApiTrip(panel, tripId) {
-    var tripIds = Array.isArray(tripId) ? tripId.filter(Boolean) : [tripId].filter(Boolean)
-    if (!tripIds.length) return
+    if (!tripId) return
     showPatchConfirm('\uC5EC\uD589\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
-      Promise.all(tripIds.map(function (id) {
-        return apiRequest('/trips/' + encodeURIComponent(id), { method: 'DELETE' })
-      })).then(function () {
+      apiRequest('/trips/' + encodeURIComponent(tripId), { method: 'DELETE' }).then(function () {
         showPatchToast('\uC5EC\uD589\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
-        if (tripIds.some(function (id) { return String(localStorage.getItem(API_TRIP_ID_KEY) || '') === String(id) })) localStorage.removeItem(API_TRIP_ID_KEY)
+        if (String(localStorage.getItem(API_TRIP_ID_KEY) || '') === String(tripId)) localStorage.removeItem(API_TRIP_ID_KEY)
         var detail = panel && panel.querySelector('.api-trip-detail')
         if (detail) detail.remove()
         renderTravelPageFromApi(true)
@@ -9526,7 +9325,6 @@
   function openApiTripDetail(panel, trip) {
     if (!panel || !trip) return
     localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
-    var groupTripIds = (trip.__groupTripIds && trip.__groupTripIds.length ? trip.__groupTripIds : [trip.id]).filter(Boolean)
     panel.dataset.apiKeepDetail = 'true'
     panel.dataset.apiOpenTripId = String(trip.id)
     panel.classList.remove('list-mode')
@@ -9534,7 +9332,6 @@
     removeLegacyTravelRecordSurfaces(panel)
     var list = panel.querySelector('.trip-list')
     if (list) list.hidden = true
-    setApiTripListControlsHidden(panel, true)
     var detail = panel.querySelector('.api-trip-detail')
     if (!detail) {
       detail = document.createElement('section')
@@ -9542,7 +9339,6 @@
       panel.appendChild(detail)
     }
     detail.dataset.apiTripId = String(trip.id)
-    detail.dataset.apiTripIds = groupTripIds.join(',')
     detail.innerHTML = [
       '<header class="api-trip-detail-header"><div><h3>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</h3><span>' + escapeHtml(tripPeriodText(trip)) + '</span></div><div class="api-trip-detail-actions"><button type="button" data-api-trip-detail-edit>\uC218\uC815</button><button type="button" class="danger-action" data-api-trip-detail-delete>\uC0AD\uC81C</button><button type="button" data-api-trip-back>\uBAA9\uB85D</button></div></header>',
       '<form class="travel-form api-travel-record-form">',
@@ -9564,9 +9360,9 @@
     var edit = detail.querySelector('[data-api-trip-detail-edit]')
     if (edit) edit.addEventListener('click', function () { startTripEdit(panel, trip) })
     var deleteButton = detail.querySelector('[data-api-trip-detail-delete]')
-    if (deleteButton) deleteButton.addEventListener('click', function () { deleteApiTrip(panel, groupTripIds) })
+    if (deleteButton) deleteButton.addEventListener('click', function () { deleteApiTrip(panel, trip.id) })
     normalizeTravelEntryForm()
-    renderApiTripRecords(detail, groupTripIds)
+    renderApiTripRecords(detail, trip.id)
     var first = detail.querySelector('[data-field="travel-title"]')
     if (first) window.setTimeout(function () { first.focus() }, 120)
   }
@@ -9575,7 +9371,7 @@
     var list = detail && detail.querySelector('.api-trip-record-list')
     if (!list) return
     list.innerHTML = '<p class="empty-note">\uC5EC\uD589 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</p>'
-    fetchTripRecordsForDetail(tripId).then(function (records) {
+    fetchTripRecords(tripId).then(function (records) {
       if (!records.length) {
         list.innerHTML = '<p class="empty-note">\uB4F1\uB85D\uB41C \uC5EC\uD589 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
         return
@@ -9635,28 +9431,6 @@
       })
     }).catch(function (error) {
       list.innerHTML = '<p class="empty-note">' + escapeHtml(apiActionErrorMessage(error, '\uC5EC\uD589 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</p>'
-    })
-  }
-
-  function fetchTripRecordsForDetail(tripId) {
-    var tripIds = Array.isArray(tripId) ? tripId : String(tripId || '').split(',')
-    tripIds = tripIds.map(function (id) { return String(id || '').trim() }).filter(Boolean)
-    if (!tripIds.length) return Promise.resolve([])
-    return Promise.all(tripIds.map(fetchTripRecords)).then(function (groups) {
-      var records = []
-      groups.forEach(function (items) {
-        records = records.concat(items || [])
-      })
-      return sortApiTravelRecords(records)
-    })
-  }
-
-  function sortApiTravelRecords(records) {
-    return (records || []).slice().sort(function (a, b) {
-      var aOrder = a && a.sortOrder != null ? Number(a.sortOrder) : Number.MAX_SAFE_INTEGER
-      var bOrder = b && b.sortOrder != null ? Number(b.sortOrder) : Number.MAX_SAFE_INTEGER
-      if (aOrder !== bOrder) return aOrder - bOrder
-      return String((b && b.createdAt) || '').localeCompare(String((a && a.createdAt) || ''))
     })
   }
 
@@ -9739,7 +9513,7 @@
     showPatchConfirm('\uC5EC\uD589 \uAE30\uB85D\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
       apiRequest('/travel-records/' + encodeURIComponent(recordId), { method: 'DELETE' }).then(function () {
         showPatchToast('\uC5EC\uD589 \uAE30\uB85D\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
-        renderApiTripRecords(detail, getActiveApiTripRecordIds(detail))
+        renderApiTripRecords(detail, getActiveApiTripId(detail))
       }).catch(function (error) {
         showPatchToast(apiActionErrorMessage(error, '\uC5EC\uD589 \uAE30\uB85D \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
       })
@@ -11083,19 +10857,6 @@
     return panelId ? String(panelId) : ''
   }
 
-  function getActiveApiTripRecordIds(root) {
-    var detail = root && root.closest ? root.closest('.api-trip-detail') : null
-    if (!detail && root && root.querySelector) detail = root.querySelector('.api-trip-detail')
-    if (!detail) detail = document.querySelector('.api-trip-detail')
-    var ids = detail && detail.dataset.apiTripIds
-    if (ids) {
-      var parts = ids.split(',').map(function (id) { return id.trim() }).filter(Boolean)
-      if (parts.length) return parts
-    }
-    var tripId = getActiveApiTripId(root)
-    return tripId ? [tripId] : []
-  }
-
   function requireActiveApiTripId(root) {
     var tripId = getActiveApiTripId(root)
     if (tripId) return tripId
@@ -11238,7 +10999,7 @@
         if (note) setInputValue(note, '')
         if (form.classList.contains('api-travel-record-form')) {
           window.setTimeout(function () {
-            renderApiTripRecords(form.closest('.api-trip-detail'), getActiveApiTripRecordIds(form))
+            renderApiTripRecords(form.closest('.api-trip-detail'), getActiveApiTripId(form))
           }, 150)
         }
       }).catch(function (error) {
