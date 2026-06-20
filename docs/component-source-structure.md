@@ -20,7 +20,7 @@ Family Platform의 신규 화면, 메뉴 수정, 공통 UI 수정은 실제 프�
 - `utils`: 해당 메뉴 전용 계산/포맷 함수.
 - `types`: 해당 메뉴 전용 타입.
 - `legacy-patch`: 현재 운영 legacy patch 호환 코드.
-- `index.ts`: 해당 메뉴 공개 진입점.
+- `index.js`: 해당 메뉴 공개 진입점과 legacy patch 조립 경로.
 
 메뉴 하나를 수정할 때는 해당 메뉴 폴더와 필요한 `src/shared`만 수정한다. 다른 메뉴 폴더를 함께 수정하지 않는다.
 

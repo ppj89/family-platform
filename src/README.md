@@ -20,7 +20,7 @@ Each menu lives under `src/features/<menu>`.
 - `utils`: menu-specific calculations and formatting.
 - `types`: menu-specific types.
 - `legacy-patch`: current production compatibility code for that menu.
-- `index.ts`: public entry point for that menu.
+- `index.js`: public entry point for that menu and the menu's legacy patch assembly map.
 
 Do not edit another menu folder when fixing one menu unless the change is genuinely shared.
 

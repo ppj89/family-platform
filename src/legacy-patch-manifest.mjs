@@ -1,32 +1,42 @@
+import { babyLegacyPatchParts } from './features/baby/index.js'
+import { calendarLegacyPatchParts } from './features/calendar/index.js'
+import { communityLegacyPatchParts } from './features/community/index.js'
+import { diaryLegacyPatchParts } from './features/diary/index.js'
+import { familyLegacyPatchParts } from './features/family/index.js'
+import { homeLegacyPatchParts } from './features/home/index.js'
+import { ledgerLegacyPatchParts } from './features/ledger/index.js'
+import { restaurantLegacyPatchParts } from './features/restaurant/index.js'
+import { travelLegacyPatchParts } from './features/travel/index.js'
+
 export const legacyPatchParts = [
   'shared/legacy-patch/00-bootstrap.js',
   'shared/legacy-patch/01-auth-session.js',
-  'features/calendar/legacy-patch/00-calendar-ui.js',
+  calendarLegacyPatchParts.ui,
   'shared/legacy-patch/02-ui-cleanup.js',
-  'features/family/legacy-patch/00-family-group.js',
+  familyLegacyPatchParts.group,
   'shared/legacy-patch/03-refresh-orchestrator.js',
-  'features/baby/legacy-patch/00-profile-dialogs.js',
-  'features/diary/legacy-patch/00-composer-ui.js',
+  babyLegacyPatchParts.profileDialogs,
+  diaryLegacyPatchParts.composerUi,
   'shared/legacy-patch/04-navigation.js',
-  'features/community/legacy-patch/00-community.js',
+  communityLegacyPatchParts.board,
   'shared/legacy-patch/05-home-and-shared-ui.js',
   'shared/legacy-patch/06-api-core.js',
-  'features/calendar/legacy-patch/01-calendar-api.js',
-  'features/home/legacy-patch/00-home-api.js',
-  'features/ledger/legacy-patch/00-ledger-api.js',
-  'features/restaurant/legacy-patch/00-restaurant-api.js',
+  calendarLegacyPatchParts.api,
+  homeLegacyPatchParts.api,
+  ledgerLegacyPatchParts.api,
+  restaurantLegacyPatchParts.api,
   'shared/legacy-patch/07-form-normalizers.js',
-  'features/travel/legacy-patch/00-travel-form-ui.js',
-  'features/diary/legacy-patch/01-diary-api.js',
-  'features/travel/legacy-patch/01-travel-api-renderer.js',
-  'features/calendar/legacy-patch/02-server-panels.js',
-  'features/travel/legacy-patch/02-server-panels.js',
-  'features/diary/legacy-patch/02-server-panels.js',
-  'features/baby/legacy-patch/01-baby-api-renderer.js',
+  travelLegacyPatchParts.formUi,
+  diaryLegacyPatchParts.api,
+  travelLegacyPatchParts.apiRenderer,
+  calendarLegacyPatchParts.serverPanels,
+  travelLegacyPatchParts.serverPanels,
+  diaryLegacyPatchParts.serverPanels,
+  babyLegacyPatchParts.apiRenderer,
   'shared/legacy-patch/08-server-refresh-and-family.js',
-  'features/calendar/legacy-patch/03-schedule-submit.js',
-  'features/travel/legacy-patch/03-travel-sync.js',
-  'features/diary/legacy-patch/03-diary-sync.js',
-  'features/baby/legacy-patch/02-baby-submit.js',
+  calendarLegacyPatchParts.scheduleSubmit,
+  travelLegacyPatchParts.sync,
+  diaryLegacyPatchParts.sync,
+  babyLegacyPatchParts.submit,
   'shared/legacy-patch/09-global-events.js',
 ]
