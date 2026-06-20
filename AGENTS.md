@@ -4,6 +4,7 @@
 
 1. `docs/common-ui-guidelines.md`
 2. `docs/menu-source-structure.md`
+3. `docs/component-source-structure.md`
 
 ## 필수 원칙
 
