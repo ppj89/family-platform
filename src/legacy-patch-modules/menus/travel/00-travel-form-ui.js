@@ -2,11 +2,18 @@
     if (!pageHeadingIs('\uC5EC\uD589')) return
     document.querySelectorAll('.travel-form, .trip-manager, .entry-panel, form').forEach(function (form) {
       var text = getCleanText(form)
-      if (text.indexOf('\uC2DC\uC791') < 0 && text.indexOf('\uC885\uB8CC') < 0) return
+      var isTripPeriodForm = text.indexOf('\uC2DC\uC791') >= 0 || text.indexOf('\uC885\uB8CC') >= 0
+      var isTravelRecordForm = !!form.querySelector('[data-field="travel-title"], [data-field="travel-record-time"], [data-field="travel-location"]')
+      if (!isTripPeriodForm && !isTravelRecordForm) return
       setDateFieldToToday(form, ['\uC2DC\uC791\uC77C', '\uC885\uB8CC\uC77C'])
       clearSampleFieldValues(form)
       normalizeTimeInputs(form)
       ensureRequiredMarkForInput(form.querySelector('[data-field="travel-title"]'))
+      ensureRequiredMarkForInput(form.querySelector('[data-field="travel-record-date"]'))
+      ensureRequiredMarkForInput(form.querySelector('[data-field="travel-record-time"]'))
+      ensureRequiredMarkForLabel(findLabelByText(form, '\uB0A0\uC9DC'))
+      ensureRequiredMarkForLabel(findLabelByText(form, '\uC2DC\uAC04'))
+      normalizeTravelLocationOptional(form)
       ensureTravelLocationSearch(form)
       form.querySelectorAll('[data-field="travel-location"], [data-field="travel-amount"], [data-field="travel-title"]').forEach(function (field) {
         field.removeAttribute('placeholder')
@@ -15,7 +22,22 @@
         if (getCleanText(node) === '\uC5EC\uD589' && !node.closest('label')) node.remove()
       })
     })
+    cleanupTravelMapUi()
     removeFeaturePlaceholders()
+  }
+
+  function normalizeTravelLocationOptional(form) {
+    var input = form && form.querySelector('[data-field="travel-location"]')
+    if (!input) return
+    input.required = false
+    input.removeAttribute('required')
+    var label = input.closest('label')
+    var mark = label && label.querySelector('.required-mark')
+    if (mark) {
+      var previous = mark.previousSibling
+      mark.remove()
+      if (previous && previous.nodeType === 3 && !previous.textContent.trim()) previous.remove()
+    }
   }
 
   function searchTravelPlaces(query, limit) {
@@ -204,6 +226,16 @@
     document.querySelectorAll('body *').forEach(function (node) {
       if (node.children.length) return
       if (getCleanText(node) === '\uC7A5\uC18C, \uB3D9\uC120, \uBE44\uC6A9') node.remove()
+    })
+  }
+
+  function cleanupTravelMapUi() {
+    if (!pageHeadingIs('\uC5EC\uD589')) return
+    document.querySelectorAll('.location-map-actions a, .location-map-actions button, a.map-link').forEach(function (node) {
+      if (getCleanText(node) === '\uC9C0\uB3C4\uC5D0\uC11C \uC5F4\uAE30') node.remove()
+    })
+    document.querySelectorAll('.route-map .route-sequence').forEach(function (node) {
+      node.remove()
     })
   }
 

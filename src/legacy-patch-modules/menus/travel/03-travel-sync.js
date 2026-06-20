@@ -100,10 +100,24 @@
     window.setTimeout(function () {
       var title = getFieldValue(form, '[data-field="travel-title"]')
       var location = getFieldValue(form, '[data-field="travel-location"]')
+      var recordDate = getDatePickerValue(form, '\uB0A0\uC9DC') || getFieldValue(form, '[data-field="travel-record-date"]')
+      var recordTime = getFieldValue(form, '[data-field="travel-record-time"]')
       if (!title) {
         var titleInput = form.querySelector('[data-field="travel-title"]')
         showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
         if (titleInput) titleInput.focus()
+        return
+      }
+      if (!recordDate) {
+        var dateInput = form.querySelector('[data-field="travel-record-date"], .date-picker-trigger')
+        showPatchToast('\uB0A0\uC9DC\uB294 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+        if (dateInput) dateInput.focus()
+        return
+      }
+      if (!recordTime) {
+        var timeInput = form.querySelector('[data-field="travel-record-time"]')
+        showPatchToast('\uC2DC\uAC04\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+        if (timeInput) timeInput.focus()
         return
       }
 
@@ -132,8 +146,8 @@
             location: location || '',
             latitude: Number(coords.latitude || 0),
             longitude: Number(coords.longitude || 0),
-            recordDate: getDatePickerValue(form, '\uB0A0\uC9DC') || getFieldValue(form, '[data-field="travel-record-date"]') || todayText(),
-            recordTime: getFieldValue(form, '[data-field="travel-record-time"]') || currentTimeText(),
+            recordDate: recordDate,
+            recordTime: recordTime,
             mediaUrls: communityMediaUrls(result.files)
           }
         })

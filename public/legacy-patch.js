@@ -8635,11 +8635,18 @@
     if (!pageHeadingIs('\uC5EC\uD589')) return
     document.querySelectorAll('.travel-form, .trip-manager, .entry-panel, form').forEach(function (form) {
       var text = getCleanText(form)
-      if (text.indexOf('\uC2DC\uC791') < 0 && text.indexOf('\uC885\uB8CC') < 0) return
+      var isTripPeriodForm = text.indexOf('\uC2DC\uC791') >= 0 || text.indexOf('\uC885\uB8CC') >= 0
+      var isTravelRecordForm = !!form.querySelector('[data-field="travel-title"], [data-field="travel-record-time"], [data-field="travel-location"]')
+      if (!isTripPeriodForm && !isTravelRecordForm) return
       setDateFieldToToday(form, ['\uC2DC\uC791\uC77C', '\uC885\uB8CC\uC77C'])
       clearSampleFieldValues(form)
       normalizeTimeInputs(form)
       ensureRequiredMarkForInput(form.querySelector('[data-field="travel-title"]'))
+      ensureRequiredMarkForInput(form.querySelector('[data-field="travel-record-date"]'))
+      ensureRequiredMarkForInput(form.querySelector('[data-field="travel-record-time"]'))
+      ensureRequiredMarkForLabel(findLabelByText(form, '\uB0A0\uC9DC'))
+      ensureRequiredMarkForLabel(findLabelByText(form, '\uC2DC\uAC04'))
+      normalizeTravelLocationOptional(form)
       ensureTravelLocationSearch(form)
       form.querySelectorAll('[data-field="travel-location"], [data-field="travel-amount"], [data-field="travel-title"]').forEach(function (field) {
         field.removeAttribute('placeholder')
@@ -8648,7 +8655,22 @@
         if (getCleanText(node) === '\uC5EC\uD589' && !node.closest('label')) node.remove()
       })
     })
+    cleanupTravelMapUi()
     removeFeaturePlaceholders()
+  }
+
+  function normalizeTravelLocationOptional(form) {
+    var input = form && form.querySelector('[data-field="travel-location"]')
+    if (!input) return
+    input.required = false
+    input.removeAttribute('required')
+    var label = input.closest('label')
+    var mark = label && label.querySelector('.required-mark')
+    if (mark) {
+      var previous = mark.previousSibling
+      mark.remove()
+      if (previous && previous.nodeType === 3 && !previous.textContent.trim()) previous.remove()
+    }
   }
 
   function searchTravelPlaces(query, limit) {
@@ -8837,6 +8859,16 @@
     document.querySelectorAll('body *').forEach(function (node) {
       if (node.children.length) return
       if (getCleanText(node) === '\uC7A5\uC18C, \uB3D9\uC120, \uBE44\uC6A9') node.remove()
+    })
+  }
+
+  function cleanupTravelMapUi() {
+    if (!pageHeadingIs('\uC5EC\uD589')) return
+    document.querySelectorAll('.location-map-actions a, .location-map-actions button, a.map-link').forEach(function (node) {
+      if (getCleanText(node) === '\uC9C0\uB3C4\uC5D0\uC11C \uC5F4\uAE30') node.remove()
+    })
+    document.querySelectorAll('.route-map .route-sequence').forEach(function (node) {
+      node.remove()
     })
   }
 
@@ -9174,8 +9206,8 @@
       '<label><span>\uC81C\uBAA9 <em class="required-mark">*</em></span><input data-field="travel-title" /></label>',
       '<label><span>\uC704\uCE58</span><input data-field="travel-location" /></label>',
       '<label><span>\uC0AC\uC6A9\uAE08\uC561</span><input data-field="travel-amount" inputmode="numeric" /></label>',
-      '<label><span>\uB0A0\uC9DC</span><input data-field="travel-record-date" type="date" value="' + todayText() + '" /></label>',
-      '<label><span>\uC2DC\uAC04</span><input data-field="travel-record-time" type="time" value="' + currentTimeText() + '" /></label>',
+      '<label><span>\uB0A0\uC9DC <em class="required-mark">*</em></span><input data-field="travel-record-date" type="date" value="' + todayText() + '" /></label>',
+      '<label><span>\uC2DC\uAC04 <em class="required-mark">*</em></span><input data-field="travel-record-time" type="time" value="' + currentTimeText() + '" /></label>',
       '<label class="travel-note-field"><span>\uBA54\uBAA8</span><textarea rows="4"></textarea></label>',
       '<div class="travel-form-actions"><button type="submit" class="submit-action">\uAE30\uB85D \uCD94\uAC00</button></div>',
       '</form>',
@@ -10633,10 +10665,24 @@
     window.setTimeout(function () {
       var title = getFieldValue(form, '[data-field="travel-title"]')
       var location = getFieldValue(form, '[data-field="travel-location"]')
+      var recordDate = getDatePickerValue(form, '\uB0A0\uC9DC') || getFieldValue(form, '[data-field="travel-record-date"]')
+      var recordTime = getFieldValue(form, '[data-field="travel-record-time"]')
       if (!title) {
         var titleInput = form.querySelector('[data-field="travel-title"]')
         showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
         if (titleInput) titleInput.focus()
+        return
+      }
+      if (!recordDate) {
+        var dateInput = form.querySelector('[data-field="travel-record-date"], .date-picker-trigger')
+        showPatchToast('\uB0A0\uC9DC\uB294 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+        if (dateInput) dateInput.focus()
+        return
+      }
+      if (!recordTime) {
+        var timeInput = form.querySelector('[data-field="travel-record-time"]')
+        showPatchToast('\uC2DC\uAC04\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+        if (timeInput) timeInput.focus()
         return
       }
 
@@ -10665,8 +10711,8 @@
             location: location || '',
             latitude: Number(coords.latitude || 0),
             longitude: Number(coords.longitude || 0),
-            recordDate: getDatePickerValue(form, '\uB0A0\uC9DC') || getFieldValue(form, '[data-field="travel-record-date"]') || todayText(),
-            recordTime: getFieldValue(form, '[data-field="travel-record-time"]') || currentTimeText(),
+            recordDate: recordDate,
+            recordTime: recordTime,
             mediaUrls: communityMediaUrls(result.files)
           }
         })

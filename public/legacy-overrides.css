@@ -3566,6 +3566,13 @@ body.api-loading-blocked::before {
   gap: 14px;
 }
 
+.travel-form .date-picker-trigger span,
+.travel-form [data-field="travel-record-time"] {
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
 .travel-form > label {
   gap: 10px;
 }
