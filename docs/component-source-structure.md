@@ -11,6 +11,8 @@ Family Platform의 신규 화면, 메뉴 수정, 공통 UI 수정은 실제 프�
 - `src/shared`: 여러 메뉴가 함께 쓰는 공통 코드
 - `src/legacy-patch-modules`: 기존 운영 patch를 메뉴별로 나눈 임시 호환 계층
 
+README는 폴더마다 만들지 않는다. `src/README.md` 하나에 전체 소스 구조와 작업 기준을 모으고, 빈 디렉터리는 `.gitkeep`으로만 유지한다.
+
 ## 메뉴별 feature 구조
 
 각 메뉴는 `src/features/<menu>` 아래에 둔다.

@@ -46,8 +46,8 @@
 
 ## 변경 절차
 
-1. `AGENTS.md`, `docs/common-ui-guidelines.md`, 이 문서를 먼저 읽는다.
-2. 수정할 메뉴의 `src/legacy-patch-modules/menus/<menu>/README.md`를 확인한다.
+1. `AGENTS.md`, `docs/common-ui-guidelines.md`, `docs/component-source-structure.md`, 이 문서를 먼저 읽는다.
+2. `src/README.md`에서 전체 소스 구조를 확인한다.
 3. 기존 운영 동작 위치가 `src/legacy-patch-modules`의 어느 메뉴 파일인지, 아니면 레거시 번들인지 확인한다.
 4. 한 메뉴의 변경만 적용한다.
 5. 메뉴별 파일을 수정했다면 `npm run build:legacy-patch`와 `npm run check:legacy-patch`를 실행한다.
