@@ -3006,44 +3006,12 @@ body.api-loading-blocked::before {
 }
 
 .api-trip-range-filter {
-  display: flex;
-  flex-wrap: wrap;
   align-items: end;
-  gap: 10px;
-  margin-bottom: 14px;
-  border-radius: 8px;
-  padding: 12px;
-  background: #f7f8fa;
 }
 
 .api-trip-mode-tabs {
   position: relative;
   z-index: 1301;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  border-radius: 999px;
-  padding: 4px;
-  background: #eef2f7;
-}
-
-.api-trip-mode-tabs button {
-  min-height: 34px;
-  border: 0;
-  border-radius: 999px;
-  padding: 0 15px;
-  background: transparent;
-  color: #6b7684;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.api-trip-mode-tabs button.active {
-  background: #fff;
-  color: #1b64da;
-  box-shadow: 0 4px 12px rgba(25, 31, 40, 0.08);
 }
 
 .api-trip-date-fields {
@@ -3064,9 +3032,7 @@ body.api-loading-blocked::before {
 
 .api-trip-date-field .date-picker-trigger {
   width: 154px;
-  min-height: 42px;
-  border-radius: 12px;
-  background: #fff;
+  min-height: 38px;
 }
 
 .api-trip-search {
