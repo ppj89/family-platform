@@ -12685,7 +12685,18 @@ body:has(.baby-api-detail) .content-grid {
   grid-template-columns: minmax(0, 1fr) !important;
 }
 
+.content-grid:has(.baby-api-detail) {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
 body:has(.baby-api-detail) .content-grid > .panel:has(.baby-api-detail) {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+
+.content-grid:has(.baby-api-detail) > .panel:has(.baby-api-detail) {
   grid-column: 1 / -1 !important;
   width: 100% !important;
   max-width: none !important;
