@@ -145,33 +145,21 @@
     if (!panel) return
     var header = panel.querySelector('.panel-header') || panel.closest('.panel') && panel.closest('.panel').querySelector('.panel-header')
     if (!header) return
+    var originalList = Array.from(panel.querySelectorAll('button')).find(function (button) {
+      return getCleanText(button) === '\uBAA9\uB85D' && !button.dataset.travelListBack
+    })
     var actions = header.querySelector('.travel-header-actions')
+    if (!originalList) {
+      if (actions && !actions.querySelector('[data-travel-list-back]')) actions.remove()
+      normalizeTravelListWorkspace()
+      return
+    }
     if (!actions) {
       actions = document.createElement('div')
       actions.className = 'travel-header-actions'
       header.appendChild(actions)
     }
-    var newButton = actions.querySelector('[data-travel-new-entry]')
-    if (!newButton) {
-      newButton = document.createElement('button')
-      newButton.type = 'button'
-      newButton.className = 'save-button travel-new-entry-button'
-      newButton.dataset.travelNewEntry = 'true'
-      newButton.textContent = '\uC2E0\uADDC\uC785\uB825'
-      actions.appendChild(newButton)
-      newButton.addEventListener('click', function () {
-        panel.classList.add('list-mode')
-        var first = panel.querySelector('.trip-add-row input, .travel-form input, .travel-form textarea')
-        if (first) {
-          first.scrollIntoView({ behavior: 'smooth', block: 'center' })
-          window.setTimeout(function () { first.focus() }, 180)
-        }
-      })
-    }
     var listButton = actions.querySelector('[data-travel-list-back]')
-    var originalList = Array.from(panel.querySelectorAll('button')).find(function (button) {
-      return getCleanText(button) === '\uBAA9\uB85D' && !button.dataset.travelListBack
-    })
     if (!listButton && originalList) {
       listButton = document.createElement('button')
       listButton.type = 'button'
