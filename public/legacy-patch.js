@@ -9252,14 +9252,14 @@
       '<button type="button" class="' + (mode === 'period' ? 'active' : '') + '" data-api-trip-range-mode="period">\uAE30\uAC04\uBCC4</button>' +
       '</div><div class="api-trip-date-fields">' +
       (mode === 'month'
-        ? tripDateFieldHtml('\uC6D4', 'month', panel.dataset.apiTripMonth || todayText(), true)
+        ? tripDateFieldHtml('\uC870\uD68C \uC6D4', 'month', panel.dataset.apiTripMonth || todayText(), true)
         : tripDateFieldHtml('\uC2DC\uC791\uC77C', 'start', panel.dataset.apiTripStart || todayText(), false) +
           tripDateFieldHtml('\uC885\uB8CC\uC77C', 'end', panel.dataset.apiTripEnd || panel.dataset.apiTripStart || todayText(), false)) +
-      '</div>'
+      '</div><button type="button" class="submit-action api-trip-query-button" data-api-trip-range-submit>\uC870\uD68C</button>'
     filter.querySelectorAll('[data-api-trip-range-mode]').forEach(function (button) {
       button.addEventListener('click', function () {
         panel.dataset.apiTripRangeMode = button.dataset.apiTripRangeMode || 'month'
-        renderApiTripList(panel, panel.__apiTrips || [])
+        renderTripRangeFilter(panel, filter)
       })
     })
     filter.querySelectorAll('[data-api-trip-date-trigger]').forEach(function (trigger) {
@@ -9272,9 +9272,16 @@
     })
     filter.querySelectorAll('[data-api-trip-date]').forEach(function (input) {
       input.addEventListener('change', function () {
-        applyApiTripRangeDate(panel, input.dataset.apiTripDate, input.value)
+        updateApiTripRangeDate(panel, input.dataset.apiTripDate, input.value)
+        renderTripRangeFilter(panel, filter)
       })
     })
+    var submit = filter.querySelector('[data-api-trip-range-submit]')
+    if (submit) {
+      submit.addEventListener('click', function () {
+        renderApiTripList(panel, panel.__apiTrips || [])
+      })
+    }
   }
 
   function tripDateFieldHtml(label, key, value, monthOnly) {
@@ -9299,7 +9306,7 @@
     toggleCommonDatePopover(input, trigger)
   }
 
-  function applyApiTripRangeDate(panel, key, value) {
+  function updateApiTripRangeDate(panel, key, value) {
     var selected = parseApiDate(value) || todayText()
     if (key === 'month') {
       var range = monthRangeFor(selected)
@@ -9313,7 +9320,6 @@
       panel.dataset.apiTripEnd = selected
       if ((panel.dataset.apiTripStart || selected) > selected) panel.dataset.apiTripStart = selected
     }
-    renderApiTripList(panel, panel.__apiTrips || [])
   }
 
   function filterApiTripsByRange(panel, trips) {

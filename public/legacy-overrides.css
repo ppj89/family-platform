@@ -3035,6 +3035,11 @@ body.api-loading-blocked::before {
   min-height: 38px;
 }
 
+.api-trip-query-button {
+  min-height: 38px;
+  padding: 0 18px;
+}
+
 .api-trip-search {
   display: grid;
   gap: 8px;
