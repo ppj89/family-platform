@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:legacy-patch": "node scripts/build-legacy-patch.mjs",
+    "check:legacy-patch": "node scripts/build-legacy-patch.mjs --check",
     "lint": "eslint .",
     "preview": "vite preview",
     "cap:sync": "npm run build && cap sync",

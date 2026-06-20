@@ -10,6 +10,7 @@ export default tseslint.config(
       'ios/**',
       'node_modules/**',
       'public/legacy/**',
+      'src/legacy-patch-modules/**/*.js',
     ],
   },
   {

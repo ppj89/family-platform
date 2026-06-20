@@ -9,8 +9,11 @@
 - 메뉴 하나를 수정할 때 다른 메뉴의 렌더링, 이벤트, API 흐름을 같이 변경하지 않는다.
 - 공통으로 쓸 수 있는 datepicker, form, filter, button, loading 처리는 `src/legacy-patch-modules/common` 기준으로 분리한다.
 - 메뉴별 동작은 `src/legacy-patch-modules/menus/<menu>` 기준으로 분리한다.
-- 운영에 적용되는 기존 보정은 당분간 `public/legacy-patch.js`에 남아 있을 수 있지만, 새 변경은 먼저 메뉴 소유권을 확인하고 해당 메뉴 영역만 수정한다.
-- `public/legacy-patch.js`에서 코드를 옮길 때는 한 번에 한 메뉴만 옮기고, 옮긴 뒤 PC/태블릿/모바일/앱 화면을 확인한다.
+- 운영에 적용되는 파일은 `public/legacy-patch.js`지만, 새 변경의 원본은 `src/legacy-patch-modules` 아래 메뉴별 파일로 관리한다.
+- 메뉴별 파일을 수정한 뒤 `npm run build:legacy-patch`를 실행해 `public/legacy-patch.js`를 다시 생성한다.
+- `public/legacy-patch.js`가 메뉴별 원본과 같은지 확인할 때는 `npm run check:legacy-patch`를 실행한다.
+- `src/legacy-patch-modules/**/*.js` 파일은 하나의 IIFE를 순서대로 나눈 조각이므로 단독 실행/단독 lint 대상이 아니다. 문법/동기화 검증은 재조합된 `public/legacy-patch.js`와 `check:legacy-patch` 기준으로 진행한다.
+- 기존 `public/legacy-patch.js`에서 코드를 더 옮길 때는 한 번에 한 메뉴만 옮기고, 옮긴 뒤 PC/태블릿/모바일/앱 화면을 확인한다.
 - 기존 동작 원복이 필요하면 메뉴별 커밋 단위로 되돌릴 수 있게 변경 범위를 작게 유지한다.
 - 사용자 요청 없이 전체 메뉴 공통 리팩터링을 진행하지 않는다.
 
@@ -24,10 +27,12 @@
 - `src/legacy-patch-modules/menus/ledger`: 가계부 목록, 필터, 입력폼
 - `src/legacy-patch-modules/menus/calendar`: 캘린더 일정/필터/date UI
 - `src/legacy-patch-modules/menus/family`: 가족그룹, 초대, 권한 흐름
+- `src/legacy-patch-modules/menus/home`: 홈 요약/대시보드
+- `src/legacy-patch-modules/menus/community`: 커뮤니티 게시판/파일/댓글
 
 ## 현재 레거시 소유권 맵
 
-현재 운영 반영 파일은 `public/legacy-patch.js`다. 아래 함수가 보이면 해당 메뉴 소유권으로 판단한다.
+현재 운영 반영 파일은 `public/legacy-patch.js`이고, 원본 분리 파일은 `src/legacy-patch-modules/manifest.mjs` 순서대로 합쳐진다. 아래 함수가 보이면 해당 메뉴 소유권으로 판단한다.
 
 - 공통: `installApiLoadingInterceptor`, `setApiLoadingVisible`, `beginApiLoading`, `endApiLoading`, `openCommonDatePopover`, `pageHeadingIs`
 - 가계부: `renderLedgerPageFromApi`, `normalizeLedgerEntryForm`
@@ -43,7 +48,8 @@
 
 1. `AGENTS.md`, `docs/common-ui-guidelines.md`, 이 문서를 먼저 읽는다.
 2. 수정할 메뉴의 `src/legacy-patch-modules/menus/<menu>/README.md`를 확인한다.
-3. 기존 운영 동작 위치가 `public/legacy-patch.js`인지, 레거시 번들인지 확인한다.
+3. 기존 운영 동작 위치가 `src/legacy-patch-modules`의 어느 메뉴 파일인지, 아니면 레거시 번들인지 확인한다.
 4. 한 메뉴의 변경만 적용한다.
-5. `npm run lint`, `npm run build`, 브라우저 PC/태블릿/모바일 확인을 진행한다.
-6. 운영 반영 대상이면 배포 후 운영 URL에서 동일하게 확인한다.
+5. 메뉴별 파일을 수정했다면 `npm run build:legacy-patch`와 `npm run check:legacy-patch`를 실행한다.
+6. `npm run lint`, `npm run build`, 브라우저 PC/태블릿/모바일 확인을 진행한다.
+7. 운영 반영 대상이면 배포 후 운영 URL에서 동일하게 확인한다.
