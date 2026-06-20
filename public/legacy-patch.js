@@ -9110,6 +9110,37 @@
     })
   }
 
+  function openApiTripCard(card) {
+    if (!card || !pageHeadingIs('\uC5EC\uD589')) return
+    var panel = card.closest('.trip-manager') || document.querySelector('.trip-manager')
+    if (!panel) return
+    var trip = {
+      id: card.dataset.apiTripId || '',
+      title: getCleanText(card.querySelector('strong')) || '\uC5EC\uD589',
+      startDate: '',
+      endDate: ''
+    }
+    var period = getCleanText(card.querySelector('span'))
+    if (period.indexOf('~') >= 0) {
+      var parts = period.split('~')
+      trip.startDate = String(parts[0] || '').trim()
+      trip.endDate = String(parts[1] || '').trim()
+    } else {
+      trip.startDate = period
+      trip.endDate = period
+    }
+    if (trip.id) openApiTripDetail(panel, trip)
+  }
+
+  document.addEventListener('click', function (event) {
+    var card = event.target && event.target.closest && event.target.closest('.api-trip-card')
+    if (!card || !pageHeadingIs('\uC5EC\uD589')) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    openApiTripCard(card)
+  }, true)
+
   function openApiTripDetail(panel, trip) {
     if (!panel || !trip) return
     localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
