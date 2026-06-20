@@ -180,6 +180,22 @@
   gap: 8px;
 }
 
+.travel-separated-course {
+  display: grid;
+  gap: 10px;
+}
+
+.travel-separated-course h4 {
+  margin: 0;
+  color: #191f28;
+  font-size: 18px;
+  line-height: 1.35;
+}
+
+.travel-separated-course .route-map {
+  margin-bottom: 0;
+}
+
 .travel-separated-record {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -228,6 +244,10 @@
   color: #191f28;
   font-size: 20px;
   line-height: 1.35;
+}
+
+.travel-separated-form .location-candidates {
+  grid-column: 1 / -1;
 }
 
 @media (max-width: 900px) {

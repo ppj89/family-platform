@@ -66,6 +66,15 @@
     return fallback
   }
 
+  function parseCoordinates(value) {
+    var match = String(value || '').trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/)
+    if (!match) return null
+    var latitude = Number(match[1])
+    var longitude = Number(match[2])
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null
+    return { latitude: latitude, longitude: longitude }
+  }
+
   function token() {
     return localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) || ''
   }
@@ -162,6 +171,118 @@
 
   function deleteRecord(recordId) {
     return apiRequest('/travel-records/' + encodeURIComponent(recordId), { method: 'DELETE' })
+  }
+
+  function searchTravelPlaces(query, limit) {
+    var keyword = String(query || '').trim()
+    if (!keyword || keyword.length < 2 || !token()) return Promise.resolve([])
+    return apiRequest('/places/search?q=' + encodeURIComponent(keyword) + '&limit=' + encodeURIComponent(limit || 6)).then(function (items) {
+      return Array.isArray(items) ? items : []
+    }).catch(function () {
+      return []
+    })
+  }
+
+  function placeLabel(item) {
+    return String(item && (item.name || item.address) || '').trim()
+  }
+
+  function placeDetail(item) {
+    return String(item && item.address || '').trim()
+  }
+
+  function setLocationCandidate(input, item) {
+    if (!input || !item) return
+    var label = placeLabel(item)
+    var detail = placeDetail(item)
+    input.value = label || detail
+    input.dataset.latitude = String(item.latitude || '')
+    input.dataset.longitude = String(item.longitude || '')
+    input.dataset.placeAddress = detail
+  }
+
+  function getLocationCoordinates(form) {
+    var input = form && form.querySelector('[name="location"]')
+    if (!input) return null
+    var latitude = Number(input.dataset.latitude)
+    var longitude = Number(input.dataset.longitude)
+    if (Number.isFinite(latitude) && Number.isFinite(longitude) && latitude !== 0 && longitude !== 0) {
+      return { latitude: latitude, longitude: longitude }
+    }
+    return parseCoordinates(input.value)
+  }
+
+  function resolveLocationForSubmit(form, location) {
+    var existing = getLocationCoordinates(form)
+    if (existing || !String(location || '').trim()) return Promise.resolve(existing)
+    return searchTravelPlaces(location, 1).then(function (items) {
+      var first = items[0]
+      if (!first) return null
+      setLocationCandidate(form.querySelector('[name="location"]'), first)
+      return { latitude: Number(first.latitude), longitude: Number(first.longitude) }
+    })
+  }
+
+  function ensureLocationSearch(form) {
+    var input = form && form.querySelector('[name="location"]')
+    if (!input || input.dataset.placeSearchReady === 'true') return
+    input.dataset.placeSearchReady = 'true'
+    input.setAttribute('autocomplete', 'off')
+    var candidates = document.createElement('div')
+    candidates.className = 'location-candidates travel-location-candidates'
+    candidates.hidden = true
+    input.closest('label').insertAdjacentElement('afterend', candidates)
+    var timer = null
+
+    function hideCandidates() {
+      candidates.hidden = true
+      candidates.innerHTML = ''
+    }
+
+    function renderCandidates(query, items) {
+      if (String(input.value || '').trim() !== query) return
+      if (!items.length) {
+        candidates.innerHTML = '<span>검색 결과가 없습니다. 장소명을 조금 더 자세히 입력해주세요.</span>'
+        candidates.hidden = false
+        return
+      }
+      candidates.innerHTML = '<span>위치를 선택해주세요.</span>' + items.map(function (item, index) {
+        return '<button type="button" data-place-index="' + index + '">' +
+          '<b>' + escapeHtml(placeLabel(item)) + '</b>' +
+          '<small>' + escapeHtml(placeDetail(item)) + '</small>' +
+          '</button>'
+      }).join('')
+      candidates.hidden = false
+      candidates.querySelectorAll('button[data-place-index]').forEach(function (button) {
+        button.addEventListener('mousedown', function (event) { event.preventDefault() })
+        button.addEventListener('click', function () {
+          setLocationCandidate(input, items[Number(button.dataset.placeIndex)])
+          hideCandidates()
+        })
+      })
+    }
+
+    input.addEventListener('input', function () {
+      delete input.dataset.latitude
+      delete input.dataset.longitude
+      delete input.dataset.placeAddress
+      window.clearTimeout(timer)
+      var query = String(input.value || '').trim()
+      if (query.length < 2) {
+        hideCandidates()
+        return
+      }
+      timer = window.setTimeout(function () {
+        candidates.innerHTML = '<span>위치를 검색하는 중입니다.</span>'
+        candidates.hidden = false
+        searchTravelPlaces(query, 6).then(function (items) {
+          renderCandidates(query, items)
+        })
+      }, 280)
+    })
+    input.addEventListener('blur', function () {
+      window.setTimeout(hideCandidates, 220)
+    })
   }
 
   function groupTrips(trips) {
@@ -387,6 +508,7 @@
 
   function recordPayload(form) {
     var sortOrderValue = form.querySelector('[name="sortOrder"]').value.trim()
+    var coords = getLocationCoordinates(form)
     return {
       sortOrder: sortOrderValue ? Number(sortOrderValue) : null,
       title: form.querySelector('[name="title"]').value.trim(),
@@ -394,8 +516,8 @@
       amount: Number(String(form.querySelector('[name="amount"]').value || '').replace(/[^\d]/g, '')) || 0,
       note: form.querySelector('[name="note"]').value.trim(),
       location: form.querySelector('[name="location"]').value.trim(),
-      latitude: 0,
-      longitude: 0,
+      latitude: coords ? Number(coords.latitude || 0) : 0,
+      longitude: coords ? Number(coords.longitude || 0) : 0,
       recordDate: form.querySelector('[name="recordDate"]').value || todayText(),
       recordTime: formatClockText(form.querySelector('[name="recordTime"]').value, currentTimeText()),
       mediaUrls: []
@@ -406,7 +528,10 @@
     form.dataset.editRecordId = String(record.id || '')
     form.querySelector('[name="sortOrder"]').value = record.sortOrder == null ? '' : String(record.sortOrder)
     form.querySelector('[name="title"]').value = record.title || ''
-    form.querySelector('[name="location"]').value = record.location || ''
+    var location = form.querySelector('[name="location"]')
+    location.value = record.location || ''
+    location.dataset.latitude = record.latitude || ''
+    location.dataset.longitude = record.longitude || ''
     form.querySelector('[name="amount"]').value = record.amount ? String(record.amount) : ''
     form.querySelector('[name="recordDate"]').value = record.recordDate || todayText()
     form.querySelector('[name="recordTime"]').value = formatClockText(record.recordTime || '', currentTimeText())
@@ -420,7 +545,11 @@
     delete form.dataset.editRecordId
     form.querySelector('[name="sortOrder"]').value = ''
     form.querySelector('[name="title"]').value = ''
-    form.querySelector('[name="location"]').value = ''
+    var location = form.querySelector('[name="location"]')
+    location.value = ''
+    delete location.dataset.latitude
+    delete location.dataset.longitude
+    delete location.dataset.placeAddress
     form.querySelector('[name="amount"]').value = ''
     form.querySelector('[name="recordDate"]').value = todayText()
     form.querySelector('[name="recordTime"]').value = currentTimeText()
@@ -441,6 +570,7 @@
       '<button type="button" class="save-button" data-travel-edit>수정</button>' +
       '<button type="button" class="danger-button" data-travel-delete>삭제</button>' +
       '</div></header>' +
+      '<section class="travel-separated-course"><h4>여행 코스</h4><div class="route-map" data-travel-route-map><div class="route-map-grid"></div><div class="route-map-empty">등록된 코스를 불러오는 중입니다.</div></div></section>' +
       '<form class="travel-separated-form" data-travel-record-form>' +
       '<label><span>순서</span><input name="sortOrder" inputmode="numeric" /></label>' +
       '<label><span>제목 <em class="required-mark">*</em></span><input name="title" /></label>' +
@@ -469,11 +599,12 @@
       })
     })
     var form = root.querySelector('[data-travel-record-form]')
+    ensureLocationSearch(form)
     form.querySelector('[data-record-cancel]').addEventListener('click', function () { clearRecordForm(form) })
     form.addEventListener('submit', function (event) {
       event.preventDefault()
-      var payload = recordPayload(form)
-      if (!payload.title) {
+      var basePayload = recordPayload(form)
+      if (!basePayload.title) {
         toast('제목을 입력해주세요.')
         form.querySelector('[name="title"]').focus()
         return
@@ -481,7 +612,13 @@
       var recordId = form.dataset.editRecordId
       var button = form.querySelector('button[type="submit"]')
       button.disabled = true
-      ;(recordId ? updateRecord(recordId, payload) : createRecord(trip.id, payload)).then(function () {
+      resolveLocationForSubmit(form, basePayload.location).then(function (coords) {
+        var payload = Object.assign({}, basePayload, {
+          latitude: coords ? Number(coords.latitude || 0) : Number(basePayload.latitude || 0),
+          longitude: coords ? Number(coords.longitude || 0) : Number(basePayload.longitude || 0)
+        })
+        return recordId ? updateRecord(recordId, payload) : createRecord(trip.id, payload)
+      }).then(function () {
         toast(recordId ? '여행 기록을 수정했습니다.' : '여행 기록을 추가했습니다.')
         clearRecordForm(form)
         loadRecords(trip)
@@ -500,6 +637,7 @@
     if (!list) return
     readRecords(trip.tripIds || [trip.id]).then(function (records) {
       var sorted = sortRecords(records)
+      renderRouteMap(sorted)
       if (!sorted.length) {
         list.innerHTML = '<p class="empty-note">등록된 여행 기록이 없습니다.</p>'
         return
@@ -536,6 +674,59 @@
     }).catch(function (error) {
       list.innerHTML = '<p class="empty-note">' + escapeHtml(errorMessage(error, '여행 기록을 불러오지 못했습니다.')) + '</p>'
     })
+  }
+
+  function routePointPosition(record, index, total) {
+    var latitude = Number(record && record.latitude)
+    var longitude = Number(record && record.longitude)
+    if (Number.isFinite(latitude) && Number.isFinite(longitude) && latitude !== 0 && longitude !== 0) {
+      var x = ((longitude + 180) / 360) * 100
+      var y = ((90 - latitude) / 180) * 100
+      return {
+        x: Math.max(8, Math.min(92, x)),
+        y: Math.max(12, Math.min(58, y))
+      }
+    }
+    if (total <= 1) return { x: 50, y: 34 }
+    var rate = index / (total - 1)
+    return {
+      x: 12 + rate * 76,
+      y: 24 + Math.sin(rate * Math.PI) * 24
+    }
+  }
+
+  function renderRouteMap(records) {
+    var map = document.querySelector('[data-travel-route-map]')
+    if (!map) return
+    var items = sortRecords(records).filter(function (record) {
+      return record && (record.title || record.location || record.latitude || record.longitude)
+    })
+    if (!items.length) {
+      map.innerHTML = '<div class="route-map-grid"></div><div class="route-map-empty">여행 상세 기록을 추가하면 코스가 표시됩니다.</div>'
+      return
+    }
+    var points = items.map(routePointPosition)
+    var polyline = points.map(function (point) {
+      return point.x + ',' + point.y
+    }).join(' ')
+    map.innerHTML = '<div class="route-map-grid"></div>' +
+      '<svg class="route-map-line" viewBox="0 0 100 70" preserveAspectRatio="none"><polyline points="' + escapeHtml(polyline) + '"></polyline></svg>' +
+      items.map(function (record, index) {
+        var point = points[index]
+        var label = record.title || record.location || '코스'
+        return '<button type="button" class="route-marker" style="left:' + point.x + '%;top:' + point.y + '%" title="' + escapeHtml(label) + '">' +
+          '<b>' + (index + 1) + '</b>' +
+          '</button>'
+      }).join('') +
+      '<div class="route-sequence">' + items.map(function (record, index) {
+        var location = record.location || ''
+        var meta = [record.recordDate || '', record.recordTime || '', location].filter(Boolean).join(' · ')
+        return '<div class="route-sequence-item">' +
+          '<b>' + (index + 1) + '</b><span>' + escapeHtml(record.title || location || '코스') + '</span>' +
+          '<small>' + escapeHtml(meta) + '</small>' +
+          (index < items.length - 1 ? '<i></i>' : '') +
+          '</div>'
+      }).join('') + '</div>'
   }
 
   function mountTravelPage() {
