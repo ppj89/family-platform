@@ -338,6 +338,7 @@
     setCount(groupedTrips.length)
     root.classList.add('travel-separated-panel')
     root.dataset.travelSeparatedMounted = 'true'
+    root.dataset.travelSeparatedView = 'list'
     root.innerHTML = shellHeader('여행', groupedTrips.length, '<button type="button" class="primary-action" data-travel-new>신규입력</button>') +
       '<div class="travel-separated-list">' +
       (groupedTrips.length ? groupedTrips.map(function (trip) {
@@ -390,6 +391,8 @@
     var root = panel()
     if (!root || !isTravelPage()) return Promise.resolve([])
     root.classList.add('travel-separated-panel')
+    root.dataset.travelSeparatedMounted = 'true'
+    root.dataset.travelSeparatedView = 'loading'
     root.innerHTML = shellHeader('여행', 0, '<button type="button" class="primary-action" data-travel-new>신규입력</button>') +
       '<p class="empty-note">여행 목록을 불러오는 중입니다.</p>'
     return readTrips(false).then(function (trips) {
@@ -420,6 +423,8 @@
     var root = panel()
     if (!root) return
     var editing = Boolean(trip && trip.id)
+    root.dataset.travelSeparatedMounted = 'true'
+    root.dataset.travelSeparatedView = editing ? 'trip-edit' : 'trip-new'
     root.innerHTML = shellHeader(editing ? '여행 수정' : '여행 등록', 0, '<button type="button" class="cancel-button" data-travel-list>목록</button>') +
       '<form class="travel-separated-form" data-travel-trip-form>' +
       '<label><span>여행명 <em class="required-mark">*</em></span><input name="title" value="' + escapeHtml((trip && trip.title) || '') + '" /></label>' +
@@ -562,6 +567,8 @@
     var root = panel()
     if (!root || !trip) return
     localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
+    root.dataset.travelSeparatedMounted = 'true'
+    root.dataset.travelSeparatedView = 'detail'
     root.innerHTML = '<section class="travel-separated-detail">' +
       '<header class="travel-separated-detail-header">' +
       '<div><h3>' + escapeHtml(trip.title || '여행') + '</h3><span>' + escapeHtml(periodText(trip)) + '</span></div>' +
@@ -729,11 +736,24 @@
       }).join('') + '</div>'
   }
 
+  function hasSeparatedTravelView(root) {
+    return Boolean(root && root.querySelector(
+      '.travel-separated-list, .travel-separated-detail, [data-travel-trip-form], .travel-separated-record-list'
+    ))
+  }
+
+  function hasLegacyTravelView(root) {
+    return Boolean(root && root.querySelector(
+      '.trip-add-row, .api-trip-card, .api-trip-detail, .api-travel-record-form, .travel-form, .trip-list, .travel-summary, .server-travel-list'
+    ))
+  }
+
   function mountTravelPage() {
     if (!isTravelPage()) return
     var root = panel()
     if (!root) return
-    if (root.dataset.travelSeparatedMounted === 'true' && root.querySelector('.travel-separated-header, .travel-separated-detail')) return
+    var legacyView = hasLegacyTravelView(root)
+    if (!legacyView && (hasSeparatedTravelView(root) || root.dataset.travelSeparatedView === 'loading')) return
     loadList()
   }
 
