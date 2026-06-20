@@ -187,26 +187,9 @@
     var actions = header.querySelector('.travel-header-actions')
 
     if (isListMode) {
-      if (!actions) {
-        actions = document.createElement('div')
-        actions.className = 'travel-header-actions'
-        header.appendChild(actions)
-      }
-      actions.querySelectorAll('[data-travel-list-back]').forEach(function (button) { button.remove() })
-      if (!actions.querySelector('[data-travel-new-entry]')) {
-        var newButton = document.createElement('button')
-        newButton.type = 'button'
-        newButton.className = 'save-button travel-new-entry-button'
-        newButton.dataset.travelNewEntry = 'true'
-        newButton.textContent = '\uC2E0\uADDC\uC785\uB825'
-        newButton.addEventListener('click', function () {
-          var first = panel.querySelector('.trip-add-row input, .trip-add-row textarea')
-          if (first) {
-            first.scrollIntoView({ behavior: 'smooth', block: 'center' })
-            window.setTimeout(function () { first.focus() }, 180)
-          }
-        })
-        actions.appendChild(newButton)
+      if (actions) {
+        actions.querySelectorAll('[data-travel-new-entry], [data-travel-list-back]').forEach(function (button) { button.remove() })
+        if (!actions.children.length) actions.remove()
       }
       normalizeTravelListWorkspace()
       return
