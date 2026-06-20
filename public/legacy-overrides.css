@@ -12680,3 +12680,26 @@ body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-
     max-width: none !important;
   }
 }
+
+body:has(.baby-api-detail) .content-grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+
+body:has(.baby-api-detail) .content-grid > .panel:has(.baby-api-detail) {
+  grid-column: 1 / -1 !important;
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+}
+
+@container (min-width: 621px) {
+  .baby-api-detail-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 320px) !important;
+  }
+}
+
+@container (max-width: 620px) {
+  .baby-api-detail-layout {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
