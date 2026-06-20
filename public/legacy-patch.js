@@ -9050,7 +9050,14 @@
     var headerAction = document.querySelector('.panel-header .passive-header-chip, .panel.wide.full-span .panel-header button')
     if (!panel && !headerAction) return
     if (!force && panel && panel.dataset.apiBacked === 'true') return
-    if (panel) panel.dataset.apiBacked = 'true'
+    if (panel) {
+      var keepDetail = panel.dataset.apiKeepDetail === 'true'
+      if (!keepDetail) {
+        closeApiTripDetail(panel)
+        panel.classList.add('list-mode')
+      }
+      panel.dataset.apiBacked = 'true'
+    }
     fetchTrips().then(function (trips) {
       if (headerAction) headerAction.textContent = Number(trips.length || 0).toLocaleString('ko-KR') + '\uAC1C'
       if (panel) renderApiTripList(panel, trips)
@@ -9058,11 +9065,21 @@
     })
   }
 
-  function activateTravelListMode(panel) {
+  function closeApiTripDetail(panel) {
     panel = panel || document.querySelector('.trip-manager')
     if (!panel) return
     var detail = panel.querySelector('.api-trip-detail')
     if (detail) detail.remove()
+    var list = panel.querySelector('.trip-list')
+    if (list) list.hidden = false
+    delete panel.dataset.apiKeepDetail
+    delete panel.dataset.apiOpenTripId
+  }
+
+  function activateTravelListMode(panel) {
+    panel = panel || document.querySelector('.trip-manager')
+    if (!panel) return
+    closeApiTripDetail(panel)
     panel.classList.add('list-mode')
     var titleInput = panel.querySelector('.trip-add-row [data-field="trip-title"], .trip-add-row input')
     if (titleInput) window.setTimeout(function () { titleInput.focus() }, 80)
@@ -9071,8 +9088,7 @@
   function activateTravelDetailList(panel) {
     panel = panel || document.querySelector('.trip-manager')
     if (!panel) return
-    var detail = panel.querySelector('.api-trip-detail')
-    if (detail) detail.remove()
+    closeApiTripDetail(panel)
     panel.classList.add('list-mode')
   }
 
@@ -9100,6 +9116,7 @@
       list.className = 'trip-list'
       panel.appendChild(list)
     }
+    if (panel.dataset.apiKeepDetail !== 'true') list.hidden = false
     if (!trips.length) {
       list.innerHTML = emptyRow('\uB4F1\uB85D\uB41C \uC5EC\uD589\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
       return
@@ -9227,6 +9244,7 @@
       showPatchToast(editId ? '\uC5EC\uD589\uC744 \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.' : '\uC5EC\uD589\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
       if (titleInput) setInputValue(titleInput, '')
       clearTripEditMode(row)
+      closeApiTripDetail(panel)
       renderTravelPageFromApi(true)
     }).catch(function (error) {
       showPatchToast(apiActionErrorMessage(error, editId ? '\uC5EC\uD589 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.' : '\uC5EC\uD589 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
@@ -9254,12 +9272,18 @@
   function openApiTripDetail(panel, trip) {
     if (!panel || !trip) return
     localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
+    panel.dataset.apiKeepDetail = 'true'
+    panel.dataset.apiOpenTripId = String(trip.id)
+    panel.classList.remove('list-mode')
+    var list = panel.querySelector('.trip-list')
+    if (list) list.hidden = true
     var detail = panel.querySelector('.api-trip-detail')
     if (!detail) {
       detail = document.createElement('section')
       detail.className = 'api-trip-detail'
       panel.appendChild(detail)
     }
+    detail.dataset.apiTripId = String(trip.id)
     detail.innerHTML = [
       '<header class="api-trip-detail-header"><div><h3>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</h3><span>' + escapeHtml(tripPeriodText(trip)) + '</span></div><div class="api-trip-detail-actions"><button type="button" data-api-trip-detail-edit>\uC218\uC815</button><button type="button" class="danger-action" data-api-trip-detail-delete>\uC0AD\uC81C</button><button type="button" data-api-trip-back>\uBAA9\uB85D</button></div></header>',
       '<form class="travel-form api-travel-record-form">',
@@ -9274,7 +9298,10 @@
       '<div class="api-trip-record-list"></div>'
     ].join('')
     var back = detail.querySelector('[data-api-trip-back]')
-    if (back) back.addEventListener('click', function () { detail.remove() })
+    if (back) back.addEventListener('click', function () {
+      closeApiTripDetail(panel)
+      panel.classList.add('list-mode')
+    })
     var edit = detail.querySelector('[data-api-trip-detail-edit]')
     if (edit) edit.addEventListener('click', function () { startTripEdit(panel, trip) })
     var deleteButton = detail.querySelector('[data-api-trip-detail-delete]')
@@ -9431,7 +9458,7 @@
     showPatchConfirm('\uC5EC\uD589 \uAE30\uB85D\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
       apiRequest('/travel-records/' + encodeURIComponent(recordId), { method: 'DELETE' }).then(function () {
         showPatchToast('\uC5EC\uD589 \uAE30\uB85D\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
-        renderApiTripRecords(detail, localStorage.getItem(API_TRIP_ID_KEY))
+        renderApiTripRecords(detail, getActiveApiTripId(detail))
       }).catch(function (error) {
         showPatchToast(apiActionErrorMessage(error, '\uC5EC\uD589 \uAE30\uB85D \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
       })
@@ -10764,21 +10791,22 @@
     }, 450)
   }
 
-  function ensureDefaultApiTrip() {
-    var cachedId = Number(localStorage.getItem(API_TRIP_ID_KEY) || '')
-    if (Number.isFinite(cachedId) && cachedId > 0) return Promise.resolve(cachedId)
+  function getActiveApiTripId(root) {
+    var detail = root && root.closest ? root.closest('.api-trip-detail') : null
+    if (!detail && root && root.querySelector) detail = root.querySelector('.api-trip-detail')
+    if (!detail) detail = document.querySelector('.api-trip-detail')
+    var detailId = detail && detail.dataset.apiTripId
+    if (detailId) return String(detailId)
+    var panel = detail && detail.closest ? detail.closest('.trip-manager') : document.querySelector('.trip-manager')
+    var panelId = panel && panel.dataset.apiOpenTripId
+    return panelId ? String(panelId) : ''
+  }
 
-    return getCurrentFamilyId().then(function (familyId) {
-      return postJson('/trips?familyId=' + encodeURIComponent(familyId), {
-      title: '기본 여행',
-      startDate: todayText(),
-      endDate: todayText(),
-      description: '프론트 동기화 기본 여행'
-      })
-    }).then(function (trip) {
-      localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
-      return trip.id
-    })
+  function requireActiveApiTripId(root) {
+    var tripId = getActiveApiTripId(root)
+    if (tripId) return tripId
+    showPatchToast('\uC5EC\uD589 \uBAA9\uB85D\uC5D0\uC11C \uC5EC\uD589\uC744 \uC120\uD0DD\uD55C \uB4A4 \uAE30\uB85D\uC744 \uCD94\uAC00\uD574\uC8FC\uC138\uC694.')
+    return ''
   }
 
   function trySyncTask(task) {
@@ -10791,9 +10819,7 @@
     }
 
     if (task.type === 'createTravelRecord') {
-      return ensureDefaultApiTrip().then(function (tripId) {
-        return postJson('/trips/' + tripId + '/records', task.payload)
-      })
+      return Promise.resolve()
     }
 
     if (task.type === 'createSchedule') {
@@ -10901,9 +10927,11 @@
         })
       }).then(function (result) {
         var payload = travelRecordPayloadFromForm(form, result.files, result.coords)
+        var tripId = requireActiveApiTripId(form)
+        if (!editId && !tripId) return Promise.reject(new Error('trip selection required'))
         var request = editId
           ? putJson('/travel-records/' + encodeURIComponent(editId), payload)
-          : postJson('/trips/' + encodeURIComponent(localStorage.getItem(API_TRIP_ID_KEY)) + '/records', payload)
+          : postJson('/trips/' + encodeURIComponent(tripId) + '/records', payload)
         return request
       }).then(function () {
         showPatchToast(editId ? '\uC5EC\uD589 \uAE30\uB85D\uC744 \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.' : '\uC5EC\uD589 \uAE30\uB85D\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
@@ -10916,7 +10944,7 @@
         if (note) setInputValue(note, '')
         if (form.classList.contains('api-travel-record-form')) {
           window.setTimeout(function () {
-            renderApiTripRecords(form.closest('.api-trip-detail'), localStorage.getItem(API_TRIP_ID_KEY))
+            renderApiTripRecords(form.closest('.api-trip-detail'), getActiveApiTripId(form))
           }, 150)
         }
       }).catch(function (error) {
