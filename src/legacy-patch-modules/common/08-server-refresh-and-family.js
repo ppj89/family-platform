@@ -12,6 +12,7 @@
     normalizeTimeInputs()
     removeFeaturePlaceholders()
     removeHardcodedDemoData()
+    renderCurrentLegacyTravelApiRecords(force)
     renderHomeMetricsFromApi(force)
     renderLedgerPageFromApi(force)
     renderDiaryPageFromApi(force)
