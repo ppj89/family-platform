@@ -12,10 +12,8 @@ declare global {
 window.FAMILY_PLATFORM_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const legacyCssPath = '/legacy/assets/index-CkWNYWFk.css'
-const legacyOverridesCssPath = '/legacy-overrides.css?v=20260620-60'
-const legacyTravelCssPath = '/legacy-travel.css?v=20260620-03'
-const legacyPatchScriptPath = '/legacy-patch.js?v=20260620-59'
-const legacyTravelScriptPath = '/legacy-travel.js?v=20260620-03'
+const legacyOverridesCssPath = '/legacy-overrides.css?v=20260620-61'
+const legacyPatchScriptPath = '/legacy-patch.js?v=20260620-61'
 const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260614-11'
 
 const root = document.getElementById('root')
@@ -31,13 +29,6 @@ if (!document.querySelector(`link[href="${legacyOverridesCssPath}"]`)) {
   const link = document.createElement('link')
   link.rel = 'stylesheet'
   link.href = legacyOverridesCssPath
-  document.head.appendChild(link)
-}
-
-if (!document.querySelector(`link[href="${legacyTravelCssPath}"]`)) {
-  const link = document.createElement('link')
-  link.rel = 'stylesheet'
-  link.href = legacyTravelCssPath
   document.head.appendChild(link)
 }
 
@@ -67,20 +58,10 @@ function loadPatchScript() {
   script.dataset.familyPatch = 'true'
   script.addEventListener('load', () => {
     window.__familyPatchLoading = false
-    loadTravelScript()
   }, { once: true })
   script.addEventListener('error', () => {
     window.__familyPatchLoading = false
-    loadTravelScript()
   }, { once: true })
-  document.body.appendChild(script)
-}
-
-function loadTravelScript() {
-  if (document.querySelector('script[data-family-travel="true"]')) return
-  const script = document.createElement('script')
-  script.src = legacyTravelScriptPath
-  script.dataset.familyTravel = 'true'
   document.body.appendChild(script)
 }
 

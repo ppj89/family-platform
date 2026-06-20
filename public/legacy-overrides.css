@@ -3006,33 +3006,18 @@ body.api-loading-blocked::before {
 }
 
 .trip-list-card {
-  display: block;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
   min-height: 74px;
+  gap: 12px;
   border: 0;
   border-radius: 8px;
-  padding: 0;
+  padding: 12px;
   background: #f7f8fa;
   color: #191f28;
   font: inherit;
   text-align: left;
-}
-
-.trip-card-main {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: 4px;
-  width: 100%;
-  min-height: 74px;
-  min-width: 0;
-  border: 0;
-  border-radius: 8px;
-  padding: 14px 16px;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
 }
 
 .trip-card-actions,
