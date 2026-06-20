@@ -3005,6 +3005,36 @@ body.api-loading-blocked::before {
   gap: 8px;
 }
 
+.api-trip-search {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 2px;
+}
+
+.api-trip-search span {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.api-trip-search input {
+  width: 100%;
+  min-height: 46px;
+  border: 1px solid #d9e0ea;
+  border-radius: 14px;
+  padding: 0 14px;
+  background: #fff;
+  color: #191f28;
+  font: inherit;
+  font-weight: 700;
+  outline: none;
+}
+
+.api-trip-search input:focus {
+  border-color: #3182f6;
+  box-shadow: 0 0 0 3px #3182f61f;
+}
+
 .trip-list-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
