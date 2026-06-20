@@ -3167,6 +3167,8 @@ body.api-loading-blocked::before {
 }
 
 .travel-main {
+  display: grid;
+  gap: 6px;
   min-width: 0;
   border: 0;
   padding: 0;
@@ -3177,20 +3179,45 @@ body.api-loading-blocked::before {
   text-align: left;
 }
 
+.travel-record-head {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: 10px;
+}
+
 .travel-main strong {
-  display: inline;
-  margin-right: 24px;
+  display: inline-block;
+  min-width: 0;
+  margin-right: 0;
+  overflow: hidden;
   font-size: 15px;
   font-weight: 800;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.travel-record-head time {
+  flex: none;
+  color: #6b7684;
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .travel-main span {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 4px;
-  color: #8b95a1;
+  width: fit-content;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: #edf4ff;
+  color: #1b64da;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 800;
+  line-height: 1.2;
   white-space: nowrap;
 }
 
@@ -3213,7 +3240,12 @@ body.api-loading-blocked::before {
 }
 
 .travel-main p {
-  margin-top: 7px;
+  margin-top: 0;
+  color: #4e5968;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+  word-break: break-word;
 }
 
 .route-map {

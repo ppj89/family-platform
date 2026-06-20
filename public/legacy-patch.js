@@ -8870,6 +8870,85 @@
     document.querySelectorAll('.route-map .route-sequence').forEach(function (node) {
       node.remove()
     })
+    normalizeTravelRecordRows()
+  }
+
+  function normalizeTravelRecordRows() {
+    if (!pageHeadingIs('\uC5EC\uD589')) return
+    document.querySelectorAll('.travel-row').forEach(function (row) {
+      normalizeTravelRecordMapButton(row)
+      normalizeTravelRecordText(row)
+    })
+  }
+
+  function normalizeTravelRecordMapButton(row) {
+    var link = row && row.querySelector('.row-actions a.map-link')
+    if (!link) return
+    var query = getTravelMapQuery(link)
+    var title = getCleanText(row.querySelector('.travel-main strong, .travel-record-head strong'))
+    if (!query || query === '\uB300\uD55C\uBBFC\uAD6D' || query === title || isEmptyTravelCoordinateQuery(query)) {
+      link.remove()
+    }
+  }
+
+  function getTravelMapQuery(link) {
+    try {
+      return String(new URL(link.href).searchParams.get('query') || '').trim()
+    } catch (error) {
+      return ''
+    }
+  }
+
+  function isEmptyTravelCoordinateQuery(query) {
+    var match = String(query || '').trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/)
+    if (!match) return false
+    return Math.abs(Number(match[1])) < 0.000001 && Math.abs(Number(match[2])) < 0.000001
+  }
+
+  function normalizeTravelRecordText(row) {
+    var main = row && row.querySelector('.travel-main')
+    if (!main || main.querySelector('.travel-record-head')) return
+    var title = getCleanText(main.querySelector('strong')) || '\uC5EC\uD589 \uAE30\uB85D'
+    var metaText = normalizeTravelCostText(getCleanText(main.querySelector('span')))
+    var bodyText = getCleanText(main.querySelector('p'))
+    var bodyParts = bodyText.split(/\s*\u00B7\s*/)
+    var dateTime = bodyParts.shift() || ''
+    var note = bodyParts.join(' \u00B7 ').trim()
+    main.innerHTML = ''
+
+    var head = document.createElement('div')
+    head.className = 'travel-record-head'
+    var titleNode = document.createElement('strong')
+    titleNode.textContent = title
+    head.appendChild(titleNode)
+    if (dateTime) {
+      var timeNode = document.createElement('time')
+      timeNode.textContent = dateTime
+      head.appendChild(timeNode)
+    }
+    main.appendChild(head)
+
+    if (metaText) {
+      var meta = document.createElement('span')
+      meta.className = 'travel-record-cost'
+      meta.textContent = metaText
+      main.appendChild(meta)
+    }
+
+    if (note) {
+      var noteNode = document.createElement('p')
+      noteNode.className = 'travel-record-note'
+      noteNode.textContent = note
+      main.appendChild(noteNode)
+    }
+  }
+
+  function normalizeTravelCostText(text) {
+    var value = String(text || '').trim()
+    if (!value || value.indexOf('\u00B7') >= 0) return value
+    var match = value.match(/^(.+?)(-?[\d,]+\uC6D0)$/)
+    if (!match) return value
+    return match[1].trim() + ' \u00B7 ' + match[2]
   }
 
   function normalizeTravelListWorkspace() {
