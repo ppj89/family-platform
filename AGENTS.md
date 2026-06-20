@@ -3,6 +3,7 @@
 이 저장소에서 소스 수정 작업을 시작하기 전에 반드시 아래 문서를 먼저 읽고 적용한다.
 
 1. `docs/common-ui-guidelines.md`
+2. `docs/menu-source-structure.md`
 
 ## 필수 원칙
 
