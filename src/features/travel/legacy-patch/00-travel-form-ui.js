@@ -63,9 +63,15 @@
     var label = placeCandidateLabel(item)
     var detail = placeCandidateDetail(item)
     setNativeInputValue(input, label || detail)
-    input.dataset.latitude = String(item.latitude || '')
-    input.dataset.longitude = String(item.longitude || '')
-    input.dataset.placeAddress = detail
+    if (Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude)) && Number(item.latitude) !== 0 && Number(item.longitude) !== 0) {
+      input.dataset.latitude = String(item.latitude)
+      input.dataset.longitude = String(item.longitude)
+    } else {
+      delete input.dataset.latitude
+      delete input.dataset.longitude
+    }
+    if (detail) input.dataset.placeAddress = detail
+    else delete input.dataset.placeAddress
   }
 
   function getTravelLocationCoordinates(form) {
@@ -117,9 +123,7 @@
     function renderCandidates(query, items) {
       if (String(input.value || '').trim() !== query) return
       if (!items.length) {
-        candidates.innerHTML = '<span>\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC0C1\uD638\uBA85\uC744 \uC880 \uB354 \uC790\uC138\uD788 \uC785\uB825\uD574\uC8FC\uC138\uC694.</span>'
-        candidates.hidden = false
-        return
+        items = [{ id: 'manual:' + query, name: query, address: '\uC785\uB825\uD55C \uC704\uCE58\uB85C \uC800\uC7A5', latitude: '', longitude: '', source: 'manual' }]
       }
       candidates.innerHTML = '<span>\uC704\uCE58\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</span>' + items.map(function (item, index) {
         return '<button type="button" data-place-index="' + index + '">' +
