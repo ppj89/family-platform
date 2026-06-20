@@ -52,6 +52,7 @@ type config struct {
 	publicBaseURL             string
 	oauth                     map[string]oauthProviderConfig
 	kakaoRestAPIKey           string
+	googlePlacesAPIKey        string
 	maxFilesPerPost           int
 	maxReferenceLength        int
 	maxImageBytes             int64
@@ -195,6 +196,7 @@ func loadConfig() (config, error) {
 		publicBaseURL:             defaultPublicBaseURL(),
 		oauth:                     loadOAuthProviders(),
 		kakaoRestAPIKey:           getenv("APP_KAKAO_REST_API_KEY", getenv("APP_OAUTH_KAKAO_CLIENT_ID", "")),
+		googlePlacesAPIKey:        firstNonEmpty(os.Getenv("APP_GOOGLE_PLACES_API_KEY"), os.Getenv("APP_GOOGLE_MAPS_API_KEY")),
 		maxFilesPerPost:           envInt("APP_MEDIA_MAX_FILES_PER_POST", 6),
 		maxReferenceLength:        envInt("APP_MEDIA_MAX_REFERENCE_LENGTH", 2048),
 		maxImageBytes:             parseSize(getenv("APP_MEDIA_MAX_IMAGE_SIZE", "8MB"), 8*1024*1024),
@@ -367,18 +369,92 @@ func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
 		return
 	}
 	limit := envClampedInt(r.URL.Query().Get("limit"), 5, 1, 10)
-	results, err := a.searchKakaoPlaces(r.Context(), query, limit)
-	if err != nil {
-		a.log.Warn("place search failed", "query", query, "error", err)
-		writeJSON(w, http.StatusOK, []placeSearchResult{})
-		return
+	results := make([]placeSearchResult, 0, limit)
+	seen := map[string]bool{}
+	for _, candidateQuery := range placeSearchQueries(query) {
+		kakaoResults, err := a.searchKakaoPlaces(r.Context(), candidateQuery, limit-len(results))
+		if err != nil {
+			a.log.Warn("kakao place search failed", "query", candidateQuery, "error", err)
+			if isPlaceProviderAuthError(err) {
+				break
+			}
+		}
+		results = appendUniquePlaces(results, kakaoResults, seen, limit)
+		if len(results) >= limit {
+			writeJSON(w, http.StatusOK, results)
+			return
+		}
 	}
+	googleResults, err := a.searchGooglePlaces(r.Context(), query, limit-len(results))
+	if err != nil {
+		a.log.Warn("google place search failed", "query", query, "error", err)
+	}
+	results = appendUniquePlaces(results, googleResults, seen, limit)
 	writeJSON(w, http.StatusOK, results)
+}
+
+func placeSearchQueries(query string) []string {
+	base := strings.TrimSpace(query)
+	if base == "" {
+		return nil
+	}
+	queries := []string{base}
+	add := func(value string) {
+		value = strings.TrimSpace(strings.Join(strings.Fields(value), " "))
+		if value == "" {
+			return
+		}
+		for _, existing := range queries {
+			if existing == value {
+				return
+			}
+		}
+		queries = append(queries, value)
+	}
+	withoutBranchSuffix := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(base, "지점"), "역점"), "점")
+	add(withoutBranchSuffix)
+	parts := strings.Fields(withoutBranchSuffix)
+	if len(parts) > 1 {
+		head := parts[0]
+		tail := strings.Join(parts[1:], " ")
+		add(tail + " " + head)
+		if strings.HasSuffix(tail, "역") {
+			add(strings.TrimSuffix(tail, "역") + " " + head)
+			add(head + " " + strings.TrimSuffix(tail, "역"))
+		}
+	}
+	return queries
+}
+
+func appendUniquePlaces(results, candidates []placeSearchResult, seen map[string]bool, limit int) []placeSearchResult {
+	for _, item := range candidates {
+		if len(results) >= limit {
+			return results
+		}
+		key := strings.TrimSpace(item.Source + ":" + item.ID)
+		if key == ":" {
+			key = fmt.Sprintf("%s:%f:%f", item.Name, item.Latitude, item.Longitude)
+		}
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		results = append(results, item)
+	}
+	return results
+}
+
+func isPlaceProviderAuthError(err error) bool {
+	if err == nil {
+		return false
+	}
+	text := err.Error()
+	return strings.Contains(text, "NotAuthorizedError") || strings.Contains(text, "disabled OPEN_MAP_AND_LOCAL") || strings.Contains(text, "returned 403")
 }
 
 func (a *app) searchKakaoPlaces(ctx context.Context, query string, limit int) ([]placeSearchResult, error) {
 	key := strings.TrimSpace(a.cfg.kakaoRestAPIKey)
-	if key == "" {
+	if key == "" || limit <= 0 {
 		return []placeSearchResult{}, nil
 	}
 	values := url.Values{}
@@ -429,6 +505,72 @@ func (a *app) searchKakaoPlaces(ctx context.Context, query string, limit int) ([
 			Latitude:  latitude,
 			Longitude: longitude,
 			Source:    "kakao",
+		})
+	}
+	return results, nil
+}
+
+func (a *app) searchGooglePlaces(ctx context.Context, query string, limit int) ([]placeSearchResult, error) {
+	key := strings.TrimSpace(a.cfg.googlePlacesAPIKey)
+	if key == "" || limit <= 0 {
+		return []placeSearchResult{}, nil
+	}
+	body, err := json.Marshal(map[string]any{
+		"textQuery":      query,
+		"languageCode":   "ko",
+		"regionCode":     "KR",
+		"maxResultCount": limit,
+	})
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://places.googleapis.com/v1/places:searchText", bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-Goog-Api-Key", key)
+	req.Header.Set("X-Goog-FieldMask", "places.id,places.displayName,places.formattedAddress,places.location")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return nil, fmt.Errorf("google places search returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+	var payload struct {
+		Places []struct {
+			ID          string `json:"id"`
+			DisplayName struct {
+				Text string `json:"text"`
+			} `json:"displayName"`
+			FormattedAddress string `json:"formattedAddress"`
+			Location         struct {
+				Latitude  float64 `json:"latitude"`
+				Longitude float64 `json:"longitude"`
+			} `json:"location"`
+		} `json:"places"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	results := make([]placeSearchResult, 0, len(payload.Places))
+	for _, item := range payload.Places {
+		name := strings.TrimSpace(item.DisplayName.Text)
+		address := strings.TrimSpace(item.FormattedAddress)
+		if name == "" || item.Location.Latitude == 0 || item.Location.Longitude == 0 {
+			continue
+		}
+		results = append(results, placeSearchResult{
+			ID:        firstNonEmpty(item.ID, fmt.Sprintf("%f,%f", item.Location.Latitude, item.Location.Longitude)),
+			Name:      name,
+			Address:   address,
+			Latitude:  item.Location.Latitude,
+			Longitude: item.Location.Longitude,
+			Source:    "google",
 		})
 	}
 	return results, nil

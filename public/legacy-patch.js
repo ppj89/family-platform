@@ -8771,10 +8771,12 @@
       })
     }
 
-    input.addEventListener('input', function () {
-      delete input.dataset.latitude
-      delete input.dataset.longitude
-      delete input.dataset.placeAddress
+    function queuePlaceSearch(clearCoordinates) {
+      if (clearCoordinates) {
+        delete input.dataset.latitude
+        delete input.dataset.longitude
+        delete input.dataset.placeAddress
+      }
       window.clearTimeout(timer)
       var query = String(input.value || '').trim()
       if (query.length < 2) {
@@ -8788,6 +8790,15 @@
           renderCandidates(query, items)
         })
       }, 280)
+    }
+
+    input.addEventListener('input', function () {
+      queuePlaceSearch(true)
+    })
+    input.addEventListener('focus', function () {
+      if (String(input.value || '').trim().length >= 2 && candidates.hidden) {
+        queuePlaceSearch(false)
+      }
     })
     input.addEventListener('blur', function () {
       window.setTimeout(hideCandidates, 220)
