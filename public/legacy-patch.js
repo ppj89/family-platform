@@ -474,7 +474,6 @@
 
   var apiLoadingState = {
     count: 0,
-    blockingCount: 0,
     showTimer: 0,
     hideTimer: 0,
     watchdogTimer: 0,
@@ -494,16 +493,14 @@
   function setApiLoadingVisible(visible) {
     var bar = ensureApiLoadingBar()
     bar.classList.toggle('active', !!visible)
-    document.body.classList.toggle('api-loading-blocked', !!visible && apiLoadingState.blockingCount > 0)
+    document.body.classList.toggle('api-loading-blocked', !!visible)
   }
 
-  function beginApiLoading(blocking) {
+  function beginApiLoading() {
     apiLoadingState.count += 1
-    if (blocking) apiLoadingState.blockingCount += 1
     if (apiLoadingState.watchdogTimer) window.clearTimeout(apiLoadingState.watchdogTimer)
     apiLoadingState.watchdogTimer = window.setTimeout(function () {
       apiLoadingState.count = 0
-      apiLoadingState.blockingCount = 0
       apiLoadingState.showTimer = 0
       apiLoadingState.hideTimer = 0
       setApiLoadingVisible(false)
@@ -520,10 +517,9 @@
     }
   }
 
-  function endApiLoading(blocking) {
+  function endApiLoading() {
     apiLoadingState.count = Math.max(0, apiLoadingState.count - 1)
-    if (blocking) apiLoadingState.blockingCount = Math.max(0, apiLoadingState.blockingCount - 1)
-    document.body.classList.toggle('api-loading-blocked', apiLoadingState.count > 0 && apiLoadingState.blockingCount > 0)
+    document.body.classList.toggle('api-loading-blocked', apiLoadingState.count > 0)
     if (apiLoadingState.count > 0) return
     if (apiLoadingState.watchdogTimer) {
       window.clearTimeout(apiLoadingState.watchdogTimer)
@@ -558,9 +554,9 @@
     var originalFetch = window.fetch.bind(window)
     window.fetch = function (input, init) {
       var loadingMeta = getApiRequestLoadingMeta(input, init)
-      if (loadingMeta.tracked) beginApiLoading(loadingMeta.blocking)
+      if (loadingMeta.tracked) beginApiLoading()
       return originalFetch(input, init).finally(function () {
-        if (loadingMeta.tracked) endApiLoading(loadingMeta.blocking)
+        if (loadingMeta.tracked) endApiLoading()
       })
     }
     ;['click', 'submit', 'keydown', 'touchstart', 'pointerdown'].forEach(function (type) {
@@ -10019,7 +10015,6 @@
     removeHardcodedDemoData()
     renderHomeMetricsFromApi(force)
     renderLedgerPageFromApi(force)
-    renderTravelPageFromApi(force)
     renderDiaryPageFromApi(force)
     renderBabyApiCards(force)
     renderRestaurantPageFromApi()
