@@ -9168,35 +9168,16 @@
     list.innerHTML = filteredTrips.map(function (trip) {
       return '<article class="trip-list-card api-trip-card" data-api-trip-id="' + escapeHtml(trip.id) + '">' +
         '<button type="button" class="trip-card-main" data-api-trip-open="' + escapeHtml(trip.id) + '">' +
-        '<div><strong>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</strong>' +
+        '<div class="trip-card-copy"><strong>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</strong>' +
         '<span>' + escapeHtml(tripPeriodText(trip)) + '</span></div>' +
-        '<small>\uAE30\uB85D \uCD94\uAC00</small>' +
+        '<small>\uC0C1\uC138 \uBCF4\uAE30</small>' +
         '</button>' +
-        '<div class="trip-card-actions">' +
-        '<button type="button" data-api-trip-edit="' + escapeHtml(trip.id) + '">\uC218\uC815</button>' +
-        '<button type="button" class="danger-action" data-api-trip-delete="' + escapeHtml(trip.id) + '">\uC0AD\uC81C</button>' +
-        '</div>' +
         '</article>'
     }).join('')
     list.querySelectorAll('[data-api-trip-open]').forEach(function (card) {
       card.addEventListener('click', function () {
         var trip = filteredTrips.find(function (item) { return String(item.id) === String(card.dataset.apiTripOpen) })
         if (trip) openApiTripDetail(panel, trip)
-      })
-    })
-    list.querySelectorAll('[data-api-trip-edit]').forEach(function (button) {
-      button.addEventListener('click', function (event) {
-        event.preventDefault()
-        event.stopPropagation()
-        var trip = filteredTrips.find(function (item) { return String(item.id) === String(button.dataset.apiTripEdit) })
-        if (trip) startTripEdit(panel, trip)
-      })
-    })
-    list.querySelectorAll('[data-api-trip-delete]').forEach(function (button) {
-      button.addEventListener('click', function (event) {
-        event.preventDefault()
-        event.stopPropagation()
-        deleteApiTrip(panel, button.dataset.apiTripDelete)
       })
     })
   }
