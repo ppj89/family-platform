@@ -209,6 +209,26 @@
     submitScheduleFormDirect(form)
   }, true)
 
+  document.addEventListener('submit', function (event) {
+    var form = event.target && event.target.closest && event.target.closest('.travel-form')
+    if (!form || !pageHeadingIs('\uC5EC\uD589')) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    syncTravelForm(form)
+  }, true)
+
+  document.addEventListener('click', function (event) {
+    var button = event.target && event.target.closest && event.target.closest('.travel-form button[type="submit"], .travel-form .submit-action')
+    if (!button || !pageHeadingIs('\uC5EC\uD589')) return
+    var form = button.closest('.travel-form')
+    if (!form) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    syncTravelForm(form)
+  }, true)
+
   function handleCalendarTitleJumpEvent(event) {
     var titleButton = event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-nav .calendar-title-button')
     if (!titleButton && event.target && event.target.closest && event.target.closest('.family-calendar-panel .calendar-toolbar')) {

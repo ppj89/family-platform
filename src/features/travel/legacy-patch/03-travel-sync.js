@@ -249,6 +249,8 @@
   }
 
   function syncTravelForm(form) {
+    if (!form || form.dataset.travelSubmitting === 'true') return
+    form.dataset.travelSubmitting = 'true'
     window.setTimeout(function () {
       var title = getFieldValue(form, '[data-field="travel-title"]')
       var location = getFieldValue(form, '[data-field="travel-location"]')
@@ -258,18 +260,21 @@
         var titleInput = form.querySelector('[data-field="travel-title"]')
         showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
         if (titleInput) titleInput.focus()
+        delete form.dataset.travelSubmitting
         return
       }
       if (!recordDate) {
         var dateInput = form.querySelector('[data-field="travel-record-date"], .date-picker-trigger')
         showPatchToast('\uB0A0\uC9DC\uB294 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
         if (dateInput) dateInput.focus()
+        delete form.dataset.travelSubmitting
         return
       }
       if (!recordTime) {
         var timeInput = form.querySelector('[data-field="travel-record-time"]')
         showPatchToast('\uC2DC\uAC04\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
         if (timeInput) timeInput.focus()
+        delete form.dataset.travelSubmitting
         return
       }
 
@@ -290,8 +295,7 @@
         var tripSnapshot = getCurrentLegacyTravelTripSnapshot()
         var apiDetail = form.closest('.api-trip-detail')
         var apiTripId = apiDetail ? Number(localStorage.getItem(API_TRIP_ID_KEY) || '') : 0
-        queueApiSync({
-          type: 'createTravelRecord',
+        var task = {
           tripId: Number.isFinite(apiTripId) && apiTripId > 0 ? apiTripId : null,
           tripSnapshot: tripSnapshot,
           payload: {
@@ -307,21 +311,29 @@
             recordTime: recordTime,
             mediaUrls: communityMediaUrls(result.files)
           }
-        })
-        flushApiQueue()
-        if (form.classList.contains('api-travel-record-form')) {
-          window.setTimeout(function () {
-            renderApiTripRecords(form.closest('.api-trip-detail'), localStorage.getItem(API_TRIP_ID_KEY))
-          }, 900)
-          window.setTimeout(function () {
-            renderApiTripRecords(form.closest('.api-trip-detail'), localStorage.getItem(API_TRIP_ID_KEY))
-          }, 1800)
         }
+        return resolveTravelTaskTripId(task).then(function (tripId) {
+          return postJson('/trips/' + tripId + '/records', task.payload).then(function (record) {
+            showPatchToast('\uC5EC\uD589 \uAE30\uB85D\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
+            renderCurrentLegacyTravelApiRecords(true)
+            if (form.classList.contains('api-travel-record-form')) {
+              renderApiTripRecords(form.closest('.api-trip-detail'), tripId)
+            }
+            form.querySelectorAll('[data-field="travel-title"], [data-field="travel-location"], [data-field="travel-amount"], textarea').forEach(function (field) {
+              setNativeInputValue(field, '')
+              delete field.dataset.latitude
+              delete field.dataset.longitude
+              delete field.dataset.placeAddress
+            })
+            return record
+          })
+        })
       }).catch(function (error) {
         if (String(error && error.message || '').indexOf('INVALID_MEDIA') < 0) {
-          showPatchToast('\uCCA8\uBD80\uD30C\uC77C \uC5C5\uB85C\uB4DC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
+          showPatchToast(apiActionErrorMessage(error, '\uC5EC\uD589 \uAE30\uB85D \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
         }
       }).finally(function () {
+        delete form.dataset.travelSubmitting
         if (submit) {
           submit.disabled = false
           if (submit.dataset.originalText) submit.textContent = submit.dataset.originalText
