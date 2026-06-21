@@ -26,7 +26,7 @@
     return {
       isSso: accountIsSsoProvider(provider),
       loginId: loginId,
-      loginIdLabel: '\uC811\uC18D ID',
+      loginIdLabel: loginId && loginId.indexOf('@') >= 0 ? '\uC774\uBA54\uC77C' : '\uC811\uC18D ID',
       nickname: nickname,
       provider: provider,
       providerLabel: providerLabel
@@ -37,7 +37,7 @@
     var rows = [
       { label: '\uB85C\uADF8\uC778 \uBC29\uC2DD', value: model.providerLabel }
     ]
-    if (!model.isSso) {
+    if (model.loginId) {
       rows.push({ label: model.loginIdLabel, value: model.loginId })
     }
     rows.push({ label: '\uB2C9\uB124\uC784', value: model.nickname })
