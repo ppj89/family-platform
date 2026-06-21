@@ -1,4 +1,4 @@
-package main
+﻿package main
 
 import (
 	"bytes"
@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net"
 	"net/http"
 	"net/smtp"
@@ -53,6 +54,8 @@ type config struct {
 	oauth                     map[string]oauthProviderConfig
 	kakaoRestAPIKey           string
 	googlePlacesAPIKey        string
+	naverSearchClientID       string
+	naverSearchClientSecret   string
 	maxFilesPerPost           int
 	maxReferenceLength        int
 	maxImageBytes             int64
@@ -197,6 +200,8 @@ func loadConfig() (config, error) {
 		oauth:                     loadOAuthProviders(),
 		kakaoRestAPIKey:           getenv("APP_KAKAO_REST_API_KEY", getenv("APP_OAUTH_KAKAO_CLIENT_ID", "")),
 		googlePlacesAPIKey:        firstNonEmpty(os.Getenv("APP_GOOGLE_PLACES_API_KEY"), os.Getenv("APP_GOOGLE_MAPS_API_KEY")),
+		naverSearchClientID:       getenv("APP_NAVER_SEARCH_CLIENT_ID", ""),
+		naverSearchClientSecret:   getenv("APP_NAVER_SEARCH_CLIENT_SECRET", ""),
 		maxFilesPerPost:           envInt("APP_MEDIA_MAX_FILES_PER_POST", 6),
 		maxReferenceLength:        envInt("APP_MEDIA_MAX_REFERENCE_LENGTH", 2048),
 		maxImageBytes:             parseSize(getenv("APP_MEDIA_MAX_IMAGE_SIZE", "8MB"), 8*1024*1024),
@@ -385,6 +390,20 @@ func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
 			return
 		}
 	}
+	for _, candidateQuery := range placeSearchQueries(query) {
+		naverResults, err := a.searchNaverPlaces(r.Context(), candidateQuery, limit-len(results))
+		if err != nil {
+			a.log.Warn("naver place search failed", "query", candidateQuery, "error", err)
+			if isPlaceProviderAuthError(err) {
+				break
+			}
+		}
+		results = appendUniquePlaces(results, naverResults, seen, limit)
+		if len(results) >= limit {
+			writeJSON(w, http.StatusOK, results)
+			return
+		}
+	}
 	googleResults, err := a.searchGooglePlaces(r.Context(), query, limit-len(results))
 	if err != nil {
 		a.log.Warn("google place search failed", "query", query, "error", err)
@@ -411,16 +430,16 @@ func placeSearchQueries(query string) []string {
 		}
 		queries = append(queries, value)
 	}
-	withoutBranchSuffix := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(base, "지점"), "역점"), "점")
+	withoutBranchSuffix := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(base, "??"), "??"), "?")
 	add(withoutBranchSuffix)
 	parts := strings.Fields(withoutBranchSuffix)
 	if len(parts) > 1 {
 		head := parts[0]
 		tail := strings.Join(parts[1:], " ")
 		add(tail + " " + head)
-		if strings.HasSuffix(tail, "역") {
-			add(strings.TrimSuffix(tail, "역") + " " + head)
-			add(head + " " + strings.TrimSuffix(tail, "역"))
+		if strings.HasSuffix(tail, "?") {
+			add(strings.TrimSuffix(tail, "?") + " " + head)
+			add(head + " " + strings.TrimSuffix(tail, "?"))
 		}
 	}
 	return queries
@@ -449,7 +468,7 @@ func isPlaceProviderAuthError(err error) bool {
 		return false
 	}
 	text := err.Error()
-	return strings.Contains(text, "NotAuthorizedError") || strings.Contains(text, "disabled OPEN_MAP_AND_LOCAL") || strings.Contains(text, "returned 403")
+	return strings.Contains(text, "NotAuthorizedError") || strings.Contains(text, "disabled OPEN_MAP_AND_LOCAL") || strings.Contains(text, "returned 401") || strings.Contains(text, "returned 403")
 }
 
 func (a *app) searchKakaoPlaces(ctx context.Context, query string, limit int) ([]placeSearchResult, error) {
@@ -508,6 +527,150 @@ func (a *app) searchKakaoPlaces(ctx context.Context, query string, limit int) ([
 		})
 	}
 	return results, nil
+}
+
+func (a *app) searchNaverPlaces(ctx context.Context, query string, limit int) ([]placeSearchResult, error) {
+	clientID := strings.TrimSpace(a.cfg.naverSearchClientID)
+	clientSecret := strings.TrimSpace(a.cfg.naverSearchClientSecret)
+	if clientID == "" || clientSecret == "" || limit <= 0 {
+		return []placeSearchResult{}, nil
+	}
+	display := limit
+	if display > 5 {
+		display = 5
+	}
+	values := url.Values{}
+	values.Set("query", query)
+	values.Set("display", strconv.Itoa(display))
+	values.Set("start", "1")
+	values.Set("sort", "random")
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://openapi.naver.com/v1/search/local.json?"+values.Encode(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("X-Naver-Client-Id", clientID)
+	req.Header.Set("X-Naver-Client-Secret", clientSecret)
+	req.Header.Set("Accept", "application/json")
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 2048))
+		return nil, fmt.Errorf("naver local search returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+	var payload struct {
+		Items []struct {
+			Title       string `json:"title"`
+			Link        string `json:"link"`
+			Category    string `json:"category"`
+			Description string `json:"description"`
+			Address     string `json:"address"`
+			RoadAddress string `json:"roadAddress"`
+			MapX        string `json:"mapx"`
+			MapY        string `json:"mapy"`
+		} `json:"items"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&payload); err != nil {
+		return nil, err
+	}
+	results := make([]placeSearchResult, 0, len(payload.Items))
+	for _, item := range payload.Items {
+		name := cleanNaverPlaceText(item.Title)
+		address := strings.TrimSpace(firstNonEmpty(item.RoadAddress, item.Address))
+		if name == "" && address == "" {
+			continue
+		}
+		latitude, longitude := parseNaverPlaceCoordinates(item.MapY, item.MapX)
+		results = append(results, placeSearchResult{
+			ID:        firstNonEmpty(strings.TrimSpace(item.Link), fmt.Sprintf("%s:%s:%s", name, item.MapY, item.MapX)),
+			Name:      firstNonEmpty(name, address),
+			Address:   address,
+			Latitude:  latitude,
+			Longitude: longitude,
+			Source:    "naver",
+		})
+	}
+	return results, nil
+}
+
+func cleanNaverPlaceText(value string) string {
+	value = strings.NewReplacer("<b>", "", "</b>", "", "<B>", "", "</B>", "").Replace(value)
+	return strings.TrimSpace(value)
+}
+
+func parseNaverPlaceCoordinates(rawLatitude, rawLongitude string) (float64, float64) {
+	latitude, latErr := strconv.ParseFloat(strings.TrimSpace(rawLatitude), 64)
+	longitude, lonErr := strconv.ParseFloat(strings.TrimSpace(rawLongitude), 64)
+	if latErr != nil || lonErr != nil {
+		return 0, 0
+	}
+	if validWGS84(latitude, longitude) {
+		return latitude, longitude
+	}
+	scaledLatitude := latitude / 10000000
+	scaledLongitude := longitude / 10000000
+	if validWGS84(scaledLatitude, scaledLongitude) {
+		return scaledLatitude, scaledLongitude
+	}
+	if latitude >= 300000 && latitude <= 900000 && longitude >= 100000 && longitude <= 600000 {
+		convertedLatitude, convertedLongitude := katecToWGS84(longitude, latitude)
+		if validWGS84(convertedLatitude, convertedLongitude) {
+			return convertedLatitude, convertedLongitude
+		}
+	}
+	return 0, 0
+}
+
+func validWGS84(latitude, longitude float64) bool {
+	return latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180 && latitude != 0 && longitude != 0
+}
+
+func katecToWGS84(x, y float64) (float64, float64) {
+	const (
+		semiMajorAxis      = 6377397.155
+		inverseFlattening  = 299.1528128
+		originLatitudeDeg  = 38.0
+		originLongitudeDeg = 128.0
+		scaleFactor        = 0.9999
+		falseEasting       = 400000.0
+		falseNorthing      = 600000.0
+		degreesPerRadian   = 180.0 / math.Pi
+		radiansPerDegree   = math.Pi / 180.0
+	)
+	flattening := 1 / inverseFlattening
+	eccentricitySquared := 2*flattening - flattening*flattening
+	secondEccentricitySquared := eccentricitySquared / (1 - eccentricitySquared)
+	originLatitude := originLatitudeDeg * radiansPerDegree
+	originLongitude := originLongitudeDeg * radiansPerDegree
+	originMeridionalArc := meridionalArc(originLatitude, semiMajorAxis, eccentricitySquared)
+	meridionalArcValue := originMeridionalArc + (y-falseNorthing)/scaleFactor
+	mu := meridionalArcValue / (semiMajorAxis * (1 - eccentricitySquared/4 - 3*math.Pow(eccentricitySquared, 2)/64 - 5*math.Pow(eccentricitySquared, 3)/256))
+	e1 := (1 - math.Sqrt(1-eccentricitySquared)) / (1 + math.Sqrt(1-eccentricitySquared))
+	footprintLatitude := mu +
+		(3*e1/2-27*math.Pow(e1, 3)/32)*math.Sin(2*mu) +
+		(21*math.Pow(e1, 2)/16-55*math.Pow(e1, 4)/32)*math.Sin(4*mu) +
+		(151*math.Pow(e1, 3)/96)*math.Sin(6*mu) +
+		(1097*math.Pow(e1, 4)/512)*math.Sin(8*mu)
+	sinFootprint := math.Sin(footprintLatitude)
+	cosFootprint := math.Cos(footprintLatitude)
+	tanFootprint := math.Tan(footprintLatitude)
+	c1 := secondEccentricitySquared * math.Pow(cosFootprint, 2)
+	t1 := math.Pow(tanFootprint, 2)
+	n1 := semiMajorAxis / math.Sqrt(1-eccentricitySquared*math.Pow(sinFootprint, 2))
+	r1 := semiMajorAxis * (1 - eccentricitySquared) / math.Pow(1-eccentricitySquared*math.Pow(sinFootprint, 2), 1.5)
+	d := (x - falseEasting) / (n1 * scaleFactor)
+	latitude := footprintLatitude - (n1*tanFootprint/r1)*(math.Pow(d, 2)/2-(5+3*t1+10*c1-4*math.Pow(c1, 2)-9*secondEccentricitySquared)*math.Pow(d, 4)/24+(61+90*t1+298*c1+45*math.Pow(t1, 2)-252*secondEccentricitySquared-3*math.Pow(c1, 2))*math.Pow(d, 6)/720)
+	longitude := originLongitude + (d-(1+2*t1+c1)*math.Pow(d, 3)/6+(5-2*c1+28*t1-3*math.Pow(c1, 2)+8*secondEccentricitySquared+24*math.Pow(t1, 2))*math.Pow(d, 5)/120)/cosFootprint
+	return latitude * degreesPerRadian, longitude * degreesPerRadian
+}
+
+func meridionalArc(latitude, semiMajorAxis, eccentricitySquared float64) float64 {
+	return semiMajorAxis * ((1-eccentricitySquared/4-3*math.Pow(eccentricitySquared, 2)/64-5*math.Pow(eccentricitySquared, 3)/256)*latitude -
+		(3*eccentricitySquared/8+3*math.Pow(eccentricitySquared, 2)/32+45*math.Pow(eccentricitySquared, 3)/1024)*math.Sin(2*latitude) +
+		(15*math.Pow(eccentricitySquared, 2)/256+45*math.Pow(eccentricitySquared, 3)/1024)*math.Sin(4*latitude) -
+		(35*math.Pow(eccentricitySquared, 3)/3072)*math.Sin(6*latitude))
 }
 
 func (a *app) searchGooglePlaces(ctx context.Context, query string, limit int) ([]placeSearchResult, error) {
@@ -604,7 +767,7 @@ func isValidNickname(nickname string) bool {
 		if r >= 'a' && r <= 'z' {
 			continue
 		}
-		if r >= '가' && r <= '힣' {
+		if r >= '?' && r <= '?' {
 			continue
 		}
 		return false
@@ -1019,13 +1182,13 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 func (a *app) verifyEmail(w http.ResponseWriter, r *http.Request) {
 	token := strings.TrimSpace(r.URL.Query().Get("token"))
 	if token == "" {
-		writeEmailVerificationHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, false, "인증 토큰이 없습니다.")
+		writeEmailVerificationHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, false, "?? ??? ????.")
 		return
 	}
 	tokenHash := verificationTokenHash(token)
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
-		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "데이터베이스 연결에 실패했습니다.")
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "?????? ??? ??????.")
 		return
 	}
 	defer tx.Rollback(r.Context())
@@ -1041,7 +1204,7 @@ func (a *app) verifyEmail(w http.ResponseWriter, r *http.Request) {
 	`, tokenHash).Scan(&tokenID, &userID, &email)
 	if err != nil {
 		a.recordLoginHistory(r.Context(), nil, "", "password", "EMAIL_VERIFY", "FAIL", "invalid or expired token")
-		writeEmailVerificationHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, false, "인증 링크가 만료되었거나 올바르지 않습니다.")
+		writeEmailVerificationHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, false, "?? ??? ?????? ???? ????.")
 		return
 	}
 	if _, err := tx.Exec(r.Context(), `
@@ -1049,19 +1212,19 @@ func (a *app) verifyEmail(w http.ResponseWriter, r *http.Request) {
 		set email_verified_at = now(), email_verification_required = false
 		where id = $1
 	`, userID); err != nil {
-		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "이메일 인증 처리에 실패했습니다.")
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "??? ?? ??? ??????.")
 		return
 	}
 	if _, err := tx.Exec(r.Context(), "update email_verification_tokens set used_at = now() where id = $1", tokenID); err != nil {
-		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "이메일 인증 처리에 실패했습니다.")
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "??? ?? ??? ??????.")
 		return
 	}
 	if err := tx.Commit(r.Context()); err != nil {
-		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "이메일 인증 처리에 실패했습니다.")
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "??? ?? ??? ??????.")
 		return
 	}
 	a.recordLoginHistory(r.Context(), &userID, email, "password", "EMAIL_VERIFY", "SUCCESS", "")
-	writeEmailVerificationHTML(w, http.StatusOK, a.cfg.publicBaseURL, true, "이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다.")
+	writeEmailVerificationHTML(w, http.StatusOK, a.cfg.publicBaseURL, true, "??? ??? ???????. ?? ???? ? ????.")
 }
 
 func (a *app) resendVerificationEmail(w http.ResponseWriter, r *http.Request) {
@@ -1341,7 +1504,7 @@ func (a *app) createFamily(w http.ResponseWriter, r *http.Request, user authUser
 			writeError(w, http.StatusInternalServerError, "database read failed")
 			return
 		}
-		name = nickname + " 가족"
+		name = nickname + " ??"
 	}
 
 	var memberCount int
@@ -1404,22 +1567,22 @@ type familyMember struct {
 }
 
 type familyInvitation struct {
-	ID             int64  `json:"id"`
-	FamilyID       int64  `json:"familyId"`
-	FamilyName     string `json:"familyName"`
-	InviterUserID  int64  `json:"inviterUserId"`
-	InviterName    string `json:"inviterName,omitempty"`
-	InviteeUserID  int64  `json:"inviteeUserId"`
-	InviteeEmail   string `json:"inviteeEmail,omitempty"`
-	InviteeName    string `json:"inviteeName,omitempty"`
-	Role           string `json:"role"`
-	CanRead        bool   `json:"canRead"`
-	CanCreate      bool   `json:"canCreate"`
-	CanUpdate      bool   `json:"canUpdate"`
-	CanDelete      bool   `json:"canDelete"`
-	Status         string `json:"status"`
-	CreatedAt      string `json:"createdAt"`
-	RespondedAt    string `json:"respondedAt,omitempty"`
+	ID            int64  `json:"id"`
+	FamilyID      int64  `json:"familyId"`
+	FamilyName    string `json:"familyName"`
+	InviterUserID int64  `json:"inviterUserId"`
+	InviterName   string `json:"inviterName,omitempty"`
+	InviteeUserID int64  `json:"inviteeUserId"`
+	InviteeEmail  string `json:"inviteeEmail,omitempty"`
+	InviteeName   string `json:"inviteeName,omitempty"`
+	Role          string `json:"role"`
+	CanRead       bool   `json:"canRead"`
+	CanCreate     bool   `json:"canCreate"`
+	CanUpdate     bool   `json:"canUpdate"`
+	CanDelete     bool   `json:"canDelete"`
+	Status        string `json:"status"`
+	CreatedAt     string `json:"createdAt"`
+	RespondedAt   string `json:"respondedAt,omitempty"`
 }
 
 func (a *app) listFamilyMembers(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -1841,7 +2004,7 @@ func (a *app) acceptFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 	_, _ = tx.Exec(r.Context(), `
 		insert into app_notifications (user_id, family_id, type, title, body, target_date, created_at)
 		values ($1, $2, 'FAMILY_INVITE_ACCEPTED', $3, $4, current_date, now())
-	`, inviterUserID, familyID, acceptedName+" 님이 초대를 수락하셨습니다.", acceptedName+" 님이 가족그룹 초대를 수락했습니다.")
+	`, inviterUserID, familyID, acceptedName+" ?? ??? ???????.", acceptedName+" ?? ???? ??? ??????.")
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "database commit failed")
 		return
@@ -3304,7 +3467,7 @@ func (a *app) createScheduleReminders(w http.ResponseWriter, r *http.Request, us
 	created := 0
 	for _, familyID := range familyIDs {
 		schedules, err := a.db.Query(r.Context(), `
-			select id, title, coalesce(schedule_time::text, ''), coalesce(category, '일정')
+			select id, title, coalesce(schedule_time::text, ''), coalesce(category, '??')
 			from family_schedules where family_id = $1 and schedule_date = $2 and deleted_at is null
 		`, familyID, targetDate)
 		if err != nil {
@@ -3327,13 +3490,13 @@ func (a *app) createScheduleReminders(w http.ResponseWriter, r *http.Request, us
 				}
 				bodyTime := scheduleTime
 				if bodyTime == "" {
-					bodyTime = "시간 미정"
+					bodyTime = "?? ??"
 				}
 				tag, err := a.db.Exec(r.Context(), `
 					insert into app_notifications (user_id, family_id, schedule_id, type, title, body, target_date, created_at)
-					values ($1,$2,$3,'SCHEDULE_REMINDER','등록된 일정이 있습니다.', $4, $5, now())
+					values ($1,$2,$3,'SCHEDULE_REMINDER','??? ??? ????.', $4, $5, now())
 					on conflict (user_id, schedule_id, type, target_date) do nothing
-				`, userID, familyID, scheduleID, bodyTime+" "+title+" · "+category, targetDate)
+				`, userID, familyID, scheduleID, bodyTime+" "+title+" ? "+category, targetDate)
 				if err == nil {
 					created += int(tag.RowsAffected())
 				}
@@ -4268,12 +4431,12 @@ func (a *app) sendVerificationEmail(email, nickname, verifyURL string) error {
 		return fmt.Errorf("mail delivery is not configured")
 	}
 	from := a.mailFromEmail()
-	subject := "Family Platform 이메일 인증"
+	subject := "Family Platform ??? ??"
 	displayName := strings.TrimSpace(nickname)
 	if displayName == "" {
-		displayName = "회원"
+		displayName = "??"
 	}
-	body := fmt.Sprintf("%s님, 아래 링크를 눌러 이메일 인증을 완료해주세요.\n\n%s\n\n이 링크는 24시간 동안 사용할 수 있습니다.", displayName, verifyURL)
+	body := fmt.Sprintf("%s?, ?? ??? ?? ??? ??? ??????.\n\n%s\n\n? ??? 24?? ?? ??? ? ????.", displayName, verifyURL)
 	message := strings.Join([]string{
 		"From: " + from,
 		"To: " + email,
@@ -4502,9 +4665,9 @@ func htmlEscape(value string) string {
 
 func writeEmailVerificationHTML(w http.ResponseWriter, status int, publicBaseURL string, success bool, message string) {
 	redirectURL := strings.TrimRight(publicBaseURL, "/") + "/"
-	title := "이메일 인증"
+	title := "??? ??"
 	if success {
-		title = "인증 완료"
+		title = "?? ??"
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
@@ -4526,7 +4689,7 @@ func writeEmailVerificationHTML(w http.ResponseWriter, status int, publicBaseURL
   <main>
     <h1>%s</h1>
     <p>%s</p>
-    <a href="%s">로그인 화면으로 이동</a>
+    <a href="%s">??? ???? ??</a>
   </main>
 </body>
 </html>`, title, title, message, redirectURL)
