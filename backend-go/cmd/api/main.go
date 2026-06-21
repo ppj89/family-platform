@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -95,6 +96,7 @@ type app struct {
 	db         *pgxpool.Pool
 	log        *slog.Logger
 	mediaStore mediaStore
+	placeCache placeSearchCache
 }
 
 type authUser struct {
@@ -369,6 +371,16 @@ type placeSearchResult struct {
 	Source    string  `json:"source"`
 }
 
+type placeSearchCache struct {
+	mu    sync.Mutex
+	items map[string]placeSearchCacheItem
+}
+
+type placeSearchCacheItem struct {
+	expiresAt time.Time
+	results   []placeSearchResult
+}
+
 func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
 	query := strings.TrimSpace(r.URL.Query().Get("q"))
 	if utf8.RuneCountInString(query) < 2 {
@@ -376,11 +388,18 @@ func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
 		return
 	}
 	limit := envClampedInt(r.URL.Query().Get("limit"), 5, 1, 10)
-	results := make([]placeSearchResult, 0, limit)
+	if results, ok := a.cachedPlaceSearch(query, limit); ok {
+		writeJSON(w, http.StatusOK, results)
+		return
+	}
+
 	seen := map[string]bool{}
+	hadProviderError := false
+	results := make([]placeSearchResult, 0, limit)
 	for _, candidateQuery := range placeSearchQueries(query) {
 		kakaoResults, err := a.searchKakaoPlaces(r.Context(), candidateQuery, limit-len(results))
 		if err != nil {
+			hadProviderError = true
 			a.log.Warn("kakao place search failed", "query", candidateQuery, "error", err)
 			if isPlaceProviderAuthError(err) {
 				break
@@ -388,13 +407,16 @@ func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
 		}
 		results = appendUniquePlaces(results, kakaoResults, seen, limit)
 		if len(results) >= limit {
-			writeJSON(w, http.StatusOK, results)
-			return
+			break
 		}
 	}
 	for _, candidateQuery := range placeSearchQueries(query) {
+		if len(results) >= limit {
+			break
+		}
 		naverResults, err := a.searchNaverPlaces(r.Context(), candidateQuery, limit-len(results))
 		if err != nil {
+			hadProviderError = true
 			a.log.Warn("naver place search failed", "query", candidateQuery, "error", err)
 			if isPlaceProviderAuthError(err) {
 				break
@@ -402,16 +424,64 @@ func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
 		}
 		results = appendUniquePlaces(results, naverResults, seen, limit)
 		if len(results) >= limit {
-			writeJSON(w, http.StatusOK, results)
-			return
+			break
 		}
 	}
-	googleResults, err := a.searchGooglePlaces(r.Context(), query, limit-len(results))
-	if err != nil {
-		a.log.Warn("google place search failed", "query", query, "error", err)
+	for _, candidateQuery := range placeSearchQueries(query) {
+		if len(results) >= limit {
+			break
+		}
+		googleResults, err := a.searchGooglePlaces(r.Context(), candidateQuery, limit-len(results))
+		if err != nil {
+			hadProviderError = true
+			a.log.Warn("google place search failed", "query", candidateQuery, "error", err)
+			break
+		}
+		results = appendUniquePlaces(results, googleResults, seen, limit)
 	}
-	results = appendUniquePlaces(results, googleResults, seen, limit)
+	if len(results) > 0 || !hadProviderError {
+		a.storePlaceSearchCache(query, limit, results)
+	}
 	writeJSON(w, http.StatusOK, results)
+}
+
+func (a *app) cachedPlaceSearch(query string, limit int) ([]placeSearchResult, bool) {
+	if a.placeCache.items == nil {
+		return nil, false
+	}
+	key := placeSearchCacheKey(query, limit)
+	a.placeCache.mu.Lock()
+	defer a.placeCache.mu.Unlock()
+	item, ok := a.placeCache.items[key]
+	if !ok || time.Now().After(item.expiresAt) {
+		delete(a.placeCache.items, key)
+		return nil, false
+	}
+	return append([]placeSearchResult(nil), item.results...), true
+}
+
+func (a *app) storePlaceSearchCache(query string, limit int, results []placeSearchResult) {
+	a.placeCache.mu.Lock()
+	defer a.placeCache.mu.Unlock()
+	if a.placeCache.items == nil {
+		a.placeCache.items = map[string]placeSearchCacheItem{}
+	}
+	if len(a.placeCache.items) > 300 {
+		now := time.Now()
+		for key, item := range a.placeCache.items {
+			if now.After(item.expiresAt) {
+				delete(a.placeCache.items, key)
+			}
+		}
+	}
+	a.placeCache.items[placeSearchCacheKey(query, limit)] = placeSearchCacheItem{
+		expiresAt: time.Now().Add(24 * time.Hour),
+		results:   append([]placeSearchResult(nil), results...),
+	}
+}
+
+func placeSearchCacheKey(query string, limit int) string {
+	return strings.ToLower(strings.Join(strings.Fields(strings.TrimSpace(query)), " ")) + ":" + strconv.Itoa(limit)
 }
 
 func placeSearchQueries(query string) []string {
