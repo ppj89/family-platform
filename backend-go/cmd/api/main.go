@@ -3715,9 +3715,13 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 	sessionID := newSessionID()
 	_, err = tx.Exec(ctx, `
 		update app_users
-		set active_session_id = $1, failed_login_attempts = 0, locked_until = null
+		set active_session_id = $1,
+		    failed_login_attempts = 0,
+		    locked_until = null,
+		    provider = $3,
+		    provider_user_id = $4
 		where id = $2
-	`, sessionID, userID)
+	`, sessionID, userID, provider, profile.ProviderUserID)
 	if err != nil {
 		return authResponse{}, err
 	}
@@ -3740,8 +3744,8 @@ func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, pr
 	if email != "" {
 		err := tx.QueryRow(ctx, `
 			update app_users
-			set provider = coalesce(provider, $1),
-			    provider_user_id = coalesce(provider_user_id, $2),
+			set provider = $1,
+			    provider_user_id = $2,
 			    email_verified_at = coalesce(email_verified_at, now()),
 			    email_verification_required = false
 			where email = $3
@@ -3793,8 +3797,8 @@ func oauthDisplayNickname(provider, nickname, email string) string {
 func (a *app) reconcileOAuthEmail(ctx context.Context, tx pgx.Tx, provider, providerUserID, email, nickname string, userID *int64, currentEmail *string, currentNickname *string, platformAdmin *bool, activeSessionID *sql.NullString) error {
 	err := tx.QueryRow(ctx, `
 		update app_users
-		set provider = coalesce(provider, $1),
-		    provider_user_id = coalesce(provider_user_id, $2),
+		set provider = $1,
+		    provider_user_id = $2,
 		    email_verified_at = coalesce(email_verified_at, now()),
 		    email_verification_required = false
 		where email = $3
@@ -3813,11 +3817,13 @@ func (a *app) reconcileOAuthEmail(ctx context.Context, tx pgx.Tx, provider, prov
 		update app_users
 		set email = $1,
 		    nickname = coalesce(nullif(nickname, ''), $2),
+		    provider = $4,
+		    provider_user_id = $5,
 		    email_verified_at = coalesce(email_verified_at, now()),
 		    email_verification_required = false
 		where id = $3
 		returning id, email, nickname, platform_admin, active_session_id
-	`, email, nickname, *userID).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
+	`, email, nickname, *userID, provider, providerUserID).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
 }
 
 func (a *app) linkOAuthIdentity(ctx context.Context, tx pgx.Tx, provider, providerUserID string, userID int64) error {

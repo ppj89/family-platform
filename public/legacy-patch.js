@@ -6598,8 +6598,8 @@
     var statusFailed = false
     var providers = [
       { key: 'naver', label: '\uB124\uC774\uBC84' },
-      { key: 'google', label: '\uAD6C\uAE00' },
-      { key: 'kakao', label: '\uCE74\uCE74\uC624' }
+      { key: 'kakao', label: '\uCE74\uCE74\uC624' },
+      { key: 'google', label: '\uAD6C\uAE00' }
     ]
 
     function resolveSsoStartUrl(provider, item) {

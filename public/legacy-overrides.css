@@ -952,13 +952,21 @@ body.api-loading-blocked::before {
 }
 
 .auth-recovery-header button {
+  display: inline-grid;
   width: 34px;
+  min-width: 34px;
   height: 34px;
+  min-height: 34px;
+  place-items: center;
   border: 0;
   border-radius: 12px;
+  padding: 0;
   background: #fff;
   color: #4e5968;
-  font-weight: 900;
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -1087,14 +1095,21 @@ body.api-loading-blocked::before {
 }
 
 .account-password-header button {
+  display: inline-grid;
   width: 40px;
+  min-width: 40px;
   height: 40px;
+  min-height: 40px;
+  place-items: center;
   border: 0;
   border-radius: 14px;
+  padding: 0;
   background: #f2f4f6;
   color: #191f28;
-  font: inherit;
-  font-weight: 900;
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -6634,14 +6649,22 @@ body.api-loading-blocked::before {
   position: absolute;
   top: 14px;
   right: 14px;
-  display: grid;
+  display: inline-grid;
   width: 34px;
+  min-width: 34px;
   height: 34px;
+  min-height: 34px;
   place-items: center;
   border: 0;
   border-radius: 12px;
+  padding: 0;
   background: #f2f4f6;
+  color: #4e5968;
   cursor: pointer;
+  font-family: Arial, sans-serif;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
 }
 
 .dialog-actions {
@@ -8023,17 +8046,22 @@ html[data-year-schedule-mode="list"] .year-month-card {
   position: absolute !important;
   top: 12px !important;
   right: 12px !important;
-  display: grid !important;
+  display: inline-grid !important;
   width: 34px !important;
+  min-width: 34px !important;
   height: 34px !important;
+  min-height: 34px !important;
   place-items: center !important;
   border: 0 !important;
   border-radius: 12px !important;
+  padding: 0 !important;
   background: #f2f4f6 !important;
   color: #4e5968 !important;
   cursor: pointer !important;
-  font-size: 15px !important;
-  font-weight: 900 !important;
+  font-family: Arial, sans-serif !important;
+  font-size: 16px !important;
+  font-weight: 500 !important;
+  line-height: 1 !important;
 }
 
 .schedule-detail-patch-date {
