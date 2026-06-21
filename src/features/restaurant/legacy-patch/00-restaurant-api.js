@@ -7,6 +7,7 @@
   }
 
   function restaurantPayloadFromForm(form) {
+    var locationInput = form.querySelector('[data-restaurant-location]')
     return {
       name: getFieldValue(form, '[data-restaurant-name]'),
       menu: getFieldValue(form, '[data-restaurant-menu]') || null,
@@ -15,8 +16,8 @@
       visitDate: getFieldValue(form, '[data-restaurant-visit-date]') || todayText(),
       location: getFieldValue(form, '[data-restaurant-location]') || null,
       address: getFieldValue(form, '[data-restaurant-address]') || null,
-      latitude: Number(form.dataset.latitude || '') || null,
-      longitude: Number(form.dataset.longitude || '') || null,
+      latitude: Number(form.dataset.latitude || (locationInput && locationInput.dataset.latitude) || '') || null,
+      longitude: Number(form.dataset.longitude || (locationInput && locationInput.dataset.longitude) || '') || null,
       scope: getFieldValue(form, '[data-restaurant-scope]') || '\uC804\uCCB4 \uAC00\uC871',
       memo: getFieldValue(form, '[data-restaurant-memo]') || null,
       mediaUrls: []
@@ -29,7 +30,12 @@
     form.querySelectorAll('input, textarea').forEach(function (input) {
       if (input.matches('[data-restaurant-visit-date]')) setOptionalInputValue(input, todayText())
       else setOptionalInputValue(input, '')
+      delete input.dataset.latitude
+      delete input.dataset.longitude
+      delete input.dataset.placeAddress
     })
+    delete form.dataset.latitude
+    delete form.dataset.longitude
     var scope = form.querySelector('[data-restaurant-scope]')
     if (scope) setOptionalInputValue(scope, '\uC804\uCCB4 \uAC00\uC871')
     var submit = form.querySelector('button[type="submit"]')
@@ -50,6 +56,15 @@
     setOptionalInputValue(form.querySelector('[data-restaurant-memo]'), item.memo || '')
     form.dataset.latitude = item.latitude || ''
     form.dataset.longitude = item.longitude || ''
+    var locationInput = form.querySelector('[data-restaurant-location]')
+    if (locationInput) {
+      if (item.latitude) locationInput.dataset.latitude = String(item.latitude)
+      else delete locationInput.dataset.latitude
+      if (item.longitude) locationInput.dataset.longitude = String(item.longitude)
+      else delete locationInput.dataset.longitude
+      if (item.address) locationInput.dataset.placeAddress = item.address
+      else delete locationInput.dataset.placeAddress
+    }
     var submit = form.querySelector('button[type="submit"]')
     if (submit) submit.textContent = '\uC800\uC7A5'
     form.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -192,7 +207,15 @@
       if (reset) reset.addEventListener('click', function () { clearRestaurantForm(form) })
     }
     syncRestaurantMenuState()
+    ensureRestaurantLocationSearch(content.querySelector('[data-restaurant-form]'))
     loadRestaurantApiPage(content, false)
+  }
+
+  function ensureRestaurantLocationSearch(form) {
+    ensureLocationSearch(form, '[data-restaurant-location]', {
+      addressSelector: '[data-restaurant-address]',
+      storeCoordinatesOnForm: true
+    })
   }
 
   function normalizeRestaurantVisitDate() {

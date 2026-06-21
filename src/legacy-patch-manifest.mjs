@@ -24,6 +24,7 @@ export const legacyPatchParts = [
   communityLegacyPatchParts.board,
   'shared/legacy-patch/05-home-and-shared-ui.js',
   'shared/legacy-patch/06-api-core.js',
+  'shared/legacy-patch/06-place-search.js',
   calendarLegacyPatchParts.api,
   homeLegacyPatchParts.api,
   ledgerLegacyPatchParts.api,
