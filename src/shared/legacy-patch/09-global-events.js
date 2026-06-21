@@ -118,6 +118,7 @@
     var button = event.target && event.target.closest && event.target.closest('[data-baby-growth-chart-mode]')
     if (!button || button.disabled) return
     var chart = button.closest('.baby-growth-chart')
+    var history = button.closest('.baby-growth-api-history')
     var detail = button.closest('.baby-api-detail')
     var babyId = detail && detail.dataset.apiBabyId
     var records = window.__familyBabyGrowthRecordsByBabyId && window.__familyBabyGrowthRecordsByBabyId[String(babyId)]
@@ -125,6 +126,10 @@
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    if (history) {
+      history.innerHTML = buildBabyGrowthChartAndList(records, button.dataset.babyGrowthChartMode)
+      return
+    }
     chart.outerHTML = buildBabyGrowthChart(records, button.dataset.babyGrowthChartMode)
   }, true)
 

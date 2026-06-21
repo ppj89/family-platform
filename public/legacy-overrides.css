@@ -5027,6 +5027,7 @@ body.api-loading-blocked::before {
 
 .baby-growth-history-list {
   display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
   gap: 8px !important;
 }
 
@@ -10186,11 +10187,12 @@ select {
 
 .baby-growth-history-row {
   display: grid !important;
-  grid-template-columns: minmax(178px, 0.72fr) minmax(120px, 0.42fr) minmax(0, 1fr) !important;
+  grid-template-columns: minmax(0, 1fr) auto !important;
   align-items: center !important;
-  gap: 28px !important;
+  gap: 10px !important;
   border-radius: 10px !important;
-  padding: 13px 16px !important;
+  min-height: 46px !important;
+  padding: 12px 14px !important;
   background: #ffffff !important;
   box-shadow: inset 0 0 0 1px #e5e8eb !important;
 }
@@ -10199,22 +10201,16 @@ select {
   color: #1b64da !important;
   font-size: 13px !important;
   font-weight: 500 !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
 
 .baby-growth-history-row span {
   color: #191f28 !important;
-  font-size: 14px !important;
+  font-size: 13px !important;
   font-weight: 500 !important;
-  white-space: nowrap !important;
-}
-
-.baby-growth-history-row small {
-  color: #6b7684 !important;
-  font-size: 12px !important;
-  font-weight: 400 !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
   white-space: nowrap !important;
 }
 
@@ -10228,8 +10224,7 @@ select {
     justify-content: flex-start !important;
   }
 
-  .baby-growth-api-form,
-  .baby-growth-history-row {
+  .baby-growth-api-form {
     grid-template-columns: 1fr !important;
   }
 

@@ -9786,13 +9786,7 @@
         history.innerHTML = '<div class="api-empty-row">\uC131\uC7A5 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</div>'
         return
       }
-      history.innerHTML = buildBabyGrowthChart(growthRecords) + '<div class="growth-history detailed baby-growth-history-list">' + growthRecords.slice().reverse().map(function (record) {
-        var metrics = [
-          record.heightCm ? record.heightCm + 'cm' : '',
-          record.weightKg ? record.weightKg + 'kg' : ''
-        ].filter(Boolean).join(' \u00B7 ')
-        return '<article class="baby-growth-history-row"><strong>' + escapeHtml(formatBabyRecordDateTime(record)) + '</strong><span>' + escapeHtml(metrics || '-') + '</span><small>' + escapeHtml(record.memo || '') + '</small></article>'
-      }).join('') + '</div>'
+      history.innerHTML = buildBabyGrowthChartAndList(growthRecords)
     }).catch(function (error) {
       history.innerHTML = '<div class="api-empty-row">' + escapeHtml(apiActionErrorMessage(error, '\uC131\uC7A5 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</div>'
     })
@@ -9910,22 +9904,76 @@
     return [date, record.recordTime || ''].filter(Boolean).join(' ')
   }
 
+  function formatBabyRecordDate(record) {
+    var source = String(record.recordDate || '')
+    var parts = source.split('-')
+    var date = source.replace(/-/g, '.')
+    if (parts.length === 3) {
+      var parsed = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      var weekdays = ['일', '월', '화', '수', '목', '금', '토']
+      if (!Number.isNaN(parsed.getTime())) {
+        date = parts[0] + '. ' + parts[1] + '. ' + parts[2] + '(' + weekdays[parsed.getDay()] + ')'
+      }
+    }
+    return date
+  }
+
   function babyGrowthNumber(value) {
+    if (value === null || typeof value === 'undefined' || value === '') return null
     var number = Number(value)
     return Number.isFinite(number) ? number : null
   }
 
-  function buildBabyGrowthChart(records, mode) {
-    var heightPoints = records.map(function (record, index) {
-      return { index: index, value: babyGrowthNumber(record.heightCm), label: String(record.recordDate || '').slice(5).replace('-', '.') }
-    }).filter(function (point) { return point.value !== null })
-    var weightPoints = records.map(function (record, index) {
-      return { index: index, value: babyGrowthNumber(record.weightKg), label: String(record.recordDate || '').slice(5).replace('-', '.') }
-    }).filter(function (point) { return point.value !== null })
+  function babyGrowthMetricValue(record, mode) {
+    var value = babyGrowthNumber(mode === 'weight' ? record.weightKg : record.heightCm)
+    if (value === null) return ''
+    return value + (mode === 'weight' ? 'kg' : 'cm')
+  }
+
+  function babyGrowthRecordsForMode(records, mode) {
+    return records.slice().sort(compareBabyRecordDate).filter(function (record) {
+      return babyGrowthNumber(mode === 'weight' ? record.weightKg : record.heightCm) !== null
+    })
+  }
+
+  function resolveBabyGrowthMode(records, mode) {
+    var heightRecords = babyGrowthRecordsForMode(records, 'height')
+    var weightRecords = babyGrowthRecordsForMode(records, 'weight')
     var selectedMode = mode === 'weight' ? 'weight' : 'height'
-    if (selectedMode === 'height' && !heightPoints.length && weightPoints.length) selectedMode = 'weight'
-    if (selectedMode === 'weight' && !weightPoints.length && heightPoints.length) selectedMode = 'height'
-    var selectedPoints = selectedMode === 'weight' ? weightPoints : heightPoints
+    if (selectedMode === 'height' && !heightRecords.length && weightRecords.length) selectedMode = 'weight'
+    if (selectedMode === 'weight' && !weightRecords.length && heightRecords.length) selectedMode = 'height'
+    return selectedMode
+  }
+
+  function buildBabyGrowthChartAndList(records, mode) {
+    var selectedMode = resolveBabyGrowthMode(records, mode)
+    return buildBabyGrowthChart(records, selectedMode) + buildBabyGrowthHistoryList(records, selectedMode)
+  }
+
+  function buildBabyGrowthHistoryList(records, mode) {
+    var selectedMode = resolveBabyGrowthMode(records, mode)
+    var growthRecords = babyGrowthRecordsForMode(records, selectedMode).slice().reverse()
+    if (!growthRecords.length) {
+      return '<div class="growth-history detailed baby-growth-history-list" data-baby-growth-history-mode="' + selectedMode + '"><div class="api-empty-row">\uC131\uC7A5 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</div></div>'
+    }
+    return '<div class="growth-history detailed baby-growth-history-list" data-baby-growth-history-mode="' + selectedMode + '">' + growthRecords.map(function (record, index) {
+      var number = index + 1
+      return '<article class="baby-growth-history-row"><strong>' + number + '. ' + escapeHtml(formatBabyRecordDate(record)) + '</strong><span>' + escapeHtml(babyGrowthMetricValue(record, selectedMode)) + '</span></article>'
+    }).join('') + '</div>'
+  }
+
+  function buildBabyGrowthChart(records, mode) {
+    var heightRecords = babyGrowthRecordsForMode(records, 'height')
+    var weightRecords = babyGrowthRecordsForMode(records, 'weight')
+    var selectedMode = resolveBabyGrowthMode(records, mode)
+    var selectedRecords = selectedMode === 'weight' ? weightRecords : heightRecords
+    var selectedPoints = selectedRecords.map(function (record, index) {
+      return {
+        index: index,
+        value: babyGrowthNumber(selectedMode === 'weight' ? record.weightKg : record.heightCm),
+        label: String(record.recordDate || '').slice(5).replace('-', '.')
+      }
+    })
     var values = selectedPoints.map(function (point) { return point.value })
     if (!values.length) return ''
     var min = Math.min.apply(null, values)
@@ -9942,7 +9990,7 @@
     var bottom = 48
     var chartWidth = width - left - right
     var chartHeight = height - top - bottom
-    var maxIndex = Math.max(records.length - 1, 1)
+    var maxIndex = Math.max(selectedPoints.length - 1, 1)
     function xy(point) {
       var x = left + chartWidth * (point.index / maxIndex)
       var y = top + chartHeight * (1 - ((point.value - min) / (max - min)))
@@ -9969,12 +10017,11 @@
       var y = top + chartHeight * rate
       return '<line class="grid-line" x1="' + left + '" x2="' + (width - right) + '" y1="' + y.toFixed(1) + '" y2="' + y.toFixed(1) + '"/><text class="axis-label" x="' + (left - 8) + '" y="' + (y + 4).toFixed(1) + '">' + value.toFixed(1) + '</text>'
     }).join('')
-    var xLabels = records.filter(function (_, index) {
-      return records.length <= 4 || index === 0 || index === records.length - 1 || index === Math.floor((records.length - 1) / 2)
-    }).map(function (record, index, filtered) {
-      var originalIndex = records.indexOf(record)
-      var x = left + chartWidth * (originalIndex / maxIndex)
-      return '<text class="x-label" x="' + x.toFixed(1) + '" y="' + (height - 10) + '">' + escapeHtml(String(record.recordDate || '').slice(5).replace('-', '.')) + '</text>'
+    var xLabels = selectedPoints.filter(function (_, index) {
+      return selectedPoints.length <= 4 || index === 0 || index === selectedPoints.length - 1 || index === Math.floor((selectedPoints.length - 1) / 2)
+    }).map(function (point) {
+      var x = left + chartWidth * (point.index / maxIndex)
+      return '<text class="x-label" x="' + x.toFixed(1) + '" y="' + (height - 10) + '">' + escapeHtml(point.label) + '</text>'
     }).join('')
     var lineClass = selectedMode === 'weight' ? 'weight-line' : 'height-line'
     var dotClass = selectedMode === 'weight' ? 'weight-dot' : 'height-dot'
@@ -9983,8 +10030,8 @@
     return [
       '<div class="growth-chart baby-growth-chart">',
       '<div class="growth-chart-toggle" role="group" aria-label="\uC131\uC7A5 \uCC28\uD2B8 \uC9C0\uD45C">',
-      chartButton('height', '\uD0A4', !!heightPoints.length),
-      chartButton('weight', '\uBAB8\uBB34\uAC8C', !!weightPoints.length),
+      chartButton('height', '\uD0A4', !!heightRecords.length),
+      chartButton('weight', '\uBAB8\uBB34\uAC8C', !!weightRecords.length),
       '</div>',
       '<svg viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="' + label + ' \uC131\uC7A5 \uCC28\uD2B8">',
       labels,
@@ -11326,6 +11373,7 @@
     var button = event.target && event.target.closest && event.target.closest('[data-baby-growth-chart-mode]')
     if (!button || button.disabled) return
     var chart = button.closest('.baby-growth-chart')
+    var history = button.closest('.baby-growth-api-history')
     var detail = button.closest('.baby-api-detail')
     var babyId = detail && detail.dataset.apiBabyId
     var records = window.__familyBabyGrowthRecordsByBabyId && window.__familyBabyGrowthRecordsByBabyId[String(babyId)]
@@ -11333,6 +11381,10 @@
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    if (history) {
+      history.innerHTML = buildBabyGrowthChartAndList(records, button.dataset.babyGrowthChartMode)
+      return
+    }
     chart.outerHTML = buildBabyGrowthChart(records, button.dataset.babyGrowthChartMode)
   }, true)
 
