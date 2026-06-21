@@ -108,6 +108,7 @@ type authResponse struct {
 	AccessToken   string `json:"accessToken"`
 	UserID        int64  `json:"userId"`
 	Email         string `json:"email"`
+	LoginEmail    string `json:"loginEmail,omitempty"`
 	Nickname      string `json:"nickname"`
 	PlatformAdmin bool   `json:"platformAdmin"`
 	Provider      string `json:"provider,omitempty"`
@@ -985,8 +986,18 @@ func (a *app) logout(w http.ResponseWriter, r *http.Request, user authUser) {
 }
 
 func (a *app) me(w http.ResponseWriter, r *http.Request, user authUser) {
-	var nickname, loginName, provider string
-	err := a.db.QueryRow(r.Context(), "select nickname, coalesce(email, login_id, ''), coalesce(provider, case when login_id is not null and login_id <> '' then 'admin' else 'password' end) from app_users where id = $1", user.ID).Scan(&nickname, &loginName, &provider)
+	var nickname, loginName, provider, loginEmail string
+	err := a.db.QueryRow(r.Context(), `
+		select u.nickname,
+		       coalesce(u.email, u.login_id, ''),
+		       coalesce(u.provider, case when u.login_id is not null and u.login_id <> '' then 'admin' else 'password' end),
+		       coalesce(oi.email, '')
+		from app_users u
+		left join oauth_identities oi on oi.user_id = u.id
+		  and oi.provider = u.provider
+		  and oi.provider_user_id = u.provider_user_id
+		where u.id = $1
+	`, user.ID).Scan(&nickname, &loginName, &provider, &loginEmail)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "invalid session")
 		return
@@ -998,6 +1009,7 @@ func (a *app) me(w http.ResponseWriter, r *http.Request, user authUser) {
 		AccessToken:   a.issueToken(user),
 		UserID:        user.ID,
 		Email:         loginName,
+		LoginEmail:    loginEmail,
 		Nickname:      nickname,
 		PlatformAdmin: user.PlatformAdmin,
 		Provider:      provider,
@@ -1173,10 +1185,11 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		writeOAuthCallbackHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, "", nil, "oauth login failed")
 		return
 	}
-	a.recordLoginHistory(r.Context(), &response.UserID, response.Email, providerName, "SSO_LOGIN", "SUCCESS", "")
+	a.recordLoginHistory(r.Context(), &response.UserID, firstNonEmpty(response.LoginEmail, response.Email), providerName, "SSO_LOGIN", "SUCCESS", "")
 	userPayload := map[string]any{
 		"userId":        response.UserID,
 		"email":         response.Email,
+		"loginEmail":    response.LoginEmail,
 		"nickname":      response.Nickname,
 		"platformAdmin": response.PlatformAdmin,
 		"provider":      response.Provider,
@@ -1930,15 +1943,30 @@ func (a *app) lookupInvitee(ctx context.Context, invite string) (int64, bool, bo
 	if invite == "" {
 		return 0, false, false
 	}
-	column := "nickname"
+	var rows pgx.Rows
+	var err error
 	if strings.Contains(invite, "@") {
-		column = "email"
+		rows, err = a.db.Query(ctx, `
+			select distinct id
+			from (
+				select id
+				from app_users
+				where lower(coalesce(email, '')) = lower($1)
+				union
+				select user_id as id
+				from oauth_identities
+				where lower(coalesce(email, '')) = lower($1)
+			) matched
+			order by id asc
+		`, invite)
+	} else {
+		rows, err = a.db.Query(ctx, `
+			select id
+			from app_users
+			where lower(coalesce(nickname, '')) = lower($1)
+			order by id asc
+		`, invite)
 	}
-	rows, err := a.db.Query(ctx, fmt.Sprintf(`
-		select id from app_users
-		where lower(coalesce(%s, '')) = lower($1)
-		order by id asc
-	`, column), invite)
 	if err != nil {
 		return 0, false, false
 	}
@@ -3684,7 +3712,7 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 			where provider = $1 and provider_user_id = $2
 		`, provider, profile.ProviderUserID).Scan(&userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID)
 		if err == nil {
-			if err := a.linkOAuthIdentity(ctx, tx, provider, profile.ProviderUserID, userID); err != nil {
+			if err := a.linkOAuthIdentity(ctx, tx, provider, profile, userID); err != nil {
 				return authResponse{}, err
 			}
 		}
@@ -3707,6 +3735,9 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 		if err := a.reconcileOAuthEmail(ctx, tx, provider, profile.ProviderUserID, email, nickname, &userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID); err != nil {
 			return authResponse{}, err
 		}
+	}
+	if err := a.linkOAuthIdentity(ctx, tx, provider, profile, userID); err != nil {
+		return authResponse{}, err
 	}
 
 	if activeSessionID.Valid && activeSessionID.String != "" && !forceLogin {
@@ -3734,6 +3765,7 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 		AccessToken:   a.issueToken(user),
 		UserID:        userID,
 		Email:         currentEmail,
+		LoginEmail:    firstNonEmpty(profile.Email, currentEmail),
 		Nickname:      currentNickname,
 		PlatformAdmin: platformAdmin,
 		Provider:      provider,
@@ -3752,7 +3784,7 @@ func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, pr
 			returning id, email, nickname, platform_admin, active_session_id
 		`, provider, providerUserID, email).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
 		if err == nil {
-			if err := a.linkOAuthIdentity(ctx, tx, provider, providerUserID, *userID); err != nil {
+			if err := a.linkOAuthIdentity(ctx, tx, provider, oauthProfile{ProviderUserID: providerUserID, Email: email, Nickname: nickname}, *userID); err != nil {
 				return false, err
 			}
 			return false, nil
@@ -3774,7 +3806,7 @@ func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, pr
 	if err != nil {
 		return false, err
 	}
-	if err := a.linkOAuthIdentity(ctx, tx, provider, providerUserID, *userID); err != nil {
+	if err := a.linkOAuthIdentity(ctx, tx, provider, oauthProfile{ProviderUserID: providerUserID, Email: email, Nickname: nickname}, *userID); err != nil {
 		return false, err
 	}
 	return true, nil
@@ -3805,7 +3837,7 @@ func (a *app) reconcileOAuthEmail(ctx context.Context, tx pgx.Tx, provider, prov
 		returning id, email, nickname, platform_admin, active_session_id
 	`, provider, providerUserID, email).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
 	if err == nil {
-		return a.linkOAuthIdentity(ctx, tx, provider, providerUserID, *userID)
+		return a.linkOAuthIdentity(ctx, tx, provider, oauthProfile{ProviderUserID: providerUserID, Email: email, Nickname: nickname}, *userID)
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return err
@@ -3826,12 +3858,16 @@ func (a *app) reconcileOAuthEmail(ctx context.Context, tx pgx.Tx, provider, prov
 	`, email, nickname, *userID, provider, providerUserID).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
 }
 
-func (a *app) linkOAuthIdentity(ctx context.Context, tx pgx.Tx, provider, providerUserID string, userID int64) error {
+func (a *app) linkOAuthIdentity(ctx context.Context, tx pgx.Tx, provider string, profile oauthProfile, userID int64) error {
 	_, err := tx.Exec(ctx, `
-		insert into oauth_identities (provider, provider_user_id, user_id, created_at)
-		values ($1, $2, $3, now())
-		on conflict (provider, provider_user_id) do update set user_id = excluded.user_id
-	`, provider, providerUserID, userID)
+		insert into oauth_identities (provider, provider_user_id, user_id, email, nickname, created_at, updated_at)
+		values ($1, $2, $3, nullif($4, ''), nullif($5, ''), now(), now())
+		on conflict (provider, provider_user_id) do update
+		set user_id = excluded.user_id,
+		    email = coalesce(excluded.email, oauth_identities.email),
+		    nickname = coalesce(excluded.nickname, oauth_identities.nickname),
+		    updated_at = now()
+	`, provider, profile.ProviderUserID, userID, profile.Email, profile.Nickname)
 	return err
 }
 
@@ -3945,10 +3981,17 @@ create table if not exists oauth_identities (
   provider varchar(255) not null,
   provider_user_id varchar(255) not null,
   user_id bigint not null references app_users(id) on delete cascade,
+  email varchar(255),
+  nickname varchar(255),
   created_at timestamp with time zone not null,
+  updated_at timestamp with time zone,
   primary key (provider, provider_user_id)
 );
+alter table if exists oauth_identities add column if not exists email varchar(255);
+alter table if exists oauth_identities add column if not exists nickname varchar(255);
+alter table if exists oauth_identities add column if not exists updated_at timestamp with time zone;
 create index if not exists idx_oauth_identities_user on oauth_identities (user_id);
+create index if not exists idx_oauth_identities_email_lower on oauth_identities (lower(email)) where email is not null;
 create table if not exists email_verification_tokens (
   id bigint generated by default as identity primary key,
   user_id bigint not null references app_users(id) on delete cascade,

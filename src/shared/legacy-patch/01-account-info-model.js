@@ -19,7 +19,7 @@
 
   function getAccountInfoModel(user) {
     user = user || readStoredAuthUser() || {}
-    var loginId = user.email || user.loginId || user.identifier || ''
+    var loginId = user.loginEmail || user.email || user.loginId || user.identifier || ''
     var nickname = user.nickname || ''
     var provider = accountProviderKey(user.provider)
     var providerLabel = accountProviderLabel(provider, loginId)

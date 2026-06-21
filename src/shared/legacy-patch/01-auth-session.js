@@ -422,6 +422,7 @@
     return {
       id: response.userId || response.id,
       email: response.email || '',
+      loginEmail: response.loginEmail || '',
       nickname: response.nickname || '',
       platformAdmin: !!response.platformAdmin,
       provider: response.provider || ''

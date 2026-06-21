@@ -996,6 +996,7 @@
     return {
       id: response.userId || response.id,
       email: response.email || '',
+      loginEmail: response.loginEmail || '',
       nickname: response.nickname || '',
       platformAdmin: !!response.platformAdmin,
       provider: response.provider || ''
@@ -1872,7 +1873,7 @@
 
   function getAccountInfoModel(user) {
     user = user || readStoredAuthUser() || {}
-    var loginId = user.email || user.loginId || user.identifier || ''
+    var loginId = user.loginEmail || user.email || user.loginId || user.identifier || ''
     var nickname = user.nickname || ''
     var provider = accountProviderKey(user.provider)
     var providerLabel = accountProviderLabel(provider, loginId)
