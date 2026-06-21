@@ -537,13 +537,16 @@
   function getApiRequestLoadingMeta(input, init) {
     var url = typeof input === 'string' ? input : (input && input.url) || ''
     if (!url) return { tracked: false, blocking: false }
+    var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase()
     try {
       var parsed = new URL(url, window.location.origin)
       if (parsed.pathname.indexOf('/api/notifications') === 0) return { tracked: false, blocking: false }
       if (parsed.pathname.indexOf('/api/') !== 0) return { tracked: false, blocking: false }
+      if (method === 'GET' || method === 'HEAD') return { tracked: false, blocking: false }
       return { tracked: true, blocking: true }
     } catch (error) {
       var tracked = String(url).indexOf('/api/') >= 0
+      if (method === 'GET' || method === 'HEAD') tracked = false
       return { tracked: tracked, blocking: tracked }
     }
   }
@@ -8370,23 +8373,34 @@
 
   function renderRestaurantRows(root, items) {
     var list = root.querySelector('[data-restaurant-list]')
-    var count = root.querySelector('[data-restaurant-count]')
-    if (count) count.textContent = (items || []).length + '\uACF3'
+    root.querySelectorAll('[data-restaurant-count]').forEach(function (count) {
+      count.textContent = (items || []).length + '\uACF3'
+    })
     if (!list) return
     if (!items || !items.length) {
       list.innerHTML = '<p class="api-empty-row">\uB4F1\uB85D\uB41C \uB9DB\uC9D1\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
       return
     }
     list.innerHTML = items.map(function (item) {
+      var rating = Number(item.rating || 0)
       var meta = [
         item.visitDate ? item.visitDate.replace(/-/g, '.') : '',
-        item.menu || '',
         item.price != null ? Number(item.price).toLocaleString('ko-KR') + '\uC6D0' : '',
-        item.rating != null ? '\u2605 ' + item.rating : ''
-      ].filter(Boolean).join(' \u00B7 ')
-      return '<article class="server-domain-row restaurant-api-row" data-restaurant-id="' + escapeHtml(item.id) + '">' +
-        '<div><strong>' + escapeHtml(item.name || '\uC0C1\uD638\uBA85') + '</strong><span>' + escapeHtml(meta) + '</span><small>' + escapeHtml(item.location || item.address || item.memo || '') + '</small></div>' +
-        '<div class="row-actions"><button type="button" class="edit-button" data-restaurant-edit="' + escapeHtml(item.id) + '">\uC218\uC815</button><button type="button" class="danger-button" data-restaurant-delete="' + escapeHtml(item.id) + '">\uC0AD\uC81C</button></div>' +
+        item.scope || ''
+      ].filter(Boolean)
+      var location = item.location || item.address || ''
+      var caption = item.menu || location || '\uB300\uD45C \uBA54\uB274\uB97C \uC785\uB825\uD574\uC8FC\uC138\uC694.'
+      var memo = item.memo || item.address || ''
+      return '<article class="restaurant-card" data-restaurant-id="' + escapeHtml(item.id) + '">' +
+        '<div class="restaurant-empty-photo" aria-hidden="true"><span>\uB9DB\uC9D1</span></div>' +
+        '<div class="restaurant-card-body">' +
+        '<div class="restaurant-card-top"><strong>' + escapeHtml(item.name || '\uC0C1\uD638\uBA85') + '</strong><span>' + (rating ? '\u2605 ' + escapeHtml(rating) : '') + '</span></div>' +
+        '<p>' + escapeHtml(caption) + '</p>' +
+        '<div class="restaurant-meta">' + meta.map(function (text) { return '<span>' + escapeHtml(text) + '</span>' }).join('') + '</div>' +
+        (memo ? '<em>' + escapeHtml(memo) + '</em>' : '') +
+        (location ? '<small>' + escapeHtml(location) + '</small>' : '') +
+        '<div class="restaurant-actions"><button type="button" class="edit-button" data-restaurant-edit="' + escapeHtml(item.id) + '">\uC218\uC815</button><button type="button" class="danger-button" data-restaurant-delete="' + escapeHtml(item.id) + '">\uC0AD\uC81C</button></div>' +
+        '</div>' +
         '</article>'
     }).join('')
     list.querySelectorAll('[data-restaurant-edit]').forEach(function (button) {
@@ -8430,21 +8444,21 @@
     clearCustomPatchPageNow()
     removeHardcodedDemoData()
     removeFeaturePlaceholders()
-    syncRestaurantMenuState()
 
     var content = document.querySelector('.content-grid')
     if (!content) return
     if (content.dataset.restaurantApiReady !== 'true') {
       content.dataset.restaurantApiReady = 'true'
-      content.className = 'content-grid restaurant-api-grid'
+      content.className = 'content-grid'
       content.innerHTML = [
-        '<section class="panel wide restaurant-api-panel">',
+        '<section class="panel restaurant-api-panel">',
         '<div class="panel-header"><h2>\uB9DB\uC9D1</h2><span class="passive-header-chip" data-restaurant-count>0\uACF3</span></div>',
-        '<div class="server-data-list restaurant-api-list" data-restaurant-list></div>',
+        '<div class="restaurant-hero"><div><span>\uBC29\uBB38\uD55C \uACF3</span><strong>\uAC00\uC871\uACFC \uD568\uAED8 \uAE30\uB85D\uD55C \uB9DB\uC9D1</strong></div><b data-restaurant-count>0\uACF3</b></div>',
+        '<div class="restaurant-grid restaurant-api-list" data-restaurant-list></div>',
         '</section>',
         '<aside class="panel entry-panel restaurant-api-form-panel">',
         '<div class="panel-header"><h2>\uB9DB\uC9D1 \uCD94\uAC00</h2></div>',
-        '<form class="restaurant-api-form" data-restaurant-form>',
+        '<form class="restaurant-form restaurant-api-form" data-restaurant-form>',
         '<label class="form-field"><span class="form-label">\uC0C1\uD638\uBA85 <em class="required-mark">*</em></span><input class="form-control" data-restaurant-name autocomplete="off" /></label>',
         '<label class="form-field"><span class="form-label">\uB300\uD45C \uBA54\uB274</span><input class="form-control" data-restaurant-menu autocomplete="off" /></label>',
         '<div class="form-row two"><label class="form-field"><span class="form-label">\uAC00\uACA9</span><input class="form-control" data-restaurant-price inputmode="numeric" autocomplete="off" /></label><label class="form-field"><span class="form-label">\uBCC4\uC810</span><input class="form-control" data-restaurant-rating inputmode="decimal" autocomplete="off" /></label></div>',
@@ -8491,7 +8505,8 @@
       var reset = content.querySelector('[data-restaurant-reset]')
       if (reset) reset.addEventListener('click', function () { clearRestaurantForm(form) })
     }
-    loadRestaurantApiPage(content, true)
+    syncRestaurantMenuState()
+    loadRestaurantApiPage(content, false)
   }
 
   function normalizeRestaurantVisitDate() {

@@ -11505,6 +11505,22 @@ select {
     max-width: 320px !important;
   }
 
+  body:has(.restaurant-form):not(:has(.family-calendar-panel)) .content-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px) !important;
+    align-items: start !important;
+  }
+
+  body:has(.restaurant-form):not(:has(.family-calendar-panel)) .content-grid > .entry-panel {
+    grid-column: 2 !important;
+    width: 100% !important;
+    max-width: 320px !important;
+  }
+
+  body:has(.restaurant-form):not(:has(.family-calendar-panel)) .content-grid > :not(.entry-panel) {
+    grid-column: 1 !important;
+    min-width: 0 !important;
+  }
+
   body:not(:has(.family-calendar-panel)) .metric-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
   }
@@ -12314,6 +12330,12 @@ html.calendar-jump-open body:has(.family-calendar-panel) .family-calendar-panel 
 
 @media (max-width: 1180px) {
   .restaurant-api-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 620px) {
+  .restaurant-api-form .form-row.two {
     grid-template-columns: 1fr;
   }
 }

@@ -537,13 +537,16 @@
   function getApiRequestLoadingMeta(input, init) {
     var url = typeof input === 'string' ? input : (input && input.url) || ''
     if (!url) return { tracked: false, blocking: false }
+    var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase()
     try {
       var parsed = new URL(url, window.location.origin)
       if (parsed.pathname.indexOf('/api/notifications') === 0) return { tracked: false, blocking: false }
       if (parsed.pathname.indexOf('/api/') !== 0) return { tracked: false, blocking: false }
+      if (method === 'GET' || method === 'HEAD') return { tracked: false, blocking: false }
       return { tracked: true, blocking: true }
     } catch (error) {
       var tracked = String(url).indexOf('/api/') >= 0
+      if (method === 'GET' || method === 'HEAD') tracked = false
       return { tracked: tracked, blocking: tracked }
     }
   }
