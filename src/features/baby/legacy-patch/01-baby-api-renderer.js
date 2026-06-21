@@ -86,11 +86,14 @@
     list.innerHTML = '<div class="api-empty-row">\uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</div>'
     var range = monthRangeFor(todayText())
     fetchBabyRecords(babyId, range.start, range.end).then(function (records) {
-      if (!records.length) {
+      var visibleRecords = records.filter(function (record) {
+        return record.recordType !== '\uC131\uC7A5'
+      })
+      if (!visibleRecords.length) {
         list.innerHTML = '<div class="api-empty-row">\uB4F1\uB85D\uB41C \uC721\uC544 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</div>'
         return
       }
-      list.innerHTML = records.map(function (record) {
+      list.innerHTML = visibleRecords.map(function (record) {
         var metrics = [
           record.amountMl ? record.amountMl + 'ml' : '',
           record.heightCm ? record.heightCm + 'cm' : '',

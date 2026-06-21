@@ -2285,6 +2285,10 @@ body.api-loading-blocked::before {
   box-shadow: inset 0 0 0 1px #dfe5ec;
 }
 
+.date-picker-trigger span {
+  font-weight: 500;
+}
+
 .date-picker-trigger svg {
   color: #3182f6;
 }
@@ -10071,6 +10075,7 @@ select {
 .baby-growth-api-form .date-picker-trigger span {
   color: #191f28 !important;
   font-size: 14px !important;
+  font-weight: 500 !important;
 }
 
 .baby-growth-api-form .save-button {
@@ -12635,8 +12640,8 @@ body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-
 }
 
 .baby-growth-api-history .baby-growth-chart {
-  width: min(100%, 760px) !important;
-  max-width: 760px !important;
+  width: 100% !important;
+  max-width: none !important;
   gap: 10px !important;
 }
 
@@ -12645,12 +12650,6 @@ body:has(.family-calendar-panel) .schedule-list-card .schedule-row.api-schedule-
   height: auto !important;
   min-height: 0 !important;
   max-height: 300px !important;
-}
-
-@media (min-width: 1280px) {
-  .baby-growth-api-history .baby-growth-chart {
-    width: min(72%, 760px) !important;
-  }
 }
 
 @media (max-width: 720px) {
