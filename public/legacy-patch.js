@@ -6543,11 +6543,24 @@
 
     var providerStatus = {}
     var statusLoaded = false
+    var statusFailed = false
     var providers = [
       { key: 'naver', label: '\uB124\uC774\uBC84' },
       { key: 'google', label: '\uAD6C\uAE00' },
       { key: 'kakao', label: '\uCE74\uCE74\uC624' }
     ]
+
+    function resolveSsoStartUrl(provider, item) {
+      var startUrl = item && item.startUrl ? item.startUrl : '/auth/oauth/' + provider.key + '/start'
+      var apiBase = window.FAMILY_PLATFORM_API_BASE_URL || localStorage.getItem('family-platform-api-base-url') || API_BASE_URL || '/api'
+      if (/^https?:\/\//i.test(startUrl)) return startUrl
+      if (startUrl.indexOf('/api/') === 0) {
+        var rootBase = apiBase.replace(/\/api\/?$/, '')
+        if (/^https?:\/\//i.test(rootBase)) return rootBase + startUrl
+        return startUrl
+      }
+      return apiBase.replace(/\/$/, '') + (startUrl.charAt(0) === '/' ? startUrl : '/' + startUrl)
+    }
 
     function updateProviderButtons() {
       providers.forEach(function (provider) {
@@ -6555,8 +6568,9 @@
         if (!button) return
         var item = providerStatus[provider.key]
         var configured = item && item.configured
-        button.classList.toggle('is-disabled', statusLoaded && !configured)
-        button.title = configured ? provider.label + ' \uB85C\uADF8\uC778' : '\uB3C4\uBA54\uC778\uACFC OAuth Client ID \uC124\uC815 \uD6C4 \uC5F0\uACB0\uB429\uB2C8\uB2E4.'
+        var unavailable = statusLoaded && !statusFailed && !configured
+        button.classList.toggle('is-disabled', unavailable)
+        button.title = unavailable ? '\uB3C4\uBA54\uC778\uACFC OAuth Client ID \uC124\uC815 \uD6C4 \uC5F0\uACB0\uB429\uB2C8\uB2E4.' : provider.label + ' \uB85C\uADF8\uC778'
       })
     }
 
@@ -6566,9 +6580,11 @@
         providerStatus[item.provider] = item
       })
       statusLoaded = true
+      statusFailed = false
       updateProviderButtons()
     }).catch(function () {
       statusLoaded = true
+      statusFailed = true
       updateProviderButtons()
     })
 
@@ -6580,11 +6596,11 @@
       button.textContent = provider.label + ' \uB85C\uADF8\uC778'
       button.addEventListener('click', function () {
         var item = providerStatus[provider.key]
-        if (!item || !item.configured) {
+        if (statusLoaded && !statusFailed && (!item || !item.configured)) {
           showPatchToast(provider.label + ' SSO\uB294 \uB3C4\uBA54\uC778\uACFC OAuth Client ID \uC124\uC815 \uD6C4 \uC5F0\uACB0\uB429\uB2C8\uB2E4.')
           return
         }
-        window.location.href = item.startUrl || (API_BASE_URL + '/auth/oauth/' + provider.key + '/start')
+        window.location.href = resolveSsoStartUrl(provider, item)
       })
       block.appendChild(button)
     })
