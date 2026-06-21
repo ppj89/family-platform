@@ -417,14 +417,19 @@
     field.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
-  function storeAuthResponse(response, persistent) {
-    var storedUser = {
-      id: response.userId,
-      email: response.email,
-      nickname: response.nickname,
-      platformAdmin: response.platformAdmin,
-      provider: response.provider
+  function normalizeAuthUser(response) {
+    response = response || {}
+    return {
+      id: response.userId || response.id,
+      email: response.email || '',
+      nickname: response.nickname || '',
+      platformAdmin: !!response.platformAdmin,
+      provider: response.provider || ''
     }
+  }
+
+  function storeAuthResponse(response, persistent) {
+    var storedUser = normalizeAuthUser(response)
     var shouldPersist = persistent === undefined ? shouldPersistAuthSession() : !!persistent
     var token = response.accessToken || getStoredAuthToken()
     protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
@@ -1040,13 +1045,7 @@
       if (!response.ok) throw new Error('Invalid session')
       return response.json()
     }).then(function (response) {
-      var storedUser = {
-        id: response.userId,
-        email: response.email,
-        nickname: response.nickname,
-        platformAdmin: response.platformAdmin,
-        provider: response.provider
-      }
+      var storedUser = normalizeAuthUser(response)
       var persistent = isAppRuntime()
         || (isAutoLoginEnabled() && !!localStorage.getItem(AUTH_TOKEN_STORAGE_KEY))
       protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
@@ -1107,7 +1106,7 @@
     var userText = params.get('sso_user')
     if (!token || !userText) return false
     try {
-      var user = JSON.parse(userText)
+      var user = normalizeAuthUser(JSON.parse(userText))
       var persistent = shouldPersistAuthSession()
       writeAuthSession(token, user, persistent)
       localStorage.setItem('family-platform-sso-complete', String(Date.now()))

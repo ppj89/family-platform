@@ -991,14 +991,19 @@
     field.scrollIntoView({ behavior: 'smooth', block: 'center' })
   }
 
-  function storeAuthResponse(response, persistent) {
-    var storedUser = {
-      id: response.userId,
-      email: response.email,
-      nickname: response.nickname,
-      platformAdmin: response.platformAdmin,
-      provider: response.provider
+  function normalizeAuthUser(response) {
+    response = response || {}
+    return {
+      id: response.userId || response.id,
+      email: response.email || '',
+      nickname: response.nickname || '',
+      platformAdmin: !!response.platformAdmin,
+      provider: response.provider || ''
     }
+  }
+
+  function storeAuthResponse(response, persistent) {
+    var storedUser = normalizeAuthUser(response)
     var shouldPersist = persistent === undefined ? shouldPersistAuthSession() : !!persistent
     var token = response.accessToken || getStoredAuthToken()
     protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
@@ -1614,13 +1619,7 @@
       if (!response.ok) throw new Error('Invalid session')
       return response.json()
     }).then(function (response) {
-      var storedUser = {
-        id: response.userId,
-        email: response.email,
-        nickname: response.nickname,
-        platformAdmin: response.platformAdmin,
-        provider: response.provider
-      }
+      var storedUser = normalizeAuthUser(response)
       var persistent = isAppRuntime()
         || (isAutoLoginEnabled() && !!localStorage.getItem(AUTH_TOKEN_STORAGE_KEY))
       protectedAuthUntil = Date.now() + 365 * 24 * 60 * 60 * 1000
@@ -1681,7 +1680,7 @@
     var userText = params.get('sso_user')
     if (!token || !userText) return false
     try {
-      var user = JSON.parse(userText)
+      var user = normalizeAuthUser(JSON.parse(userText))
       var persistent = shouldPersistAuthSession()
       writeAuthSession(token, user, persistent)
       localStorage.setItem('family-platform-sso-complete', String(Date.now()))
@@ -1852,25 +1851,6 @@
     submitAuthRequest(mode, payload, submit, false)
   }
 
-  function closeAccountInfoDialog() {
-    var dialog = document.querySelector('.account-info-backdrop')
-    if (dialog) dialog.remove()
-  }
-
-  function accountDisplayValue(value) {
-    return escapeHtml(value || '-')
-  }
-
-  function accountProviderLabel(provider, loginId) {
-    var key = String(provider || '').toLowerCase()
-    if (key === 'naver') return '\uB124\uC774\uBC84'
-    if (key === 'google') return '\uAD6C\uAE00'
-    if (key === 'kakao') return '\uCE74\uCE74\uC624'
-    if (key === 'admin') return '\uAD00\uB9AC\uC790 ID'
-    if (key === 'password') return loginId && loginId.indexOf('@') < 0 ? '\uAD00\uB9AC\uC790 ID' : '\uC774\uBA54\uC77C'
-    return loginId && loginId.indexOf('@') < 0 ? '\uAD00\uB9AC\uC790 ID' : '\uC774\uBA54\uC77C'
-  }
-
   function accountProviderKey(provider) {
     return String(provider || '').toLowerCase()
   }
@@ -1880,16 +1860,26 @@
     return key === 'naver' || key === 'google' || key === 'kakao'
   }
 
+  function accountProviderLabel(provider, loginId) {
+    var key = accountProviderKey(provider)
+    if (key === 'naver') return '\uB124\uC774\uBC84'
+    if (key === 'google') return '\uAD6C\uAE00'
+    if (key === 'kakao') return '\uCE74\uCE74\uC624'
+    if (key === 'admin') return '\uAD00\uB9AC\uC790 ID'
+    if (key === 'password') return loginId && loginId.indexOf('@') < 0 ? '\uAD00\uB9AC\uC790 ID' : '\uC774\uBA54\uC77C'
+    return loginId && loginId.indexOf('@') < 0 ? '\uAD00\uB9AC\uC790 ID' : '\uC774\uBA54\uC77C'
+  }
+
   function getAccountInfoModel(user) {
     user = user || readStoredAuthUser() || {}
     var loginId = user.email || user.loginId || user.identifier || ''
     var nickname = user.nickname || ''
     var provider = accountProviderKey(user.provider)
     var providerLabel = accountProviderLabel(provider, loginId)
-    var loginIdLabel = accountIsSsoProvider(provider) ? '\uC5F0\uB3D9 \uC774\uBA54\uC77C' : '\uC811\uC18D ID'
     return {
+      isSso: accountIsSsoProvider(provider),
       loginId: loginId,
-      loginIdLabel: loginIdLabel,
+      loginIdLabel: '\uC811\uC18D ID',
       nickname: nickname,
       provider: provider,
       providerLabel: providerLabel
@@ -1897,11 +1887,22 @@
   }
 
   function getAccountInfoRows(model) {
-    return [
-      { label: '\uB85C\uADF8\uC778 \uBC29\uC2DD', value: model.providerLabel },
-      { label: model.loginIdLabel, value: model.loginId },
-      { label: '\uB2C9\uB124\uC784', value: model.nickname }
+    var rows = [
+      { label: '\uB85C\uADF8\uC778 \uBC29\uC2DD', value: model.providerLabel }
     ]
+    if (!model.isSso) {
+      rows.push({ label: model.loginIdLabel, value: model.loginId })
+    }
+    rows.push({ label: '\uB2C9\uB124\uC784', value: model.nickname })
+    return rows
+  }
+  function closeAccountInfoDialog() {
+    var dialog = document.querySelector('.account-info-backdrop')
+    if (dialog) dialog.remove()
+  }
+
+  function accountDisplayValue(value) {
+    return escapeHtml(value || '-')
   }
 
   function renderAccountInfoRows(rows) {
@@ -1939,16 +1940,16 @@
     })
     document.body.appendChild(backdrop)
   }
-
   function openAccountInfoDialog() {
     var stored = readStoredAuthUser()
     renderAccountInfoDialog(stored)
     if (!getStoredAuthToken()) return
     apiRequest('/auth/me').then(function (response) {
+      var nextUser = response || stored
       if (response && response.accessToken) {
-        writeAuthSession(response.accessToken, response, shouldPersistAuthSession())
+        nextUser = storeAuthResponse(response, shouldPersistAuthSession())
       }
-      renderAccountInfoDialog(response || stored)
+      renderAccountInfoDialog(nextUser)
     }).catch(function () {})
   }
 

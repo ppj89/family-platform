@@ -11,6 +11,8 @@ import { travelLegacyPatchParts } from './features/travel/index.js'
 export const legacyPatchParts = [
   'shared/legacy-patch/00-bootstrap.js',
   'shared/legacy-patch/01-auth-session.js',
+  'shared/legacy-patch/01-account-info-model.js',
+  'shared/legacy-patch/01-account-info-view.js',
   'shared/legacy-patch/01-account-info.js',
   calendarLegacyPatchParts.ui,
   'shared/legacy-patch/02-ui-cleanup.js',
