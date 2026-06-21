@@ -110,6 +110,7 @@ type authResponse struct {
 	Email         string `json:"email"`
 	Nickname      string `json:"nickname"`
 	PlatformAdmin bool   `json:"platformAdmin"`
+	Provider      string `json:"provider,omitempty"`
 }
 
 type oauthProfile struct {
@@ -887,6 +888,7 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 		Email:         email,
 		Nickname:      nickname,
 		PlatformAdmin: user.PlatformAdmin,
+		Provider:      "password",
 	})
 }
 
@@ -972,6 +974,7 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 		Email:         loginName,
 		Nickname:      nickname,
 		PlatformAdmin: platformAdmin,
+		Provider:      "password",
 	})
 }
 
@@ -982,8 +985,8 @@ func (a *app) logout(w http.ResponseWriter, r *http.Request, user authUser) {
 }
 
 func (a *app) me(w http.ResponseWriter, r *http.Request, user authUser) {
-	var nickname, loginName string
-	err := a.db.QueryRow(r.Context(), "select nickname, coalesce(email, login_id, '') from app_users where id = $1", user.ID).Scan(&nickname, &loginName)
+	var nickname, loginName, provider string
+	err := a.db.QueryRow(r.Context(), "select nickname, coalesce(email, login_id, ''), coalesce(provider, case when login_id is not null and login_id <> '' then 'admin' else 'password' end) from app_users where id = $1", user.ID).Scan(&nickname, &loginName, &provider)
 	if err != nil {
 		writeError(w, http.StatusUnauthorized, "invalid session")
 		return
@@ -997,6 +1000,7 @@ func (a *app) me(w http.ResponseWriter, r *http.Request, user authUser) {
 		Email:         loginName,
 		Nickname:      nickname,
 		PlatformAdmin: user.PlatformAdmin,
+		Provider:      provider,
 	})
 }
 
@@ -1175,6 +1179,7 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		"email":         response.Email,
 		"nickname":      response.Nickname,
 		"platformAdmin": response.PlatformAdmin,
+		"provider":      response.Provider,
 	}
 	writeOAuthCallbackHTML(w, http.StatusOK, a.cfg.publicBaseURL, response.AccessToken, userPayload, "")
 }
@@ -3727,6 +3732,7 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 		Email:         currentEmail,
 		Nickname:      currentNickname,
 		PlatformAdmin: platformAdmin,
+		Provider:      provider,
 	}, nil
 }
 

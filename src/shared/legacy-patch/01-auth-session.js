@@ -1184,80 +1184,8 @@
     if (firstInput) firstInput.focus()
   }
 
-  function closeAccountInfoDialog() {
-    var dialog = document.querySelector('.account-info-backdrop')
-    if (dialog) dialog.remove()
-  }
-
-  function accountDisplayValue(value) {
-    return escapeHtml(value || '-')
-  }
-
-  function renderAccountInfoDialog(user) {
-    closeAccountInfoDialog()
-    user = user || readStoredAuthUser() || {}
-    var loginId = user.email || user.loginId || user.identifier || ''
-    var nickname = user.nickname || ''
-    var backdrop = document.createElement('div')
-    backdrop.className = 'account-info-backdrop'
-    backdrop.innerHTML = [
-      '<section class="account-info-dialog" role="dialog" aria-modal="true" aria-label="\uB0B4 \uC815\uBCF4">',
-      '<div class="account-password-header"><strong>\uB0B4 \uC815\uBCF4</strong><button type="button" data-account-info-close>X</button></div>',
-      '<div class="account-info-list">',
-      '<div><span>\uC811\uC18D ID</span><strong>' + accountDisplayValue(loginId) + '</strong></div>',
-      '<div><span>\uB2C9\uB124\uC784</span><strong>' + accountDisplayValue(nickname) + '</strong></div>',
-      '</div>',
-      '<div class="account-password-actions account-info-actions">',
-      '<button type="button" class="cancel-button" data-account-info-close>\uB2EB\uAE30</button>',
-      '<button type="button" class="save-button" data-account-info-password>\uBE44\uBC00\uBC88\uD638 \uBCC0\uACBD</button>',
-      '</div>',
-      '</section>'
-    ].join('')
-    backdrop.addEventListener('click', function (event) {
-      if (event.target === backdrop || (event.target.closest && event.target.closest('[data-account-info-close]'))) {
-        closeAccountInfoDialog()
-        return
-      }
-      if (event.target.closest && event.target.closest('[data-account-info-password]')) {
-        closeAccountInfoDialog()
-        openPasswordChangeDialog()
-      }
-    })
-    document.body.appendChild(backdrop)
-  }
-
-  function openAccountInfoDialog() {
-    var stored = readStoredAuthUser()
-    renderAccountInfoDialog(stored)
-    if (!getStoredAuthToken()) return
-    apiRequest('/auth/me').then(function (response) {
-      if (response && response.accessToken) {
-        writeAuthSession(response.accessToken, response, shouldPersistAuthSession())
-      }
-      renderAccountInfoDialog(response || stored)
-    }).catch(function () {})
-  }
-
   function ensurePasswordChangeAction() {
-    if (document.querySelector('.auth-card')) return
-    var actions = document.querySelector('.top-actions')
-    if (!actions) return
-    actions.querySelectorAll('[data-account-password-change]').forEach(function (button) {
-      button.remove()
-    })
-    if (actions.querySelector('[data-account-info]')) return
-    var logout = Array.from(actions.querySelectorAll('button')).find(function (button) {
-      return getCleanText(button).replace(/\s+/g, '') === '\uB85C\uADF8\uC544\uC6C3'
-    })
-    if (!logout) return
-    var button = document.createElement('button')
-    button.type = 'button'
-    button.className = 'secondary-action account-password-change'
-    button.dataset.accountInfo = 'true'
-    button.textContent = '\uB0B4 \uC815\uBCF4'
-    button.addEventListener('click', openAccountInfoDialog)
-    if (logout) actions.insertBefore(button, logout)
-    else actions.appendChild(button)
+    ensureAccountInfoAction()
   }
 
   function enhanceAuthApi() {
