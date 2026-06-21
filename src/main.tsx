@@ -12,7 +12,7 @@ declare global {
 window.FAMILY_PLATFORM_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api'
 
 const legacyCssPath = '/legacy/assets/index-CkWNYWFk.css'
-const legacyOverridesCssPath = '/legacy-overrides.css?v=20260622-01'
+const legacyOverridesCssPath = '/legacy-overrides.css?v=20260622-03'
 const legacyPatchScriptPath = '/legacy-patch.js?v=20260622-01'
 const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260614-11'
 

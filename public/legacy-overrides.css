@@ -4851,8 +4851,8 @@ body.api-loading-blocked::before {
 
 .restaurant-hero div {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr);
-  column-gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4px;
   align-items: center;
 }
 
@@ -12303,7 +12303,12 @@ html.calendar-jump-open body:has(.family-calendar-panel) .family-calendar-panel 
 
 .restaurant-api-list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.restaurant-api-list > .api-empty-row {
+  grid-column: 1 / -1;
 }
 
 .restaurant-api-row .row-actions {
@@ -12330,6 +12335,10 @@ html.calendar-jump-open body:has(.family-calendar-panel) .family-calendar-panel 
 
 @media (max-width: 1180px) {
   .restaurant-api-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .restaurant-api-list {
     grid-template-columns: 1fr;
   }
 }
