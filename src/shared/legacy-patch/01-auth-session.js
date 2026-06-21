@@ -422,7 +422,8 @@
       id: response.userId,
       email: response.email,
       nickname: response.nickname,
-      platformAdmin: response.platformAdmin
+      platformAdmin: response.platformAdmin,
+      provider: response.provider
     }
     var shouldPersist = persistent === undefined ? shouldPersistAuthSession() : !!persistent
     var token = response.accessToken || getStoredAuthToken()
@@ -1043,7 +1044,8 @@
         id: response.userId,
         email: response.email,
         nickname: response.nickname,
-        platformAdmin: response.platformAdmin
+        platformAdmin: response.platformAdmin,
+        provider: response.provider
       }
       var persistent = isAppRuntime()
         || (isAutoLoginEnabled() && !!localStorage.getItem(AUTH_TOKEN_STORAGE_KEY))

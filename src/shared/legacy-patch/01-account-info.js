@@ -17,21 +17,55 @@
     return loginId && loginId.indexOf('@') < 0 ? '\uAD00\uB9AC\uC790 ID' : '\uC774\uBA54\uC77C'
   }
 
-  function renderAccountInfoDialog(user) {
-    closeAccountInfoDialog()
+  function accountProviderKey(provider) {
+    return String(provider || '').toLowerCase()
+  }
+
+  function accountIsSsoProvider(provider) {
+    var key = accountProviderKey(provider)
+    return key === 'naver' || key === 'google' || key === 'kakao'
+  }
+
+  function getAccountInfoModel(user) {
     user = user || readStoredAuthUser() || {}
     var loginId = user.email || user.loginId || user.identifier || ''
     var nickname = user.nickname || ''
-    var providerLabel = accountProviderLabel(user.provider, loginId)
+    var provider = accountProviderKey(user.provider)
+    var providerLabel = accountProviderLabel(provider, loginId)
+    var loginIdLabel = accountIsSsoProvider(provider) ? '\uC5F0\uB3D9 \uC774\uBA54\uC77C' : '\uC811\uC18D ID'
+    return {
+      loginId: loginId,
+      loginIdLabel: loginIdLabel,
+      nickname: nickname,
+      provider: provider,
+      providerLabel: providerLabel
+    }
+  }
+
+  function getAccountInfoRows(model) {
+    return [
+      { label: '\uB85C\uADF8\uC778 \uBC29\uC2DD', value: model.providerLabel },
+      { label: model.loginIdLabel, value: model.loginId },
+      { label: '\uB2C9\uB124\uC784', value: model.nickname }
+    ]
+  }
+
+  function renderAccountInfoRows(rows) {
+    return rows.map(function (row) {
+      return '<div><span>' + accountDisplayValue(row.label) + '</span><strong>' + accountDisplayValue(row.value) + '</strong></div>'
+    }).join('')
+  }
+
+  function renderAccountInfoDialog(user) {
+    closeAccountInfoDialog()
+    var model = getAccountInfoModel(user)
     var backdrop = document.createElement('div')
     backdrop.className = 'account-info-backdrop'
     backdrop.innerHTML = [
       '<section class="account-info-dialog" role="dialog" aria-modal="true" aria-label="\uB0B4 \uC815\uBCF4">',
       '<div class="account-password-header"><strong>\uB0B4 \uC815\uBCF4</strong><button type="button" data-account-info-close>X</button></div>',
       '<div class="account-info-list">',
-      '<div><span>\uC811\uC18D ID</span><strong>' + accountDisplayValue(loginId) + '</strong></div>',
-      '<div><span>\uB85C\uADF8\uC778 \uBC29\uC2DD</span><strong>' + accountDisplayValue(providerLabel) + '</strong></div>',
-      '<div><span>\uB2C9\uB124\uC784</span><strong>' + accountDisplayValue(nickname) + '</strong></div>',
+      renderAccountInfoRows(getAccountInfoRows(model)),
       '</div>',
       '<div class="account-password-actions account-info-actions">',
       '<button type="button" class="cancel-button" data-account-info-close>\uB2EB\uAE30</button>',
