@@ -1,5 +1,6 @@
 param(
-  [string]$ApiBaseUrl = "http://192.145.44.103/api"
+  [string]$AppUrl = "https://familyhistory.dedyn.io",
+  [string]$ApiBaseUrl = "https://familyhistory.dedyn.io/api"
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,6 +26,7 @@ function Invoke-Checked {
 }
 
 $env:VITE_API_BASE_URL = $ApiBaseUrl
+$env:CAPACITOR_SERVER_URL = $AppUrl
 Invoke-Checked "npm.cmd" @("run", "build")
 Invoke-Checked "npx.cmd" @("cap", "sync", "android")
 

@@ -1,5 +1,6 @@
 param(
-  [string]$ApiBaseUrl = "http://192.145.44.103/api",
+  [string]$AppUrl = "https://familyhistory.dedyn.io",
+  [string]$ApiBaseUrl = "https://familyhistory.dedyn.io/api",
   [string]$ServerHost = "192.145.44.103",
   [string]$SshUser = "root",
   [string]$SshKeyPath = "$env:USERPROFILE\.ssh\family_platform_netcup_ed25519",
@@ -12,7 +13,7 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 Set-Location $repoRoot
 
 $buildScript = Join-Path $PSScriptRoot "build-android-debug-server.ps1"
-& powershell -NoProfile -ExecutionPolicy Bypass -File $buildScript -ApiBaseUrl $ApiBaseUrl
+& powershell -NoProfile -ExecutionPolicy Bypass -File $buildScript -AppUrl $AppUrl -ApiBaseUrl $ApiBaseUrl
 if ($LASTEXITCODE -ne 0) {
   throw "Android debug build failed with exit code $LASTEXITCODE"
 }
@@ -39,5 +40,5 @@ if ($LASTEXITCODE -ne 0) {
   throw "Remote publish failed with exit code $LASTEXITCODE"
 }
 
-$downloadUrl = "http://$ServerHost/downloads/$RemoteApkName"
+$downloadUrl = "https://familyhistory.dedyn.io/downloads/$RemoteApkName"
 Write-Host "Android debug APK published: $downloadUrl"

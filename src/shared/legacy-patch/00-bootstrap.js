@@ -548,6 +548,36 @@
     }
   }
 
+  function configuredApiBaseUrl() {
+    return window.FAMILY_PLATFORM_API_BASE_URL || localStorage.getItem('family-platform-api-base-url') || '/api'
+  }
+
+  function apiFetchInput(input) {
+    var apiBase = configuredApiBaseUrl()
+    if (!apiBase || apiBase === '/api' || apiBase.indexOf('http') !== 0) return input
+
+    function resolveApiUrl(url) {
+      if (typeof url !== 'string') return url
+      if (url.indexOf('/api/') === 0 || url === '/api') {
+        return apiBase.replace(/\/$/, '') + url.slice('/api'.length)
+      }
+      try {
+        var parsed = new URL(url, window.location.origin)
+        if (parsed.origin === window.location.origin && (parsed.pathname.indexOf('/api/') === 0 || parsed.pathname === '/api')) {
+          return apiBase.replace(/\/$/, '') + parsed.pathname.slice('/api'.length) + parsed.search + parsed.hash
+        }
+      } catch (error) {}
+      return url
+    }
+
+    if (typeof input === 'string') return resolveApiUrl(input)
+    if (input && input.url) {
+      var nextUrl = resolveApiUrl(input.url)
+      if (nextUrl !== input.url && typeof Request === 'function') return new Request(nextUrl, input)
+    }
+    return input
+  }
+
   function installApiLoadingInterceptor() {
     if (apiLoadingState.installed || !window.fetch) return
     apiLoadingState.installed = true
@@ -555,7 +585,7 @@
     window.fetch = function (input, init) {
       var loadingMeta = getApiRequestLoadingMeta(input, init)
       if (loadingMeta.tracked) beginApiLoading()
-      return originalFetch(input, init).finally(function () {
+      return originalFetch(apiFetchInput(input), init).finally(function () {
         if (loadingMeta.tracked) endApiLoading()
       })
     }

@@ -16,25 +16,25 @@ The APK is generated at:
 android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Build a debug APK that points to the current production test API:
+Build a debug APK that opens the current production app:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build-android-debug-server.ps1 -ApiBaseUrl "http://192.145.44.103/api"
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build-android-debug-server.ps1
 ```
 
 Build and publish it to the server download URL:
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-android-debug-server.ps1 -ApiBaseUrl "http://192.145.44.103/api" -ServerHost "192.145.44.103"
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\publish-android-debug-server.ps1
 ```
 
 Android test download:
 
 ```text
-http://192.145.44.103/downloads/app-debug.apk
+https://familyhistory.dedyn.io/downloads/app-debug.apk
 ```
 
-This debug APK allows HTTP traffic only for testing with the server IP. Release builds should use a domain with HTTPS.
+The app opens `https://familyhistory.dedyn.io` by default so OAuth callbacks and session storage use the same origin as the web app.
 
 ## Notes
 

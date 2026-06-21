@@ -1,3 +1,8 @@
+param(
+  [string]$AppUrl = "https://familyhistory.dedyn.io",
+  [string]$ApiBaseUrl = "https://familyhistory.dedyn.io/api"
+)
+
 $ErrorActionPreference = "Stop"
 
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
@@ -32,6 +37,8 @@ if ($env:ANDROID_KEYSTORE_PATH -and ![System.IO.Path]::IsPathRooted($env:ANDROID
 $env:JAVA_HOME = $jdkHome
 $env:ANDROID_HOME = $androidSdk
 $env:ANDROID_SDK_ROOT = $androidSdk
+$env:CAPACITOR_SERVER_URL = $AppUrl
+$env:VITE_API_BASE_URL = $ApiBaseUrl
 $env:PATH = "$jdkHome\bin;$androidSdk\platform-tools;$env:PATH"
 
 Push-Location $root
