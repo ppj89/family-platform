@@ -228,27 +228,8 @@
   }
 
   function syncTripAddRow(row) {
-    if (row && row.dataset && row.dataset.apiTripEditId && typeof submitApiTripRow === 'function') {
-      submitApiTripRow(row)
-      return
-    }
     window.setTimeout(function () {
-      var title = getFieldValue(row, '[data-field="trip-title"]') || getFieldValue(row, 'input')
-      if (!title) return
-      var dateFields = row.querySelectorAll('.date-picker-field')
-      var startDate = parseApiDate(getCleanText(dateFields[0])) || todayText()
-      var endDate = parseApiDate(getCleanText(dateFields[1])) || startDate
-
-      queueApiSync({
-        type: 'createTrip',
-        payload: {
-          title: title,
-          startDate: startDate,
-          endDate: endDate,
-          description: startDate === endDate ? startDate : (startDate + ' ~ ' + endDate)
-        }
-      })
-      flushApiQueue()
+      submitApiTripRow(row)
     }, 350)
   }
 
