@@ -228,6 +228,10 @@
   }
 
   function syncTripAddRow(row) {
+    if (row && row.dataset && row.dataset.apiTripEditId && typeof submitApiTripRow === 'function') {
+      submitApiTripRow(row)
+      return
+    }
     window.setTimeout(function () {
       var title = getFieldValue(row, '[data-field="trip-title"]') || getFieldValue(row, 'input')
       if (!title) return

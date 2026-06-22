@@ -3037,6 +3037,23 @@ body.api-loading-blocked::before {
   text-align: left;
 }
 
+.trip-card-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
 .trip-card-actions,
 .travel-record-actions,
 .api-trip-detail-actions {
@@ -10321,10 +10338,50 @@ select {
   font-weight: 900 !important;
 }
 
+.api-travel-record-form {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  border-radius: 18px !important;
+  padding: 16px !important;
+}
+
+.api-travel-record-form label {
+  display: grid !important;
+  gap: 7px !important;
+  margin: 0 !important;
+}
+
+.api-travel-record-form label > span {
+  color: #6b7684 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+}
+
+.api-travel-record-form input,
+.api-travel-record-form textarea {
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border: 1px solid #d9e0ea !important;
+  border-radius: 16px !important;
+  background: #fff !important;
+}
+
+.api-travel-record-form input {
+  min-height: 48px !important;
+  padding: 0 14px !important;
+}
+
+.api-travel-record-form textarea {
+  min-height: 112px !important;
+  padding: 13px 14px !important;
+  resize: vertical !important;
+}
+
 .api-travel-record-form .travel-api-location-map,
 .api-travel-record-form .travel-note-field,
 .api-travel-record-form .travel-form-actions {
-  grid-column: 1 / -1;
+  grid-column: 1 / -1 !important;
 }
 
 .api-trip-record-list {
@@ -10345,7 +10402,7 @@ select {
 
 @media (max-width: 860px) {
   .api-travel-record-form {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 
   .trip-list-card,
