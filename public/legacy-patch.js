@@ -4337,165 +4337,6 @@
     })
   }
 
-  function openCommonDatePickerPopover(input, trigger) {
-    if (!input || !trigger) return
-    document.querySelectorAll('.common-date-popover, .date-picker-field .calendar-popover').forEach(function (old) {
-      old.remove()
-    })
-    var selected = parseApiDate(input.value) || todayText()
-    var view = new Date(selected + 'T00:00:00')
-    var popover = document.createElement('div')
-    popover.className = 'calendar-popover common-date-popover'
-    var level = 'day'
-
-    function draw() {
-      var year = view.getFullYear()
-      var month = view.getMonth()
-      var selectedDate = parseApiDate(selected) || todayText()
-      var selectedYear = Number(selectedDate.slice(0, 4))
-      var selectedMonth = Number(selectedDate.slice(5, 7)) - 1
-      var title = level === 'year' ? year + '\uB144' : (level === 'month' ? year + '\uB144' : year + '\uB144 ' + (month + 1) + '\uC6D4')
-      var html = '<header class="calendar-header"><button type="button" data-common-date-prev>&lt;</button><button type="button" class="calendar-title-button" data-common-date-title><span>' + title + '</span></button><button type="button" data-common-date-next>&gt;</button></header>'
-      html += '<div class="calendar-today-row"><button type="button" data-common-date-today>\uC624\uB298</button></div>'
-      if (level === 'year') {
-        var startYear = Math.floor(year / 12) * 12
-        html += '<div class="calendar-year-grid">'
-        for (var yearIndex = 0; yearIndex < 12; yearIndex += 1) {
-          var itemYear = startYear + yearIndex
-          html += '<button type="button" class="' + (selectedYear === itemYear ? 'selected' : '') + '" data-common-year="' + itemYear + '">' + itemYear + '\uB144</button>'
-        }
-        html += '</div>'
-      } else if (level === 'month') {
-        html += '<div class="calendar-month-grid">'
-        for (var monthIndex = 0; monthIndex < 12; monthIndex += 1) {
-          var isSelectedMonth = selectedYear === year && selectedMonth === monthIndex
-          html += '<button type="button" class="' + (isSelectedMonth ? 'selected' : '') + '" data-common-month="' + monthIndex + '">' + (monthIndex + 1) + '\uC6D4</button>'
-        }
-        html += '</div>'
-      } else {
-        var first = new Date(year, month, 1)
-        var last = new Date(year, month + 1, 0).getDate()
-        html += '<div class="calendar-weekdays"><span>\uC77C</span><span>\uC6D4</span><span>\uD654</span><span>\uC218</span><span>\uBAA9</span><span>\uAE08</span><span>\uD1A0</span></div><div class="calendar-day-grid">'
-        for (var blank = 0; blank < first.getDay(); blank += 1) html += '<span class="calendar-empty"></span>'
-        for (var day = 1; day <= last; day += 1) {
-          var date = new Date(year, month, day)
-          var iso = formatDate(date)
-          var classes = []
-          if (date.getDay() === 0) classes.push('holiday')
-          if (date.getDay() === 6) classes.push('saturday')
-          if (iso === selected) classes.push('selected')
-          html += '<button type="button" class="' + classes.join(' ') + '" data-common-date="' + iso + '">' + day + '</button>'
-        }
-        html += '</div>'
-      }
-      popover.innerHTML = html
-      if (popover.isConnected) window.setTimeout(function () { positionCommonDatePickerPopover(popover, trigger) }, 0)
-    }
-
-    function applySelected() {
-      setInputValue(input, selected)
-      var label = trigger.querySelector('span')
-      if (label) label.textContent = selected.replace(/-/g, '.')
-      popover.remove()
-    }
-
-    function handleAction(event, skipRecentPointer) {
-      var target = event.target
-      if (!target || !target.closest) return false
-      var control = target.closest('[data-common-date-prev], [data-common-date-next], [data-common-date-title], [data-common-date-today], [data-common-year], [data-common-month], [data-common-date]')
-      if (!control) return false
-      if (skipRecentPointer && popover.dataset.commonDatePointerAt && Date.now() - Number(popover.dataset.commonDatePointerAt) < 600) {
-        event.preventDefault()
-        event.stopPropagation()
-        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-        return true
-      }
-      event.preventDefault()
-      event.stopPropagation()
-      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-      if (event.type === 'pointerdown') popover.dataset.commonDatePointerAt = String(Date.now())
-      if (target.closest('[data-common-date-prev]')) {
-        if (level === 'year') view.setFullYear(view.getFullYear() - 12)
-        else if (level === 'month') view.setFullYear(view.getFullYear() - 1)
-        else view.setMonth(view.getMonth() - 1)
-        draw()
-        return true
-      }
-      if (target.closest('[data-common-date-next]')) {
-        if (level === 'year') view.setFullYear(view.getFullYear() + 12)
-        else if (level === 'month') view.setFullYear(view.getFullYear() + 1)
-        else view.setMonth(view.getMonth() + 1)
-        draw()
-        return true
-      }
-      if (target.closest('[data-common-date-title]')) {
-        if (level === 'day') level = 'month'
-        else if (level === 'month') level = 'year'
-        draw()
-        return true
-      }
-      if (target.closest('[data-common-date-today]')) {
-        selected = todayText()
-        view = new Date(selected + 'T00:00:00')
-        level = 'day'
-        applySelected()
-        return true
-      }
-      var yearButton = target.closest('[data-common-year]')
-      if (yearButton) {
-        view.setFullYear(Number(yearButton.dataset.commonYear))
-        level = 'month'
-        draw()
-        return true
-      }
-      var monthButton = target.closest('[data-common-month]')
-      if (monthButton) {
-        view.setMonth(Number(monthButton.dataset.commonMonth))
-        level = 'day'
-        draw()
-        return true
-      }
-      var dayButton = target.closest('[data-common-date]')
-      if (dayButton) {
-        selected = dayButton.dataset.commonDate
-        applySelected()
-      }
-      return true
-    }
-
-    draw()
-    document.body.appendChild(popover)
-    positionCommonDatePickerPopover(popover, trigger)
-    popover.addEventListener('pointerdown', function (event) { handleAction(event, false) }, true)
-    popover.addEventListener('click', function (event) { handleAction(event, true) }, true)
-  }
-
-  function positionCommonDatePickerPopover(popover, trigger) {
-    if (!popover || !trigger || !trigger.getBoundingClientRect) return
-    var viewport = window.visualViewport || null
-    var viewportLeft = viewport ? viewport.offsetLeft : 0
-    var viewportTop = viewport ? viewport.offsetTop : 0
-    var viewportWidth = viewport ? viewport.width : window.innerWidth
-    var viewportHeight = viewport ? viewport.height : window.innerHeight
-    var rect = trigger.getBoundingClientRect()
-    var width = Math.min(330, Math.max(280, viewportWidth - 32))
-    var height = Math.min(popover.scrollHeight || popover.offsetHeight || 360, viewportHeight - 24)
-    var belowTop = rect.bottom + 8
-    var aboveTop = rect.top - height - 8
-    var top = belowTop
-    var minTop = viewportTop + 12
-    var maxBottom = viewportTop + viewportHeight - 12
-    if (belowTop + height > maxBottom && aboveTop >= minTop) top = aboveTop
-    else if (belowTop + height > maxBottom) top = Math.max(minTop, maxBottom - height)
-    var minLeft = viewportLeft + 16
-    var maxLeft = viewportLeft + viewportWidth - width - 16
-    var left = Math.max(minLeft, Math.min(maxLeft, rect.left + rect.width / 2 - width / 2))
-    popover.style.setProperty('position', 'fixed', 'important')
-    popover.style.setProperty('width', width + 'px', 'important')
-    popover.style.setProperty('left', left + 'px', 'important')
-    popover.style.setProperty('top', top + 'px', 'important')
-  }
-
   function syncScheduleBasisLayout() {
     var card = document.querySelector('.schedule-form-card')
     if (!card) return
@@ -4536,13 +4377,6 @@
   }
 
   function closeOpenSelects(target) {
-    if (target && target.closest && (target.closest('.common-date-popover') || target.closest('.date-picker-trigger'))) {
-      return
-    }
-    document.querySelectorAll('.common-date-popover').forEach(function (popover) {
-      popover.remove()
-    })
-
     if (target && target.closest && target.closest('.custom-select')) {
       var current = target.closest('.custom-select')
       document.querySelectorAll('.date-picker-field .calendar-popover').forEach(function (popover) {
@@ -4608,10 +4442,6 @@
   }, true)
 
   document.addEventListener('click', function (event) {
-    closeOpenSelects(event.target)
-  }, true)
-
-  document.addEventListener('focusin', function (event) {
     closeOpenSelects(event.target)
   }, true)
 
@@ -8653,6 +8483,125 @@
     })
   }
 
+  var restaurantSelectOptions = {
+    price: [
+      { value: '', label: '\uC120\uD0DD' },
+      { value: '10000', label: '1\uB9CC\uC6D0\uB300' },
+      { value: '20000', label: '2\uB9CC\uC6D0\uB300' },
+      { value: '30000', label: '3\uB9CC\uC6D0\uB300' },
+      { value: '50000', label: '5\uB9CC\uC6D0 \uC774\uC0C1' }
+    ],
+    rating: [
+      { value: '', label: '\uC120\uD0DD' },
+      { value: '5.0', label: '5.0' },
+      { value: '4.5', label: '4.5' },
+      { value: '4.0', label: '4.0' },
+      { value: '3.5', label: '3.5' },
+      { value: '3.0', label: '3.0' }
+    ],
+    scope: [
+      { value: '\uC804\uCCB4 \uAC00\uC871', label: '\uC804\uCCB4 \uAC00\uC871' },
+      { value: '\uAC00\uC871\uAD00\uB9AC\uC790', label: '\uAC00\uC871\uAD00\uB9AC\uC790' },
+      { value: '\uB098\uB9CC \uBCF4\uAE30', label: '\uB098\uB9CC \uBCF4\uAE30' }
+    ]
+  }
+
+  function restaurantSelectInputSelector(name) {
+    if (name === 'price') return '[data-restaurant-price]'
+    if (name === 'rating') return '[data-restaurant-rating]'
+    if (name === 'scope') return '[data-restaurant-scope]'
+    return ''
+  }
+
+  function restaurantSelectLabel(name, value) {
+    var options = restaurantSelectOptions[name] || []
+    var match = options.find(function (option) { return String(option.value) === String(value || '') })
+    return (match && match.label) || (options[0] && options[0].label) || ''
+  }
+
+  function restaurantCustomSelectMarkup(name, label, inputAttrs, defaultValue) {
+    var value = defaultValue || ''
+    var options = restaurantSelectOptions[name] || []
+    return '<label class="form-field restaurant-select-field"><span class="form-label">' + label + '</span>' +
+      '<input type="hidden" ' + inputAttrs + ' value="' + escapeHtml(value) + '" />' +
+      '<div class="custom-select restaurant-custom-select" data-restaurant-custom-select data-restaurant-select-name="' + escapeHtml(name) + '">' +
+      '<button type="button" class="custom-select-trigger form-control" data-restaurant-select-trigger aria-haspopup="listbox" aria-expanded="false"><span>' + escapeHtml(restaurantSelectLabel(name, value)) + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+      '<div class="custom-select-list" role="listbox" hidden>' +
+      options.map(function (option) {
+        return '<button type="button" role="option" class="' + (String(option.value) === String(value) ? 'selected' : '') + '" data-restaurant-select-option="' + escapeHtml(option.value) + '">' + escapeHtml(option.label) + '</button>'
+      }).join('') +
+      '</div></div></label>'
+  }
+
+  function setRestaurantCustomSelectOpen(wrapper, open) {
+    if (!wrapper) return
+    var trigger = wrapper.querySelector('[data-restaurant-select-trigger]')
+    var list = wrapper.querySelector('.custom-select-list')
+    wrapper.classList.toggle('open', !!open)
+    if (trigger) {
+      trigger.classList.toggle('open', !!open)
+      trigger.setAttribute('aria-expanded', open ? 'true' : 'false')
+    }
+    if (list) list.hidden = !open
+  }
+
+  function closeRestaurantCustomSelects(root, except) {
+    Array.from((root || document).querySelectorAll('[data-restaurant-custom-select].open')).forEach(function (wrapper) {
+      if (wrapper !== except) setRestaurantCustomSelectOpen(wrapper, false)
+    })
+  }
+
+  function syncRestaurantCustomSelect(form, name) {
+    if (!form) return
+    var input = form.querySelector(restaurantSelectInputSelector(name))
+    var wrapper = form.querySelector('[data-restaurant-select-name="' + name + '"]')
+    if (!input || !wrapper) return
+    var value = input.value || ''
+    var label = wrapper.querySelector('[data-restaurant-select-trigger] span')
+    if (label) label.textContent = restaurantSelectLabel(name, value)
+    wrapper.querySelectorAll('[data-restaurant-select-option]').forEach(function (button) {
+      button.classList.toggle('selected', String(button.dataset.restaurantSelectOption || '') === String(value))
+    })
+  }
+
+  function syncRestaurantCustomSelects(form) {
+    syncRestaurantCustomSelect(form, 'price')
+    syncRestaurantCustomSelect(form, 'rating')
+    syncRestaurantCustomSelect(form, 'scope')
+  }
+
+  function bindRestaurantCustomSelects(form) {
+    if (!form || form.dataset.restaurantSelectsWired === 'true') return
+    form.dataset.restaurantSelectsWired = 'true'
+    form.addEventListener('click', function (event) {
+      var trigger = event.target && event.target.closest && event.target.closest('[data-restaurant-select-trigger]')
+      if (trigger && form.contains(trigger)) {
+        event.preventDefault()
+        event.stopPropagation()
+        var wrapper = trigger.closest('[data-restaurant-custom-select]')
+        var willOpen = !wrapper.classList.contains('open')
+        closeRestaurantCustomSelects(form, wrapper)
+        setRestaurantCustomSelectOpen(wrapper, willOpen)
+        return
+      }
+      var option = event.target && event.target.closest && event.target.closest('[data-restaurant-select-option]')
+      if (option && form.contains(option)) {
+        event.preventDefault()
+        event.stopPropagation()
+        var select = option.closest('[data-restaurant-custom-select]')
+        var name = select && select.dataset.restaurantSelectName
+        var input = name && form.querySelector(restaurantSelectInputSelector(name))
+        if (input) setOptionalInputValue(input, option.dataset.restaurantSelectOption || '')
+        syncRestaurantCustomSelect(form, name)
+        setRestaurantCustomSelectOpen(select, false)
+      }
+    })
+    document.addEventListener('click', function (event) {
+      if (!form.contains(event.target)) closeRestaurantCustomSelects(form)
+    })
+    syncRestaurantCustomSelects(form)
+  }
+
   function restaurantPayloadFromForm(form) {
     var locationInput = form.querySelector('[data-restaurant-location]')
     var mediaUrls = []
@@ -8695,6 +8644,7 @@
     if (scope) setOptionalInputValue(scope, '\uC804\uCCB4 \uAC00\uC871')
     var submit = form.querySelector('button[type="submit"]')
     if (submit) submit.textContent = '\uCD94\uAC00'
+    syncRestaurantCustomSelects(form)
     syncRestaurantVisitDateDisplay(form)
     renderRestaurantMediaPreview(form)
     renderRestaurantLocationPreview(form)
@@ -8726,6 +8676,7 @@
     }
     var submit = form.querySelector('button[type="submit"]')
     if (submit) submit.textContent = '\uC800\uC7A5'
+    syncRestaurantCustomSelects(form)
     syncRestaurantVisitDateDisplay(form)
     renderRestaurantMediaPreview(form)
     renderRestaurantLocationPreview(form)
@@ -8816,9 +8767,7 @@
     trigger.addEventListener('click', function (event) {
       event.preventDefault()
       event.stopPropagation()
-      if (typeof openCommonDatePickerPopover === 'function') {
-        openCommonDatePickerPopover(input, trigger)
-      }
+      openRestaurantVisitDatePopover(input, trigger)
     })
     input.addEventListener('input', function () { syncRestaurantVisitDateDisplay(form) })
     input.addEventListener('change', function () { syncRestaurantVisitDateDisplay(form) })
@@ -8829,7 +8778,7 @@
     if (!trigger) return
     var form = trigger.closest('[data-restaurant-form]')
     var input = form && form.querySelector('[data-restaurant-visit-date]')
-    if (!input || typeof openCommonDatePickerPopover !== 'function') return
+    if (!input) return
     if ((event.type === 'click' || event.type === 'mouseup') && trigger.dataset.restaurantDatePointerAt && Date.now() - Number(trigger.dataset.restaurantDatePointerAt) < 600) {
       event.preventDefault()
       event.stopPropagation()
@@ -8840,7 +8789,7 @@
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     if (event.type !== 'click') trigger.dataset.restaurantDatePointerAt = String(Date.now())
-    openCommonDatePickerPopover(input, trigger)
+    openRestaurantVisitDatePopover(input, trigger)
     syncRestaurantVisitDateDisplay(form)
   }
 
@@ -8848,6 +8797,125 @@
   document.addEventListener('mousedown', handleRestaurantVisitDateTriggerEvent, true)
   document.addEventListener('touchstart', handleRestaurantVisitDateTriggerEvent, true)
   document.addEventListener('click', handleRestaurantVisitDateTriggerEvent, true)
+
+  function openRestaurantVisitDatePopover(input, trigger) {
+    if (!input || !trigger) return
+    document.querySelectorAll('.restaurant-date-popover, .restaurant-visit-date-field .calendar-popover').forEach(function (old) {
+      old.remove()
+    })
+    var selected = parseApiDate(input.value) || todayText()
+    var view = new Date(selected + 'T00:00:00')
+    var level = 'day'
+    var popover = document.createElement('div')
+    popover.className = 'calendar-popover restaurant-date-popover'
+
+    function draw() {
+      var year = view.getFullYear()
+      var month = view.getMonth()
+      var selectedDate = parseApiDate(selected) || todayText()
+      var selectedYear = Number(selectedDate.slice(0, 4))
+      var selectedMonth = Number(selectedDate.slice(5, 7)) - 1
+      var title = level === 'year' ? year + '\uB144' : (level === 'month' ? year + '\uB144' : year + '\uB144 ' + (month + 1) + '\uC6D4')
+      var html = '<header class="calendar-header"><button type="button" data-restaurant-date-prev>&lt;</button><button type="button" class="calendar-title-button" data-restaurant-date-title><span>' + title + '</span></button><button type="button" data-restaurant-date-next>&gt;</button></header>'
+      html += '<div class="calendar-today-row"><button type="button" data-restaurant-date-today>\uC624\uB298</button></div>'
+      if (level === 'year') {
+        var startYear = Math.floor(year / 12) * 12
+        html += '<div class="calendar-year-grid">'
+        for (var yearIndex = 0; yearIndex < 12; yearIndex += 1) {
+          var itemYear = startYear + yearIndex
+          html += '<button type="button" class="' + (selectedYear === itemYear ? 'selected' : '') + '" data-restaurant-year="' + itemYear + '">' + itemYear + '\uB144</button>'
+        }
+        html += '</div>'
+      } else if (level === 'month') {
+        html += '<div class="calendar-month-grid">'
+        for (var monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+          var isSelectedMonth = selectedYear === year && selectedMonth === monthIndex
+          html += '<button type="button" class="' + (isSelectedMonth ? 'selected' : '') + '" data-restaurant-month="' + monthIndex + '">' + (monthIndex + 1) + '\uC6D4</button>'
+        }
+        html += '</div>'
+      } else {
+        var first = new Date(year, month, 1)
+        var last = new Date(year, month + 1, 0).getDate()
+        html += '<div class="calendar-weekdays"><span>\uC77C</span><span>\uC6D4</span><span>\uD654</span><span>\uC218</span><span>\uBAA9</span><span>\uAE08</span><span>\uD1A0</span></div><div class="calendar-day-grid">'
+        for (var blank = 0; blank < first.getDay(); blank += 1) html += '<span class="calendar-empty"></span>'
+        for (var day = 1; day <= last; day += 1) {
+          var date = new Date(year, month, day)
+          var iso = formatDate(date)
+          var classes = []
+          if (date.getDay() === 0) classes.push('holiday')
+          if (date.getDay() === 6) classes.push('saturday')
+          if (iso === selected) classes.push('selected')
+          html += '<button type="button" class="' + classes.join(' ') + '" data-restaurant-date="' + iso + '">' + day + '</button>'
+        }
+        html += '</div>'
+      }
+      popover.innerHTML = html
+    }
+
+    function applySelected() {
+      setInputValue(input, selected)
+      var label = trigger.querySelector('span')
+      if (label) label.textContent = selected.replace(/-/g, '.')
+      popover.remove()
+    }
+
+    draw()
+    trigger.insertAdjacentElement('afterend', popover)
+    popover.addEventListener('pointerdown', function (event) {
+      event.stopPropagation()
+    }, true)
+    popover.addEventListener('click', function (event) {
+      var target = event.target
+      if (!target || !target.closest) return
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      if (target.closest('[data-restaurant-date-prev]')) {
+        if (level === 'year') view.setFullYear(view.getFullYear() - 12)
+        else if (level === 'month') view.setFullYear(view.getFullYear() - 1)
+        else view.setMonth(view.getMonth() - 1)
+        draw()
+        return
+      }
+      if (target.closest('[data-restaurant-date-next]')) {
+        if (level === 'year') view.setFullYear(view.getFullYear() + 12)
+        else if (level === 'month') view.setFullYear(view.getFullYear() + 1)
+        else view.setMonth(view.getMonth() + 1)
+        draw()
+        return
+      }
+      if (target.closest('[data-restaurant-date-title]')) {
+        if (level === 'day') level = 'month'
+        else if (level === 'month') level = 'year'
+        draw()
+        return
+      }
+      if (target.closest('[data-restaurant-date-today]')) {
+        selected = todayText()
+        applySelected()
+        return
+      }
+      var yearButton = target.closest('[data-restaurant-year]')
+      if (yearButton) {
+        view.setFullYear(Number(yearButton.dataset.restaurantYear))
+        level = 'month'
+        draw()
+        return
+      }
+      var monthButton = target.closest('[data-restaurant-month]')
+      if (monthButton) {
+        view.setMonth(Number(monthButton.dataset.restaurantMonth))
+        level = 'day'
+        draw()
+        return
+      }
+      var dayButton = target.closest('[data-restaurant-date]')
+      if (dayButton) {
+        selected = dayButton.dataset.restaurantDate
+        applySelected()
+      }
+    }, true)
+  }
 
   function useRestaurantCurrentLocation(form) {
     if (!form || !navigator.geolocation) {
@@ -8970,12 +9038,12 @@
         '<form class="ledger-form restaurant-form" data-restaurant-form>',
         '<label><span>\uB9DB\uC9D1 \uC774\uB984 <em class="required-mark">*</em></span><input data-restaurant-name data-field="restaurant-title" autocomplete="off" /></label>',
         '<label><span>\uB300\uD45C \uBA54\uB274</span><input data-restaurant-menu data-field="restaurant-menu" autocomplete="off" /></label>',
-        '<div class="form-row"><label><span>\uAC00\uACA9\uB300</span><select data-restaurant-price data-field="restaurant-price"><option value="">\uC120\uD0DD</option><option value="10000">1\uB9CC\uC6D0\uB300</option><option value="20000">2\uB9CC\uC6D0\uB300</option><option value="30000">3\uB9CC\uC6D0\uB300</option><option value="50000">5\uB9CC\uC6D0 \uC774\uC0C1</option></select></label><label><span>\uBCC4\uC810</span><select data-restaurant-rating data-field="restaurant-rating"><option value="">\uC120\uD0DD</option><option value="5.0">5.0</option><option value="4.5">4.5</option><option value="4.0">4.0</option><option value="3.5">3.5</option><option value="3.0">3.0</option></select></label></div>',
+        '<div class="form-row">' + restaurantCustomSelectMarkup('price', '\uAC00\uACA9\uB300', 'data-restaurant-price data-field="restaurant-price"', '') + restaurantCustomSelectMarkup('rating', '\uBCC4\uC810', 'data-restaurant-rating data-field="restaurant-rating"', '') + '</div>',
         '<label class="date-picker-field restaurant-visit-date-field form-field"><span class="form-label">\uBC29\uBB38\uC77C <em class="required-mark">*</em></span><input data-restaurant-visit-date data-field="restaurant-visit-date" type="hidden" value="' + todayText() + '" /><button type="button" class="date-picker-trigger form-control" data-restaurant-visit-date-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 2v4M16 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label>',
         '<label><span>\uC704\uCE58</span><input data-restaurant-location data-field="restaurant-location" autocomplete="off" placeholder="\uC0C1\uD638\uBA85 \uB610\uB294 \uC8FC\uC18C\uB97C \uC785\uB825\uD558\uACE0 \uD6C4\uBCF4\uB97C \uC120\uD0DD\uD558\uC138\uC694" /></label>',
         '<div class="location-map-box"><div data-restaurant-map-preview>' + restaurantGoogleMapEmbed(null, null, '\uB9DB\uC9D1 \uC9C0\uB3C4') + '</div><div class="location-map-actions"><button type="button" class="cancel-button" data-restaurant-current-location>\uD604\uC7AC \uC704\uCE58 \uC0AC\uC6A9</button></div></div>',
         '<label><span>\uC8FC\uC18C</span><input data-restaurant-address data-field="restaurant-address" autocomplete="off" /></label>',
-        '<label><span>\uACF5\uAC1C\uBC94\uC704</span><select data-restaurant-scope data-field="restaurant-scope"><option value="\uC804\uCCB4 \uAC00\uC871">\uC804\uCCB4 \uAC00\uC871</option><option value="\uAC00\uC871\uAD00\uB9AC\uC790">\uAC00\uC871\uAD00\uB9AC\uC790</option><option value="\uB098\uB9CC \uBCF4\uAE30">\uB098\uB9CC \uBCF4\uAE30</option></select></label>',
+        restaurantCustomSelectMarkup('scope', '\uACF5\uAC1C\uBC94\uC704', 'data-restaurant-scope data-field="restaurant-scope"', '\uC804\uCCB4 \uAC00\uC871'),
         '<label><span>\uBBF8\uB514\uC5B4</span><div class="photo-input"><div data-restaurant-media-preview class="media-upload-empty"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCD94\uAC00</span></div><input data-restaurant-media name="files" type="file" accept="image/*,video/*" multiple /></div><small data-restaurant-media-hint>' + (typeof mediaLimitText === 'function' ? mediaLimitText() : '') + '</small></label>',
         '<label><span>\uBA54\uBAA8</span><textarea data-restaurant-memo data-field="restaurant-note" rows="4" placeholder="\uC544\uC774 \uB3D9\uBC18, \uC8FC\uCC28, \uC7AC\uBC29\uBB38 \uC5EC\uBD80 \uB4F1\uC744 \uC801\uC5B4\uB450\uC138\uC694"></textarea></label>',
         '<div class="form-actions"><button type="submit" class="submit-action">\uCD94\uAC00</button><button type="button" class="cancel-button" data-restaurant-reset>\uCD08\uAE30\uD654</button></div>',
@@ -9027,6 +9095,7 @@
       if (mediaInput) mediaInput.addEventListener('change', function () { renderRestaurantMediaPreview(form) })
       var currentLocation = content.querySelector('[data-restaurant-current-location]')
       if (currentLocation) currentLocation.addEventListener('click', function () { useRestaurantCurrentLocation(form) })
+      bindRestaurantCustomSelects(form)
       bindRestaurantVisitDate(form)
       content.querySelectorAll('[data-restaurant-location], [data-restaurant-address]').forEach(function (input) {
         input.addEventListener('input', function () { window.setTimeout(function () { renderRestaurantLocationPreview(form) }, 0) })
