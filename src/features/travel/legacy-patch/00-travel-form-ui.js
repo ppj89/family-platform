@@ -65,7 +65,76 @@
   }
 
   function ensureTravelLocationSearch(form) {
-    ensureLocationSearch(form, '[data-field="travel-location"]')
+    ensureLocationSearch(form, '[data-field="travel-location"]', {
+      storeCoordinatesOnForm: true,
+      onSelect: updateTravelLocationMapFromSelection
+    })
+  }
+
+  function updateTravelLocationMapFromSelection(input, item, coords) {
+    if (!pageHeadingIs('\uC5EC\uD589') || !input) return
+    var latitude = Number(coords && coords.latitude != null ? coords.latitude : item && item.latitude)
+    var longitude = Number(coords && coords.longitude != null ? coords.longitude : item && item.longitude)
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude === 0 || longitude === 0) return
+    var form = input.closest('form')
+    if (form) {
+      form.dataset.latitude = String(latitude)
+      form.dataset.longitude = String(longitude)
+    }
+    window.setTimeout(function () {
+      renderTravelLocationMap(input, latitude, longitude, locationCandidateLabel(item), locationCandidateDetail(item))
+    }, 80)
+  }
+
+  function ensureTravelLocationMapBox(input) {
+    var form = input && input.closest('form')
+    var box = form && form.querySelector('.location-map-box')
+    if (!box) {
+      box = document.createElement('div')
+      box.className = 'location-map-box'
+      var anchor = input && input.closest('label')
+      if (anchor) anchor.insertAdjacentElement('afterend', box)
+    }
+    var map = box.querySelector('.location-map-osm')
+    if (!map) {
+      box.innerHTML = ''
+      map = document.createElement('div')
+      map.className = 'location-map-osm'
+      box.appendChild(map)
+    }
+    return map
+  }
+
+  function renderTravelLocationMap(input, latitude, longitude, title, address) {
+    var mapNode = ensureTravelLocationMapBox(input)
+    if (!mapNode) return
+    if (window.L && typeof window.L.map === 'function') {
+      try {
+        mapNode.innerHTML = ''
+        delete mapNode._leaflet_id
+        var map = window.L.map(mapNode, { zoomControl: true, attributionControl: true, scrollWheelZoom: false })
+        map.setView([latitude, longitude], 15)
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map)
+        var marker = window.L.marker([latitude, longitude], {
+          title: title || address || '\uC704\uCE58'
+        }).addTo(map)
+        if (title || address) {
+          marker.bindPopup('<strong>' + escapeHtml(title || '\uC704\uCE58') + '</strong>' + (address ? '<br />' + escapeHtml(address) : '')).openPopup()
+        }
+        window.setTimeout(function () { map.invalidateSize() }, 120)
+        return
+      } catch (error) {
+        mapNode.innerHTML = ''
+      }
+    }
+    mapNode.innerHTML = '<a class="map-static-link" href="https://www.google.com/maps/search/?api=1&query=' +
+      encodeURIComponent(latitude + ',' + longitude) + '" target="_blank" rel="noreferrer">' +
+      '<strong>' + escapeHtml(title || '\uC704\uCE58') + '</strong>' +
+      '<span>' + escapeHtml(address || (latitude.toFixed(6) + ', ' + longitude.toFixed(6))) + '</span>' +
+      '</a>'
   }
 
   function ensureTravelHeaderActions() {

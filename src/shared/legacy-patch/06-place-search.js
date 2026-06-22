@@ -45,6 +45,13 @@
       var addressInput = input.form.querySelector(options.addressSelector)
       if (addressInput && detail) setNativeInputValue(addressInput, detail)
     }
+    if (typeof options.onSelect === 'function') {
+      options.onSelect(input, item, { latitude: latitude, longitude: longitude, label: label, detail: detail })
+    }
+    input.dispatchEvent(new CustomEvent('family-platform-location-selected', {
+      bubbles: true,
+      detail: { item: item, latitude: latitude, longitude: longitude, label: label, address: detail }
+    }))
   }
 
   function getLocationCoordinates(form, selector) {
