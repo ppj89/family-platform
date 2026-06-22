@@ -9372,18 +9372,11 @@
     if (!pageHeadingIs('\uC5EC\uD589')) return
     document.querySelectorAll('.travel-form, .trip-manager, .entry-panel, form').forEach(function (form) {
       var text = getCleanText(form)
-      var isTripPeriodForm = text.indexOf('\uC2DC\uC791') >= 0 || text.indexOf('\uC885\uB8CC') >= 0
-      var isTravelRecordForm = !!form.querySelector('[data-field="travel-title"], [data-field="travel-record-time"], [data-field="travel-location"]')
-      if (!isTripPeriodForm && !isTravelRecordForm) return
+      if (text.indexOf('\uC2DC\uC791') < 0 && text.indexOf('\uC885\uB8CC') < 0) return
       setDateFieldToToday(form, ['\uC2DC\uC791\uC77C', '\uC885\uB8CC\uC77C'])
       clearSampleFieldValues(form)
       normalizeTimeInputs(form)
       ensureRequiredMarkForInput(form.querySelector('[data-field="travel-title"]'))
-      ensureRequiredMarkForInput(form.querySelector('[data-field="travel-record-date"]'))
-      ensureRequiredMarkForInput(form.querySelector('[data-field="travel-record-time"]'))
-      ensureRequiredMarkForLabel(findLabelByText(form, '\uB0A0\uC9DC'))
-      ensureRequiredMarkForLabel(findLabelByText(form, '\uC2DC\uAC04'))
-      normalizeTravelLocationOptional(form)
       ensureTravelLocationSearch(form)
       form.querySelectorAll('[data-field="travel-location"], [data-field="travel-amount"], [data-field="travel-title"]').forEach(function (field) {
         field.removeAttribute('placeholder')
@@ -9392,22 +9385,7 @@
         if (getCleanText(node) === '\uC5EC\uD589' && !node.closest('label')) node.remove()
       })
     })
-    cleanupTravelMapUi()
     removeFeaturePlaceholders()
-  }
-
-  function normalizeTravelLocationOptional(form) {
-    var input = form && form.querySelector('[data-field="travel-location"]')
-    if (!input) return
-    input.required = false
-    input.removeAttribute('required')
-    var label = input.closest('label')
-    var mark = label && label.querySelector('.required-mark')
-    if (mark) {
-      var previous = mark.previousSibling
-      mark.remove()
-      if (previous && previous.nodeType === 3 && !previous.textContent.trim()) previous.remove()
-    }
   }
 
   function searchTravelPlaces(query, limit) {
@@ -9433,15 +9411,9 @@
     var label = placeCandidateLabel(item)
     var detail = placeCandidateDetail(item)
     setNativeInputValue(input, label || detail)
-    if (Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude)) && Number(item.latitude) !== 0 && Number(item.longitude) !== 0) {
-      input.dataset.latitude = String(item.latitude)
-      input.dataset.longitude = String(item.longitude)
-    } else {
-      delete input.dataset.latitude
-      delete input.dataset.longitude
-    }
-    if (detail) input.dataset.placeAddress = detail
-    else delete input.dataset.placeAddress
+    input.dataset.latitude = String(item.latitude || '')
+    input.dataset.longitude = String(item.longitude || '')
+    input.dataset.placeAddress = detail
   }
 
   function getTravelLocationCoordinates(form) {
@@ -9493,7 +9465,9 @@
     function renderCandidates(query, items) {
       if (String(input.value || '').trim() !== query) return
       if (!items.length) {
-        items = [{ id: 'manual:' + query, name: query, address: '\uC785\uB825\uD55C \uC704\uCE58\uB85C \uC800\uC7A5', latitude: '', longitude: '', source: 'manual' }]
+        candidates.innerHTML = '<span>\uAC80\uC0C9 \uACB0\uACFC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. \uC0C1\uD638\uBA85\uC744 \uC880 \uB354 \uC790\uC138\uD788 \uC785\uB825\uD574\uC8FC\uC138\uC694.</span>'
+        candidates.hidden = false
+        return
       }
       candidates.innerHTML = '<span>\uC704\uCE58\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</span>' + items.map(function (item, index) {
         return '<button type="button" data-place-index="' + index + '">' +
@@ -9512,12 +9486,10 @@
       })
     }
 
-    function queuePlaceSearch(clearCoordinates) {
-      if (clearCoordinates) {
-        delete input.dataset.latitude
-        delete input.dataset.longitude
-        delete input.dataset.placeAddress
-      }
+    input.addEventListener('input', function () {
+      delete input.dataset.latitude
+      delete input.dataset.longitude
+      delete input.dataset.placeAddress
       window.clearTimeout(timer)
       var query = String(input.value || '').trim()
       if (query.length < 2) {
@@ -9531,15 +9503,6 @@
           renderCandidates(query, items)
         })
       }, 280)
-    }
-
-    input.addEventListener('input', function () {
-      queuePlaceSearch(true)
-    })
-    input.addEventListener('focus', function () {
-      if (String(input.value || '').trim().length >= 2 && candidates.hidden) {
-        queuePlaceSearch(false)
-      }
     })
     input.addEventListener('blur', function () {
       window.setTimeout(hideCandidates, 220)
@@ -9550,140 +9513,46 @@
     if (!pageHeadingIs('\uC5EC\uD589')) return
     var panel = document.querySelector('.trip-manager')
     if (!panel) return
-    cleanupTravelPageCaption()
     var header = panel.querySelector('.panel-header') || panel.closest('.panel') && panel.closest('.panel').querySelector('.panel-header')
     if (!header) return
-    var isListMode = panel.classList.contains('list-mode')
     var actions = header.querySelector('.travel-header-actions')
-
-    if (isListMode) {
-      if (actions) {
-        actions.querySelectorAll('[data-travel-new-entry], [data-travel-list-back]').forEach(function (button) { button.remove() })
-        if (!actions.children.length) actions.remove()
-      }
-      normalizeTravelListWorkspace()
-      return
-    }
-
-    var originalList = Array.from(panel.querySelectorAll('button')).find(function (button) {
-      return getCleanText(button) === '\uBAA9\uB85D' && !button.dataset.travelListBack
-    })
-    if (!originalList) {
-      if (actions) {
-        actions.querySelectorAll('[data-travel-new-entry]').forEach(function (button) { button.remove() })
-        if (!actions.children.length) actions.remove()
-      }
-      normalizeTravelListWorkspace()
-      return
-    }
     if (!actions) {
       actions = document.createElement('div')
       actions.className = 'travel-header-actions'
       header.appendChild(actions)
     }
-    actions.querySelectorAll('[data-travel-new-entry]').forEach(function (button) { button.remove() })
-    actions.querySelectorAll('[data-travel-list-back]').forEach(function (button) {
-      if (button !== originalList) button.remove()
+    var newButton = actions.querySelector('[data-travel-new-entry]')
+    if (!newButton) {
+      newButton = document.createElement('button')
+      newButton.type = 'button'
+      newButton.className = 'save-button travel-new-entry-button'
+      newButton.dataset.travelNewEntry = 'true'
+      newButton.textContent = '\uC2E0\uADDC\uC785\uB825'
+      actions.appendChild(newButton)
+      newButton.addEventListener('click', function () {
+        panel.classList.add('list-mode')
+        var first = panel.querySelector('.trip-add-row input, .travel-form input, .travel-form textarea')
+        if (first) {
+          first.scrollIntoView({ behavior: 'smooth', block: 'center' })
+          window.setTimeout(function () { first.focus() }, 180)
+        }
+      })
+    }
+    var listButton = actions.querySelector('[data-travel-list-back]')
+    var originalList = Array.from(panel.querySelectorAll('button')).find(function (button) {
+      return getCleanText(button) === '\uBAA9\uB85D' && !button.dataset.travelListBack
     })
-    originalList.dataset.travelListBack = 'true'
-    actions.appendChild(originalList)
+    if (!listButton && originalList) {
+      listButton = document.createElement('button')
+      listButton.type = 'button'
+      listButton.className = originalList.className || 'cancel-button'
+      listButton.dataset.travelListBack = 'true'
+      listButton.textContent = '\uBAA9\uB85D'
+      actions.appendChild(listButton)
+      listButton.addEventListener('click', function () { originalList.click() })
+      originalList.remove()
+    }
     normalizeTravelListWorkspace()
-  }
-
-  function cleanupTravelPageCaption() {
-    document.querySelectorAll('body *').forEach(function (node) {
-      if (node.children.length) return
-      if (getCleanText(node) === '\uC7A5\uC18C, \uB3D9\uC120, \uBE44\uC6A9') node.remove()
-    })
-  }
-
-  function cleanupTravelMapUi() {
-    if (!pageHeadingIs('\uC5EC\uD589')) return
-    document.querySelectorAll('.location-map-actions a, .location-map-actions button, a.map-link').forEach(function (node) {
-      if (getCleanText(node) === '\uC9C0\uB3C4\uC5D0\uC11C \uC5F4\uAE30') node.remove()
-    })
-    document.querySelectorAll('.route-map .route-sequence').forEach(function (node) {
-      node.remove()
-    })
-    normalizeTravelRecordRows()
-  }
-
-  function normalizeTravelRecordRows() {
-    if (!pageHeadingIs('\uC5EC\uD589')) return
-    document.querySelectorAll('.travel-row').forEach(function (row) {
-      normalizeTravelRecordMapButton(row)
-      normalizeTravelRecordText(row)
-    })
-  }
-
-  function normalizeTravelRecordMapButton(row) {
-    var link = row && row.querySelector('.row-actions a.map-link')
-    if (!link) return
-    var query = getTravelMapQuery(link)
-    var title = getCleanText(row.querySelector('.travel-main strong, .travel-record-head strong'))
-    if (!query || query === '\uB300\uD55C\uBBFC\uAD6D' || query === title || isEmptyTravelCoordinateQuery(query)) {
-      link.remove()
-    }
-  }
-
-  function getTravelMapQuery(link) {
-    try {
-      return String(new URL(link.href).searchParams.get('query') || '').trim()
-    } catch (error) {
-      return ''
-    }
-  }
-
-  function isEmptyTravelCoordinateQuery(query) {
-    var match = String(query || '').trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/)
-    if (!match) return false
-    return Math.abs(Number(match[1])) < 0.000001 && Math.abs(Number(match[2])) < 0.000001
-  }
-
-  function normalizeTravelRecordText(row) {
-    var main = row && row.querySelector('.travel-main')
-    if (!main || main.querySelector('.travel-record-head')) return
-    var title = getCleanText(main.querySelector('strong')) || '\uC5EC\uD589 \uAE30\uB85D'
-    var metaText = normalizeTravelCostText(getCleanText(main.querySelector('span')))
-    var bodyText = getCleanText(main.querySelector('p'))
-    var bodyParts = bodyText.split(/\s*\u00B7\s*/)
-    var dateTime = bodyParts.shift() || ''
-    var note = bodyParts.join(' \u00B7 ').trim()
-    main.innerHTML = ''
-
-    var head = document.createElement('div')
-    head.className = 'travel-record-head'
-    var titleNode = document.createElement('strong')
-    titleNode.textContent = title
-    head.appendChild(titleNode)
-    if (dateTime) {
-      var timeNode = document.createElement('time')
-      timeNode.textContent = dateTime
-      head.appendChild(timeNode)
-    }
-    main.appendChild(head)
-
-    if (metaText) {
-      var meta = document.createElement('span')
-      meta.className = 'travel-record-cost'
-      meta.textContent = metaText
-      main.appendChild(meta)
-    }
-
-    if (note) {
-      var noteNode = document.createElement('p')
-      noteNode.className = 'travel-record-note'
-      noteNode.textContent = note
-      main.appendChild(noteNode)
-    }
-  }
-
-  function normalizeTravelCostText(text) {
-    var value = String(text || '').trim()
-    if (!value || value.indexOf('\u00B7') >= 0) return value
-    var match = value.match(/^(.+?)(-?[\d,]+\uC6D0)$/)
-    if (!match) return value
-    return match[1].trim() + ' \u00B7 ' + match[2]
   }
 
   function normalizeTravelListWorkspace() {
@@ -10026,7 +9895,7 @@
     var panel = card.closest('.trip-manager') || document.querySelector('.trip-manager')
     if (!panel) return
     var trip = tripFromCard(card)
-    if (trip.id) openApiTripDetail(panel, trip)
+    if (trip && trip.id) openApiTripDetail(panel, trip)
   }
 
   document.addEventListener('click', function (event) {
@@ -10180,8 +10049,8 @@
       '<label><span>\uC81C\uBAA9 <em class="required-mark">*</em></span><input data-field="travel-title" /></label>',
       '<label><span>\uC704\uCE58</span><input data-field="travel-location" /></label>',
       '<label><span>\uC0AC\uC6A9\uAE08\uC561</span><input data-field="travel-amount" inputmode="numeric" /></label>',
-      '<label><span>\uB0A0\uC9DC <em class="required-mark">*</em></span><input data-field="travel-record-date" type="date" value="' + todayText() + '" /></label>',
-      '<label><span>\uC2DC\uAC04 <em class="required-mark">*</em></span><input data-field="travel-record-time" type="time" value="' + currentTimeText() + '" /></label>',
+      '<label><span>\uB0A0\uC9DC</span><input data-field="travel-record-date" type="date" value="' + todayText() + '" /></label>',
+      '<label><span>\uC2DC\uAC04</span><input data-field="travel-record-time" type="time" value="' + currentTimeText() + '" /></label>',
       '<label class="travel-note-field"><span>\uBA54\uBAA8</span><textarea rows="4"></textarea></label>',
       '<div class="travel-form-actions"><button type="submit" class="submit-action">\uAE30\uB85D \uCD94\uAC00</button></div>',
       '</form>',
@@ -10311,6 +10180,54 @@
     }).catch(function (error) {
       window.__familyLastTripRecordsError = apiActionErrorMessage(error, '\uC5EC\uD589 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
       throw error
+    })
+  }
+
+  function ensureServerTravelPanel() {
+    removeDeveloperServerPanels()
+    return
+    if (!document.querySelector('.travel-form') && !document.querySelector('.trip-list') && !document.querySelector('.travel-summary')) return
+    if (document.querySelector('.server-travel-list')) return
+    var anchor = document.querySelector('.trip-list') || document.querySelector('.travel-summary') || document.querySelector('.travel-form')
+    if (!anchor || !anchor.parentElement) return
+    var panel = document.createElement('section')
+    panel.className = 'panel server-travel-list server-domain-panel'
+    panel.innerHTML = '<header class="panel-header"><h2>DB 여행 기록</h2><button type="button">서버 조회</button></header><div class="server-data-list"></div>'
+    anchor.parentElement.insertBefore(panel, anchor.nextSibling)
+  }
+
+  function renderTravelServerEntries(force) {
+    removeDeveloperServerPanels()
+    return
+    if (getCleanText(document.querySelector('.topbar h1')) !== '\uC5EC\uD589') return
+    ensureServerTravelPanel()
+    var panel = document.querySelector('.server-travel-list')
+    var list = panel && panel.querySelector('.server-data-list')
+    if (!list) return
+    if (!force && panel.dataset.loaded === 'true') return
+    panel.dataset.loaded = 'true'
+    list.innerHTML = '<p class="server-data-empty">\uC11C\uBC84 \uC5EC\uD589\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</p>'
+    fetchTrips().then(function (trips) {
+      if (!trips.length) {
+        list.innerHTML = '<p class="server-data-empty">DB \uC5EC\uD589 \uB370\uC774\uD130\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
+        return
+      }
+      return Promise.all(trips.slice(0, 5).map(function (trip) {
+        return fetchTripRecords(trip.id).then(function (records) {
+          return { trip: trip, records: records }
+        })
+      })).then(function (groups) {
+        list.innerHTML = groups.map(function (group) {
+          var total = group.records.reduce(function (sum, item) { return sum + Number(item.amount || 0) }, 0)
+          var first = group.records[0]
+          return '<article class="server-domain-row" data-api-trip-id="' + group.trip.id + '">' +
+            '<div><strong>' + escapeHtml(group.trip.title) + '</strong><span>' +
+            escapeHtml((group.trip.startDate || '') + ' ~ ' + (group.trip.endDate || '')) +
+            '</span></div><b>' + escapeHtml(total.toLocaleString('ko-KR') + '\uC6D0') + '</b>' +
+            (first ? '<small>' + escapeHtml(first.title + ' · ' + (first.location || '')) + '</small>' : '<small>\uC5EC\uD589 \uAE30\uB85D \uC5C6\uC74C</small>') +
+            '</article>'
+        }).join('')
+      })
     })
   }
 
@@ -11606,155 +11523,6 @@
     })
   }
 
-  function parseTravelDate(value) {
-    var match = String(value || '').match(/(\d{4})[.\-/\s]+(\d{1,2})[.\-/\s]+(\d{1,2})/)
-    if (!match) return ''
-    return [match[1], match[2].padStart(2, '0'), match[3].padStart(2, '0')].join('-')
-  }
-
-  function parseTravelPeriod(value) {
-    var dates = String(value || '').match(/\d{4}[.\-/\s]+\d{1,2}[.\-/\s]+\d{1,2}/g) || []
-    var startDate = parseTravelDate(dates[0])
-    var endDate = parseTravelDate(dates[1]) || startDate
-    return { startDate: startDate, endDate: endDate }
-  }
-
-  function getCurrentLegacyTravelContext() {
-    if (!pageHeadingIs('\uC5EC\uD589')) return null
-    var manager = document.querySelector('.trip-manager')
-    if (!manager || manager.classList.contains('list-mode')) return null
-    var panel = manager.closest('.panel') || manager.closest('article') || manager
-    return { manager: manager, panel: panel }
-  }
-
-  function getCurrentLegacyTravelTripSnapshot() {
-    var context = getCurrentLegacyTravelContext()
-    if (!context) return null
-    var headerTitle = context.panel.querySelector('.panel-header h2, .panel-header h3, .panel-header strong')
-    var title = getCleanText(headerTitle)
-    if (!title || title === '\uC5EC\uD589' || title === '\uC5EC\uD589 \uAE30\uB85D \uCD94\uAC00') return null
-    var periodText = getCleanText(context.panel.querySelector('.trip-period-label'))
-    var period = parseTravelPeriod(periodText)
-    return {
-      title: title,
-      startDate: period.startDate || todayText(),
-      endDate: period.endDate || period.startDate || todayText()
-    }
-  }
-
-  function sameTravelTrip(trip, snapshot) {
-    if (!trip || !snapshot) return false
-    if (String(trip.title || '').trim() !== String(snapshot.title || '').trim()) return false
-    var startDate = parseTravelDate(trip.startDate) || String(trip.startDate || '')
-    var endDate = parseTravelDate(trip.endDate) || String(trip.endDate || startDate)
-    return startDate === snapshot.startDate && endDate === snapshot.endDate
-  }
-
-  function ensureApiTripForSnapshot(snapshot) {
-    if (!snapshot || !snapshot.title) return ensureDefaultApiTrip()
-    return fetchTrips().then(function (trips) {
-      var found = trips.find(function (trip) {
-        return sameTravelTrip(trip, snapshot)
-      })
-      if (found && found.id) {
-        localStorage.setItem(API_TRIP_ID_KEY, String(found.id))
-        return found.id
-      }
-      return getReadableFamilyId().then(function (familyId) {
-        return postJson('/trips?familyId=' + encodeURIComponent(familyId), {
-          title: snapshot.title,
-          startDate: snapshot.startDate || todayText(),
-          endDate: snapshot.endDate || snapshot.startDate || todayText(),
-          description: snapshot.startDate === snapshot.endDate ? snapshot.startDate : (snapshot.startDate + ' ~ ' + snapshot.endDate)
-        })
-      }).then(function (trip) {
-        if (trip && trip.id) {
-          localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
-          return trip.id
-        }
-        return ensureDefaultApiTrip()
-      })
-    })
-  }
-
-  function resolveTravelTaskTripId(task) {
-    var directId = Number(task && task.tripId)
-    if (Number.isFinite(directId) && directId > 0) return Promise.resolve(directId)
-    if (task && task.tripSnapshot) return ensureApiTripForSnapshot(task.tripSnapshot)
-    var current = getCurrentLegacyTravelTripSnapshot()
-    return current ? ensureApiTripForSnapshot(current) : ensureDefaultApiTrip()
-  }
-
-  function legacyTravelRecordKey(title, date, time) {
-    return [String(title || '').trim(), String(date || '').trim(), String(time || '').trim()].join('|')
-  }
-
-  function readLegacyTravelRowKey(row) {
-    var title = getCleanText(row.querySelector('.travel-record-head strong, .travel-main strong'))
-    var timeNode = row.querySelector('.travel-record-head time')
-    var dateTimeText = getCleanText(timeNode)
-    if (!dateTimeText) {
-      var body = getCleanText(row.querySelector('.travel-main p'))
-      dateTimeText = body.split(/\s*\u00B7\s*/)[0] || ''
-    }
-    var parts = String(dateTimeText || '').trim().split(/\s+/)
-    return legacyTravelRecordKey(title, parts[0] || '', parts[1] || '')
-  }
-
-  function legacyTravelRecordExists(timeline, record) {
-    var key = legacyTravelRecordKey(record.title, record.recordDate, record.recordTime)
-    return Array.from(timeline.querySelectorAll('.travel-row:not(.api-travel-record-row)')).some(function (row) {
-      return readLegacyTravelRowKey(row) === key
-    })
-  }
-
-  function formatTravelApiAmount(value) {
-    var amount = Number(value || 0)
-    return amount.toLocaleString('ko-KR') + '\uC6D0'
-  }
-
-  function createLegacyApiTravelRow(record, index) {
-    var row = document.createElement('div')
-    row.className = 'timeline-row travel-row api-travel-record-row'
-    row.dataset.apiTravelRecordId = String(record.id || '')
-    var order = String(record.sortOrder || index + 1).padStart(2, '0')
-    var meta = [record.category || '\uAE30\uD0C0', formatTravelApiAmount(record.amount)].filter(Boolean).join(' \u00B7 ')
-    var dateTime = [record.recordDate || '', record.recordTime || ''].filter(Boolean).join(' ')
-    var note = String(record.note || '').trim()
-    row.innerHTML = '<b>' + escapeHtml(order) + '</b>' +
-      '<div class="travel-thumb empty"></div>' +
-      '<button type="button" class="travel-main">' +
-      '<div class="travel-record-head"><strong>' + escapeHtml(record.title || '\uC5EC\uD589 \uAE30\uB85D') + '</strong>' +
-      (dateTime ? '<time>' + escapeHtml(dateTime) + '</time>' : '') + '</div>' +
-      '<span class="travel-record-cost">' + escapeHtml(meta) + '</span>' +
-      (note ? '<p class="travel-record-note">' + escapeHtml(note) + '</p>' : '') +
-      '</button><div class="row-actions"></div>'
-    return row
-  }
-
-  function renderCurrentLegacyTravelApiRecords(force) {
-    var context = getCurrentLegacyTravelContext()
-    if (!context || !getStoredAuthToken()) return
-    var timeline = context.panel.querySelector('.timeline, .travel-timeline')
-    if (!timeline) return
-    if (!force && timeline.dataset.apiTravelRecordsLoaded === 'true') return
-    var snapshot = getCurrentLegacyTravelTripSnapshot()
-    if (!snapshot) return
-    timeline.dataset.apiTravelRecordsLoaded = 'true'
-    ensureApiTripForSnapshot(snapshot).then(function (tripId) {
-      return fetchTripRecords(tripId)
-    }).then(function (records) {
-      timeline.querySelectorAll('.api-travel-record-row').forEach(function (node) { node.remove() })
-      records.forEach(function (record, index) {
-        if (legacyTravelRecordExists(timeline, record)) return
-        timeline.appendChild(createLegacyApiTravelRow(record, index))
-      })
-      normalizeTravelRecordRows()
-    }).catch(function () {
-      timeline.dataset.apiTravelRecordsLoaded = ''
-    })
-  }
-
 
   function trySyncTask(task) {
     if (task.type === 'createTrip') {
@@ -11766,11 +11534,8 @@
     }
 
     if (task.type === 'createTravelRecord') {
-      return resolveTravelTaskTripId(task).then(function (tripId) {
+      return ensureDefaultApiTrip().then(function (tripId) {
         return postJson('/trips/' + tripId + '/records', task.payload)
-      }).then(function (record) {
-        renderCurrentLegacyTravelApiRecords(true)
-        return record
       })
     }
 
@@ -11825,32 +11590,13 @@
   }
 
   function syncTravelForm(form) {
-    if (!form || form.dataset.travelSubmitting === 'true') return
-    form.dataset.travelSubmitting = 'true'
     window.setTimeout(function () {
       var title = getFieldValue(form, '[data-field="travel-title"]')
       var location = getFieldValue(form, '[data-field="travel-location"]')
-      var recordDate = getDatePickerValue(form, '\uB0A0\uC9DC') || getFieldValue(form, '[data-field="travel-record-date"]')
-      var recordTime = getFieldValue(form, '[data-field="travel-record-time"]')
       if (!title) {
         var titleInput = form.querySelector('[data-field="travel-title"]')
         showPatchToast('\uC81C\uBAA9\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
         if (titleInput) titleInput.focus()
-        delete form.dataset.travelSubmitting
-        return
-      }
-      if (!recordDate) {
-        var dateInput = form.querySelector('[data-field="travel-record-date"], .date-picker-trigger')
-        showPatchToast('\uB0A0\uC9DC\uB294 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
-        if (dateInput) dateInput.focus()
-        delete form.dataset.travelSubmitting
-        return
-      }
-      if (!recordTime) {
-        var timeInput = form.querySelector('[data-field="travel-record-time"]')
-        showPatchToast('\uC2DC\uAC04\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
-        if (timeInput) timeInput.focus()
-        delete form.dataset.travelSubmitting
         return
       }
 
@@ -11868,12 +11614,8 @@
         })
       }).then(function (result) {
         var coords = result.coords || { latitude: 0, longitude: 0 }
-        var tripSnapshot = getCurrentLegacyTravelTripSnapshot()
-        var apiDetail = form.closest('.api-trip-detail')
-        var apiTripId = apiDetail ? Number(localStorage.getItem(API_TRIP_ID_KEY) || '') : 0
-        var task = {
-          tripId: Number.isFinite(apiTripId) && apiTripId > 0 ? apiTripId : null,
-          tripSnapshot: tripSnapshot,
+        queueApiSync({
+          type: 'createTravelRecord',
           payload: {
             sortOrder: parseAmountValue(getFieldValue(form, 'input[inputmode="numeric"]')) || null,
             title: title,
@@ -11883,33 +11625,25 @@
             location: location || '',
             latitude: Number(coords.latitude || 0),
             longitude: Number(coords.longitude || 0),
-            recordDate: recordDate,
-            recordTime: recordTime,
+            recordDate: getDatePickerValue(form, '\uB0A0\uC9DC') || getFieldValue(form, '[data-field="travel-record-date"]') || todayText(),
+            recordTime: getFieldValue(form, '[data-field="travel-record-time"]') || currentTimeText(),
             mediaUrls: communityMediaUrls(result.files)
           }
-        }
-        return resolveTravelTaskTripId(task).then(function (tripId) {
-          return postJson('/trips/' + tripId + '/records', task.payload).then(function (record) {
-            showPatchToast('\uC5EC\uD589 \uAE30\uB85D\uC744 \uC800\uC7A5\uD588\uC2B5\uB2C8\uB2E4.')
-            renderCurrentLegacyTravelApiRecords(true)
-            if (form.classList.contains('api-travel-record-form')) {
-              renderApiTripRecords(form.closest('.api-trip-detail'), tripId)
-            }
-            form.querySelectorAll('[data-field="travel-title"], [data-field="travel-location"], [data-field="travel-amount"], textarea').forEach(function (field) {
-              setNativeInputValue(field, '')
-              delete field.dataset.latitude
-              delete field.dataset.longitude
-              delete field.dataset.placeAddress
-            })
-            return record
-          })
         })
+        flushApiQueue()
+        if (form.classList.contains('api-travel-record-form')) {
+          window.setTimeout(function () {
+            renderApiTripRecords(form.closest('.api-trip-detail'), localStorage.getItem(API_TRIP_ID_KEY))
+          }, 900)
+          window.setTimeout(function () {
+            renderApiTripRecords(form.closest('.api-trip-detail'), localStorage.getItem(API_TRIP_ID_KEY))
+          }, 1800)
+        }
       }).catch(function (error) {
         if (String(error && error.message || '').indexOf('INVALID_MEDIA') < 0) {
-          showPatchToast(apiActionErrorMessage(error, '\uC5EC\uD589 \uAE30\uB85D \uC800\uC7A5\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+          showPatchToast('\uCCA8\uBD80\uD30C\uC77C \uC5C5\uB85C\uB4DC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.')
         }
       }).finally(function () {
-        delete form.dataset.travelSubmitting
         if (submit) {
           submit.disabled = false
           if (submit.dataset.originalText) submit.textContent = submit.dataset.originalText
@@ -11917,6 +11651,34 @@
       })
     }, 450)
   }
+
+  document.addEventListener('click', function (event) {
+    var tripButton = event.target && event.target.closest && event.target.closest('.trip-add-row .submit-action')
+    if (tripButton) {
+      event.preventDefault()
+      syncTripAddRow(tripButton.closest('.trip-add-row'))
+    }
+  }, true)
+
+  document.addEventListener('submit', function (event) {
+    var tripRow = event.target && event.target.closest && event.target.closest('.trip-add-row')
+    if (!tripRow) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    syncTripAddRow(tripRow)
+  }, true)
+
+  document.addEventListener('submit', function (event) {
+    var travelForm = event.target && event.target.closest && event.target.closest('.travel-form')
+    if (travelForm && travelForm.classList.contains('api-travel-record-form')) {
+      event.preventDefault()
+      event.stopPropagation()
+      syncTravelForm(travelForm)
+      return
+    }
+    if (travelForm) syncTravelForm(travelForm)
+  }, true)
 
   function optionalInteger(value) {
     var text = String(value || '').replace(/[^\d-]/g, '')
