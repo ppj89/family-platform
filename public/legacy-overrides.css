@@ -5865,6 +5865,17 @@ body.api-loading-blocked::before {
   min-width: 0;
 }
 
+.restaurant-form .restaurant-location-empty {
+  display: grid;
+  min-height: 180px;
+  place-items: center;
+  padding: 18px;
+  color: #6b7684;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
 .menu-readonly-fields span {
   color: #6b7684;
   font-size: 13px;
