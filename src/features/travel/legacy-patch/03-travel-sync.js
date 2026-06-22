@@ -144,6 +144,9 @@
     }, 450)
   }
 
+  function renderCurrentLegacyTravelApiRecords() {
+  }
+
   document.addEventListener('click', function (event) {
     var tripButton = event.target && event.target.closest && event.target.closest('.trip-add-row .submit-action')
     if (tripButton) {
@@ -171,4 +174,3 @@
     }
     if (travelForm) syncTravelForm(travelForm)
   }, true)
-
