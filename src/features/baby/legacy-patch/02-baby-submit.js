@@ -147,7 +147,7 @@
     }
     root.dataset.submitting = 'true'
     setBabyCreateBusy(root, true)
-    getCurrentFamilyId().then(function (familyId) {
+    getReadableFamilyId(true).then(function (familyId) {
       return postJson('/babies?familyId=' + encodeURIComponent(familyId), payload)
     }).then(function (baby) {
       if (!baby || !baby.id || (!payload.latestHeightCm && !payload.latestWeightKg)) return baby
