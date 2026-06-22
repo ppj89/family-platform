@@ -273,6 +273,8 @@
     panel.classList.toggle('list-mode', !enabled)
     panel.querySelectorAll('.trip-list, .trip-add-row, .travel-trip-create-card').forEach(function (node) {
       node.hidden = !!enabled
+      if (enabled) node.style.setProperty('display', 'none', 'important')
+      else node.style.removeProperty('display')
     })
   }
 
