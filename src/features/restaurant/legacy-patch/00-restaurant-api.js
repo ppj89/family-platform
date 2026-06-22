@@ -38,30 +38,7 @@
     delete form.dataset.longitude
     var scope = form.querySelector('[data-restaurant-scope]')
     if (scope) setOptionalInputValue(scope, '\uC804\uCCB4 \uAC00\uC871')
-    var submit = form.querySelector('[data-restaurant-submit], button[type="submit"]')
-    if (submit) submit.textContent = '\uCD94\uAC00'
-  }
-
-  function resetRestaurantFormSafely(form) {
-    try {
-      clearRestaurantForm(form)
-      return
-    } catch (error) {}
-    if (!form) return
-    form.dataset.editId = ''
-    form.querySelectorAll('input, textarea').forEach(function (input) {
-      input.value = input.matches('[data-restaurant-visit-date]') ? todayText() : ''
-      input.dispatchEvent(new Event('input', { bubbles: true }))
-      input.dispatchEvent(new Event('change', { bubbles: true }))
-      delete input.dataset.latitude
-      delete input.dataset.longitude
-      delete input.dataset.placeAddress
-    })
-    delete form.dataset.latitude
-    delete form.dataset.longitude
-    var scope = form.querySelector('[data-restaurant-scope]')
-    if (scope) scope.value = '\uC804\uCCB4 \uAC00\uC871'
-    var submit = form.querySelector('[data-restaurant-submit], button[type="submit"]')
+    var submit = form.querySelector('button[type="submit"]')
     if (submit) submit.textContent = '\uCD94\uAC00'
   }
 
@@ -88,7 +65,7 @@
       if (item.address) locationInput.dataset.placeAddress = item.address
       else delete locationInput.dataset.placeAddress
     }
-    var submit = form.querySelector('[data-restaurant-submit], button[type="submit"]')
+    var submit = form.querySelector('button[type="submit"]')
     if (submit) submit.textContent = '\uC800\uC7A5'
     form.scrollIntoView({ behavior: 'smooth', block: 'center' })
     var first = form.querySelector('[data-restaurant-name]')
@@ -140,9 +117,8 @@
         var id = button.dataset.restaurantDelete
         showPatchConfirm('\uB9DB\uC9D1\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
           apiRequest('/restaurants/' + encodeURIComponent(id), { method: 'DELETE' }).then(function () {
-            removeRestaurantItem(root, id)
             showPatchToast('\uB9DB\uC9D1\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
-            refreshRestaurantItems(root).catch(function () {})
+            loadRestaurantApiPage(root, true)
           }).catch(function (error) {
             showPatchToast(apiActionErrorMessage(error, '\uB9DB\uC9D1 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
           })
@@ -151,111 +127,15 @@
     })
   }
 
-  function setRestaurantItems(root, items) {
-    if (!root) return
-    root.__restaurantItems = Array.isArray(items) ? items : []
-    renderRestaurantRows(root, root.__restaurantItems)
-  }
-
-  function upsertRestaurantItem(root, item) {
-    if (!root || !item || !item.id) return
-    var itemId = String(item.id)
-    var changed = false
-    var items = (Array.isArray(root.__restaurantItems) ? root.__restaurantItems : []).map(function (current) {
-      if (String(current.id) !== itemId) return current
-      changed = true
-      return item
-    })
-    if (!changed) items.unshift(item)
-    setRestaurantItems(root, items)
-  }
-
-  function removeRestaurantItem(root, id) {
-    if (!root) return
-    var itemId = String(id)
-    var items = (Array.isArray(root.__restaurantItems) ? root.__restaurantItems : []).filter(function (current) {
-      return String(current.id) !== itemId
-    })
-    setRestaurantItems(root, items)
-  }
-
-  function refreshRestaurantItems(root) {
-    return fetchRestaurants().then(function (items) {
-      setRestaurantItems(root, items)
-      return items
-    })
-  }
-
-  function submitRestaurantApiForm(form, content) {
-    if (!form || !content || form.dataset.restaurantSubmitting === 'true') return
-    var payload = restaurantPayloadFromForm(form)
-    if (!payload.name) {
-      var nameInput = form.querySelector('[data-restaurant-name]')
-      showPatchToast('\uC0C1\uD638\uBA85\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
-      if (nameInput) nameInput.focus()
-      return
-    }
-    if (!payload.visitDate) {
-      var dateInput = form.querySelector('[data-restaurant-visit-date]')
-      showPatchToast('\uBC29\uBB38\uC77C\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
-      if (dateInput) dateInput.focus()
-      return
-    }
-    var editId = form.dataset.editId
-    var request = editId
-      ? function () { return apiRequest('/restaurants/' + encodeURIComponent(editId), { method: 'PUT', body: JSON.stringify(payload) }) }
-      : function () { return getReadableFamilyId().then(function (familyId) { return postJson('/restaurants?familyId=' + encodeURIComponent(familyId), payload) }) }
-    showPatchConfirm(editId ? '\uB9DB\uC9D1\uC744 \uC218\uC815\uD560\uAE4C\uC694?' : '\uB9DB\uC9D1\uC744 \uCD94\uAC00\uD560\uAE4C\uC694?', function () {
-      form.dataset.restaurantSubmitting = 'true'
-      request().then(function (savedItem) {
-        resetRestaurantFormSafely(form)
-        if (savedItem && savedItem.id) {
-          try {
-            upsertRestaurantItem(content, savedItem)
-          } catch (error) {}
-        }
-        showPatchToast(editId ? '\uB9DB\uC9D1\uC744 \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.' : '\uB9DB\uC9D1\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
-        return refreshRestaurantItems(content).catch(function () {
-          if (!savedItem || !savedItem.id) loadRestaurantApiPage(content, true)
-          return []
-        })
-      }).catch(function (error) {
-        showPatchToast(apiActionErrorMessage(error, editId ? '\uB9DB\uC9D1 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.' : '\uB9DB\uC9D1 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
-      }).finally(function () {
-        delete form.dataset.restaurantSubmitting
-      })
-    })
-  }
-
-  document.addEventListener('click', function (event) {
-    var button = event.target && event.target.closest && event.target.closest('[data-restaurant-submit]')
-    if (!button || !pageHeadingIs('\uB9DB\uC9D1')) return
-    var form = button.closest('[data-restaurant-form]')
-    var content = form && form.closest('.content-grid')
-    if (!form || !content) return
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    submitRestaurantApiForm(form, content)
-  }, true)
-
-  document.addEventListener('submit', function (event) {
-    var form = event.target && event.target.closest && event.target.closest('[data-restaurant-form]')
-    if (!form || !pageHeadingIs('\uB9DB\uC9D1')) return
-    var content = form.closest('.content-grid')
-    if (!content) return
-    event.preventDefault()
-    event.stopPropagation()
-    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-    submitRestaurantApiForm(form, content)
-  }, true)
-
   function loadRestaurantApiPage(root, force) {
     if (!root || (root.dataset.loaded === 'true' && !force)) return
     root.dataset.loaded = 'true'
     var list = root.querySelector('[data-restaurant-list]')
     if (list) list.innerHTML = '<p class="api-empty-row">\uB9DB\uC9D1\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</p>'
-    refreshRestaurantItems(root).catch(function (error) {
+    fetchRestaurants().then(function (items) {
+      root.__restaurantItems = items
+      renderRestaurantRows(root, items)
+    }).catch(function (error) {
       if (list) list.innerHTML = '<p class="api-empty-row">' + escapeHtml(apiActionErrorMessage(error, '\uB9DB\uC9D1\uC744 \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')) + '</p>'
     })
   }
@@ -270,7 +150,7 @@
     if (!content) return
     if (content.dataset.restaurantApiReady !== 'true') {
       content.dataset.restaurantApiReady = 'true'
-      content.className = 'content-grid restaurant-api-grid'
+      content.className = 'content-grid'
       content.innerHTML = [
         '<section class="panel restaurant-api-panel">',
         '<div class="panel-header"><h2>\uB9DB\uC9D1</h2><span class="passive-header-chip" data-restaurant-count>0\uACF3</span></div>',
@@ -288,7 +168,7 @@
         '<label class="form-field"><span class="form-label">\uC8FC\uC18C</span><input class="form-control" data-restaurant-address autocomplete="off" /></label>',
         '<label class="form-field"><span class="form-label">\uACF5\uAC1C\uBC94\uC704</span><input class="form-control" data-restaurant-scope value="\uC804\uCCB4 \uAC00\uC871" autocomplete="off" /></label>',
         '<label class="form-field"><span class="form-label">\uBA54\uBAA8</span><textarea class="form-control" data-restaurant-memo rows="4"></textarea></label>',
-        '<div class="form-actions"><button type="button" class="cancel-button" data-restaurant-reset>\uCD08\uAE30\uD654</button><button type="button" class="save-button" data-restaurant-submit>\uCD94\uAC00</button></div>',
+        '<div class="form-actions"><button type="button" class="cancel-button" data-restaurant-reset>\uCD08\uAE30\uD654</button><button type="submit" class="save-button">\uCD94\uAC00</button></div>',
         '</form>',
         '</aside>'
       ].join('')
@@ -296,16 +176,32 @@
       var form = content.querySelector('[data-restaurant-form]')
       form.addEventListener('submit', function (event) {
         event.preventDefault()
-        event.stopPropagation()
-        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-        submitRestaurantApiForm(form, content)
-      })
-      var submit = content.querySelector('[data-restaurant-submit]')
-      if (submit) submit.addEventListener('click', function (event) {
-        event.preventDefault()
-        event.stopPropagation()
-        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
-        submitRestaurantApiForm(form, content)
+        var payload = restaurantPayloadFromForm(form)
+        if (!payload.name) {
+          var nameInput = form.querySelector('[data-restaurant-name]')
+          showPatchToast('\uC0C1\uD638\uBA85\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+          if (nameInput) nameInput.focus()
+          return
+        }
+        if (!payload.visitDate) {
+          var dateInput = form.querySelector('[data-restaurant-visit-date]')
+          showPatchToast('\uBC29\uBB38\uC77C\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+          if (dateInput) dateInput.focus()
+          return
+        }
+        var editId = form.dataset.editId
+        var request = editId
+          ? function () { return apiRequest('/restaurants/' + encodeURIComponent(editId), { method: 'PUT', body: JSON.stringify(payload) }) }
+          : function () { return getReadableFamilyId().then(function (familyId) { return postJson('/restaurants?familyId=' + encodeURIComponent(familyId), payload) }) }
+        showPatchConfirm(editId ? '\uB9DB\uC9D1\uC744 \uC218\uC815\uD560\uAE4C\uC694?' : '\uB9DB\uC9D1\uC744 \uCD94\uAC00\uD560\uAE4C\uC694?', function () {
+          request().then(function () {
+            showPatchToast(editId ? '\uB9DB\uC9D1\uC744 \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.' : '\uB9DB\uC9D1\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
+            clearRestaurantForm(form)
+            loadRestaurantApiPage(content, true)
+          }).catch(function (error) {
+            showPatchToast(apiActionErrorMessage(error, editId ? '\uB9DB\uC9D1 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.' : '\uB9DB\uC9D1 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+          })
+        })
       })
       var reset = content.querySelector('[data-restaurant-reset]')
       if (reset) reset.addEventListener('click', function () { clearRestaurantForm(form) })
@@ -340,7 +236,6 @@
   function normalizeRestaurantFormControls() {
     var form = document.querySelector('.restaurant-form')
     if (!form) return
-    if (form.matches('[data-restaurant-form]')) return
     Array.from(form.querySelectorAll('label')).forEach(function (label) {
       var labelText = getCleanText(label)
       var title = label.querySelector('span')
