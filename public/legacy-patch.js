@@ -4756,7 +4756,7 @@
       var initialWeight = optionalDecimal(getFieldValue(dialog, '[data-baby-create-weight]'))
       save.disabled = true
       save.textContent = '\uC800\uC7A5 \uC911'
-      getCurrentFamilyId().then(function (familyId) {
+      getReadableFamilyId().then(function (familyId) {
         return postJson('/babies?familyId=' + encodeURIComponent(familyId), {
           name: name,
           gender: gender,
