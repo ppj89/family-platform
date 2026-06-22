@@ -234,6 +234,15 @@
       form.dataset.latitude = String(latitude)
       form.dataset.longitude = String(longitude)
     }
+    var candidates = form && form.querySelector('.location-candidates')
+    if (candidates) {
+      candidates.hidden = true
+      candidates.innerHTML = ''
+      window.setTimeout(function () {
+        candidates.hidden = true
+        candidates.innerHTML = ''
+      }, 420)
+    }
     window.setTimeout(function () {
       renderRestaurantLocationMap(input, latitude, longitude, locationCandidateLabel(item), locationCandidateDetail(item))
     }, 80)
