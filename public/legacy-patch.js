@@ -8546,6 +8546,13 @@
     root.querySelectorAll('[data-restaurant-count]').forEach(function (count) {
       count.textContent = (items || []).length + '\uACF3'
     })
+    root.querySelectorAll('[data-restaurant-rating-average]').forEach(function (target) {
+      var ratedItems = (items || []).map(function (item) { return Number(item.rating || 0) }).filter(function (rating) { return rating > 0 })
+      var average = ratedItems.length
+        ? (ratedItems.reduce(function (sum, rating) { return sum + rating }, 0) / ratedItems.length).toFixed(1)
+        : '0.0'
+      target.textContent = average
+    })
     if (!list) return
     if (!items || !items.length) {
       list.innerHTML = '<p class="api-empty-row">\uB4F1\uB85D\uB41C \uB9DB\uC9D1\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
@@ -8621,23 +8628,23 @@
       content.dataset.restaurantApiReady = 'true'
       content.className = 'content-grid'
       content.innerHTML = [
-        '<section class="panel restaurant-api-panel">',
-        '<div class="panel-header"><h2>\uB9DB\uC9D1</h2><span class="passive-header-chip" data-restaurant-count>0\uACF3</span></div>',
-        '<div class="restaurant-hero"><div><span>\uBC29\uBB38\uD55C \uACF3</span><strong>\uAC00\uC871\uACFC \uD568\uAED8 \uAE30\uB85D\uD55C \uB9DB\uC9D1</strong></div><b data-restaurant-count>0\uACF3</b></div>',
-        '<div class="restaurant-grid restaurant-api-list" data-restaurant-list></div>',
-        '</section>',
-        '<aside class="panel entry-panel restaurant-api-form-panel">',
+        '<article class="panel wide">',
+        '<div class="panel-header"><h2>\uAC00\uC871 \uB9DB\uC9D1</h2><span class="passive-header-chip" data-restaurant-count>0\uACF3</span></div>',
+        '<section class="restaurant-hero"><div><strong>\uAC00\uC871\uC774 \uB2E4\uC2DC \uAC00\uACE0 \uC2F6\uC740 \uC7A5\uC18C</strong><span>\uC0AC\uC9C4, \uC704\uCE58, \uB300\uD45C \uBA54\uB274, \uBCC4\uC810\uAE4C\uC9C0 \uD55C \uBC88\uC5D0 \uC800\uC7A5</span></div><b data-restaurant-rating-average>0.0</b></section>',
+        '<div class="restaurant-grid" data-restaurant-list></div>',
+        '</article>',
+        '<aside class="panel entry-panel">',
         '<div class="panel-header"><h2>\uB9DB\uC9D1 \uCD94\uAC00</h2></div>',
-        '<form class="restaurant-form restaurant-api-form" data-restaurant-form>',
-        '<label class="form-field"><span class="form-label">\uC0C1\uD638\uBA85 <em class="required-mark">*</em></span><input class="form-control" data-restaurant-name autocomplete="off" /></label>',
-        '<label class="form-field"><span class="form-label">\uB300\uD45C \uBA54\uB274</span><input class="form-control" data-restaurant-menu autocomplete="off" /></label>',
-        '<div class="form-row two"><label class="form-field"><span class="form-label">\uAC00\uACA9</span><input class="form-control" data-restaurant-price inputmode="numeric" autocomplete="off" /></label><label class="form-field"><span class="form-label">\uBCC4\uC810</span><input class="form-control" data-restaurant-rating inputmode="decimal" autocomplete="off" /></label></div>',
-        '<label class="form-field"><span class="form-label">\uBC29\uBB38\uC77C <em class="required-mark">*</em></span><input class="form-control" data-restaurant-visit-date type="date" value="' + todayText() + '" /></label>',
-        '<label class="form-field"><span class="form-label">\uC704\uCE58</span><input class="form-control" data-restaurant-location autocomplete="off" /></label>',
-        '<label class="form-field"><span class="form-label">\uC8FC\uC18C</span><input class="form-control" data-restaurant-address autocomplete="off" /></label>',
-        '<label class="form-field"><span class="form-label">\uACF5\uAC1C\uBC94\uC704</span><input class="form-control" data-restaurant-scope value="\uC804\uCCB4 \uAC00\uC871" autocomplete="off" /></label>',
-        '<label class="form-field"><span class="form-label">\uBA54\uBAA8</span><textarea class="form-control" data-restaurant-memo rows="4"></textarea></label>',
-        '<div class="form-actions"><button type="button" class="cancel-button" data-restaurant-reset>\uCD08\uAE30\uD654</button><button type="submit" class="save-button">\uCD94\uAC00</button></div>',
+        '<form class="ledger-form restaurant-form" data-restaurant-form>',
+        '<label><span>\uB9DB\uC9D1 \uC774\uB984 <em class="required-mark">*</em></span><input data-restaurant-name data-field="restaurant-title" autocomplete="off" /></label>',
+        '<label><span>\uB300\uD45C \uBA54\uB274</span><input data-restaurant-menu data-field="restaurant-menu" autocomplete="off" /></label>',
+        '<div class="form-row"><label><span>\uAC00\uACA9</span><input data-restaurant-price data-field="restaurant-price" inputmode="numeric" autocomplete="off" /></label><label><span>\uBCC4\uC810</span><input data-restaurant-rating data-field="restaurant-rating" inputmode="decimal" autocomplete="off" /></label></div>',
+        '<label><span>\uBC29\uBB38\uC77C <em class="required-mark">*</em></span><input data-restaurant-visit-date data-field="restaurant-visit-date" type="date" value="' + todayText() + '" /></label>',
+        '<label><span>\uC704\uCE58</span><input data-restaurant-location data-field="restaurant-location" autocomplete="off" /></label>',
+        '<label><span>\uC8FC\uC18C</span><input data-restaurant-address data-field="restaurant-address" autocomplete="off" /></label>',
+        '<label><span>\uACF5\uAC1C\uBC94\uC704</span><input data-restaurant-scope data-field="restaurant-scope" value="\uC804\uCCB4 \uAC00\uC871" autocomplete="off" /></label>',
+        '<label><span>\uBA54\uBAA8</span><textarea data-restaurant-memo data-field="restaurant-note" rows="4"></textarea></label>',
+        '<div class="form-actions"><button type="submit" class="submit-action">\uCD94\uAC00</button><button type="button" class="cancel-button" data-restaurant-reset>\uCD08\uAE30\uD654</button></div>',
         '</form>',
         '</aside>'
       ].join('')
