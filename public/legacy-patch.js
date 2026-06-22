@@ -8705,6 +8705,7 @@
   function normalizeRestaurantFormControls() {
     var form = document.querySelector('.restaurant-form')
     if (!form) return
+    if (form.matches('[data-restaurant-form]')) return
     Array.from(form.querySelectorAll('label')).forEach(function (label) {
       var labelText = getCleanText(label)
       var title = label.querySelector('span')
