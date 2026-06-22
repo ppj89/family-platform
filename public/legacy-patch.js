@@ -932,6 +932,7 @@
     if (remember && remember.checked) {
       localStorage.setItem(AUTH_REMEMBER_EMAIL_ENABLED_STORAGE_KEY, 'true')
       if (normalizedEmail) localStorage.setItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY, normalizedEmail)
+      else localStorage.removeItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY)
     } else {
       localStorage.setItem(AUTH_REMEMBER_EMAIL_ENABLED_STORAGE_KEY, 'false')
       localStorage.removeItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY)
@@ -8601,16 +8602,28 @@
     var target = form && form.querySelector('[data-restaurant-map-preview]')
     var locationInput = form && form.querySelector('[data-restaurant-location]')
     if (!target || !locationInput) return
-    var latitude = Number(form.dataset.latitude || locationInput.dataset.latitude || '')
-    var longitude = Number(form.dataset.longitude || locationInput.dataset.longitude || '')
-    var label = getFieldValue(form, '[data-restaurant-location]') || getFieldValue(form, '[data-restaurant-address]')
+    var coords = typeof getLocationCoordinates === 'function'
+      ? getLocationCoordinates(form, '[data-restaurant-location]')
+      : null
+    var latitude = Number((coords && coords.latitude) || form.dataset.latitude || locationInput.dataset.latitude || '')
+    var longitude = Number((coords && coords.longitude) || form.dataset.longitude || locationInput.dataset.longitude || '')
     if (Number.isFinite(latitude) && Number.isFinite(longitude) && latitude !== 0 && longitude !== 0) {
-      target.innerHTML = '<iframe title="\uB9DB\uC9D1 \uC704\uCE58" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
-        encodeURIComponent((longitude - 0.01) + ',' + (latitude - 0.01) + ',' + (longitude + 0.01) + ',' + (latitude + 0.01)) +
-        '&layer=mapnik&marker=' + encodeURIComponent(latitude + ',' + longitude) + '"></iframe>'
+      target.innerHTML = restaurantOsmEmbed(latitude, longitude, '\uB9DB\uC9D1 \uC704\uCE58')
       return
     }
-    target.innerHTML = '<div class="location-map-osm restaurant-location-empty">' + escapeHtml(label || '\uC704\uCE58\uB97C \uC785\uB825\uD558\uBA74 \uC9C0\uB3C4 \uC601\uC5ED\uC5D0 \uBC18\uC601\uB429\uB2C8\uB2E4.') + '</div>'
+    target.innerHTML = restaurantOsmEmbed(null, null, '\uB9DB\uC9D1 \uC9C0\uB3C4')
+  }
+
+  function restaurantOsmEmbed(latitude, longitude, title) {
+    var lat = Number(latitude)
+    var lng = Number(longitude)
+    if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
+      return '<iframe title="' + escapeHtml(title || '\uB9DB\uC9D1 \uC704\uCE58') + '" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
+        encodeURIComponent((lng - 0.01) + ',' + (lat - 0.01) + ',' + (lng + 0.01) + ',' + (lat + 0.01)) +
+        '&layer=mapnik&marker=' + encodeURIComponent(lat + ',' + lng) + '"></iframe>'
+    }
+    return '<iframe title="' + escapeHtml(title || '\uB9DB\uC9D1 \uC9C0\uB3C4') + '" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
+      encodeURIComponent('124,33,132,39') + '&layer=mapnik"></iframe>'
   }
 
   function useRestaurantCurrentLocation(form) {

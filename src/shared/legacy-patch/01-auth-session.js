@@ -325,6 +325,7 @@
     if (remember && remember.checked) {
       localStorage.setItem(AUTH_REMEMBER_EMAIL_ENABLED_STORAGE_KEY, 'true')
       if (normalizedEmail) localStorage.setItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY, normalizedEmail)
+      else localStorage.removeItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY)
     } else {
       localStorage.setItem(AUTH_REMEMBER_EMAIL_ENABLED_STORAGE_KEY, 'false')
       localStorage.removeItem(AUTH_REMEMBER_EMAIL_STORAGE_KEY)
