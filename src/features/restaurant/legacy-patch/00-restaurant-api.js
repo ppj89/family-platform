@@ -48,6 +48,7 @@
     if (scope) setOptionalInputValue(scope, '\uC804\uCCB4 \uAC00\uC871')
     var submit = form.querySelector('button[type="submit"]')
     if (submit) submit.textContent = '\uCD94\uAC00'
+    syncRestaurantVisitDateDisplay(form)
     renderRestaurantMediaPreview(form)
     renderRestaurantLocationPreview(form)
   }
@@ -78,6 +79,7 @@
     }
     var submit = form.querySelector('button[type="submit"]')
     if (submit) submit.textContent = '\uC800\uC7A5'
+    syncRestaurantVisitDateDisplay(form)
     renderRestaurantMediaPreview(form)
     renderRestaurantLocationPreview(form)
     form.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -131,23 +133,74 @@
     var latitude = Number((coords && coords.latitude) || form.dataset.latitude || locationInput.dataset.latitude || '')
     var longitude = Number((coords && coords.longitude) || form.dataset.longitude || locationInput.dataset.longitude || '')
     if (Number.isFinite(latitude) && Number.isFinite(longitude) && latitude !== 0 && longitude !== 0) {
-      target.innerHTML = restaurantOsmEmbed(latitude, longitude, '\uB9DB\uC9D1 \uC704\uCE58')
+      target.innerHTML = restaurantGoogleMapEmbed(latitude, longitude, '\uB9DB\uC9D1 \uC704\uCE58')
       return
     }
-    target.innerHTML = restaurantOsmEmbed(null, null, '\uB9DB\uC9D1 \uC9C0\uB3C4')
+    target.innerHTML = restaurantGoogleMapEmbed(null, null, '\uB9DB\uC9D1 \uC9C0\uB3C4')
   }
 
-  function restaurantOsmEmbed(latitude, longitude, title) {
+  function restaurantGoogleMapEmbed(latitude, longitude, title) {
     var lat = Number(latitude)
     var lng = Number(longitude)
-    if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
-      return '<iframe title="' + escapeHtml(title || '\uB9DB\uC9D1 \uC704\uCE58') + '" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
-        encodeURIComponent((lng - 0.01) + ',' + (lat - 0.01) + ',' + (lng + 0.01) + ',' + (lat + 0.01)) +
-        '&layer=mapnik&marker=' + encodeURIComponent(lat + ',' + lng) + '"></iframe>'
-    }
-    return '<iframe title="' + escapeHtml(title || '\uB9DB\uC9D1 \uC9C0\uB3C4') + '" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
-      encodeURIComponent('124,33,132,39') + '&layer=mapnik"></iframe>'
+    var query = Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0
+      ? lat + ',' + lng
+      : '\uB300\uD55C\uBBFC\uAD6D'
+    var zoom = Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0 ? '15' : '6'
+    return '<iframe title="' + escapeHtml(title || '\uB9DB\uC9D1 \uC9C0\uB3C4') + '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=' +
+      encodeURIComponent(query) + '&z=' + zoom + '&output=embed"></iframe>'
   }
+
+  function syncRestaurantVisitDateDisplay(form) {
+    var input = form && form.querySelector('[data-restaurant-visit-date]')
+    var trigger = form && form.querySelector('[data-restaurant-visit-date-trigger]')
+    var label = trigger && trigger.querySelector('span')
+    if (!input || !label) return
+    var value = parseApiDate(input.value) || todayText()
+    setOptionalInputValue(input, value)
+    label.textContent = value.replace(/-/g, '.')
+  }
+
+  function bindRestaurantVisitDate(form) {
+    var input = form && form.querySelector('[data-restaurant-visit-date]')
+    var trigger = form && form.querySelector('[data-restaurant-visit-date-trigger]')
+    if (!input || !trigger || trigger.dataset.restaurantDateWired === 'true') return
+    trigger.dataset.restaurantDateWired = 'true'
+    syncRestaurantVisitDateDisplay(form)
+    trigger.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (typeof openCommonDatePickerPopover === 'function') {
+        openCommonDatePickerPopover(input, trigger)
+      }
+    })
+    input.addEventListener('input', function () { syncRestaurantVisitDateDisplay(form) })
+    input.addEventListener('change', function () { syncRestaurantVisitDateDisplay(form) })
+  }
+
+  function handleRestaurantVisitDateTriggerEvent(event) {
+    var trigger = event.target && event.target.closest && event.target.closest('[data-restaurant-visit-date-trigger]')
+    if (!trigger) return
+    var form = trigger.closest('[data-restaurant-form]')
+    var input = form && form.querySelector('[data-restaurant-visit-date]')
+    if (!input || typeof openCommonDatePickerPopover !== 'function') return
+    if ((event.type === 'click' || event.type === 'mouseup') && trigger.dataset.restaurantDatePointerAt && Date.now() - Number(trigger.dataset.restaurantDatePointerAt) < 600) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      return
+    }
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    if (event.type !== 'click') trigger.dataset.restaurantDatePointerAt = String(Date.now())
+    openCommonDatePickerPopover(input, trigger)
+    syncRestaurantVisitDateDisplay(form)
+  }
+
+  document.addEventListener('pointerdown', handleRestaurantVisitDateTriggerEvent, true)
+  document.addEventListener('mousedown', handleRestaurantVisitDateTriggerEvent, true)
+  document.addEventListener('touchstart', handleRestaurantVisitDateTriggerEvent, true)
+  document.addEventListener('click', handleRestaurantVisitDateTriggerEvent, true)
 
   function useRestaurantCurrentLocation(form) {
     if (!form || !navigator.geolocation) {
@@ -271,9 +324,9 @@
         '<label><span>\uB9DB\uC9D1 \uC774\uB984 <em class="required-mark">*</em></span><input data-restaurant-name data-field="restaurant-title" autocomplete="off" /></label>',
         '<label><span>\uB300\uD45C \uBA54\uB274</span><input data-restaurant-menu data-field="restaurant-menu" autocomplete="off" /></label>',
         '<div class="form-row"><label><span>\uAC00\uACA9\uB300</span><select data-restaurant-price data-field="restaurant-price"><option value="">\uC120\uD0DD</option><option value="10000">1\uB9CC\uC6D0\uB300</option><option value="20000">2\uB9CC\uC6D0\uB300</option><option value="30000">3\uB9CC\uC6D0\uB300</option><option value="50000">5\uB9CC\uC6D0 \uC774\uC0C1</option></select></label><label><span>\uBCC4\uC810</span><select data-restaurant-rating data-field="restaurant-rating"><option value="">\uC120\uD0DD</option><option value="5.0">5.0</option><option value="4.5">4.5</option><option value="4.0">4.0</option><option value="3.5">3.5</option><option value="3.0">3.0</option></select></label></div>',
-        '<label><span>\uBC29\uBB38\uC77C <em class="required-mark">*</em></span><input data-restaurant-visit-date data-field="restaurant-visit-date" type="date" value="' + todayText() + '" /></label>',
+        '<label class="date-picker-field restaurant-visit-date-field form-field"><span class="form-label">\uBC29\uBB38\uC77C <em class="required-mark">*</em></span><input data-restaurant-visit-date data-field="restaurant-visit-date" type="hidden" value="' + todayText() + '" /><button type="button" class="date-picker-trigger form-control" data-restaurant-visit-date-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 2v4M16 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label>',
         '<label><span>\uC704\uCE58</span><input data-restaurant-location data-field="restaurant-location" autocomplete="off" placeholder="\uC0C1\uD638\uBA85 \uB610\uB294 \uC8FC\uC18C\uB97C \uC785\uB825\uD558\uACE0 \uD6C4\uBCF4\uB97C \uC120\uD0DD\uD558\uC138\uC694" /></label>',
-        '<div class="location-map-box"><div data-restaurant-map-preview></div><div class="location-map-actions"><button type="button" class="cancel-button" data-restaurant-current-location>\uD604\uC7AC \uC704\uCE58 \uC0AC\uC6A9</button></div></div>',
+        '<div class="location-map-box"><div data-restaurant-map-preview>' + restaurantGoogleMapEmbed(null, null, '\uB9DB\uC9D1 \uC9C0\uB3C4') + '</div><div class="location-map-actions"><button type="button" class="cancel-button" data-restaurant-current-location>\uD604\uC7AC \uC704\uCE58 \uC0AC\uC6A9</button></div></div>',
         '<label><span>\uC8FC\uC18C</span><input data-restaurant-address data-field="restaurant-address" autocomplete="off" /></label>',
         '<label><span>\uACF5\uAC1C\uBC94\uC704</span><select data-restaurant-scope data-field="restaurant-scope"><option value="\uC804\uCCB4 \uAC00\uC871">\uC804\uCCB4 \uAC00\uC871</option><option value="\uAC00\uC871\uAD00\uB9AC\uC790">\uAC00\uC871\uAD00\uB9AC\uC790</option><option value="\uB098\uB9CC \uBCF4\uAE30">\uB098\uB9CC \uBCF4\uAE30</option></select></label>',
         '<label><span>\uBBF8\uB514\uC5B4</span><div class="photo-input"><div data-restaurant-media-preview class="media-upload-empty"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCD94\uAC00</span></div><input data-restaurant-media name="files" type="file" accept="image/*,video/*" multiple /></div><small data-restaurant-media-hint>' + (typeof mediaLimitText === 'function' ? mediaLimitText() : '') + '</small></label>',
@@ -327,8 +380,10 @@
       if (mediaInput) mediaInput.addEventListener('change', function () { renderRestaurantMediaPreview(form) })
       var currentLocation = content.querySelector('[data-restaurant-current-location]')
       if (currentLocation) currentLocation.addEventListener('click', function () { useRestaurantCurrentLocation(form) })
+      bindRestaurantVisitDate(form)
       content.querySelectorAll('[data-restaurant-location], [data-restaurant-address]').forEach(function (input) {
         input.addEventListener('input', function () { window.setTimeout(function () { renderRestaurantLocationPreview(form) }, 0) })
+        input.addEventListener('family-platform-location-selected', function () { window.setTimeout(function () { renderRestaurantLocationPreview(form) }, 0) })
       })
       renderRestaurantMediaPreview(form)
       renderRestaurantLocationPreview(form)

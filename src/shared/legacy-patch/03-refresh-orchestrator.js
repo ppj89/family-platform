@@ -244,6 +244,165 @@
     })
   }
 
+  function openCommonDatePickerPopover(input, trigger) {
+    if (!input || !trigger) return
+    document.querySelectorAll('.common-date-popover, .date-picker-field .calendar-popover').forEach(function (old) {
+      old.remove()
+    })
+    var selected = parseApiDate(input.value) || todayText()
+    var view = new Date(selected + 'T00:00:00')
+    var popover = document.createElement('div')
+    popover.className = 'calendar-popover common-date-popover'
+    var level = 'day'
+
+    function draw() {
+      var year = view.getFullYear()
+      var month = view.getMonth()
+      var selectedDate = parseApiDate(selected) || todayText()
+      var selectedYear = Number(selectedDate.slice(0, 4))
+      var selectedMonth = Number(selectedDate.slice(5, 7)) - 1
+      var title = level === 'year' ? year + '\uB144' : (level === 'month' ? year + '\uB144' : year + '\uB144 ' + (month + 1) + '\uC6D4')
+      var html = '<header class="calendar-header"><button type="button" data-common-date-prev>&lt;</button><button type="button" class="calendar-title-button" data-common-date-title><span>' + title + '</span></button><button type="button" data-common-date-next>&gt;</button></header>'
+      html += '<div class="calendar-today-row"><button type="button" data-common-date-today>\uC624\uB298</button></div>'
+      if (level === 'year') {
+        var startYear = Math.floor(year / 12) * 12
+        html += '<div class="calendar-year-grid">'
+        for (var yearIndex = 0; yearIndex < 12; yearIndex += 1) {
+          var itemYear = startYear + yearIndex
+          html += '<button type="button" class="' + (selectedYear === itemYear ? 'selected' : '') + '" data-common-year="' + itemYear + '">' + itemYear + '\uB144</button>'
+        }
+        html += '</div>'
+      } else if (level === 'month') {
+        html += '<div class="calendar-month-grid">'
+        for (var monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+          var isSelectedMonth = selectedYear === year && selectedMonth === monthIndex
+          html += '<button type="button" class="' + (isSelectedMonth ? 'selected' : '') + '" data-common-month="' + monthIndex + '">' + (monthIndex + 1) + '\uC6D4</button>'
+        }
+        html += '</div>'
+      } else {
+        var first = new Date(year, month, 1)
+        var last = new Date(year, month + 1, 0).getDate()
+        html += '<div class="calendar-weekdays"><span>\uC77C</span><span>\uC6D4</span><span>\uD654</span><span>\uC218</span><span>\uBAA9</span><span>\uAE08</span><span>\uD1A0</span></div><div class="calendar-day-grid">'
+        for (var blank = 0; blank < first.getDay(); blank += 1) html += '<span class="calendar-empty"></span>'
+        for (var day = 1; day <= last; day += 1) {
+          var date = new Date(year, month, day)
+          var iso = formatDate(date)
+          var classes = []
+          if (date.getDay() === 0) classes.push('holiday')
+          if (date.getDay() === 6) classes.push('saturday')
+          if (iso === selected) classes.push('selected')
+          html += '<button type="button" class="' + classes.join(' ') + '" data-common-date="' + iso + '">' + day + '</button>'
+        }
+        html += '</div>'
+      }
+      popover.innerHTML = html
+      if (popover.isConnected) window.setTimeout(function () { positionCommonDatePickerPopover(popover, trigger) }, 0)
+    }
+
+    function applySelected() {
+      setInputValue(input, selected)
+      var label = trigger.querySelector('span')
+      if (label) label.textContent = selected.replace(/-/g, '.')
+      popover.remove()
+    }
+
+    function handleAction(event, skipRecentPointer) {
+      var target = event.target
+      if (!target || !target.closest) return false
+      var control = target.closest('[data-common-date-prev], [data-common-date-next], [data-common-date-title], [data-common-date-today], [data-common-year], [data-common-month], [data-common-date]')
+      if (!control) return false
+      if (skipRecentPointer && popover.dataset.commonDatePointerAt && Date.now() - Number(popover.dataset.commonDatePointerAt) < 600) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+        return true
+      }
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      if (event.type === 'pointerdown') popover.dataset.commonDatePointerAt = String(Date.now())
+      if (target.closest('[data-common-date-prev]')) {
+        if (level === 'year') view.setFullYear(view.getFullYear() - 12)
+        else if (level === 'month') view.setFullYear(view.getFullYear() - 1)
+        else view.setMonth(view.getMonth() - 1)
+        draw()
+        return true
+      }
+      if (target.closest('[data-common-date-next]')) {
+        if (level === 'year') view.setFullYear(view.getFullYear() + 12)
+        else if (level === 'month') view.setFullYear(view.getFullYear() + 1)
+        else view.setMonth(view.getMonth() + 1)
+        draw()
+        return true
+      }
+      if (target.closest('[data-common-date-title]')) {
+        if (level === 'day') level = 'month'
+        else if (level === 'month') level = 'year'
+        draw()
+        return true
+      }
+      if (target.closest('[data-common-date-today]')) {
+        selected = todayText()
+        view = new Date(selected + 'T00:00:00')
+        level = 'day'
+        applySelected()
+        return true
+      }
+      var yearButton = target.closest('[data-common-year]')
+      if (yearButton) {
+        view.setFullYear(Number(yearButton.dataset.commonYear))
+        level = 'month'
+        draw()
+        return true
+      }
+      var monthButton = target.closest('[data-common-month]')
+      if (monthButton) {
+        view.setMonth(Number(monthButton.dataset.commonMonth))
+        level = 'day'
+        draw()
+        return true
+      }
+      var dayButton = target.closest('[data-common-date]')
+      if (dayButton) {
+        selected = dayButton.dataset.commonDate
+        applySelected()
+      }
+      return true
+    }
+
+    draw()
+    document.body.appendChild(popover)
+    positionCommonDatePickerPopover(popover, trigger)
+    popover.addEventListener('pointerdown', function (event) { handleAction(event, false) }, true)
+    popover.addEventListener('click', function (event) { handleAction(event, true) }, true)
+  }
+
+  function positionCommonDatePickerPopover(popover, trigger) {
+    if (!popover || !trigger || !trigger.getBoundingClientRect) return
+    var viewport = window.visualViewport || null
+    var viewportLeft = viewport ? viewport.offsetLeft : 0
+    var viewportTop = viewport ? viewport.offsetTop : 0
+    var viewportWidth = viewport ? viewport.width : window.innerWidth
+    var viewportHeight = viewport ? viewport.height : window.innerHeight
+    var rect = trigger.getBoundingClientRect()
+    var width = Math.min(330, Math.max(280, viewportWidth - 32))
+    var height = Math.min(popover.scrollHeight || popover.offsetHeight || 360, viewportHeight - 24)
+    var belowTop = rect.bottom + 8
+    var aboveTop = rect.top - height - 8
+    var top = belowTop
+    var minTop = viewportTop + 12
+    var maxBottom = viewportTop + viewportHeight - 12
+    if (belowTop + height > maxBottom && aboveTop >= minTop) top = aboveTop
+    else if (belowTop + height > maxBottom) top = Math.max(minTop, maxBottom - height)
+    var minLeft = viewportLeft + 16
+    var maxLeft = viewportLeft + viewportWidth - width - 16
+    var left = Math.max(minLeft, Math.min(maxLeft, rect.left + rect.width / 2 - width / 2))
+    popover.style.setProperty('position', 'fixed', 'important')
+    popover.style.setProperty('width', width + 'px', 'important')
+    popover.style.setProperty('left', left + 'px', 'important')
+    popover.style.setProperty('top', top + 'px', 'important')
+  }
+
   function syncScheduleBasisLayout() {
     var card = document.querySelector('.schedule-form-card')
     if (!card) return
@@ -284,6 +443,13 @@
   }
 
   function closeOpenSelects(target) {
+    if (target && target.closest && (target.closest('.common-date-popover') || target.closest('.date-picker-trigger'))) {
+      return
+    }
+    document.querySelectorAll('.common-date-popover').forEach(function (popover) {
+      popover.remove()
+    })
+
     if (target && target.closest && target.closest('.custom-select')) {
       var current = target.closest('.custom-select')
       document.querySelectorAll('.date-picker-field .calendar-popover').forEach(function (popover) {
@@ -349,6 +515,10 @@
   }, true)
 
   document.addEventListener('click', function (event) {
+    closeOpenSelects(event.target)
+  }, true)
+
+  document.addEventListener('focusin', function (event) {
     closeOpenSelects(event.target)
   }, true)
 

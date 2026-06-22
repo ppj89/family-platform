@@ -4337,6 +4337,165 @@
     })
   }
 
+  function openCommonDatePickerPopover(input, trigger) {
+    if (!input || !trigger) return
+    document.querySelectorAll('.common-date-popover, .date-picker-field .calendar-popover').forEach(function (old) {
+      old.remove()
+    })
+    var selected = parseApiDate(input.value) || todayText()
+    var view = new Date(selected + 'T00:00:00')
+    var popover = document.createElement('div')
+    popover.className = 'calendar-popover common-date-popover'
+    var level = 'day'
+
+    function draw() {
+      var year = view.getFullYear()
+      var month = view.getMonth()
+      var selectedDate = parseApiDate(selected) || todayText()
+      var selectedYear = Number(selectedDate.slice(0, 4))
+      var selectedMonth = Number(selectedDate.slice(5, 7)) - 1
+      var title = level === 'year' ? year + '\uB144' : (level === 'month' ? year + '\uB144' : year + '\uB144 ' + (month + 1) + '\uC6D4')
+      var html = '<header class="calendar-header"><button type="button" data-common-date-prev>&lt;</button><button type="button" class="calendar-title-button" data-common-date-title><span>' + title + '</span></button><button type="button" data-common-date-next>&gt;</button></header>'
+      html += '<div class="calendar-today-row"><button type="button" data-common-date-today>\uC624\uB298</button></div>'
+      if (level === 'year') {
+        var startYear = Math.floor(year / 12) * 12
+        html += '<div class="calendar-year-grid">'
+        for (var yearIndex = 0; yearIndex < 12; yearIndex += 1) {
+          var itemYear = startYear + yearIndex
+          html += '<button type="button" class="' + (selectedYear === itemYear ? 'selected' : '') + '" data-common-year="' + itemYear + '">' + itemYear + '\uB144</button>'
+        }
+        html += '</div>'
+      } else if (level === 'month') {
+        html += '<div class="calendar-month-grid">'
+        for (var monthIndex = 0; monthIndex < 12; monthIndex += 1) {
+          var isSelectedMonth = selectedYear === year && selectedMonth === monthIndex
+          html += '<button type="button" class="' + (isSelectedMonth ? 'selected' : '') + '" data-common-month="' + monthIndex + '">' + (monthIndex + 1) + '\uC6D4</button>'
+        }
+        html += '</div>'
+      } else {
+        var first = new Date(year, month, 1)
+        var last = new Date(year, month + 1, 0).getDate()
+        html += '<div class="calendar-weekdays"><span>\uC77C</span><span>\uC6D4</span><span>\uD654</span><span>\uC218</span><span>\uBAA9</span><span>\uAE08</span><span>\uD1A0</span></div><div class="calendar-day-grid">'
+        for (var blank = 0; blank < first.getDay(); blank += 1) html += '<span class="calendar-empty"></span>'
+        for (var day = 1; day <= last; day += 1) {
+          var date = new Date(year, month, day)
+          var iso = formatDate(date)
+          var classes = []
+          if (date.getDay() === 0) classes.push('holiday')
+          if (date.getDay() === 6) classes.push('saturday')
+          if (iso === selected) classes.push('selected')
+          html += '<button type="button" class="' + classes.join(' ') + '" data-common-date="' + iso + '">' + day + '</button>'
+        }
+        html += '</div>'
+      }
+      popover.innerHTML = html
+      if (popover.isConnected) window.setTimeout(function () { positionCommonDatePickerPopover(popover, trigger) }, 0)
+    }
+
+    function applySelected() {
+      setInputValue(input, selected)
+      var label = trigger.querySelector('span')
+      if (label) label.textContent = selected.replace(/-/g, '.')
+      popover.remove()
+    }
+
+    function handleAction(event, skipRecentPointer) {
+      var target = event.target
+      if (!target || !target.closest) return false
+      var control = target.closest('[data-common-date-prev], [data-common-date-next], [data-common-date-title], [data-common-date-today], [data-common-year], [data-common-month], [data-common-date]')
+      if (!control) return false
+      if (skipRecentPointer && popover.dataset.commonDatePointerAt && Date.now() - Number(popover.dataset.commonDatePointerAt) < 600) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+        return true
+      }
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      if (event.type === 'pointerdown') popover.dataset.commonDatePointerAt = String(Date.now())
+      if (target.closest('[data-common-date-prev]')) {
+        if (level === 'year') view.setFullYear(view.getFullYear() - 12)
+        else if (level === 'month') view.setFullYear(view.getFullYear() - 1)
+        else view.setMonth(view.getMonth() - 1)
+        draw()
+        return true
+      }
+      if (target.closest('[data-common-date-next]')) {
+        if (level === 'year') view.setFullYear(view.getFullYear() + 12)
+        else if (level === 'month') view.setFullYear(view.getFullYear() + 1)
+        else view.setMonth(view.getMonth() + 1)
+        draw()
+        return true
+      }
+      if (target.closest('[data-common-date-title]')) {
+        if (level === 'day') level = 'month'
+        else if (level === 'month') level = 'year'
+        draw()
+        return true
+      }
+      if (target.closest('[data-common-date-today]')) {
+        selected = todayText()
+        view = new Date(selected + 'T00:00:00')
+        level = 'day'
+        applySelected()
+        return true
+      }
+      var yearButton = target.closest('[data-common-year]')
+      if (yearButton) {
+        view.setFullYear(Number(yearButton.dataset.commonYear))
+        level = 'month'
+        draw()
+        return true
+      }
+      var monthButton = target.closest('[data-common-month]')
+      if (monthButton) {
+        view.setMonth(Number(monthButton.dataset.commonMonth))
+        level = 'day'
+        draw()
+        return true
+      }
+      var dayButton = target.closest('[data-common-date]')
+      if (dayButton) {
+        selected = dayButton.dataset.commonDate
+        applySelected()
+      }
+      return true
+    }
+
+    draw()
+    document.body.appendChild(popover)
+    positionCommonDatePickerPopover(popover, trigger)
+    popover.addEventListener('pointerdown', function (event) { handleAction(event, false) }, true)
+    popover.addEventListener('click', function (event) { handleAction(event, true) }, true)
+  }
+
+  function positionCommonDatePickerPopover(popover, trigger) {
+    if (!popover || !trigger || !trigger.getBoundingClientRect) return
+    var viewport = window.visualViewport || null
+    var viewportLeft = viewport ? viewport.offsetLeft : 0
+    var viewportTop = viewport ? viewport.offsetTop : 0
+    var viewportWidth = viewport ? viewport.width : window.innerWidth
+    var viewportHeight = viewport ? viewport.height : window.innerHeight
+    var rect = trigger.getBoundingClientRect()
+    var width = Math.min(330, Math.max(280, viewportWidth - 32))
+    var height = Math.min(popover.scrollHeight || popover.offsetHeight || 360, viewportHeight - 24)
+    var belowTop = rect.bottom + 8
+    var aboveTop = rect.top - height - 8
+    var top = belowTop
+    var minTop = viewportTop + 12
+    var maxBottom = viewportTop + viewportHeight - 12
+    if (belowTop + height > maxBottom && aboveTop >= minTop) top = aboveTop
+    else if (belowTop + height > maxBottom) top = Math.max(minTop, maxBottom - height)
+    var minLeft = viewportLeft + 16
+    var maxLeft = viewportLeft + viewportWidth - width - 16
+    var left = Math.max(minLeft, Math.min(maxLeft, rect.left + rect.width / 2 - width / 2))
+    popover.style.setProperty('position', 'fixed', 'important')
+    popover.style.setProperty('width', width + 'px', 'important')
+    popover.style.setProperty('left', left + 'px', 'important')
+    popover.style.setProperty('top', top + 'px', 'important')
+  }
+
   function syncScheduleBasisLayout() {
     var card = document.querySelector('.schedule-form-card')
     if (!card) return
@@ -4377,6 +4536,13 @@
   }
 
   function closeOpenSelects(target) {
+    if (target && target.closest && (target.closest('.common-date-popover') || target.closest('.date-picker-trigger'))) {
+      return
+    }
+    document.querySelectorAll('.common-date-popover').forEach(function (popover) {
+      popover.remove()
+    })
+
     if (target && target.closest && target.closest('.custom-select')) {
       var current = target.closest('.custom-select')
       document.querySelectorAll('.date-picker-field .calendar-popover').forEach(function (popover) {
@@ -4442,6 +4608,10 @@
   }, true)
 
   document.addEventListener('click', function (event) {
+    closeOpenSelects(event.target)
+  }, true)
+
+  document.addEventListener('focusin', function (event) {
     closeOpenSelects(event.target)
   }, true)
 
@@ -8525,6 +8695,7 @@
     if (scope) setOptionalInputValue(scope, '\uC804\uCCB4 \uAC00\uC871')
     var submit = form.querySelector('button[type="submit"]')
     if (submit) submit.textContent = '\uCD94\uAC00'
+    syncRestaurantVisitDateDisplay(form)
     renderRestaurantMediaPreview(form)
     renderRestaurantLocationPreview(form)
   }
@@ -8555,6 +8726,7 @@
     }
     var submit = form.querySelector('button[type="submit"]')
     if (submit) submit.textContent = '\uC800\uC7A5'
+    syncRestaurantVisitDateDisplay(form)
     renderRestaurantMediaPreview(form)
     renderRestaurantLocationPreview(form)
     form.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -8608,23 +8780,74 @@
     var latitude = Number((coords && coords.latitude) || form.dataset.latitude || locationInput.dataset.latitude || '')
     var longitude = Number((coords && coords.longitude) || form.dataset.longitude || locationInput.dataset.longitude || '')
     if (Number.isFinite(latitude) && Number.isFinite(longitude) && latitude !== 0 && longitude !== 0) {
-      target.innerHTML = restaurantOsmEmbed(latitude, longitude, '\uB9DB\uC9D1 \uC704\uCE58')
+      target.innerHTML = restaurantGoogleMapEmbed(latitude, longitude, '\uB9DB\uC9D1 \uC704\uCE58')
       return
     }
-    target.innerHTML = restaurantOsmEmbed(null, null, '\uB9DB\uC9D1 \uC9C0\uB3C4')
+    target.innerHTML = restaurantGoogleMapEmbed(null, null, '\uB9DB\uC9D1 \uC9C0\uB3C4')
   }
 
-  function restaurantOsmEmbed(latitude, longitude, title) {
+  function restaurantGoogleMapEmbed(latitude, longitude, title) {
     var lat = Number(latitude)
     var lng = Number(longitude)
-    if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
-      return '<iframe title="' + escapeHtml(title || '\uB9DB\uC9D1 \uC704\uCE58') + '" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
-        encodeURIComponent((lng - 0.01) + ',' + (lat - 0.01) + ',' + (lng + 0.01) + ',' + (lat + 0.01)) +
-        '&layer=mapnik&marker=' + encodeURIComponent(lat + ',' + lng) + '"></iframe>'
-    }
-    return '<iframe title="' + escapeHtml(title || '\uB9DB\uC9D1 \uC9C0\uB3C4') + '" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
-      encodeURIComponent('124,33,132,39') + '&layer=mapnik"></iframe>'
+    var query = Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0
+      ? lat + ',' + lng
+      : '\uB300\uD55C\uBBFC\uAD6D'
+    var zoom = Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0 ? '15' : '6'
+    return '<iframe title="' + escapeHtml(title || '\uB9DB\uC9D1 \uC9C0\uB3C4') + '" loading="lazy" referrerpolicy="no-referrer-when-downgrade" src="https://www.google.com/maps?q=' +
+      encodeURIComponent(query) + '&z=' + zoom + '&output=embed"></iframe>'
   }
+
+  function syncRestaurantVisitDateDisplay(form) {
+    var input = form && form.querySelector('[data-restaurant-visit-date]')
+    var trigger = form && form.querySelector('[data-restaurant-visit-date-trigger]')
+    var label = trigger && trigger.querySelector('span')
+    if (!input || !label) return
+    var value = parseApiDate(input.value) || todayText()
+    setOptionalInputValue(input, value)
+    label.textContent = value.replace(/-/g, '.')
+  }
+
+  function bindRestaurantVisitDate(form) {
+    var input = form && form.querySelector('[data-restaurant-visit-date]')
+    var trigger = form && form.querySelector('[data-restaurant-visit-date-trigger]')
+    if (!input || !trigger || trigger.dataset.restaurantDateWired === 'true') return
+    trigger.dataset.restaurantDateWired = 'true'
+    syncRestaurantVisitDateDisplay(form)
+    trigger.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (typeof openCommonDatePickerPopover === 'function') {
+        openCommonDatePickerPopover(input, trigger)
+      }
+    })
+    input.addEventListener('input', function () { syncRestaurantVisitDateDisplay(form) })
+    input.addEventListener('change', function () { syncRestaurantVisitDateDisplay(form) })
+  }
+
+  function handleRestaurantVisitDateTriggerEvent(event) {
+    var trigger = event.target && event.target.closest && event.target.closest('[data-restaurant-visit-date-trigger]')
+    if (!trigger) return
+    var form = trigger.closest('[data-restaurant-form]')
+    var input = form && form.querySelector('[data-restaurant-visit-date]')
+    if (!input || typeof openCommonDatePickerPopover !== 'function') return
+    if ((event.type === 'click' || event.type === 'mouseup') && trigger.dataset.restaurantDatePointerAt && Date.now() - Number(trigger.dataset.restaurantDatePointerAt) < 600) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      return
+    }
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    if (event.type !== 'click') trigger.dataset.restaurantDatePointerAt = String(Date.now())
+    openCommonDatePickerPopover(input, trigger)
+    syncRestaurantVisitDateDisplay(form)
+  }
+
+  document.addEventListener('pointerdown', handleRestaurantVisitDateTriggerEvent, true)
+  document.addEventListener('mousedown', handleRestaurantVisitDateTriggerEvent, true)
+  document.addEventListener('touchstart', handleRestaurantVisitDateTriggerEvent, true)
+  document.addEventListener('click', handleRestaurantVisitDateTriggerEvent, true)
 
   function useRestaurantCurrentLocation(form) {
     if (!form || !navigator.geolocation) {
@@ -8748,9 +8971,9 @@
         '<label><span>\uB9DB\uC9D1 \uC774\uB984 <em class="required-mark">*</em></span><input data-restaurant-name data-field="restaurant-title" autocomplete="off" /></label>',
         '<label><span>\uB300\uD45C \uBA54\uB274</span><input data-restaurant-menu data-field="restaurant-menu" autocomplete="off" /></label>',
         '<div class="form-row"><label><span>\uAC00\uACA9\uB300</span><select data-restaurant-price data-field="restaurant-price"><option value="">\uC120\uD0DD</option><option value="10000">1\uB9CC\uC6D0\uB300</option><option value="20000">2\uB9CC\uC6D0\uB300</option><option value="30000">3\uB9CC\uC6D0\uB300</option><option value="50000">5\uB9CC\uC6D0 \uC774\uC0C1</option></select></label><label><span>\uBCC4\uC810</span><select data-restaurant-rating data-field="restaurant-rating"><option value="">\uC120\uD0DD</option><option value="5.0">5.0</option><option value="4.5">4.5</option><option value="4.0">4.0</option><option value="3.5">3.5</option><option value="3.0">3.0</option></select></label></div>',
-        '<label><span>\uBC29\uBB38\uC77C <em class="required-mark">*</em></span><input data-restaurant-visit-date data-field="restaurant-visit-date" type="date" value="' + todayText() + '" /></label>',
+        '<label class="date-picker-field restaurant-visit-date-field form-field"><span class="form-label">\uBC29\uBB38\uC77C <em class="required-mark">*</em></span><input data-restaurant-visit-date data-field="restaurant-visit-date" type="hidden" value="' + todayText() + '" /><button type="button" class="date-picker-trigger form-control" data-restaurant-visit-date-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 2v4M16 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label>',
         '<label><span>\uC704\uCE58</span><input data-restaurant-location data-field="restaurant-location" autocomplete="off" placeholder="\uC0C1\uD638\uBA85 \uB610\uB294 \uC8FC\uC18C\uB97C \uC785\uB825\uD558\uACE0 \uD6C4\uBCF4\uB97C \uC120\uD0DD\uD558\uC138\uC694" /></label>',
-        '<div class="location-map-box"><div data-restaurant-map-preview></div><div class="location-map-actions"><button type="button" class="cancel-button" data-restaurant-current-location>\uD604\uC7AC \uC704\uCE58 \uC0AC\uC6A9</button></div></div>',
+        '<div class="location-map-box"><div data-restaurant-map-preview>' + restaurantGoogleMapEmbed(null, null, '\uB9DB\uC9D1 \uC9C0\uB3C4') + '</div><div class="location-map-actions"><button type="button" class="cancel-button" data-restaurant-current-location>\uD604\uC7AC \uC704\uCE58 \uC0AC\uC6A9</button></div></div>',
         '<label><span>\uC8FC\uC18C</span><input data-restaurant-address data-field="restaurant-address" autocomplete="off" /></label>',
         '<label><span>\uACF5\uAC1C\uBC94\uC704</span><select data-restaurant-scope data-field="restaurant-scope"><option value="\uC804\uCCB4 \uAC00\uC871">\uC804\uCCB4 \uAC00\uC871</option><option value="\uAC00\uC871\uAD00\uB9AC\uC790">\uAC00\uC871\uAD00\uB9AC\uC790</option><option value="\uB098\uB9CC \uBCF4\uAE30">\uB098\uB9CC \uBCF4\uAE30</option></select></label>',
         '<label><span>\uBBF8\uB514\uC5B4</span><div class="photo-input"><div data-restaurant-media-preview class="media-upload-empty"><span>\uC0AC\uC9C4/\uC601\uC0C1 \uCD94\uAC00</span></div><input data-restaurant-media name="files" type="file" accept="image/*,video/*" multiple /></div><small data-restaurant-media-hint>' + (typeof mediaLimitText === 'function' ? mediaLimitText() : '') + '</small></label>',
@@ -8804,8 +9027,10 @@
       if (mediaInput) mediaInput.addEventListener('change', function () { renderRestaurantMediaPreview(form) })
       var currentLocation = content.querySelector('[data-restaurant-current-location]')
       if (currentLocation) currentLocation.addEventListener('click', function () { useRestaurantCurrentLocation(form) })
+      bindRestaurantVisitDate(form)
       content.querySelectorAll('[data-restaurant-location], [data-restaurant-address]').forEach(function (input) {
         input.addEventListener('input', function () { window.setTimeout(function () { renderRestaurantLocationPreview(form) }, 0) })
+        input.addEventListener('family-platform-location-selected', function () { window.setTimeout(function () { renderRestaurantLocationPreview(form) }, 0) })
       })
       renderRestaurantMediaPreview(form)
       renderRestaurantLocationPreview(form)

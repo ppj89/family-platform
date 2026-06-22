@@ -5850,32 +5850,6 @@ body.api-loading-blocked::before {
   font-weight: 900;
 }
 
-.restaurant-form .location-map-box {
-  grid-column: 1 / -1;
-  width: 100%;
-  min-width: 0;
-  overflow: visible;
-}
-
-.restaurant-form .location-map-box iframe,
-.restaurant-form .location-map-canvas,
-.restaurant-form .location-map-osm {
-  display: block;
-  width: 100% !important;
-  min-width: 0;
-}
-
-.restaurant-form .restaurant-location-empty {
-  display: grid;
-  min-height: 180px;
-  place-items: center;
-  padding: 18px;
-  color: #6b7684;
-  font-size: 13px;
-  font-weight: 700;
-  text-align: center;
-}
-
 .menu-readonly-fields span {
   color: #6b7684;
   font-size: 13px;
