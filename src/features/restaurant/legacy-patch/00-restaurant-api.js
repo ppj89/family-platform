@@ -36,6 +36,8 @@
     })
     delete form.dataset.latitude
     delete form.dataset.longitude
+    var mapBox = form.querySelector('.restaurant-location-map-box')
+    if (mapBox) mapBox.remove()
     var scope = form.querySelector('[data-restaurant-scope]')
     if (scope) setOptionalInputValue(scope, '\uC804\uCCB4 \uAC00\uC871')
     var submit = form.querySelector('button[type="submit"]')
@@ -64,6 +66,9 @@
       else delete locationInput.dataset.longitude
       if (item.address) locationInput.dataset.placeAddress = item.address
       else delete locationInput.dataset.placeAddress
+      if (item.latitude && item.longitude) {
+        renderRestaurantLocationMap(locationInput, Number(item.latitude), Number(item.longitude), item.location || item.name || '', item.address || '')
+      }
     }
     var submit = form.querySelector('button[type="submit"]')
     if (submit) submit.textContent = '\uC800\uC7A5'
@@ -214,8 +219,75 @@
   function ensureRestaurantLocationSearch(form) {
     ensureLocationSearch(form, '[data-restaurant-location]', {
       addressSelector: '[data-restaurant-address]',
-      storeCoordinatesOnForm: true
+      storeCoordinatesOnForm: true,
+      onSelect: updateRestaurantLocationMapFromSelection
     })
+  }
+
+  function updateRestaurantLocationMapFromSelection(input, item, coords) {
+    if (!pageHeadingIs('\uB9DB\uC9D1') || !input) return
+    var latitude = Number(coords && coords.latitude != null ? coords.latitude : item && item.latitude)
+    var longitude = Number(coords && coords.longitude != null ? coords.longitude : item && item.longitude)
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude === 0 || longitude === 0) return
+    var form = input.closest('form')
+    if (form) {
+      form.dataset.latitude = String(latitude)
+      form.dataset.longitude = String(longitude)
+    }
+    window.setTimeout(function () {
+      renderRestaurantLocationMap(input, latitude, longitude, locationCandidateLabel(item), locationCandidateDetail(item))
+    }, 80)
+  }
+
+  function ensureRestaurantLocationMapBox(input) {
+    var form = input && input.closest('form')
+    var box = form && form.querySelector('.restaurant-location-map-box')
+    if (!box) {
+      box = document.createElement('div')
+      box.className = 'restaurant-location-map-box location-map-box'
+      var anchor = input && input.closest('label')
+      if (anchor) anchor.insertAdjacentElement('afterend', box)
+    }
+    var map = box.querySelector('.restaurant-location-map-osm')
+    if (!map) {
+      box.innerHTML = ''
+      map = document.createElement('div')
+      map.className = 'restaurant-location-map-osm location-map-osm'
+      box.appendChild(map)
+    }
+    return map
+  }
+
+  function renderRestaurantLocationMap(input, latitude, longitude, title, address) {
+    var mapNode = ensureRestaurantLocationMapBox(input)
+    if (!mapNode) return
+    if (window.L && typeof window.L.map === 'function') {
+      try {
+        mapNode.innerHTML = ''
+        delete mapNode._leaflet_id
+        var map = window.L.map(mapNode, { zoomControl: true, attributionControl: true, scrollWheelZoom: false })
+        map.setView([latitude, longitude], 15)
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map)
+        var marker = window.L.marker([latitude, longitude], {
+          title: title || address || '\uC704\uCE58'
+        }).addTo(map)
+        if (title || address) {
+          marker.bindPopup('<strong>' + escapeHtml(title || '\uC704\uCE58') + '</strong>' + (address ? '<br />' + escapeHtml(address) : '')).openPopup()
+        }
+        window.setTimeout(function () { map.invalidateSize() }, 120)
+        return
+      } catch (error) {
+        mapNode.innerHTML = ''
+      }
+    }
+    mapNode.innerHTML = '<a class="map-static-link" href="https://www.google.com/maps/search/?api=1&query=' +
+      encodeURIComponent(latitude + ',' + longitude) + '" target="_blank" rel="noreferrer">' +
+      '<strong>' + escapeHtml(title || '\uC704\uCE58') + '</strong>' +
+      '<span>' + escapeHtml(address || (latitude.toFixed(6) + ', ' + longitude.toFixed(6))) + '</span>' +
+      '</a>'
   }
 
   function normalizeRestaurantVisitDate() {

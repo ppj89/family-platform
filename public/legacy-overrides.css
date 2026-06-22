@@ -12381,6 +12381,120 @@ html.calendar-jump-open body:has(.family-calendar-panel) .family-calendar-panel 
   }
 }
 
+/* Restaurant API form scoped correction: do not modify existing common form CSS. */
+.restaurant-api-form-panel {
+  min-width: 0;
+}
+
+.restaurant-api-form.restaurant-form {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.restaurant-api-form.restaurant-form .form-row.two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.restaurant-api-form.restaurant-form .form-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+}
+
+.restaurant-api-form.restaurant-form .form-label {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.restaurant-api-form.restaurant-form .required-mark {
+  color: #f04452;
+  font-style: normal;
+}
+
+.restaurant-api-form.restaurant-form .form-control,
+.restaurant-api-form.restaurant-form input,
+.restaurant-api-form.restaurant-form textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #d9e0ea;
+  border-radius: 16px;
+  background-color: #fff;
+  color: #191f28;
+  box-shadow: none;
+  outline: 0;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0;
+  appearance: none;
+}
+
+.restaurant-api-form.restaurant-form input.form-control {
+  height: 48px;
+  padding: 0 14px;
+}
+
+.restaurant-api-form.restaurant-form input[type="date"].form-control {
+  padding-right: 14px;
+}
+
+.restaurant-api-form.restaurant-form textarea.form-control {
+  min-height: 140px;
+  padding: 14px;
+  resize: vertical;
+}
+
+.restaurant-api-form.restaurant-form .form-control:focus,
+.restaurant-api-form.restaurant-form input:focus,
+.restaurant-api-form.restaurant-form textarea:focus {
+  border-color: #3182f6;
+  box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.12);
+}
+
+.restaurant-api-form.restaurant-form .location-candidates {
+  margin-top: -4px;
+}
+
+.restaurant-api-form.restaurant-form .restaurant-location-map-box {
+  grid-column: 1 / -1;
+  margin-top: -2px;
+}
+
+.restaurant-api-form.restaurant-form .restaurant-location-map-osm {
+  min-height: 180px;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.restaurant-api-form.restaurant-form .form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.restaurant-api-form.restaurant-form .form-actions button {
+  min-width: 0;
+  min-height: 48px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+@media (max-width: 620px) {
+  .restaurant-api-form.restaurant-form .form-row.two {
+    grid-template-columns: 1fr;
+  }
+}
+
 .server-ledger-list .ledger-row {
   min-height: auto;
   padding: 13px 14px;
