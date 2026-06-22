@@ -15,6 +15,7 @@
     renderCurrentLegacyTravelApiRecords(force)
     renderHomeMetricsFromApi(force)
     renderLedgerPageFromApi(force)
+    renderTravelPageFromApi(force)
     renderDiaryPageFromApi(force)
     renderBabyApiCards(force)
     renderRestaurantPageFromApi()

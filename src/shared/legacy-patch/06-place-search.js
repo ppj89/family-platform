@@ -21,7 +21,9 @@
     options = options || {}
     var label = locationCandidateLabel(item)
     var detail = locationCandidateDetail(item)
+    input.dataset.placeApplying = 'true'
     setNativeInputValue(input, label || detail)
+    delete input.dataset.placeApplying
     var latitude = Number(item.latitude)
     var longitude = Number(item.longitude)
     if (Number.isFinite(latitude) && Number.isFinite(longitude) && latitude !== 0 && longitude !== 0) {
@@ -45,6 +47,10 @@
       var addressInput = input.form.querySelector(options.addressSelector)
       if (addressInput && detail) setNativeInputValue(addressInput, detail)
     }
+    input.dispatchEvent(new CustomEvent('family-platform-location-selected', {
+      bubbles: true,
+      detail: item
+    }))
   }
 
   function getLocationCoordinates(form, selector) {
@@ -142,6 +148,7 @@
     }
 
     input.addEventListener('input', function () {
+      if (input.dataset.placeApplying === 'true') return
       queuePlaceSearch(true)
     })
     input.addEventListener('focus', function () {
