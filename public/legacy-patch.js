@@ -10109,6 +10109,7 @@
   function startTripEdit(panel, trip) {
     var detail = panel && panel.querySelector('.api-trip-detail')
     if (detail) detail.remove()
+    setTripDetailMode(panel, false)
     var row = findTripAddRow(panel)
     if (!fillTripRow(row, trip)) showPatchToast('\uC218\uC815\uD560 \uC5EC\uD589\uC744 \uCC3E\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
   }
@@ -10155,12 +10156,13 @@
     showPatchConfirm('\uC5EC\uD589\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
       apiRequest('/trips/' + encodeURIComponent(tripId), { method: 'DELETE' }).then(function () {
         showPatchToast('\uC5EC\uD589\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
-        if (String(localStorage.getItem(API_TRIP_ID_KEY) || '') === String(tripId)) localStorage.removeItem(API_TRIP_ID_KEY)
-        var detail = panel && panel.querySelector('.api-trip-detail')
-        if (detail) detail.remove()
-        renderTravelPageFromApi(true)
-      }).catch(function (error) {
-        showPatchToast(apiActionErrorMessage(error, '\uC5EC\uD589 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+          if (String(localStorage.getItem(API_TRIP_ID_KEY) || '') === String(tripId)) localStorage.removeItem(API_TRIP_ID_KEY)
+          var detail = panel && panel.querySelector('.api-trip-detail')
+          if (detail) detail.remove()
+          setTripDetailMode(panel, false)
+          renderTravelPageFromApi(true)
+        }).catch(function (error) {
+          showPatchToast(apiActionErrorMessage(error, '\uC5EC\uD589 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
       })
     })
   }
@@ -10168,6 +10170,7 @@
   function openApiTripDetail(panel, trip) {
     if (!panel || !trip) return
     localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
+    setTripDetailMode(panel, true)
     var detail = panel.querySelector('.api-trip-detail')
     if (!detail) {
       detail = document.createElement('section')
@@ -10188,11 +10191,23 @@
       '<div class="api-trip-record-list"></div>'
     ].join('')
     var back = detail.querySelector('[data-api-trip-back]')
-    if (back) back.addEventListener('click', function () { detail.remove() })
+    if (back) back.addEventListener('click', function () {
+      detail.remove()
+      setTripDetailMode(panel, false)
+    })
     normalizeTravelEntryForm()
     renderApiTripRecords(detail, trip.id)
     var first = detail.querySelector('[data-field="travel-title"]')
     if (first) window.setTimeout(function () { first.focus() }, 120)
+  }
+
+  function setTripDetailMode(panel, enabled) {
+    if (!panel) return
+    panel.classList.toggle('detail-mode', !!enabled)
+    panel.classList.toggle('list-mode', !enabled)
+    panel.querySelectorAll('.trip-list, .trip-add-row, .travel-trip-create-card').forEach(function (node) {
+      node.hidden = !!enabled
+    })
   }
 
   function renderApiTripRecords(detail, tripId) {
