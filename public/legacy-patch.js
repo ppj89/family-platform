@@ -11450,7 +11450,7 @@
     }
     var editId = Number(row.dataset.apiTripEditId || row.dataset.tripEditId || '')
     var isEdit = Number.isFinite(editId) && editId > 0
-    if (!confirmed && typeof showPatchConfirm === 'function') {
+    if (isEdit && !confirmed && typeof showPatchConfirm === 'function') {
       showPatchConfirm(isEdit ? '\uC5EC\uD589\uC744 \uC218\uC815\uD560\uAE4C\uC694?' : '\uC5EC\uD589\uC744 \uCD94\uAC00\uD560\uAE4C\uC694?', function () {
         saveTripRowToApi(row, true)
       })
@@ -11459,7 +11459,7 @@
     setTripRowBusy(row, true)
     var request = isEdit
       ? apiRequest('/trips/' + encodeURIComponent(editId), { method: 'PUT', body: JSON.stringify(payload) })
-      : getCurrentFamilyId().then(function (familyId) {
+      : getReadableFamilyId().then(function (familyId) {
           return postJson('/trips?familyId=' + encodeURIComponent(familyId), payload)
         })
     request.then(function (trip) {
