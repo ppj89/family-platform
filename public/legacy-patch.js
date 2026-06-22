@@ -8514,6 +8514,7 @@
     delete form.dataset.longitude
     var mapBox = form.querySelector('.restaurant-location-map-box')
     if (mapBox) mapBox.remove()
+    renderRestaurantDefaultLocationMap(form.querySelector('[data-restaurant-location]'))
     var scope = form.querySelector('[data-restaurant-scope]')
     if (scope) setOptionalInputValue(scope, '\uC804\uCCB4 \uAC00\uC871')
     var submit = form.querySelector('button[type="submit"]')
@@ -8544,6 +8545,10 @@
       else delete locationInput.dataset.placeAddress
       if (item.latitude && item.longitude) {
         renderRestaurantLocationMap(locationInput, Number(item.latitude), Number(item.longitude), item.location || item.name || '', item.address || '')
+      } else {
+        var mapBox = form.querySelector('.restaurant-location-map-box')
+        if (mapBox) mapBox.remove()
+        renderRestaurantDefaultLocationMap(locationInput)
       }
     }
     var submit = form.querySelector('button[type="submit"]')
@@ -8688,7 +8693,9 @@
       if (reset) reset.addEventListener('click', function () { clearRestaurantForm(form) })
     }
     syncRestaurantMenuState()
-    ensureRestaurantLocationSearch(content.querySelector('[data-restaurant-form]'))
+    var restaurantForm = content.querySelector('[data-restaurant-form]')
+    ensureRestaurantLocationSearch(restaurantForm)
+    renderRestaurantDefaultLocationMap(restaurantForm && restaurantForm.querySelector('[data-restaurant-location]'))
     loadRestaurantApiPage(content, false)
   }
 
@@ -8730,8 +8737,10 @@
     if (!box) {
       box = document.createElement('div')
       box.className = 'restaurant-location-map-box location-map-box'
+      var candidates = form && form.querySelector('.location-candidates')
       var anchor = input && input.closest('label')
-      if (anchor) anchor.insertAdjacentElement('afterend', box)
+      if (candidates) candidates.insertAdjacentElement('afterend', box)
+      else if (anchor) anchor.insertAdjacentElement('afterend', box)
     }
     var map = box.querySelector('.restaurant-location-map-osm')
     if (!map) {
@@ -8746,6 +8755,7 @@
   function renderRestaurantLocationMap(input, latitude, longitude, title, address) {
     var mapNode = ensureRestaurantLocationMapBox(input)
     if (!mapNode) return
+    mapNode.dataset.locationSelected = 'true'
     if (window.L && typeof window.L.map === 'function') {
       try {
         mapNode.innerHTML = ''
@@ -8773,6 +8783,30 @@
       '<strong>' + escapeHtml(title || '\uC704\uCE58') + '</strong>' +
       '<span>' + escapeHtml(address || (latitude.toFixed(6) + ', ' + longitude.toFixed(6))) + '</span>' +
       '</a>'
+  }
+
+  function renderRestaurantDefaultLocationMap(input) {
+    if (!pageHeadingIs('\uB9DB\uC9D1') || !input) return
+    var mapNode = ensureRestaurantLocationMapBox(input)
+    if (!mapNode || mapNode.dataset.locationSelected === 'true') return
+    mapNode.dataset.locationSelected = 'false'
+    if (window.L && typeof window.L.map === 'function') {
+      try {
+        mapNode.innerHTML = ''
+        delete mapNode._leaflet_id
+        var map = window.L.map(mapNode, { zoomControl: true, attributionControl: true, scrollWheelZoom: false })
+        map.setView([36.5, 127.8], 6)
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map)
+        window.setTimeout(function () { map.invalidateSize() }, 120)
+        return
+      } catch (error) {
+        mapNode.innerHTML = ''
+      }
+    }
+    mapNode.innerHTML = '<div class="map-static-link restaurant-empty-map"><strong>\uC704\uCE58\uB97C \uAC80\uC0C9\uD558\uBA74 \uC9C0\uB3C4\uC5D0 \uD45C\uC2DC\uB429\uB2C8\uB2E4.</strong></div>'
   }
 
   function normalizeRestaurantVisitDate() {
