@@ -26,14 +26,21 @@
       return
     }
     list.innerHTML = trips.map(function (trip) {
-      return '<button type="button" class="trip-list-card api-trip-card" data-api-trip-id="' + escapeHtml(trip.id) + '">' +
-        '<div><strong>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</strong>' +
-        '<span>' + escapeHtml((trip.startDate || '') + (trip.endDate && trip.endDate !== trip.startDate ? ' ~ ' + trip.endDate : '')) + '</span></div>' +
-        '<small>\uAE30\uB85D \uCD94\uAC00</small>' +
-        '</button>'
+      return '<article class="trip-list-card api-trip-card" data-api-trip-id="' + escapeHtml(trip.id) + '">' +
+        '<button type="button" class="trip-open-button" data-api-trip-open>' +
+        '<strong>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</strong>' +
+        '<span>' + escapeHtml((trip.startDate || '') + (trip.endDate && trip.endDate !== trip.startDate ? ' ~ ' + trip.endDate : '')) + '</span>' +
+        '</button>' +
+        '<div class="trip-row-actions">' +
+        '<button type="button" data-api-trip-open>\uAE30\uB85D \uCD94\uAC00</button>' +
+        '<button type="button" class="edit-button" data-api-trip-edit>\uC218\uC815</button>' +
+        '<button type="button" class="danger-action" data-api-trip-delete>\uC0AD\uC81C</button>' +
+        '</div>' +
+        '</article>'
     }).join('')
     list.querySelectorAll('.api-trip-card').forEach(function (card) {
-      card.addEventListener('click', function () {
+      card.addEventListener('click', function (event) {
+        if (event.target && event.target.closest && event.target.closest('.trip-row-actions')) return
         var trip = trips.find(function (item) { return String(item.id) === String(card.dataset.apiTripId) })
         if (trip) openApiTripDetail(panel, trip)
       })
@@ -65,11 +72,84 @@
   document.addEventListener('click', function (event) {
     var card = event.target && event.target.closest && event.target.closest('.api-trip-card')
     if (!card || !pageHeadingIs('\uC5EC\uD589')) return
+    var editButton = event.target.closest('[data-api-trip-edit]')
+    var deleteButton = event.target.closest('[data-api-trip-delete]')
+    if (editButton || deleteButton) {
+      event.preventDefault()
+      event.stopPropagation()
+      if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+      if (editButton) openApiTripEditRow(card)
+      if (deleteButton) deleteApiTrip(card)
+      return
+    }
     event.preventDefault()
     event.stopPropagation()
     if (event.stopImmediatePropagation) event.stopImmediatePropagation()
     openApiTripCard(card)
   }, true)
+
+  function readTripFromCard(card) {
+    var period = getCleanText(card.querySelector('.trip-open-button span, span'))
+    var trip = {
+      id: card.dataset.apiTripId || '',
+      title: getCleanText(card.querySelector('.trip-open-button strong, strong')) || '\uC5EC\uD589',
+      startDate: '',
+      endDate: ''
+    }
+    if (period.indexOf('~') >= 0) {
+      var parts = period.split('~')
+      trip.startDate = String(parts[0] || '').trim()
+      trip.endDate = String(parts[1] || '').trim()
+    } else {
+      trip.startDate = period
+      trip.endDate = period
+    }
+    return trip
+  }
+
+  function openApiTripEditRow(card) {
+    var trip = readTripFromCard(card)
+    if (!trip.id) return
+    document.querySelectorAll('.trip-add-row[data-api-trip-edit-id]').forEach(function (row) { row.remove() })
+    var row = document.createElement('form')
+    row.className = 'trip-add-row'
+    row.dataset.apiTripEditId = String(trip.id)
+    var startDate = parseApiDate(trip.startDate) || todayText()
+    var endDate = parseApiDate(trip.endDate) || startDate
+    row.innerHTML = [
+      '<input data-field="trip-title" value="' + escapeHtml(trip.title) + '" />',
+      '<label><span>\uC2DC\uC791\uC77C</span><input type="date" value="' + escapeHtml(startDate) + '" /></label>',
+      '<label><span>\uC885\uB8CC\uC77C</span><input type="date" value="' + escapeHtml(endDate) + '" /></label>',
+      '<button type="submit" class="save-button">\uC800\uC7A5</button>',
+      '<button type="button" class="cancel-button" data-api-trip-edit-cancel>\uCDE8\uC18C</button>'
+    ].join('')
+    card.insertAdjacentElement('afterend', row)
+    var title = row.querySelector('[data-field="trip-title"]')
+    if (title) title.focus()
+  }
+
+  document.addEventListener('click', function (event) {
+    var cancel = event.target && event.target.closest && event.target.closest('[data-api-trip-edit-cancel]')
+    if (!cancel || !pageHeadingIs('\uC5EC\uD589')) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    var row = cancel.closest('.trip-add-row[data-api-trip-edit-id]')
+    if (row) row.remove()
+  }, true)
+
+  function deleteApiTrip(card) {
+    var trip = readTripFromCard(card)
+    if (!trip.id || typeof showPatchConfirm !== 'function') return
+    showPatchConfirm('\uC5EC\uD589\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?', function () {
+      apiRequest('/trips/' + encodeURIComponent(trip.id), { method: 'DELETE' }).then(function () {
+        showPatchToast('\uC5EC\uD589\uC744 \uC0AD\uC81C\uD588\uC2B5\uB2C8\uB2E4.')
+        renderTravelPageFromApi(true)
+      }).catch(function (error) {
+        showPatchToast(apiActionErrorMessage(error, '\uC5EC\uD589 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+      })
+    })
+  }
 
   function openApiTripDetail(panel, trip) {
     if (!panel || !trip) return

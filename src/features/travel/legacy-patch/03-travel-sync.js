@@ -227,26 +227,119 @@
     })
   }
 
-  function syncTripAddRow(row) {
-    window.setTimeout(function () {
-      var title = getFieldValue(row, '[data-field="trip-title"]') || getFieldValue(row, 'input')
-      if (!title) return
-      var dateFields = row.querySelectorAll('.date-picker-field')
-      var startDate = parseApiDate(getCleanText(dateFields[0])) || todayText()
-      var endDate = parseApiDate(getCleanText(dateFields[1])) || startDate
-
-      queueApiSync({
-        type: 'createTrip',
-        payload: {
-          title: title,
-          startDate: startDate,
-          endDate: endDate,
-          description: startDate === endDate ? startDate : (startDate + ' ~ ' + endDate)
-        }
-      })
-      flushApiQueue()
-    }, 350)
+  function getTripRowTitleInput(row) {
+    if (!row) return null
+    return row.querySelector('[data-field="trip-title"]') || Array.from(row.querySelectorAll('input')).find(function (input) {
+      if (input.type === 'hidden' || input.type === 'date' || input.type === 'time') return false
+      return !input.closest('.date-picker-field')
+    }) || null
   }
+
+  function getTripRowDateValue(row, index) {
+    var dateFields = row ? row.querySelectorAll('.date-picker-field') : []
+    var fieldText = parseApiDate(getCleanText(dateFields[index]))
+    if (fieldText) return fieldText
+    var dateInputs = row ? row.querySelectorAll('input[type="date"]') : []
+    return parseApiDate(dateInputs[index] && dateInputs[index].value) || ''
+  }
+
+  function getTripRowPayload(row) {
+    var titleInput = getTripRowTitleInput(row)
+    var title = String(titleInput && titleInput.value || '').trim()
+    var startDate = getTripRowDateValue(row, 0) || todayText()
+    var endDate = getTripRowDateValue(row, 1) || startDate
+    return {
+      title: title,
+      startDate: startDate,
+      endDate: endDate,
+      description: startDate === endDate ? startDate : (startDate + ' ~ ' + endDate)
+    }
+  }
+
+  function setTripRowBusy(row, busy) {
+    if (!row) return
+    row.dataset.travelTripSubmitting = busy ? 'true' : ''
+    row.querySelectorAll('button').forEach(function (button) {
+      if (button.classList.contains('cancel-button')) return
+      button.disabled = !!busy
+    })
+  }
+
+  function clearTripRowAfterCreate(row) {
+    var titleInput = getTripRowTitleInput(row)
+    if (titleInput) setNativeInputValue(titleInput, '')
+  }
+
+  function refreshTripListAfterSave() {
+    if (typeof renderTravelPageFromApi === 'function') renderTravelPageFromApi(true)
+    else refreshServerDataViews(true)
+  }
+
+  function saveTripRowToApi(row, confirmed) {
+    if (!row || row.dataset.travelTripSubmitting === 'true') return
+    var payload = getTripRowPayload(row)
+    var titleInput = getTripRowTitleInput(row)
+    if (!payload.title) {
+      showPatchToast('\uC5EC\uD589\uBA85\uC740 \uD544\uC218\uAC12\uC785\uB2C8\uB2E4.')
+      if (titleInput) titleInput.focus()
+      return
+    }
+    var editId = Number(row.dataset.apiTripEditId || row.dataset.tripEditId || '')
+    var isEdit = Number.isFinite(editId) && editId > 0
+    if (!confirmed && typeof showPatchConfirm === 'function') {
+      showPatchConfirm(isEdit ? '\uC5EC\uD589\uC744 \uC218\uC815\uD560\uAE4C\uC694?' : '\uC5EC\uD589\uC744 \uCD94\uAC00\uD560\uAE4C\uC694?', function () {
+        saveTripRowToApi(row, true)
+      })
+      return
+    }
+    setTripRowBusy(row, true)
+    var request = isEdit
+      ? apiRequest('/trips/' + encodeURIComponent(editId), { method: 'PUT', body: JSON.stringify(payload) })
+      : getCurrentFamilyId().then(function (familyId) {
+          return postJson('/trips?familyId=' + encodeURIComponent(familyId), payload)
+        })
+    request.then(function (trip) {
+      if (trip && trip.id) localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
+      if (!isEdit) clearTripRowAfterCreate(row)
+      showPatchToast(isEdit ? '\uC5EC\uD589\uC744 \uC218\uC815\uD588\uC2B5\uB2C8\uB2E4.' : '\uC5EC\uD589\uC744 \uCD94\uAC00\uD588\uC2B5\uB2C8\uB2E4.')
+      refreshTripListAfterSave()
+    }).catch(function (error) {
+      showPatchToast(apiActionErrorMessage(error, isEdit ? '\uC5EC\uD589 \uC218\uC815\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.' : '\uC5EC\uD589 \uCD94\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.'))
+    }).finally(function () {
+      setTripRowBusy(row, false)
+    })
+  }
+
+  function syncTripAddRow(row) {
+    saveTripRowToApi(row, false)
+  }
+
+  function isTravelTripSaveButton(button) {
+    if (!button || !button.closest('.trip-add-row')) return false
+    if (button.classList.contains('cancel-button') || button.dataset.travelListBack) return false
+    if (button.matches('.submit-action, .save-button, button[type="submit"]')) return true
+    return getCleanText(button) === '\uC800\uC7A5' || getCleanText(button) === '\uC5EC\uD589 \uCD94\uAC00'
+  }
+
+  document.addEventListener('click', function (event) {
+    if (!pageHeadingIs('\uC5EC\uD589')) return
+    var button = event.target && event.target.closest && event.target.closest('.trip-add-row button')
+    if (!isTravelTripSaveButton(button)) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    syncTripAddRow(button.closest('.trip-add-row'))
+  }, true)
+
+  document.addEventListener('submit', function (event) {
+    if (!pageHeadingIs('\uC5EC\uD589')) return
+    var tripRow = event.target && event.target.closest && event.target.closest('.trip-add-row')
+    if (!tripRow) return
+    event.preventDefault()
+    event.stopPropagation()
+    if (event.stopImmediatePropagation) event.stopImmediatePropagation()
+    syncTripAddRow(tripRow)
+  }, true)
 
   function syncTravelForm(form) {
     if (!form || form.dataset.travelSubmitting === 'true') return
