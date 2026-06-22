@@ -9411,31 +9411,139 @@
   }
 
   function searchTravelPlaces(query, limit) {
-    return searchLocationPlaces(query, limit)
+    var text = String(query || '').trim()
+    if (!text || text.length < 2 || !getStoredAuthToken()) return Promise.resolve([])
+    return apiRequest('/places/search?q=' + encodeURIComponent(text) + '&limit=' + encodeURIComponent(limit || 6)).then(function (items) {
+      return Array.isArray(items) ? items : []
+    }).catch(function () {
+      return []
+    })
   }
 
   function placeCandidateLabel(item) {
-    return locationCandidateLabel(item)
+    return String(item && (item.name || item.address) || '').trim()
   }
 
   function placeCandidateDetail(item) {
-    return locationCandidateDetail(item)
+    return String(item && item.address || '').trim()
   }
 
   function setTravelLocationCandidate(input, item) {
-    setLocationCandidate(input, item)
+    if (!input || !item) return
+    var label = placeCandidateLabel(item)
+    var detail = placeCandidateDetail(item)
+    setNativeInputValue(input, label || detail)
+    if (Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude)) && Number(item.latitude) !== 0 && Number(item.longitude) !== 0) {
+      input.dataset.latitude = String(item.latitude)
+      input.dataset.longitude = String(item.longitude)
+    } else {
+      delete input.dataset.latitude
+      delete input.dataset.longitude
+    }
+    if (detail) input.dataset.placeAddress = detail
+    else delete input.dataset.placeAddress
   }
 
   function getTravelLocationCoordinates(form) {
-    return getLocationCoordinates(form, '[data-field="travel-location"]')
+    var input = form && form.querySelector('[data-field="travel-location"]')
+    if (!input) return null
+    var latitude = Number(input.dataset.latitude)
+    var longitude = Number(input.dataset.longitude)
+    if (Number.isFinite(latitude) && Number.isFinite(longitude) && latitude !== 0 && longitude !== 0) {
+      return { latitude: latitude, longitude: longitude }
+    }
+    var match = String(input.value || '').trim().match(/^(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)$/)
+    if (!match) return null
+    latitude = Number(match[1])
+    longitude = Number(match[2])
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude) || Math.abs(latitude) > 90 || Math.abs(longitude) > 180) return null
+    return { latitude: latitude, longitude: longitude }
   }
 
   function resolveTravelLocationForSubmit(form, location) {
-    return resolveLocationForSubmit(form, location, '[data-field="travel-location"]')
+    var existing = getTravelLocationCoordinates(form)
+    if (existing || !String(location || '').trim()) return Promise.resolve(existing)
+    return searchTravelPlaces(location, 1).then(function (items) {
+      var first = items[0]
+      if (!first) return null
+      var input = form.querySelector('[data-field="travel-location"]')
+      setTravelLocationCandidate(input, first)
+      return { latitude: Number(first.latitude), longitude: Number(first.longitude) }
+    })
   }
 
   function ensureTravelLocationSearch(form) {
-    ensureLocationSearch(form, '[data-field="travel-location"]')
+    var input = form && form.querySelector('[data-field="travel-location"]')
+    if (!input || input.dataset.placeSearchReady === 'true') return
+    input.dataset.placeSearchReady = 'true'
+    var label = input.closest('label')
+    var candidates = document.createElement('div')
+    candidates.className = 'location-candidates travel-location-candidates'
+    candidates.hidden = true
+    if (label && label.parentElement) {
+      label.insertAdjacentElement('afterend', candidates)
+    }
+    var timer = null
+
+    function hideCandidates() {
+      candidates.hidden = true
+      candidates.innerHTML = ''
+    }
+
+    function renderCandidates(query, items) {
+      if (String(input.value || '').trim() !== query) return
+      if (!items.length) {
+        items = [{ id: 'manual:' + query, name: query, address: '\uC785\uB825\uD55C \uC704\uCE58\uB85C \uC800\uC7A5', latitude: '', longitude: '', source: 'manual' }]
+      }
+      candidates.innerHTML = '<span>\uC704\uCE58\uB97C \uC120\uD0DD\uD574\uC8FC\uC138\uC694.</span>' + items.map(function (item, index) {
+        return '<button type="button" data-place-index="' + index + '">' +
+          '<b>' + escapeHtml(placeCandidateLabel(item)) + '</b>' +
+          '<small>' + escapeHtml(placeCandidateDetail(item)) + '</small>' +
+          '</button>'
+      }).join('')
+      candidates.hidden = false
+      candidates.querySelectorAll('button[data-place-index]').forEach(function (button) {
+        button.addEventListener('mousedown', function (event) { event.preventDefault() })
+        button.addEventListener('click', function () {
+          var item = items[Number(button.dataset.placeIndex)]
+          setTravelLocationCandidate(input, item)
+          hideCandidates()
+        })
+      })
+    }
+
+    function queuePlaceSearch(clearCoordinates) {
+      if (clearCoordinates) {
+        delete input.dataset.latitude
+        delete input.dataset.longitude
+        delete input.dataset.placeAddress
+      }
+      window.clearTimeout(timer)
+      var query = String(input.value || '').trim()
+      if (query.length < 2) {
+        hideCandidates()
+        return
+      }
+      timer = window.setTimeout(function () {
+        candidates.innerHTML = '<span>\uC704\uCE58\uB97C \uAC80\uC0C9\uD558\uB294 \uC911\uC785\uB2C8\uB2E4.</span>'
+        candidates.hidden = false
+        searchTravelPlaces(query, 6).then(function (items) {
+          renderCandidates(query, items)
+        })
+      }, 280)
+    }
+
+    input.addEventListener('input', function () {
+      queuePlaceSearch(true)
+    })
+    input.addEventListener('focus', function () {
+      if (String(input.value || '').trim().length >= 2 && candidates.hidden) {
+        queuePlaceSearch(false)
+      }
+    })
+    input.addEventListener('blur', function () {
+      window.setTimeout(hideCandidates, 220)
+    })
   }
 
   function ensureTravelHeaderActions() {
@@ -9908,11 +10016,12 @@
     }
     detail.innerHTML = [
       '<header class="api-trip-detail-header"><div><h3>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</h3><span>' + escapeHtml((trip.startDate || '') + (trip.endDate && trip.endDate !== trip.startDate ? ' ~ ' + trip.endDate : '')) + '</span></div><button type="button" data-api-trip-back>\uBAA9\uB85D</button></header>',
-      '<form class="ledger-form travel-form api-travel-record-form">',
+      '<form class="travel-form api-travel-record-form">',
       '<label><span>\uC81C\uBAA9 <em class="required-mark">*</em></span><input data-field="travel-title" /></label>',
-      '<div class="form-row"><label><span>\uC704\uCE58</span><input data-field="travel-location" autocomplete="off" /></label><label><span>\uC0AC\uC6A9\uAE08\uC561</span><input data-field="travel-amount" inputmode="numeric" /></label></div>',
-      '<div class="location-map-box travel-api-location-map"><div data-travel-map-preview></div><div class="location-map-actions"><button type="button" class="cancel-button" data-travel-current-location>\uD604\uC7AC \uC704\uCE58 \uC0AC\uC6A9</button></div></div>',
-      '<div class="form-row"><label><span>\uB0A0\uC9DC <em class="required-mark">*</em></span><input data-field="travel-record-date" type="date" value="' + todayText() + '" /></label><label><span>\uC2DC\uAC04 <em class="required-mark">*</em></span><input data-field="travel-record-time" type="time" value="' + currentTimeText() + '" /></label></div>',
+      '<label><span>\uC704\uCE58</span><input data-field="travel-location" /></label>',
+      '<label><span>\uC0AC\uC6A9\uAE08\uC561</span><input data-field="travel-amount" inputmode="numeric" /></label>',
+      '<label><span>\uB0A0\uC9DC <em class="required-mark">*</em></span><input data-field="travel-record-date" type="date" value="' + todayText() + '" /></label>',
+      '<label><span>\uC2DC\uAC04 <em class="required-mark">*</em></span><input data-field="travel-record-time" type="time" value="' + currentTimeText() + '" /></label>',
       '<label class="travel-note-field"><span>\uBA54\uBAA8</span><textarea rows="4"></textarea></label>',
       '<div class="travel-form-actions"><button type="submit" class="submit-action">\uAE30\uB85D \uCD94\uAC00</button></div>',
       '</form>',
@@ -9921,69 +10030,9 @@
     var back = detail.querySelector('[data-api-trip-back]')
     if (back) back.addEventListener('click', function () { detail.remove() })
     normalizeTravelEntryForm()
-    bindTravelApiLocationMap(detail.querySelector('.api-travel-record-form'))
     renderApiTripRecords(detail, trip.id)
     var first = detail.querySelector('[data-field="travel-title"]')
     if (first) window.setTimeout(function () { first.focus() }, 120)
-  }
-
-  function travelOsmEmbed(latitude, longitude, title) {
-    var lat = Number(latitude)
-    var lng = Number(longitude)
-    if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
-      return '<iframe title="' + escapeHtml(title || '\uC5EC\uD589 \uC704\uCE58') + '" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
-        encodeURIComponent((lng - 0.01) + ',' + (lat - 0.01) + ',' + (lng + 0.01) + ',' + (lat + 0.01)) +
-        '&layer=mapnik&marker=' + encodeURIComponent(lat + ',' + lng) + '"></iframe>'
-    }
-    return '<iframe title="' + escapeHtml(title || '\uC5EC\uD589 \uC9C0\uB3C4') + '" loading="lazy" src="https://www.openstreetmap.org/export/embed.html?bbox=' +
-      encodeURIComponent('124,33,132,39') + '&layer=mapnik"></iframe>'
-  }
-
-  function renderTravelApiLocationPreview(form) {
-    var target = form && form.querySelector('[data-travel-map-preview]')
-    if (!target) return
-    var coords = getTravelLocationCoordinates(form)
-    target.innerHTML = coords
-      ? travelOsmEmbed(coords.latitude, coords.longitude, '\uC5EC\uD589 \uC704\uCE58')
-      : travelOsmEmbed(null, null, '\uC5EC\uD589 \uC9C0\uB3C4')
-  }
-
-  function useTravelApiCurrentLocation(form) {
-    if (!form || !navigator.geolocation) {
-      showPatchToast('\uD604\uC7AC \uC704\uCE58\uB97C \uC0AC\uC6A9\uD560 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4.')
-      return
-    }
-    navigator.geolocation.getCurrentPosition(function (position) {
-      var input = form.querySelector('[data-field="travel-location"]')
-      var latitude = position.coords.latitude
-      var longitude = position.coords.longitude
-      if (input) {
-        setNativeInputValue(input, latitude.toFixed(6) + ', ' + longitude.toFixed(6))
-        input.dataset.latitude = String(latitude)
-        input.dataset.longitude = String(longitude)
-      }
-      renderTravelApiLocationPreview(form)
-      showPatchToast('\uD604\uC7AC \uC704\uCE58\uB97C \uBC18\uC601\uD588\uC2B5\uB2C8\uB2E4.')
-    }, function () {
-      showPatchToast('\uD604\uC7AC \uC704\uCE58\uB97C \uAC00\uC838\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.')
-    }, { enableHighAccuracy: true, timeout: 10000 })
-  }
-
-  function bindTravelApiLocationMap(form) {
-    if (!form || form.dataset.travelMapReady === 'true') return
-    form.dataset.travelMapReady = 'true'
-    var input = form.querySelector('[data-field="travel-location"]')
-    var current = form.querySelector('[data-travel-current-location]')
-    if (input) {
-      input.addEventListener('input', function () {
-        window.setTimeout(function () { renderTravelApiLocationPreview(form) }, 0)
-      })
-      input.addEventListener('family-platform-location-selected', function () {
-        renderTravelApiLocationPreview(form)
-      })
-    }
-    if (current) current.addEventListener('click', function () { useTravelApiCurrentLocation(form) })
-    renderTravelApiLocationPreview(form)
   }
 
   function renderApiTripRecords(detail, tripId) {
@@ -11707,7 +11756,6 @@
               delete field.dataset.longitude
               delete field.dataset.placeAddress
             })
-            if (typeof renderTravelApiLocationPreview === 'function') renderTravelApiLocationPreview(form)
             return record
           })
         })

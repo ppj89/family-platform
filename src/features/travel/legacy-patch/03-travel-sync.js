@@ -325,7 +325,6 @@
               delete field.dataset.longitude
               delete field.dataset.placeAddress
             })
-            if (typeof renderTravelApiLocationPreview === 'function') renderTravelApiLocationPreview(form)
             return record
           })
         })
