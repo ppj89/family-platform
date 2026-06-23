@@ -10475,9 +10475,9 @@ select {
 
 .api-trip-detail-shell {
   display: grid !important;
-  grid-template-columns: minmax(420px, 1fr) minmax(340px, 390px) !important;
+  grid-template-columns: minmax(500px, 1fr) minmax(300px, 340px) !important;
   align-items: start !important;
-  gap: 18px !important;
+  gap: 16px !important;
 }
 
 .api-trip-detail-main,
@@ -10626,12 +10626,12 @@ select {
 
 .api-travel-record-card {
   display: grid !important;
-  grid-template-columns: 34px 44px minmax(0, 1fr) !important;
-  grid-template-rows: auto auto !important;
+  grid-template-columns: 34px minmax(0, 1fr) !important;
+  grid-template-rows: auto auto auto !important;
   align-items: start !important;
-  gap: 10px 12px !important;
+  gap: 4px 12px !important;
   border-radius: 18px !important;
-  padding: 14px !important;
+  padding: 10px 12px !important;
   background: #f7f8fa !important;
   box-shadow: inset 0 0 0 1px #e5e8eb !important;
 }
@@ -10639,10 +10639,11 @@ select {
 .api-travel-record-order {
   display: grid !important;
   place-items: center !important;
-  grid-row: 1 / span 2 !important;
-  width: 34px !important;
-  height: 34px !important;
-  margin-top: 2px !important;
+  grid-column: 1 !important;
+  grid-row: 1 !important;
+  width: 32px !important;
+  height: 32px !important;
+  margin-top: 0 !important;
   border-radius: 11px !important;
   background: #e8f3ff !important;
   color: #1b64da !important;
@@ -10653,9 +10654,10 @@ select {
 .api-travel-record-thumb {
   display: grid !important;
   place-items: center !important;
-  grid-row: 1 / span 2 !important;
-  width: 44px !important;
-  height: 44px !important;
+  grid-column: 1 !important;
+  grid-row: 2 !important;
+  width: 32px !important;
+  height: 32px !important;
   border-radius: 12px !important;
   color: #8b95a1 !important;
   background: #e9edf2 !important;
@@ -10663,15 +10665,17 @@ select {
 
 .api-travel-record-body {
   display: grid !important;
-  grid-column: 3 !important;
-  grid-row: 1 !important;
-  gap: 6px !important;
+  grid-column: 2 !important;
+  grid-row: 1 / span 2 !important;
+  grid-template-columns: minmax(0, 1fr) !important;
+  gap: 3px !important;
   min-width: 0 !important;
   overflow: hidden !important;
 }
 
 .api-travel-record-date {
   display: block !important;
+  grid-row: 1 !important;
   margin: 0 !important;
   max-width: 100% !important;
   overflow: hidden !important;
@@ -10685,6 +10689,7 @@ select {
 
 .api-travel-record-title {
   display: block !important;
+  grid-row: 3 !important;
   min-width: 0 !important;
   overflow: hidden !important;
   color: #191f28 !important;
@@ -10698,8 +10703,13 @@ select {
 .api-travel-record-note,
 .api-travel-record-location {
   display: block !important;
+  width: 100% !important;
+  grid-row: 4 !important;
   margin: 0 !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
   overflow: hidden !important;
+  background: transparent !important;
   color: #4e5968 !important;
   font-size: 13px !important;
   font-weight: 600 !important;
@@ -10710,8 +10720,12 @@ select {
 
 .api-travel-record-cost {
   display: block !important;
-  margin-top: 2px !important;
+  width: 100% !important;
+  grid-row: 2 !important;
+  margin-top: 0 !important;
   max-width: 100% !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
   overflow: hidden !important;
   color: #4e5968 !important;
   background: transparent !important;
@@ -10723,18 +10737,18 @@ select {
 }
 
 .api-travel-record-actions {
-  grid-column: 3 !important;
-  grid-row: 2 !important;
+  grid-column: 2 !important;
+  grid-row: 3 !important;
   align-self: end !important;
   justify-content: flex-end !important;
-  gap: 7px !important;
+  gap: 6px !important;
   min-width: 0 !important;
 }
 
 .api-travel-record-card .api-travel-record-actions button {
-  min-height: 32px !important;
-  padding: 0 11px !important;
-  border-radius: 11px !important;
+  min-height: 28px !important;
+  padding: 0 9px !important;
+  border-radius: 10px !important;
   font-size: 12px !important;
 }
 
@@ -10869,7 +10883,7 @@ select {
 
 @media (max-width: 860px) {
   .api-trip-detail-shell {
-    grid-template-columns: minmax(360px, 1fr) minmax(300px, 340px) !important;
+    grid-template-columns: minmax(380px, 1fr) minmax(280px, 320px) !important;
     gap: 14px !important;
   }
 
@@ -10886,8 +10900,8 @@ select {
     grid-template-columns: 34px minmax(0, 1fr) !important;
     grid-template-rows: auto auto auto !important;
     align-items: start !important;
-    gap: 8px 12px !important;
-    padding: 13px !important;
+    gap: 4px 12px !important;
+    padding: 10px 12px !important;
     border-radius: 16px !important;
     background: #ffffff !important;
   }
@@ -10919,10 +10933,9 @@ select {
   .api-travel-record-body {
     grid-column: 2 !important;
     grid-row: 1 / span 2 !important;
-    grid-template-columns: auto minmax(0, 1fr) !important;
-    align-items: center !important;
-    column-gap: 8px !important;
-    row-gap: 5px !important;
+    grid-template-columns: minmax(0, 1fr) !important;
+    align-items: start !important;
+    gap: 3px !important;
   }
 
   .api-travel-record-date {
@@ -10933,13 +10946,13 @@ select {
 
   .api-travel-record-title {
     grid-column: 1 / -1 !important;
-    grid-row: 2 !important;
+    grid-row: 3 !important;
     font-size: 15px !important;
   }
 
   .api-travel-record-note {
     grid-column: 1 / -1 !important;
-    grid-row: 3 !important;
+    grid-row: 4 !important;
   }
 
   .api-travel-record-location {
@@ -10950,7 +10963,7 @@ select {
 
   .api-travel-record-cost {
     grid-column: 1 / -1 !important;
-    grid-row: 4 !important;
+    grid-row: 2 !important;
     color: #4e5968 !important;
     background: transparent !important;
   }
@@ -10971,8 +10984,8 @@ select {
 
   .api-travel-record-card .api-travel-record-actions button {
     flex: 0 0 auto !important;
-    min-height: 30px !important;
-    padding: 0 10px !important;
+    min-height: 28px !important;
+    padding: 0 9px !important;
     border-radius: 10px !important;
     font-size: 12px !important;
   }
