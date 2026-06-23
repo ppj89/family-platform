@@ -3,7 +3,7 @@
       var order = travelRecordOrder(record, index)
       var amount = Number(record.amount || 0)
       var cost = [record.category || '', amount ? amount.toLocaleString('ko-KR') + '\uC6D0' : '0\uC6D0'].filter(Boolean).join(' \u00B7 ')
-      var dateTime = [record.recordDate || '', formatTravelRecordTime(record.recordTime)].filter(Boolean).join(' \u00B7 ')
+      var dateTime = [record.recordDate || '', formatTravelRecordTime(record.recordTime)].filter(Boolean).join(' ')
       var note = String(record.note || '').trim()
       var location = String(record.location || '').trim()
       return '<article class="travel-row travel-record-card api-travel-record-card" data-api-travel-record-id="' + escapeHtml(record.id || '') + '">' +
@@ -32,7 +32,7 @@
   function renderTravelRouteSequence(records) {
     var items = records.slice(0, 12).map(function (record, index) {
       var label = record.title || record.location || '\uC5EC\uD589 \uAE30\uB85D'
-      var sub = record.location || [record.recordDate || '', formatTravelRecordTime(record.recordTime)].filter(Boolean).join(' \u00B7 ')
+      var sub = record.location || [record.recordDate || '', formatTravelRecordTime(record.recordTime)].filter(Boolean).join(' ')
       return '<div class="route-sequence-item"><b>' + escapeHtml(travelRouteNumber(record, index)) + '</b><span>' + escapeHtml(label) + '</span>' +
         (sub ? '<small>' + escapeHtml(sub) + '</small>' : '') + (index < records.length - 1 ? '<i></i>' : '') + '</div>'
     }).join('')
