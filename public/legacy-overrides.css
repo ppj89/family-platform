@@ -10713,9 +10713,10 @@ select {
   margin-top: 2px !important;
   max-width: 100% !important;
   overflow: hidden !important;
-  color: #1b64da !important;
+  color: #4e5968 !important;
+  background: transparent !important;
   font-size: 13px !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
   line-height: 1.35 !important;
   text-overflow: ellipsis !important;
   white-space: nowrap !important;
@@ -10950,6 +10951,8 @@ select {
   .api-travel-record-cost {
     grid-column: 1 / -1 !important;
     grid-row: 4 !important;
+    color: #4e5968 !important;
+    background: transparent !important;
   }
 
   .api-travel-record-note,

@@ -2,10 +2,10 @@
     return sortedTravelRecords(records).map(function (record, index) {
       var order = travelRecordOrder(record, index)
       var amount = Number(record.amount || 0)
-      var cost = [record.category || '', amount ? amount.toLocaleString('ko-KR') + '\uC6D0' : '0\uC6D0'].filter(Boolean).join(' \u00B7 ')
       var dateTime = [record.recordDate || '', formatTravelRecordTime(record.recordTime)].filter(Boolean).join(' ')
       var note = String(record.note || '').trim()
       var location = String(record.location || '').trim()
+      var cost = [record.category || '', amount ? amount.toLocaleString('ko-KR') + '\uC6D0' : '0\uC6D0', location].filter(Boolean).join(' \u00B7 ')
       return '<article class="travel-row travel-record-card api-travel-record-card" data-api-travel-record-id="' + escapeHtml(record.id || '') + '">' +
         '<b class="api-travel-record-order">' + escapeHtml(order) + '</b>' +
         '<div class="travel-thumb empty api-travel-record-thumb" aria-hidden="true">' + renderTravelRecordThumbIcon() + '</div>' +
@@ -13,7 +13,6 @@
         '<time class="api-travel-record-date">' + escapeHtml(dateTime) + '</time>' +
         '<strong class="api-travel-record-title">' + escapeHtml(record.title || '\uC5EC\uD589 \uAE30\uB85D') + '</strong>' +
         (note ? '<span class="api-travel-record-note">' + escapeHtml(note) + '</span>' : '') +
-        (location ? '<small class="api-travel-record-location">' + escapeHtml(location) + '</small>' : '') +
         '<span class="api-travel-record-cost">' + escapeHtml(cost) + '</span>' +
         '</div>' +
         '<div class="travel-record-actions api-travel-record-actions">' +
