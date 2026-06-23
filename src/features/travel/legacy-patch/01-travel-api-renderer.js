@@ -3,7 +3,9 @@
     var panel = document.querySelector('.trip-manager')
     var headerAction = document.querySelector('.panel-header .passive-header-chip, .panel.wide.full-span .panel-header button')
     if (!panel && !headerAction) return
-    if (!force && panel && panel.dataset.apiBacked === 'true') return
+    var existingList = panel && panel.querySelector('.trip-list')
+    var hasRenderedList = existingList && (existingList.querySelector('.api-trip-card') || existingList.querySelector('.api-empty-row'))
+    if (!force && panel && panel.dataset.apiBacked === 'true' && hasRenderedList) return
     if (panel) panel.dataset.apiBacked = 'true'
     normalizeTravelListWorkspace()
     fetchTrips().then(function (trips) {
