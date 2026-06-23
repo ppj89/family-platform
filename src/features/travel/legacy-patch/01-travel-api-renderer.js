@@ -47,9 +47,10 @@
   }
 
   function forceTravelListModeNow() {
+    var panel = document.querySelector('.trip-manager')
+    if (panel && panel.querySelector('.api-trip-detail') && Date.now() - Number(window.__familyTravelDetailOpenedAt || 0) < 2500) return
     window.__familyTravelForceListMode = true
     try { localStorage.removeItem(API_TRIP_ID_KEY) } catch {}
-    var panel = document.querySelector('.trip-manager')
     if (panel) resetTravelApiListMode(panel)
     if (pageHeadingIs('\uC5EC\uD589')) renderTravelPageFromApi(true)
   }
@@ -65,18 +66,7 @@
       list.innerHTML = emptyRow('\uB4F1\uB85D\uB41C \uC5EC\uD589\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.', '')
       return
     }
-    list.innerHTML = trips.map(function (trip) {
-      return '<article class="trip-list-card api-trip-card" data-api-trip-id="' + escapeHtml(trip.id) + '" data-api-trip-title="' + escapeHtml(trip.title || '\uC5EC\uD589') + '" data-api-trip-start="' + escapeHtml(trip.startDate || '') + '" data-api-trip-end="' + escapeHtml(trip.endDate || trip.startDate || '') + '">' +
-        '<button type="button" class="trip-card-main" data-api-trip-open="' + escapeHtml(trip.id) + '">' +
-        '<div><strong>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</strong>' +
-        '<span>' + escapeHtml(tripPeriodText(trip)) + '</span></div>' +
-        '</button>' +
-        '<div class="trip-card-actions">' +
-        '<button type="button" data-api-trip-edit="' + escapeHtml(trip.id) + '">\uC218\uC815</button>' +
-        '<button type="button" class="danger-action" data-api-trip-delete="' + escapeHtml(trip.id) + '">\uC0AD\uC81C</button>' +
-        '</div>' +
-        '</article>'
-    }).join('')
+    list.innerHTML = renderTravelTripListCards(trips)
     list.querySelectorAll('[data-api-trip-open]').forEach(function (card) {
       card.addEventListener('click', function () {
         var trip = trips.find(function (item) { return String(item.id) === String(card.dataset.apiTripOpen) })
@@ -107,7 +97,7 @@
 
   function tripFromCard(card) {
     if (!card) return null
-    var period = getCleanText(card.querySelector('span'))
+        var period = getCleanText(card.querySelector('span'))
     var startDate = card.dataset.apiTripStart || ''
     var endDate = card.dataset.apiTripEnd || startDate
     if (!startDate && period.indexOf('~') >= 0) {
@@ -311,6 +301,7 @@
   function openApiTripDetail(panel, trip) {
     if (!panel || !trip) return
     window.__familyTravelForceListMode = false
+    window.__familyTravelDetailOpenedAt = Date.now()
     localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
     setTripDetailMode(panel, true)
     var detail = panel.querySelector('.api-trip-detail')
@@ -319,31 +310,7 @@
       detail.className = 'api-trip-detail'
       panel.appendChild(detail)
     }
-    detail.innerHTML = [
-      '<div class="api-trip-detail-shell">',
-      '<section class="api-trip-detail-main">',
-      '<div class="api-trip-detail-toolbar"><button type="button" data-api-trip-back>\uBAA9\uB85D</button></div>',
-      '<div class="travel-summary api-travel-summary"><div><span>\uCD1D \uC0AC\uC6A9\uAE08\uC561</span><strong data-trip-total-amount>0\uC6D0</strong></div><div><span>\uB2E4\uC74C \uC21C\uC11C</span><strong data-trip-next-order>01</strong></div></div>',
-      '<div class="route-map api-trip-route-map"><div class="route-map-osm" data-trip-route-map></div><div class="route-map-empty" data-trip-route-empty>\uB4F1\uB85D\uB41C \uC704\uCE58\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</div></div>',
-      '<div class="api-trip-record-list"></div>',
-      '</section>',
-      '<aside class="api-trip-detail-side">',
-      '<form class="travel-form api-travel-record-form">',
-      '<h3>\uC5EC\uD589 \uAE30\uB85D \uCD94\uAC00</h3>',
-      '<label class="form-field"><span class="form-label">\uC21C\uC11C</span><input class="form-control" data-field="travel-sort-order" inputmode="numeric" value="1" /></label>',
-      '<label class="form-field travel-category-field"><span class="form-label">\uBE44\uC6A9 \uAD6C\uBD84</span><input type="hidden" data-field="travel-category" value="\uAD50\uD1B5" /><div class="custom-select api-travel-category-select" data-api-travel-category-select><button type="button" class="custom-select-trigger form-control" data-api-travel-category-trigger><span>\uAD50\uD1B5</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="custom-select-list" hidden><button type="button" data-api-travel-category-value="\uAD50\uD1B5" class="selected">\uAD50\uD1B5</button><button type="button" data-api-travel-category-value="\uC219\uBC15">\uC219\uBC15</button><button type="button" data-api-travel-category-value="\uC2DD\uBE44">\uC2DD\uBE44</button><button type="button" data-api-travel-category-value="\uAD00\uAD11">\uAD00\uAD11</button><button type="button" data-api-travel-category-value="\uAE30\uD0C0">\uAE30\uD0C0</button></div></div></label>',
-      '<label class="form-field travel-title-field"><span class="form-label">\uC81C\uBAA9 <em class="required-mark">*</em></span><input class="form-control" data-field="travel-title" /></label>',
-      '<label class="form-field date-picker-field travel-record-date-field"><span class="form-label">\uB0A0\uC9DC <em class="required-mark">*</em></span><input type="hidden" data-field="travel-record-date" value="' + todayText() + '" /><button type="button" class="date-picker-trigger form-control" data-api-travel-record-date-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 2v4M8 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label>',
-      '<label class="form-field"><span class="form-label">\uC2DC\uAC04 <em class="required-mark">*</em></span><input class="form-control" data-field="travel-record-time" type="text" inputmode="numeric" maxlength="5" autocomplete="off" value="' + currentTimeText() + '" /></label>',
-      '<label class="form-field travel-location-field"><span class="form-label">\uC704\uCE58</span><input class="form-control" data-field="travel-location" autocomplete="off" /></label>',
-      '<div class="location-map-box api-location-map-box"><div class="location-map-osm" data-travel-location-map><span>\uC704\uCE58\uB97C \uC120\uD0DD\uD558\uBA74 \uC9C0\uB3C4\uC5D0 \uD45C\uC2DC\uB429\uB2C8\uB2E4.</span></div></div>',
-      '<label class="form-field"><span class="form-label">\uC0AC\uC6A9\uAE08\uC561</span><input class="form-control" data-field="travel-amount" inputmode="numeric" /></label>',
-      '<label class="form-field travel-note-field"><span class="form-label">\uB0B4\uC6A9</span><textarea class="form-control" rows="5"></textarea></label>',
-      '<div class="travel-form-actions"><button type="submit" class="save-button submit-action">\uAE30\uB85D \uCD94\uAC00</button></div>',
-      '</form>',
-      '</aside>',
-      '</div>'
-    ].join('')
+    detail.innerHTML = renderTravelTripDetailShell(trip)
     var back = detail.querySelector('[data-api-trip-back]')
     if (back) back.addEventListener('click', function () {
       localStorage.removeItem(API_TRIP_ID_KEY)
@@ -778,28 +745,7 @@
         list.innerHTML = '<p class="empty-note">\uB4F1\uB85D\uB41C \uC5EC\uD589 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
         return
       }
-      list.innerHTML = sortedTravelRecords(records).map(function (record, index) {
-        var order = travelRecordOrder(record, index)
-        var amount = Number(record.amount || 0)
-        var cost = [record.category || '', amount ? amount.toLocaleString('ko-KR') + '\uC6D0' : '0\uC6D0'].filter(Boolean).join(' \u00B7 ')
-        var dateTime = [record.recordDate || '', formatTravelRecordTime(record.recordTime)].filter(Boolean).join(' \u00B7 ')
-        var note = String(record.note || '').trim()
-        var location = String(record.location || '').trim()
-        return '<article class="travel-row travel-record-card api-travel-record-card" data-api-travel-record-id="' + escapeHtml(record.id || '') + '">' +
-          '<b class="api-travel-record-order">' + escapeHtml(order) + '</b>' +
-          '<div class="travel-thumb empty api-travel-record-thumb" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M4 8h4l2-3h4l2 3h4v11H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><circle cx="12" cy="13" r="3" fill="none" stroke="currentColor" stroke-width="2"/></svg></div>' +
-          '<div class="travel-main api-travel-record-body">' +
-          '<div class="api-travel-record-head"><strong>' + escapeHtml(record.title || '\uC5EC\uD589 \uAE30\uB85D') + '</strong><span>' + escapeHtml(cost) + '</span></div>' +
-          '<span class="api-travel-record-meta">' + escapeHtml(dateTime + (note ? ' \u00B7 ' + note : '')) + '</span>' +
-          (location ? '<small class="api-travel-record-location">' + escapeHtml(location) + '</small>' : '') +
-          '</div>' +
-          '<div class="travel-record-actions api-travel-record-actions">' +
-          (hasTravelRecordCoordinates(record) ? '<button type="button" data-api-travel-record-map="' + escapeHtml(record.id || '') + '">\uC9C0\uB3C4</button>' : '') +
-          '<button type="button" data-api-travel-record-edit="' + escapeHtml(record.id || '') + '">\uC218\uC815</button>' +
-          '<button type="button" class="danger-action" data-api-travel-record-delete="' + escapeHtml(record.id || '') + '">\uC0AD\uC81C</button>' +
-          '</div>' +
-          '</article>'
-      }).join('')
+      list.innerHTML = renderTravelRecordCards(records)
       bindApiTravelRecordRows(detail, records)
     })
   }
@@ -910,14 +856,8 @@
 
   function renderApiTripRouteOverlay(map, records) {
     if (!map) return
-    var items = records.slice(0, 12).map(function (record, index) {
-      var label = record.title || record.location || '\uC5EC\uD589 \uAE30\uB85D'
-      var sub = record.location || [record.recordDate || '', formatTravelRecordTime(record.recordTime)].filter(Boolean).join(' \u00B7 ')
-      return '<div class="route-sequence-item"><b>' + escapeHtml(travelRouteNumber(record, index)) + '</b><span>' + escapeHtml(label) + '</span>' +
-        (sub ? '<small>' + escapeHtml(sub) + '</small>' : '') + (index < records.length - 1 ? '<i></i>' : '') + '</div>'
-    }).join('')
-    if (!items) return
-    map.insertAdjacentHTML('beforeend', '<div class="route-sequence api-trip-route-sequence">' + items + '</div>')
+    var sequence = renderTravelRouteSequence(records)
+    if (sequence) map.insertAdjacentHTML('beforeend', sequence)
   }
 
   function hasTravelRecordCoordinates(record) {
