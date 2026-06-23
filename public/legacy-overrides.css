@@ -10408,8 +10408,9 @@ select {
 }
 
 .api-travel-record-form input,
-.api-travel-record-form select,
-.api-travel-record-form textarea {
+.api-travel-record-form textarea,
+.api-travel-record-form .custom-select-trigger,
+.api-travel-record-form .date-picker-trigger {
   width: 100% !important;
   box-sizing: border-box !important;
   border: 1px solid #d9e0ea !important;
@@ -10420,9 +10421,40 @@ select {
   outline: none !important;
 }
 
-.api-travel-record-form input {
+.api-travel-record-form input,
+.api-travel-record-form .custom-select-trigger,
+.api-travel-record-form .date-picker-trigger {
   min-height: 48px !important;
   padding: 0 14px !important;
+}
+
+.api-travel-record-form .custom-select,
+.api-travel-record-form .date-picker-field {
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+.api-travel-record-form .custom-select-trigger,
+.api-travel-record-form .date-picker-trigger {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  text-align: left !important;
+}
+
+.api-travel-record-form .custom-select-trigger span,
+.api-travel-record-form .date-picker-trigger span {
+  color: #191f28 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+}
+
+.api-travel-record-form .custom-select-list {
+  z-index: 50 !important;
+}
+
+.api-travel-record-form .custom-select-list[hidden] {
+  display: none !important;
 }
 
 .api-travel-record-form textarea {
@@ -10456,6 +10488,10 @@ select {
 .api-trip-detail-main {
   display: grid !important;
   gap: 14px !important;
+  border-radius: 18px !important;
+  padding: 14px !important;
+  background: #fff !important;
+  box-shadow: inset 0 0 0 1px #e5e8eb !important;
 }
 
 .api-trip-detail-toolbar {
@@ -10535,10 +10571,12 @@ select {
   grid-column: 1 / -1 !important;
 }
 
-.api-travel-record-form select.form-control {
-  min-height: 48px !important;
-  padding: 0 38px 0 14px !important;
-  appearance: auto !important;
+.api-travel-record-form .travel-record-date-popover {
+  left: 0 !important;
+  right: auto !important;
+  top: calc(100% + 8px) !important;
+  width: min(320px, calc(100vw - 48px)) !important;
+  max-width: 100% !important;
 }
 
 .api-location-map-box {

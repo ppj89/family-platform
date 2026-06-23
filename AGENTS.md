@@ -41,3 +41,13 @@
 - After production deployment, repeat the same real user path on the deployed site and verify the screen state or screenshot before saying the work is done.
 - When the global API loading bar is visible, the screen must block clicks, touches, keyboard submits, and menu movement until the API request finishes.
 - Travel menu entry must always show the top-level trip list first. A trip detail screen may open only after the user clicks a trip row.
+
+## Repeated Travel/Common UI Rules
+
+- 여행 메뉴를 수정할 때는 여행 메뉴 `.js`만 수정한다. 사용자가 명시하지 않은 다른 메뉴 `.js`는 절대 건드리지 않는다.
+- 기존에 동작하던 지도/API/검색 구현이 있으면 새로 만들지 말고 먼저 기존 구현을 찾아 그대로 재사용한다.
+- 여행 상세의 태블릿 화면은 왼쪽 기록/지도 영역과 오른쪽 입력 영역을 분리한 2섹터 구조를 유지한다.
+- 여행 상세 첫 진입은 항상 여행 대목록만 보여준다. 상세와 기록 입력 폼은 row 클릭 이후에만 보여준다.
+- select, datepicker, time, input은 네이티브 브라우저 UI를 직접 노출하지 않고 공통 `.custom-select`, `.date-picker-field`, `.date-picker-trigger`, `.form-control` 패턴을 사용한다.
+- 공통 CSS의 기존 규칙은 수정하지 않는다. 필요한 보정은 해당 메뉴에만 적용되는 scoped CSS를 추가한다.
+- 수정 후에는 PC/태블릿/모바일/앱 WebView 기준으로 직접 클릭 흐름을 검증하고, 특히 목록 -> row 클릭 -> 상세 -> 지도 -> 입력 컨트롤 흐름을 확인한다.

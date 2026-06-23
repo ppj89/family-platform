@@ -9940,10 +9940,10 @@
       '<form class="travel-form api-travel-record-form">',
       '<h3>\uC5EC\uD589 \uAE30\uB85D \uCD94\uAC00</h3>',
       '<label class="form-field"><span class="form-label">\uC21C\uC11C</span><input class="form-control" data-field="travel-sort-order" inputmode="numeric" value="1" /></label>',
-      '<label class="form-field"><span class="form-label">\uBE44\uC6A9 \uAD6C\uBD84</span><select class="form-control" data-field="travel-category"><option>\uAD50\uD1B5</option><option>\uC219\uBC15</option><option>\uC2DD\uBE44</option><option>\uAD00\uAD11</option><option>\uAE30\uD0C0</option></select></label>',
+      '<label class="form-field travel-category-field"><span class="form-label">\uBE44\uC6A9 \uAD6C\uBD84</span><input type="hidden" data-field="travel-category" value="\uAD50\uD1B5" /><div class="custom-select api-travel-category-select" data-api-travel-category-select><button type="button" class="custom-select-trigger form-control" data-api-travel-category-trigger><span>\uAD50\uD1B5</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="custom-select-list" hidden><button type="button" data-api-travel-category-value="\uAD50\uD1B5" class="selected">\uAD50\uD1B5</button><button type="button" data-api-travel-category-value="\uC219\uBC15">\uC219\uBC15</button><button type="button" data-api-travel-category-value="\uC2DD\uBE44">\uC2DD\uBE44</button><button type="button" data-api-travel-category-value="\uAD00\uAD11">\uAD00\uAD11</button><button type="button" data-api-travel-category-value="\uAE30\uD0C0">\uAE30\uD0C0</button></div></div></label>',
       '<label class="form-field travel-title-field"><span class="form-label">\uC81C\uBAA9 <em class="required-mark">*</em></span><input class="form-control" data-field="travel-title" /></label>',
-      '<label class="form-field"><span class="form-label">\uB0A0\uC9DC <em class="required-mark">*</em></span><input class="form-control" data-field="travel-record-date" type="date" value="' + todayText() + '" /></label>',
-      '<label class="form-field"><span class="form-label">\uC2DC\uAC04 <em class="required-mark">*</em></span><input class="form-control" data-field="travel-record-time" type="time" value="' + currentTimeText() + '" /></label>',
+      '<label class="form-field date-picker-field travel-record-date-field"><span class="form-label">\uB0A0\uC9DC <em class="required-mark">*</em></span><input type="hidden" data-field="travel-record-date" value="' + todayText() + '" /><button type="button" class="date-picker-trigger form-control" data-api-travel-record-date-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 2v4M8 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label>',
+      '<label class="form-field"><span class="form-label">\uC2DC\uAC04 <em class="required-mark">*</em></span><input class="form-control" data-field="travel-record-time" type="text" inputmode="numeric" maxlength="5" autocomplete="off" value="' + currentTimeText() + '" /></label>',
       '<label class="form-field travel-location-field"><span class="form-label">\uC704\uCE58</span><input class="form-control" data-field="travel-location" autocomplete="off" /></label>',
       '<div class="location-map-box api-location-map-box"><div class="location-map-osm" data-travel-location-map><span>\uC704\uCE58\uB97C \uC120\uD0DD\uD558\uBA74 \uC9C0\uB3C4\uC5D0 \uD45C\uC2DC\uB429\uB2C8\uB2E4.</span></div></div>',
       '<label class="form-field"><span class="form-label">\uC0AC\uC6A9\uAE08\uC561</span><input class="form-control" data-field="travel-amount" inputmode="numeric" /></label>',
@@ -9960,6 +9960,7 @@
       setTripDetailMode(panel, false)
     })
     normalizeTravelEntryForm()
+    initApiTravelRecordControls(detail)
     initApiTravelLocationMap(detail)
     renderApiTripRecords(detail, trip.id)
     var first = detail.querySelector('[data-field="travel-title"]')
@@ -9976,6 +9977,259 @@
     input.addEventListener('family-platform-location-selected', function (event) {
       var data = event.detail || {}
       renderApiLocationPreview(map, data.latitude, data.longitude, data.label || input.value)
+    })
+  }
+
+  function initApiTravelRecordControls(detail) {
+    var form = detail && detail.querySelector('.api-travel-record-form')
+    if (!form) return
+    bindApiTravelCategorySelect(form)
+    bindApiTravelRecordDatePicker(form)
+    bindApiTravelTimeInput(form)
+  }
+
+  function bindApiTravelCategorySelect(form) {
+    var select = form && form.querySelector('[data-api-travel-category-select]')
+    if (!select || select.dataset.ready === 'true') return
+    select.dataset.ready = 'true'
+    var hidden = form.querySelector('[data-field="travel-category"]')
+    var trigger = select.querySelector('[data-api-travel-category-trigger]')
+    var label = trigger && trigger.querySelector('span')
+    var list = select.querySelector('.custom-select-list')
+    function close() {
+      select.classList.remove('open')
+      if (trigger) trigger.classList.remove('open')
+      if (list) list.hidden = true
+    }
+    function open() {
+      document.querySelectorAll('.custom-select.open').forEach(function (item) {
+        if (item !== select) {
+          item.classList.remove('open')
+          var itemTrigger = item.querySelector('.custom-select-trigger')
+          var itemList = item.querySelector('.custom-select-list')
+          if (itemTrigger) itemTrigger.classList.remove('open')
+          if (itemList) itemList.hidden = true
+        }
+      })
+      select.classList.add('open')
+      if (trigger) trigger.classList.add('open')
+      if (list) list.hidden = false
+    }
+    if (trigger) {
+      trigger.addEventListener('click', function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (select.classList.contains('open')) close()
+        else open()
+      })
+    }
+    select.querySelectorAll('[data-api-travel-category-value]').forEach(function (button) {
+      button.addEventListener('pointerdown', function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+      })
+      button.addEventListener('click', function (event) {
+        event.preventDefault()
+        event.stopPropagation()
+        var value = button.dataset.apiTravelCategoryValue || ''
+        if (hidden) setInputValue(hidden, value)
+        if (label) label.textContent = value
+        select.querySelectorAll('[data-api-travel-category-value]').forEach(function (item) {
+          item.classList.toggle('selected', item === button)
+        })
+        close()
+      })
+    })
+    document.addEventListener('pointerdown', function (event) {
+      if (!select.contains(event.target)) close()
+    })
+  }
+
+  function bindApiTravelRecordDatePicker(form) {
+    var field = form && form.querySelector('.travel-record-date-field')
+    var input = field && field.querySelector('[data-field="travel-record-date"]')
+    var trigger = field && field.querySelector('[data-api-travel-record-date-trigger]')
+    if (!field || !input || !trigger || trigger.dataset.ready === 'true') return
+    trigger.dataset.ready = 'true'
+    trigger.addEventListener('click', function (event) {
+      event.preventDefault()
+      event.stopPropagation()
+      toggleApiTravelDatePopover(field, input, trigger)
+    })
+    document.addEventListener('pointerdown', function (event) {
+      if (field.contains(event.target)) return
+      closeApiTravelDatePopover(field)
+    })
+  }
+
+  function closeApiTravelDatePopover(field) {
+    if (!field) return
+    field.querySelectorAll('.travel-record-date-popover').forEach(function (popover) {
+      popover.remove()
+    })
+  }
+
+  function toggleApiTravelDatePopover(field, input, trigger) {
+    var old = field.querySelector('.travel-record-date-popover')
+    if (old) {
+      old.remove()
+      return
+    }
+    openApiTravelDatePopover(field, input, trigger)
+  }
+
+  function travelDateFromValue(value) {
+    var parsed = parseApiDate(value) || todayText()
+    var parts = parsed.split('-').map(Number)
+    return new Date(parts[0], parts[1] - 1, parts[2])
+  }
+
+  function travelDateValue(date) {
+    var year = date.getFullYear()
+    var month = String(date.getMonth() + 1).padStart(2, '0')
+    var day = String(date.getDate()).padStart(2, '0')
+    return year + '-' + month + '-' + day
+  }
+
+  function travelDateDisplay(value) {
+    return String(value || todayText()).replace(/-/g, '.')
+  }
+
+  function openApiTravelDatePopover(field, input, trigger) {
+    closeApiTravelDatePopover(field)
+    var selectedValue = parseApiDate(input.value) || todayText()
+    var viewDate = travelDateFromValue(selectedValue)
+    var mode = 'day'
+    var popover = document.createElement('div')
+    popover.className = 'calendar-popover travel-record-date-popover'
+    field.appendChild(popover)
+
+    function setDateValue(value) {
+      setInputValue(input, value)
+      var text = trigger.querySelector('span')
+      if (text) text.textContent = travelDateDisplay(value)
+      closeApiTravelDatePopover(field)
+    }
+
+    function render() {
+      var selectedDate = travelDateFromValue(selectedValue)
+      var year = viewDate.getFullYear()
+      var month = viewDate.getMonth()
+      var title = mode === 'day' ? year + '\uB144 ' + (month + 1) + '\uC6D4' : mode === 'month' ? year + '\uB144' : (Math.floor(year / 12) * 12) + ' - ' + (Math.floor(year / 12) * 12 + 11)
+      popover.innerHTML = '<div class="calendar-header">' +
+        '<button type="button" data-travel-date-prev aria-label="\uC774\uC804">&lt;</button>' +
+        '<button type="button" class="calendar-title-button" data-travel-date-title><strong>' + escapeHtml(title) + '</strong></button>' +
+        '<button type="button" data-travel-date-next aria-label="\uB2E4\uC74C">&gt;</button>' +
+        '</div><div data-travel-date-body></div><div class="calendar-today-row"><button type="button" data-travel-date-today>\uC624\uB298</button></div>'
+      var body = popover.querySelector('[data-travel-date-body]')
+      if (mode === 'day') renderDayBody(body, selectedDate, year, month)
+      else if (mode === 'month') renderMonthBody(body, selectedDate, year)
+      else renderYearBody(body, selectedDate, year)
+    }
+
+    function renderDayBody(body, selectedDate, year, month) {
+      var weekdays = ['\uC77C', '\uC6D4', '\uD654', '\uC218', '\uBAA9', '\uAE08', '\uD1A0']
+      var first = new Date(year, month, 1)
+      var lastDay = new Date(year, month + 1, 0).getDate()
+      var html = '<div class="calendar-weekdays">' + weekdays.map(function (day) { return '<span>' + day + '</span>' }).join('') + '</div><div class="calendar-day-grid">'
+      for (var i = 0; i < first.getDay(); i++) html += '<span class="calendar-empty"></span>'
+      for (var day = 1; day <= lastDay; day++) {
+        var date = new Date(year, month, day)
+        var value = travelDateValue(date)
+        var classes = []
+        if (value === travelDateValue(selectedDate)) classes.push('selected')
+        if (date.getDay() === 0) classes.push('holiday')
+        if (date.getDay() === 6) classes.push('saturday')
+        html += '<button type="button" class="' + classes.join(' ') + '" data-travel-date-value="' + value + '">' + day + '</button>'
+      }
+      html += '</div>'
+      body.innerHTML = html
+    }
+
+    function renderMonthBody(body, selectedDate, year) {
+      var html = '<div class="calendar-month-grid">'
+      for (var month = 0; month < 12; month++) {
+        var classes = selectedDate.getFullYear() === year && selectedDate.getMonth() === month ? 'selected' : ''
+        html += '<button type="button" class="' + classes + '" data-travel-date-month="' + month + '">' + (month + 1) + '\uC6D4</button>'
+      }
+      body.innerHTML = html + '</div>'
+    }
+
+    function renderYearBody(body, selectedDate, year) {
+      var start = Math.floor(year / 12) * 12
+      var html = '<div class="calendar-year-grid">'
+      for (var i = 0; i < 12; i++) {
+        var itemYear = start + i
+        var classes = selectedDate.getFullYear() === itemYear ? 'selected' : ''
+        html += '<button type="button" class="' + classes + '" data-travel-date-year="' + itemYear + '">' + itemYear + '</button>'
+      }
+      body.innerHTML = html + '</div>'
+    }
+
+    popover.addEventListener('click', function (event) {
+      event.stopPropagation()
+      var prev = event.target.closest('[data-travel-date-prev]')
+      var next = event.target.closest('[data-travel-date-next]')
+      var title = event.target.closest('[data-travel-date-title]')
+      var day = event.target.closest('[data-travel-date-value]')
+      var month = event.target.closest('[data-travel-date-month]')
+      var year = event.target.closest('[data-travel-date-year]')
+      var today = event.target.closest('[data-travel-date-today]')
+      if (prev) {
+        if (mode === 'day') viewDate.setMonth(viewDate.getMonth() - 1)
+        else if (mode === 'month') viewDate.setFullYear(viewDate.getFullYear() - 1)
+        else viewDate.setFullYear(viewDate.getFullYear() - 12)
+        render()
+      } else if (next) {
+        if (mode === 'day') viewDate.setMonth(viewDate.getMonth() + 1)
+        else if (mode === 'month') viewDate.setFullYear(viewDate.getFullYear() + 1)
+        else viewDate.setFullYear(viewDate.getFullYear() + 12)
+        render()
+      } else if (title) {
+        mode = mode === 'day' ? 'month' : mode === 'month' ? 'year' : 'day'
+        render()
+      } else if (day) {
+        selectedValue = day.dataset.travelDateValue
+        setDateValue(selectedValue)
+      } else if (month) {
+        viewDate.setMonth(Number(month.dataset.travelDateMonth))
+        mode = 'day'
+        render()
+      } else if (year) {
+        viewDate.setFullYear(Number(year.dataset.travelDateYear))
+        mode = 'month'
+        render()
+      } else if (today) {
+        setDateValue(todayText())
+      }
+    })
+    render()
+  }
+
+  function bindApiTravelTimeInput(form) {
+    var input = form && form.querySelector('[data-field="travel-record-time"]')
+    if (!input || input.dataset.ready === 'true') return
+    input.dataset.ready = 'true'
+    input.addEventListener('input', function () {
+      var digits = String(input.value || '').replace(/\D/g, '').slice(0, 4)
+      if (digits.length >= 2) {
+        var hour = Math.min(Number(digits.slice(0, 2)) || 0, 23)
+        var minuteText = digits.slice(2)
+        if (minuteText.length >= 2) minuteText = String(Math.min(Number(minuteText) || 0, 59)).padStart(2, '0')
+        input.value = String(hour).padStart(2, '0') + (minuteText ? ':' + minuteText : '')
+      } else {
+        input.value = digits
+      }
+    })
+    input.addEventListener('blur', function () {
+      var match = String(input.value || '').match(/^(\d{1,2})(?::?(\d{1,2}))?$/)
+      if (!match) {
+        input.value = currentTimeText()
+        return
+      }
+      var hour = Math.min(Number(match[1]) || 0, 23)
+      var minute = Math.min(Number(match[2] || 0) || 0, 59)
+      input.value = String(hour).padStart(2, '0') + ':' + String(minute).padStart(2, '0')
     })
   }
 
