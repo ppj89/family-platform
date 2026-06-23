@@ -72,6 +72,15 @@
     }
     if (detail) input.dataset.placeAddress = detail
     else delete input.dataset.placeAddress
+    input.dispatchEvent(new CustomEvent('family-platform-location-selected', {
+      bubbles: true,
+      detail: {
+        label: label || detail,
+        address: detail,
+        latitude: input.dataset.latitude || '',
+        longitude: input.dataset.longitude || ''
+      }
+    }))
   }
 
   function getTravelLocationCoordinates(form) {

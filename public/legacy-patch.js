@@ -9137,6 +9137,15 @@
     }
     if (detail) input.dataset.placeAddress = detail
     else delete input.dataset.placeAddress
+    input.dispatchEvent(new CustomEvent('family-platform-location-selected', {
+      bubbles: true,
+      detail: {
+        label: label || detail,
+        address: detail,
+        latitude: input.dataset.latitude || '',
+        longitude: input.dataset.longitude || ''
+      }
+    }))
   }
 
   function getTravelLocationCoordinates(form) {
@@ -9913,9 +9922,9 @@
       panel.appendChild(detail)
     }
     detail.innerHTML = [
-      '<header class="api-trip-detail-header"><div><h3>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</h3><span>' + escapeHtml(tripPeriodText(trip)) + '</span></div><button type="button" data-api-trip-back>\uBAA9\uB85D</button></header>',
       '<div class="api-trip-detail-shell">',
       '<section class="api-trip-detail-main">',
+      '<div class="api-trip-detail-toolbar"><button type="button" data-api-trip-back>\uBAA9\uB85D</button></div>',
       '<div class="travel-summary api-travel-summary"><div><span>\uCD1D \uC0AC\uC6A9\uAE08\uC561</span><strong data-trip-total-amount>0\uC6D0</strong></div><div><span>\uB2E4\uC74C \uC21C\uC11C</span><strong data-trip-next-order>01</strong></div></div>',
       '<div class="route-map api-trip-route-map"><div class="route-map-osm" data-trip-route-map></div><div class="route-map-empty" data-trip-route-empty>\uB4F1\uB85D\uB41C \uC704\uCE58\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</div></div>',
       '<div class="api-trip-record-list"></div>',
@@ -9966,10 +9975,8 @@
     latitude = Number(latitude)
     longitude = Number(longitude)
     if (!map || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude === 0 || longitude === 0) return
-    var delta = 0.01
-    var bbox = [longitude - delta, latitude - delta, longitude + delta, latitude + delta].map(function (value) { return value.toFixed(6) }).join('%2C')
-    var marker = latitude.toFixed(6) + '%2C' + longitude.toFixed(6)
-    map.innerHTML = '<iframe title="' + escapeHtml(label || '\uC704\uCE58') + '" src="https://www.openstreetmap.org/export/embed.html?bbox=' + bbox + '&layer=mapnik&marker=' + marker + '" loading="lazy" referrerpolicy="no-referrer"></iframe>'
+    map.innerHTML = '<iframe title="' + escapeHtml(label || '\uC704\uCE58') + '" src="https://maps.google.com/maps?q=' +
+      encodeURIComponent(latitude + ',' + longitude) + '&z=15&output=embed" loading="lazy"></iframe>'
   }
 
   function setTripDetailMode(panel, enabled) {
@@ -10019,8 +10026,33 @@
     if (orderNode) orderNode.textContent = String(records.length + 1).padStart(2, '0')
     var formOrder = detail && detail.querySelector('[data-field="travel-sort-order"]')
     if (formOrder) setInputValue(formOrder, String(records.length + 1))
+    renderApiTripRouteMap(detail, records)
   }
 
+  function renderApiTripRouteMap(detail, records) {
+    var map = detail && detail.querySelector('[data-trip-route-map]')
+    var empty = detail && detail.querySelector('[data-trip-route-empty]')
+    if (!map) return
+    var candidates = records.filter(function (record) {
+      return hasTravelRecordCoordinates(record) || String(record.location || '').trim()
+    })
+    if (!candidates.length) {
+      map.innerHTML = ''
+      if (empty) empty.hidden = false
+      return
+    }
+    var first = candidates.find(hasTravelRecordCoordinates) || candidates[0]
+    var query = hasTravelRecordCoordinates(first) ? first.latitude + ',' + first.longitude : first.location
+    map.innerHTML = '<iframe loading="lazy" title="\uC5EC\uD589 \uACBD\uB85C \uC9C0\uB3C4" src="https://maps.google.com/maps?q=' +
+      encodeURIComponent(query) + '&z=13&output=embed"></iframe>'
+    if (empty) empty.hidden = true
+  }
+
+  function hasTravelRecordCoordinates(record) {
+    var latitude = Number(record && record.latitude)
+    var longitude = Number(record && record.longitude)
+    return Number.isFinite(latitude) && Number.isFinite(longitude) && (latitude !== 0 || longitude !== 0)
+  }
   function ensureServerSchedulePanel() {
     removeDeveloperServerPanels()
     return
