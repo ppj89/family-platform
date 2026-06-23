@@ -275,17 +275,29 @@
       panel.appendChild(detail)
     }
     detail.innerHTML = [
-      '<header class="api-trip-detail-header"><div><h3>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</h3><span>' + escapeHtml((trip.startDate || '') + (trip.endDate && trip.endDate !== trip.startDate ? ' ~ ' + trip.endDate : '')) + '</span></div><button type="button" data-api-trip-back>\uBAA9\uB85D</button></header>',
+      '<header class="api-trip-detail-header"><div><h3>' + escapeHtml(trip.title || '\uC5EC\uD589') + '</h3><span>' + escapeHtml(tripPeriodText(trip)) + '</span></div><button type="button" data-api-trip-back>\uBAA9\uB85D</button></header>',
+      '<div class="api-trip-detail-shell">',
+      '<section class="api-trip-detail-main">',
+      '<div class="travel-summary api-travel-summary"><div><span>\uCD1D \uC0AC\uC6A9\uAE08\uC561</span><strong data-trip-total-amount>0\uC6D0</strong></div><div><span>\uB2E4\uC74C \uC21C\uC11C</span><strong data-trip-next-order>01</strong></div></div>',
+      '<div class="route-map api-trip-route-map"><div class="route-map-osm" data-trip-route-map></div><div class="route-map-empty" data-trip-route-empty>\uB4F1\uB85D\uB41C \uC704\uCE58\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.</div></div>',
+      '<div class="api-trip-record-list"></div>',
+      '</section>',
+      '<aside class="api-trip-detail-side">',
       '<form class="travel-form api-travel-record-form">',
-      '<label><span>\uC81C\uBAA9 <em class="required-mark">*</em></span><input data-field="travel-title" /></label>',
-      '<label><span>\uC704\uCE58</span><input data-field="travel-location" /></label>',
-      '<label><span>\uC0AC\uC6A9\uAE08\uC561</span><input data-field="travel-amount" inputmode="numeric" /></label>',
-      '<label><span>\uB0A0\uC9DC <em class="required-mark">*</em></span><input data-field="travel-record-date" type="date" value="' + todayText() + '" /></label>',
-      '<label><span>\uC2DC\uAC04 <em class="required-mark">*</em></span><input data-field="travel-record-time" type="time" value="' + currentTimeText() + '" /></label>',
-      '<label class="travel-note-field"><span>\uBA54\uBAA8</span><textarea rows="4"></textarea></label>',
+      '<h3>\uC5EC\uD589 \uAE30\uB85D \uCD94\uAC00</h3>',
+      '<label class="form-field"><span class="form-label">\uC21C\uC11C</span><input class="form-control" data-field="travel-sort-order" inputmode="numeric" value="1" /></label>',
+      '<label class="form-field"><span class="form-label">\uBE44\uC6A9 \uAD6C\uBD84</span><select class="form-control" data-field="travel-category"><option>\uAD50\uD1B5</option><option>\uC219\uBC15</option><option>\uC2DD\uBE44</option><option>\uAD00\uAD11</option><option>\uAE30\uD0C0</option></select></label>',
+      '<label class="form-field travel-title-field"><span class="form-label">\uC81C\uBAA9 <em class="required-mark">*</em></span><input class="form-control" data-field="travel-title" /></label>',
+      '<label class="form-field"><span class="form-label">\uB0A0\uC9DC <em class="required-mark">*</em></span><input class="form-control" data-field="travel-record-date" type="date" value="' + todayText() + '" /></label>',
+      '<label class="form-field"><span class="form-label">\uC2DC\uAC04 <em class="required-mark">*</em></span><input class="form-control" data-field="travel-record-time" type="time" value="' + currentTimeText() + '" /></label>',
+      '<label class="form-field travel-location-field"><span class="form-label">\uC704\uCE58</span><input class="form-control" data-field="travel-location" autocomplete="off" /></label>',
+      '<div class="location-map-box api-location-map-box"><div class="location-map-osm" data-travel-location-map><span>\uC704\uCE58\uB97C \uC120\uD0DD\uD558\uBA74 \uC9C0\uB3C4\uC5D0 \uD45C\uC2DC\uB429\uB2C8\uB2E4.</span></div></div>',
+      '<label class="form-field"><span class="form-label">\uC0AC\uC6A9\uAE08\uC561</span><input class="form-control" data-field="travel-amount" inputmode="numeric" /></label>',
+      '<label class="form-field travel-note-field"><span class="form-label">\uB0B4\uC6A9</span><textarea class="form-control" rows="5"></textarea></label>',
       '<div class="travel-form-actions"><button type="submit" class="submit-action">\uAE30\uB85D \uCD94\uAC00</button></div>',
       '</form>',
-      '<div class="api-trip-record-list"></div>'
+      '</aside>',
+      '</div>'
     ].join('')
     var back = detail.querySelector('[data-api-trip-back]')
     if (back) back.addEventListener('click', function () {
@@ -294,9 +306,32 @@
       setTripDetailMode(panel, false)
     })
     normalizeTravelEntryForm()
+    initApiTravelLocationMap(detail)
     renderApiTripRecords(detail, trip.id)
     var first = detail.querySelector('[data-field="travel-title"]')
     if (first) window.setTimeout(function () { first.focus() }, 120)
+  }
+
+  function initApiTravelLocationMap(detail) {
+    var form = detail && detail.querySelector('.api-travel-record-form')
+    if (!form) return
+    var input = form.querySelector('[data-field="travel-location"]')
+    var map = form.querySelector('[data-travel-location-map]')
+    if (!input || !map) return
+    input.addEventListener('family-platform-location-selected', function (event) {
+      var data = event.detail || {}
+      renderApiLocationPreview(map, data.latitude, data.longitude, data.label || input.value)
+    })
+  }
+
+  function renderApiLocationPreview(map, latitude, longitude, label) {
+    latitude = Number(latitude)
+    longitude = Number(longitude)
+    if (!map || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude === 0 || longitude === 0) return
+    var delta = 0.01
+    var bbox = [longitude - delta, latitude - delta, longitude + delta, latitude + delta].map(function (value) { return value.toFixed(6) }).join('%2C')
+    var marker = latitude.toFixed(6) + '%2C' + longitude.toFixed(6)
+    map.innerHTML = '<iframe title="' + escapeHtml(label || '\uC704\uCE58') + '" src="https://www.openstreetmap.org/export/embed.html?bbox=' + bbox + '&layer=mapnik&marker=' + marker + '" loading="lazy" referrerpolicy="no-referrer"></iframe>'
   }
 
   function setTripDetailMode(panel, enabled) {
@@ -322,6 +357,7 @@
     if (!list) return
     list.innerHTML = '<p class="empty-note">\uC5EC\uD589 \uAE30\uB85D\uC744 \uBD88\uB7EC\uC624\uB294 \uC911\uC785\uB2C8\uB2E4.</p>'
     fetchTripRecords(tripId).then(function (records) {
+      updateApiTripSummary(detail, records)
       if (!records.length) {
         list.innerHTML = '<p class="empty-note">\uB4F1\uB85D\uB41C \uC5EC\uD589 \uAE30\uB85D\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.</p>'
         return
@@ -332,5 +368,16 @@
           '<p>' + escapeHtml(record.note || '') + '</p></article>'
       }).join('')
     })
+  }
+
+  function updateApiTripSummary(detail, records) {
+    records = Array.isArray(records) ? records : []
+    var totalNode = detail && detail.querySelector('[data-trip-total-amount]')
+    var orderNode = detail && detail.querySelector('[data-trip-next-order]')
+    var total = records.reduce(function (sum, item) { return sum + Number(item.amount || 0) }, 0)
+    if (totalNode) totalNode.textContent = total.toLocaleString('ko-KR') + '\uC6D0'
+    if (orderNode) orderNode.textContent = String(records.length + 1).padStart(2, '0')
+    var formOrder = detail && detail.querySelector('[data-field="travel-sort-order"]')
+    if (formOrder) setInputValue(formOrder, String(records.length + 1))
   }
 

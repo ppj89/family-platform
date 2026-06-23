@@ -25,5 +25,17 @@
 - 화면별로 `window.confirm`, 임의 confirm UI, 별도 팝업을 새로 만들지 말고 기존 공통 confirm 컴포넌트/헬퍼를 사용한다.
 - 공통 confirm이 없는 상황이면 화면별 임시 구현을 만들기 전에 공통 confirm을 먼저 만들고 모든 메뉴에서 재사용한다.
 - 소스 수정 후에는 변경 범위에 맞게 lint, build, 브라우저 화면 확인을 진행한다.
+- 소스 수정 후 브라우저 확인은 단순 진입 확인으로 끝내지 않는다. 사용자가 지적한 실제 흐름을 시작부터 끝까지 직접 클릭해서 확인한다.
+- 목록/상세 구조를 수정한 경우 반드시 `목록 진입 -> row 클릭 -> 상세 진입 -> 목록 복귀`까지 직접 테스트하고, 각 단계에서 목록/상세/입력폼 개수와 화면 깨짐 여부를 확인한 뒤 반영한다.
+- 버튼, row, 입력, 저장, 수정, 삭제 중 하나라도 수정했으면 해당 액션을 실제로 클릭/입력해서 동작 여부를 확인한다.
+- 운영 배포 전후로 같은 사용자 흐름을 다시 확인하고, 운영 화면에서 재현 캡처 또는 DOM 상태를 확인하지 않은 작업은 완료로 말하지 않는다.
 - 항상 PC, 태블릿, 모바일, 앱 환경에서 보이는 화면을 기준으로 작업하고, 모든 화면 크기에서 깨짐/겹침/가로 스크롤이 없는지 테스트한 뒤 반영한다.
 - 운영 반영이 필요한 작업은 배포 후 운영 화면/헬스체크까지 확인한다.
+
+## Mandatory Actual Testing Before Reporting Done
+
+- Any source change must be tested by Codex before it is reported as complete.
+- Testing must cover the real user path, not only build/lint or initial page load.
+- If a menu has list/detail behavior, test list entry, row click, detail entry, and return-to-list directly in the browser.
+- If a button, input, save, edit, delete, search, map, or datepicker was changed, operate that exact control before reporting completion.
+- After production deployment, repeat the same real user path on the deployed site and verify the screen state or screenshot before saying the work is done.

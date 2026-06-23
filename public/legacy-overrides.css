@@ -10408,6 +10408,7 @@ select {
 }
 
 .api-travel-record-form input,
+.api-travel-record-form select,
 .api-travel-record-form textarea {
   width: 100% !important;
   box-sizing: border-box !important;
@@ -10440,6 +10441,97 @@ select {
   gap: 10px !important;
 }
 
+.api-trip-detail-shell {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 390px) !important;
+  align-items: start !important;
+  gap: 18px !important;
+}
+
+.api-trip-detail-main,
+.api-trip-detail-side {
+  min-width: 0 !important;
+}
+
+.api-trip-detail-main {
+  display: grid !important;
+  gap: 14px !important;
+}
+
+.api-trip-detail-side {
+  position: sticky !important;
+  top: 18px !important;
+}
+
+.api-travel-summary {
+  margin-bottom: 0 !important;
+}
+
+.api-trip-route-map {
+  min-height: 250px !important;
+  margin: 0 !important;
+}
+
+.api-trip-route-map .route-map-osm {
+  min-height: 250px !important;
+}
+
+.api-trip-route-map .route-map-empty {
+  position: absolute !important;
+  left: 16px !important;
+  right: 16px !important;
+  bottom: 16px !important;
+  border-radius: 16px !important;
+  padding: 12px 14px !important;
+  background: rgba(255,255,255,.92) !important;
+  color: #6b7684 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  text-align: center !important;
+}
+
+.api-travel-record-form h3 {
+  grid-column: 1 / -1 !important;
+  margin: 0 !important;
+  color: #191f28 !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
+}
+
+.api-travel-record-form .travel-title-field,
+.api-travel-record-form .travel-location-field,
+.api-travel-record-form .api-location-map-box,
+.api-travel-record-form .travel-note-field,
+.api-travel-record-form .travel-form-actions {
+  grid-column: 1 / -1 !important;
+}
+
+.api-travel-record-form select.form-control {
+  min-height: 48px !important;
+  padding: 0 38px 0 14px !important;
+  appearance: auto !important;
+}
+
+.api-location-map-box {
+  margin-top: -4px !important;
+}
+
+.api-location-map-box .location-map-osm {
+  display: grid !important;
+  min-height: 180px !important;
+  place-items: center !important;
+  color: #6b7684 !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  overflow: hidden !important;
+}
+
+.api-location-map-box iframe {
+  width: 100% !important;
+  height: 180px !important;
+  border: 0 !important;
+}
+
 .api-travel-record-card {
   display: grid !important;
   grid-template-columns: minmax(0, 1fr) auto !important;
@@ -10452,6 +10544,14 @@ select {
 }
 
 @media (max-width: 860px) {
+  .api-trip-detail-shell {
+    grid-template-columns: 1fr !important;
+  }
+
+  .api-trip-detail-side {
+    position: static !important;
+  }
+
   .api-travel-record-form {
     grid-template-columns: 1fr !important;
   }

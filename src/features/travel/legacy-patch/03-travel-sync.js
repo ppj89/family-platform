@@ -121,9 +121,9 @@
         queueApiSync({
           type: 'createTravelRecord',
           payload: {
-            sortOrder: parseAmountValue(getFieldValue(form, 'input[inputmode="numeric"]')) || null,
+            sortOrder: parseAmountValue(getFieldValue(form, '[data-field="travel-sort-order"]')) || null,
             title: title,
-            category: getCustomSelectValue('\uBE44\uC6A9 \uAD6C\uBD84') || '\uAE30\uD0C0',
+            category: getFieldValue(form, '[data-field="travel-category"]') || getCustomSelectValue('\uBE44\uC6A9 \uAD6C\uBD84') || '\uAE30\uD0C0',
             amount: parseAmountValue(getFieldValue(form, '[data-field="travel-amount"]')),
             note: getFieldValue(form, 'textarea'),
             location: location || '',
