@@ -4,10 +4,10 @@
 
     return getReadableFamilyId().then(function (familyId) {
       return postJson('/trips?familyId=' + encodeURIComponent(familyId), {
-      title: '기본 여행',
+      title: '\uAE30\uBCF8 \uC5EC\uD589',
       startDate: todayText(),
       endDate: todayText(),
-      description: '프론트 동기화 기본 여행'
+      description: '\uD504\uB860\uD2B8 \uB3D9\uAE30\uD654 \uAE30\uBCF8 \uC5EC\uD589'
       })
     }).then(function (trip) {
       localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
@@ -18,7 +18,7 @@
 
   function trySyncTask(task) {
     if (task.type === 'createTrip') {
-      return getCurrentFamilyId().then(function (familyId) {
+      return getReadableFamilyId().then(function (familyId) {
         return postJson('/trips?familyId=' + encodeURIComponent(familyId), task.payload)
       }).then(function (trip) {
         if (trip && trip.id) localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))

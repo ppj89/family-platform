@@ -9630,9 +9630,14 @@
     var panel = document.querySelector('.trip-manager')
     var headerAction = document.querySelector('.panel-header .passive-header-chip, .panel.wide.full-span .panel-header button')
     if (!panel && !headerAction) return
+    var shouldForceList = !!window.__familyTravelForceListMode || (panel && !panel.classList.contains('detail-mode'))
+    if (shouldForceList) resetTravelApiListMode(panel)
     var existingList = panel && panel.querySelector('.trip-list')
     var hasRenderedList = existingList && (existingList.querySelector('.api-trip-card') || existingList.querySelector('.api-empty-row'))
-    if (!force && panel && panel.dataset.apiBacked === 'true' && hasRenderedList) return
+    if (!force && panel && panel.dataset.apiBacked === 'true' && hasRenderedList) {
+      window.__familyTravelForceListMode = false
+      return
+    }
     if (panel) panel.dataset.apiBacked = 'true'
     normalizeTravelListWorkspace()
     fetchTrips().then(function (trips) {
@@ -9640,7 +9645,30 @@
       if (panel) renderApiTripList(panel, trips)
       normalizeTravelListWorkspace()
       removeHardcodedDemoData()
+      window.__familyTravelForceListMode = false
     })
+  }
+
+  function resetTravelApiListMode(panel) {
+    if (!panel) return
+    panel.querySelectorAll('.api-trip-detail').forEach(function (detail) { detail.remove() })
+    Array.from(panel.children).forEach(function (child) {
+      if (!child || !child.matches) return
+      if (
+        child.matches('.trip-list') ||
+        child.matches('.trip-add-row') ||
+        child.matches('.travel-trip-create-card')
+      ) return
+      if (
+        child.matches('.travel-summary') ||
+        child.matches('.route-map') ||
+        child.matches('.route-map-grid') ||
+        child.matches('.timeline') ||
+        child.matches('.travel-form') ||
+        child.matches('.api-trip-record-list')
+      ) child.remove()
+    })
+    setTripDetailMode(panel, false)
   }
 
   function renderApiTripList(panel, trips) {
@@ -9863,6 +9891,7 @@
 
   function openApiTripDetail(panel, trip) {
     if (!panel || !trip) return
+    window.__familyTravelForceListMode = false
     localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
     setTripDetailMode(panel, true)
     var detail = panel.querySelector('.api-trip-detail')
@@ -9886,6 +9915,7 @@
     ].join('')
     var back = detail.querySelector('[data-api-trip-back]')
     if (back) back.addEventListener('click', function () {
+      localStorage.removeItem(API_TRIP_ID_KEY)
       detail.remove()
       setTripDetailMode(panel, false)
     })
@@ -9905,6 +9935,13 @@
       else node.style.removeProperty('display')
     })
   }
+
+  document.addEventListener('click', function (event) {
+    var nav = event.target && event.target.closest && event.target.closest('.nav-item')
+    if (!nav || getCleanText(nav).indexOf('\uC5EC\uD589') < 0) return
+    window.__familyTravelForceListMode = true
+    localStorage.removeItem(API_TRIP_ID_KEY)
+  }, true)
 
   function renderApiTripRecords(detail, tripId) {
     var list = detail && detail.querySelector('.api-trip-record-list')
@@ -11354,10 +11391,10 @@
 
     return getReadableFamilyId().then(function (familyId) {
       return postJson('/trips?familyId=' + encodeURIComponent(familyId), {
-      title: '기본 여행',
+      title: '\uAE30\uBCF8 \uC5EC\uD589',
       startDate: todayText(),
       endDate: todayText(),
-      description: '프론트 동기화 기본 여행'
+      description: '\uD504\uB860\uD2B8 \uB3D9\uAE30\uD654 \uAE30\uBCF8 \uC5EC\uD589'
       })
     }).then(function (trip) {
       localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))
@@ -11368,7 +11405,7 @@
 
   function trySyncTask(task) {
     if (task.type === 'createTrip') {
-      return getCurrentFamilyId().then(function (familyId) {
+      return getReadableFamilyId().then(function (familyId) {
         return postJson('/trips?familyId=' + encodeURIComponent(familyId), task.payload)
       }).then(function (trip) {
         if (trip && trip.id) localStorage.setItem(API_TRIP_ID_KEY, String(trip.id))

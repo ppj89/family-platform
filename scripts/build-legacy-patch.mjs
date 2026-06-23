@@ -13,6 +13,47 @@ const chunks = await Promise.all(
 )
 const output = chunks.join('')
 
+function assertLegacyPatchInvariant(condition, message) {
+  if (condition) return
+  console.error(message)
+  process.exit(1)
+}
+
+function validateLegacyPatchInvariants(source) {
+  assertLegacyPatchInvariant(
+    source.includes('function renderTravelPageFromApi(force)'),
+    'travel API renderer is missing from legacy patch output',
+  )
+  assertLegacyPatchInvariant(
+    source.includes('renderTravelPageFromApi(force)'),
+    'refreshServerDataViews must call renderTravelPageFromApi(force)',
+  )
+  assertLegacyPatchInvariant(
+    source.includes('class="trip-list-card api-trip-card"') &&
+      source.includes('class="trip-card-main"') &&
+      source.includes('data-api-trip-edit') &&
+      source.includes('data-api-trip-delete'),
+    'travel list must render cards with separate open/edit/delete actions',
+  )
+  assertLegacyPatchInvariant(
+    source.includes('setTripDetailMode(panel, true)') &&
+      source.includes('setTripDetailMode(panel, false)'),
+    'travel detail/list mode toggles are required',
+  )
+  assertLegacyPatchInvariant(
+    source.includes('window.__familyTravelForceListMode') &&
+      source.includes('function resetTravelApiListMode(panel)') &&
+      source.includes('resetTravelApiListMode(panel)'),
+    'travel menu entry must reset to top-level trip list before detail opens',
+  )
+  assertLegacyPatchInvariant(
+    source.includes("postJson('/trips?familyId=' + encodeURIComponent(familyId), payload)"),
+    'travel trip creation must save through the trips API',
+  )
+}
+
+validateLegacyPatchInvariants(output)
+
 if (checkOnly) {
   const current = await readFile(outputPath, 'utf8')
   if (current !== output) {
