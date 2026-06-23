@@ -39,3 +39,5 @@
 - If a menu has list/detail behavior, test list entry, row click, detail entry, and return-to-list directly in the browser.
 - If a button, input, save, edit, delete, search, map, or datepicker was changed, operate that exact control before reporting completion.
 - After production deployment, repeat the same real user path on the deployed site and verify the screen state or screenshot before saying the work is done.
+- When the global API loading bar is visible, the screen must block clicks, touches, keyboard submits, and menu movement until the API request finishes.
+- Travel menu entry must always show the top-level trip list first. A trip detail screen may open only after the user clicks a trip row.

@@ -3,8 +3,9 @@
     var panel = document.querySelector('.trip-manager')
     var headerAction = document.querySelector('.panel-header .passive-header-chip, .panel.wide.full-span .panel-header button')
     if (!panel && !headerAction) return
+    var forceListMode = !!window.__familyTravelForceListMode
     var hasApiDetail = panel && !!panel.querySelector('.api-trip-detail')
-    var shouldForceList = !!window.__familyTravelForceListMode || !hasApiDetail
+    var shouldForceList = forceListMode || !hasApiDetail
     if (shouldForceList) resetTravelApiListMode(panel)
     var existingList = panel && panel.querySelector('.trip-list')
     var hasRenderedList = existingList && (existingList.querySelector('.api-trip-card') || existingList.querySelector('.api-empty-row'))
@@ -43,6 +44,14 @@
       ) child.remove()
     })
     setTripDetailMode(panel, false)
+  }
+
+  function forceTravelListModeNow() {
+    window.__familyTravelForceListMode = true
+    try { localStorage.removeItem(API_TRIP_ID_KEY) } catch {}
+    var panel = document.querySelector('.trip-manager')
+    if (panel) resetTravelApiListMode(panel)
+    if (pageHeadingIs('\uC5EC\uD589')) renderTravelPageFromApi(true)
   }
 
   function renderApiTripList(panel, trips) {
@@ -348,8 +357,10 @@
   document.addEventListener('click', function (event) {
     var nav = event.target && event.target.closest && event.target.closest('.nav-item')
     if (!nav || getCleanText(nav).indexOf('\uC5EC\uD589') < 0) return
-    window.__familyTravelForceListMode = true
-    localStorage.removeItem(API_TRIP_ID_KEY)
+    forceTravelListModeNow()
+    ;[80, 240, 600].forEach(function (delay) {
+      window.setTimeout(forceTravelListModeNow, delay)
+    })
   }, true)
 
   function renderApiTripRecords(detail, tripId) {

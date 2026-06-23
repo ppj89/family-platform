@@ -477,7 +477,8 @@
     showTimer: 0,
     hideTimer: 0,
     watchdogTimer: 0,
-    installed: false
+    installed: false,
+    lastUserActionAt: 0
   }
 
   function ensureApiLoadingBar() {
@@ -519,7 +520,6 @@
 
   function endApiLoading() {
     apiLoadingState.count = Math.max(0, apiLoadingState.count - 1)
-    document.body.classList.toggle('api-loading-blocked', apiLoadingState.count > 0)
     if (apiLoadingState.count > 0) return
     if (apiLoadingState.watchdogTimer) {
       window.clearTimeout(apiLoadingState.watchdogTimer)
@@ -535,6 +535,7 @@
   }
 
   function getApiRequestLoadingMeta(input, init) {
+    if (!document.querySelector('.app-shell')) return { tracked: false, blocking: false }
     var url = typeof input === 'string' ? input : (input && input.url) || ''
     if (!url) return { tracked: false, blocking: false }
     var method = String((init && init.method) || (input && input.method) || 'GET').toUpperCase()
@@ -542,11 +543,11 @@
       var parsed = new URL(url, window.location.origin)
       if (parsed.pathname.indexOf('/api/notifications') === 0) return { tracked: false, blocking: false }
       if (parsed.pathname.indexOf('/api/') !== 0) return { tracked: false, blocking: false }
-      if (method === 'GET' || method === 'HEAD') return { tracked: false, blocking: false }
+      if ((method === 'GET' || method === 'HEAD') && Date.now() - apiLoadingState.lastUserActionAt > 1200) return { tracked: false, blocking: false }
       return { tracked: true, blocking: true }
     } catch (error) {
       var tracked = String(url).indexOf('/api/') >= 0
-      if (method === 'GET' || method === 'HEAD') tracked = false
+      if ((method === 'GET' || method === 'HEAD') && Date.now() - apiLoadingState.lastUserActionAt > 1200) tracked = false
       return { tracked: tracked, blocking: tracked }
     }
   }
@@ -594,6 +595,7 @@
     }
     ;['click', 'submit', 'keydown', 'touchstart', 'pointerdown'].forEach(function (type) {
       document.addEventListener(type, function (event) {
+        apiLoadingState.lastUserActionAt = Date.now()
         if (!document.body.classList.contains('api-loading-blocked')) return
         if (event.target && event.target.closest && event.target.closest('.global-api-loading')) return
         event.preventDefault()
@@ -9630,8 +9632,9 @@
     var panel = document.querySelector('.trip-manager')
     var headerAction = document.querySelector('.panel-header .passive-header-chip, .panel.wide.full-span .panel-header button')
     if (!panel && !headerAction) return
+    var forceListMode = !!window.__familyTravelForceListMode
     var hasApiDetail = panel && !!panel.querySelector('.api-trip-detail')
-    var shouldForceList = !!window.__familyTravelForceListMode || !hasApiDetail
+    var shouldForceList = forceListMode || !hasApiDetail
     if (shouldForceList) resetTravelApiListMode(panel)
     var existingList = panel && panel.querySelector('.trip-list')
     var hasRenderedList = existingList && (existingList.querySelector('.api-trip-card') || existingList.querySelector('.api-empty-row'))
@@ -9670,6 +9673,14 @@
       ) child.remove()
     })
     setTripDetailMode(panel, false)
+  }
+
+  function forceTravelListModeNow() {
+    window.__familyTravelForceListMode = true
+    try { localStorage.removeItem(API_TRIP_ID_KEY) } catch {}
+    var panel = document.querySelector('.trip-manager')
+    if (panel) resetTravelApiListMode(panel)
+    if (pageHeadingIs('\uC5EC\uD589')) renderTravelPageFromApi(true)
   }
 
   function renderApiTripList(panel, trips) {
@@ -9975,8 +9986,10 @@
   document.addEventListener('click', function (event) {
     var nav = event.target && event.target.closest && event.target.closest('.nav-item')
     if (!nav || getCleanText(nav).indexOf('\uC5EC\uD589') < 0) return
-    window.__familyTravelForceListMode = true
-    localStorage.removeItem(API_TRIP_ID_KEY)
+    forceTravelListModeNow()
+    ;[80, 240, 600].forEach(function (delay) {
+      window.setTimeout(forceTravelListModeNow, delay)
+    })
   }, true)
 
   function renderApiTripRecords(detail, tripId) {
