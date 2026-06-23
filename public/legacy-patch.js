@@ -8909,23 +8909,29 @@
     var now = currentTimeText()
     scope.querySelectorAll('input[type="time"], input[name="recordTime"], [data-field="travel-record-time"]').forEach(function (input) {
       if (!input || input.disabled) return
+      if (input.type === 'time') {
+        try { input.type = 'text' } catch {}
+      }
       input.setAttribute('maxlength', '5')
       input.setAttribute('inputmode', 'numeric')
+      input.setAttribute('autocomplete', 'off')
       input.setAttribute('pattern', '[0-2][0-9]:[0-5][0-9]')
       if (document.activeElement === input) return
+      var current = String(input.value || '').trim()
       if (input.matches && input.matches('input[name="recordTime"]')) {
-        var value = String(input.value || '').trim()
-        if (!value || ((value === '00:00' || value === '14:00') && input.dataset.timeDefaulted !== 'true')) {
+        if (!current || ((current === '00:00' || current === '14:00') && input.dataset.timeDefaulted !== 'true')) {
           setInputValue(input, now)
           input.dataset.timeDefaulted = 'true'
-        } else {
-          setInputValue(input, formatClockText(value, ''))
+        } else if (current) {
+          setInputValue(input, formatClockText(current, ''))
         }
         return
       }
-      if (!input.value || ((input.value === '00:00' || input.value === '14:00') && input.dataset.timeDefaulted !== 'true')) {
+      if (!current || ((current === '00:00' || current === '14:00') && input.dataset.timeDefaulted !== 'true')) {
         setInputValue(input, now)
         input.dataset.timeDefaulted = 'true'
+      } else if (current) {
+        setInputValue(input, formatClockText(current, ''))
       }
     })
   }
@@ -9079,7 +9085,11 @@
       ensureRequiredMarkForLabel(findLabelByText(form, '\uB0A0\uC9DC'))
       ensureRequiredMarkForLabel(findLabelByText(form, '\uC2DC\uAC04'))
       normalizeTravelLocationOptional(form)
-      ensureTravelLocationSearch(form)
+      if (typeof ensureLocationSearch === 'function') {
+        ensureLocationSearch(form, '[data-field="travel-location"]')
+      } else {
+        ensureTravelLocationSearch(form)
+      }
       form.querySelectorAll('[data-field="travel-location"], [data-field="travel-amount"], [data-field="travel-title"]').forEach(function (field) {
         field.removeAttribute('placeholder')
       })
@@ -9169,6 +9179,9 @@
   }
 
   function resolveTravelLocationForSubmit(form, location) {
+    if (typeof resolveLocationForSubmit === 'function') {
+      return resolveLocationForSubmit(form, location, '[data-field="travel-location"]')
+    }
     var existing = getTravelLocationCoordinates(form)
     if (existing || !String(location || '').trim()) return Promise.resolve(existing)
     return searchTravelPlaces(location, 1).then(function (items) {

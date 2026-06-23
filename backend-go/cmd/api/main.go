@@ -394,12 +394,10 @@ func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
 	}
 
 	seen := map[string]bool{}
-	hadProviderError := false
 	results := make([]placeSearchResult, 0, limit)
 	for _, candidateQuery := range placeSearchQueries(query) {
 		kakaoResults, err := a.searchKakaoPlaces(r.Context(), candidateQuery, limit-len(results))
 		if err != nil {
-			hadProviderError = true
 			a.log.Warn("kakao place search failed", "query", candidateQuery, "error", err)
 			if isPlaceProviderAuthError(err) {
 				break
@@ -416,7 +414,6 @@ func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
 		}
 		naverResults, err := a.searchNaverPlaces(r.Context(), candidateQuery, limit-len(results))
 		if err != nil {
-			hadProviderError = true
 			a.log.Warn("naver place search failed", "query", candidateQuery, "error", err)
 			if isPlaceProviderAuthError(err) {
 				break
@@ -433,13 +430,12 @@ func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
 		}
 		googleResults, err := a.searchGooglePlaces(r.Context(), candidateQuery, limit-len(results))
 		if err != nil {
-			hadProviderError = true
 			a.log.Warn("google place search failed", "query", candidateQuery, "error", err)
 			break
 		}
 		results = appendUniquePlaces(results, googleResults, seen, limit)
 	}
-	if len(results) > 0 || !hadProviderError {
+	if len(results) > 0 {
 		a.storePlaceSearchCache(query, limit, results)
 	}
 	writeJSON(w, http.StatusOK, results)
@@ -504,14 +500,20 @@ func placeSearchQueries(query string) []string {
 	}
 	withoutBranchSuffix := strings.TrimSuffix(strings.TrimSuffix(strings.TrimSuffix(base, "??"), "??"), "?")
 	add(withoutBranchSuffix)
+	add(strings.Join(strings.Fields(withoutBranchSuffix), ""))
 	parts := strings.Fields(withoutBranchSuffix)
 	if len(parts) > 1 {
 		head := parts[0]
 		tail := strings.Join(parts[1:], " ")
 		add(tail + " " + head)
+		add(tail + head)
+		add(head + tail)
 		if strings.HasSuffix(tail, "?") {
-			add(strings.TrimSuffix(tail, "?") + " " + head)
-			add(head + " " + strings.TrimSuffix(tail, "?"))
+			trimmedTail := strings.TrimSuffix(tail, "?")
+			add(trimmedTail + " " + head)
+			add(head + " " + trimmedTail)
+			add(trimmedTail + head)
+			add(head + trimmedTail)
 		}
 	}
 	return queries

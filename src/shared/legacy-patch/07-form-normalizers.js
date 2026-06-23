@@ -41,23 +41,29 @@
     var now = currentTimeText()
     scope.querySelectorAll('input[type="time"], input[name="recordTime"], [data-field="travel-record-time"]').forEach(function (input) {
       if (!input || input.disabled) return
+      if (input.type === 'time') {
+        try { input.type = 'text' } catch {}
+      }
       input.setAttribute('maxlength', '5')
       input.setAttribute('inputmode', 'numeric')
+      input.setAttribute('autocomplete', 'off')
       input.setAttribute('pattern', '[0-2][0-9]:[0-5][0-9]')
       if (document.activeElement === input) return
+      var current = String(input.value || '').trim()
       if (input.matches && input.matches('input[name="recordTime"]')) {
-        var value = String(input.value || '').trim()
-        if (!value || ((value === '00:00' || value === '14:00') && input.dataset.timeDefaulted !== 'true')) {
+        if (!current || ((current === '00:00' || current === '14:00') && input.dataset.timeDefaulted !== 'true')) {
           setInputValue(input, now)
           input.dataset.timeDefaulted = 'true'
-        } else {
-          setInputValue(input, formatClockText(value, ''))
+        } else if (current) {
+          setInputValue(input, formatClockText(current, ''))
         }
         return
       }
-      if (!input.value || ((input.value === '00:00' || input.value === '14:00') && input.dataset.timeDefaulted !== 'true')) {
+      if (!current || ((current === '00:00' || current === '14:00') && input.dataset.timeDefaulted !== 'true')) {
         setInputValue(input, now)
         input.dataset.timeDefaulted = 'true'
+      } else if (current) {
+        setInputValue(input, formatClockText(current, ''))
       }
     })
   }

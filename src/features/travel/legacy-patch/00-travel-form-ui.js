@@ -14,7 +14,11 @@
       ensureRequiredMarkForLabel(findLabelByText(form, '\uB0A0\uC9DC'))
       ensureRequiredMarkForLabel(findLabelByText(form, '\uC2DC\uAC04'))
       normalizeTravelLocationOptional(form)
-      ensureTravelLocationSearch(form)
+      if (typeof ensureLocationSearch === 'function') {
+        ensureLocationSearch(form, '[data-field="travel-location"]')
+      } else {
+        ensureTravelLocationSearch(form)
+      }
       form.querySelectorAll('[data-field="travel-location"], [data-field="travel-amount"], [data-field="travel-title"]').forEach(function (field) {
         field.removeAttribute('placeholder')
       })
@@ -104,6 +108,9 @@
   }
 
   function resolveTravelLocationForSubmit(form, location) {
+    if (typeof resolveLocationForSubmit === 'function') {
+      return resolveLocationForSubmit(form, location, '[data-field="travel-location"]')
+    }
     var existing = getTravelLocationCoordinates(form)
     if (existing || !String(location || '').trim()) return Promise.resolve(existing)
     return searchTravelPlaces(location, 1).then(function (items) {
