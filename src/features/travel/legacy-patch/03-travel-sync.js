@@ -31,6 +31,10 @@
       })
     }
 
+    if (task.type === 'updateTravelRecord') {
+      return putJson('/travel-records/' + encodeURIComponent(task.recordId), task.payload)
+    }
+
     if (task.type === 'createSchedule') {
       return getReadableFamilyId().then(function (familyId) {
         return postJson('/schedules?familyId=' + encodeURIComponent(familyId), task.payload)
@@ -118,23 +122,28 @@
         })
       }).then(function (result) {
         var coords = result.coords || { latitude: 0, longitude: 0 }
-        queueApiSync({
-          type: 'createTravelRecord',
-          payload: {
-            sortOrder: parseAmountValue(getFieldValue(form, '[data-field="travel-sort-order"]')) || null,
-            title: title,
-            category: getFieldValue(form, '[data-field="travel-category"]') || getCustomSelectValue('\uBE44\uC6A9 \uAD6C\uBD84') || '\uAE30\uD0C0',
-            amount: parseAmountValue(getFieldValue(form, '[data-field="travel-amount"]')),
-            note: getFieldValue(form, 'textarea'),
-            location: location || '',
-            latitude: Number(coords.latitude || 0),
-            longitude: Number(coords.longitude || 0),
-            recordDate: getDatePickerValue(form, '\uB0A0\uC9DC') || getFieldValue(form, '[data-field="travel-record-date"]') || todayText(),
-            recordTime: getFieldValue(form, '[data-field="travel-record-time"]') || currentTimeText(),
-            mediaUrls: communityMediaUrls(result.files)
-          }
-        })
+        var payload = {
+          sortOrder: parseAmountValue(getFieldValue(form, '[data-field="travel-sort-order"]')) || null,
+          title: title,
+          category: getFieldValue(form, '[data-field="travel-category"]') || getCustomSelectValue('\uBE44\uC6A9 \uAD6C\uBD84') || '\uAE30\uD0C0',
+          amount: parseAmountValue(getFieldValue(form, '[data-field="travel-amount"]')),
+          note: getFieldValue(form, 'textarea'),
+          location: location || '',
+          latitude: Number(coords.latitude || 0),
+          longitude: Number(coords.longitude || 0),
+          recordDate: getDatePickerValue(form, '\uB0A0\uC9DC') || getFieldValue(form, '[data-field="travel-record-date"]') || todayText(),
+          recordTime: getFieldValue(form, '[data-field="travel-record-time"]') || currentTimeText(),
+          mediaUrls: communityMediaUrls(result.files)
+        }
+        var editRecordId = form.dataset.apiTravelRecordEditId
+        queueApiSync(editRecordId
+          ? { type: 'updateTravelRecord', recordId: editRecordId, payload: payload }
+          : { type: 'createTravelRecord', payload: payload })
         flushApiQueue()
+        if (typeof resetApiTravelRecordForm === 'function') {
+          var nextOrder = parseAmountValue(getFieldValue(form, '[data-field="travel-sort-order"]')) + 1
+          resetApiTravelRecordForm(form, nextOrder)
+        }
         if (form.classList.contains('api-travel-record-form')) {
           window.setTimeout(function () {
             renderApiTripRecords(form.closest('.api-trip-detail'), localStorage.getItem(API_TRIP_ID_KEY))

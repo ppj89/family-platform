@@ -255,7 +255,7 @@
     document.querySelectorAll('.location-map-actions a, .location-map-actions button, a.map-link').forEach(function (node) {
       if (getCleanText(node) === '\uC9C0\uB3C4\uC5D0\uC11C \uC5F4\uAE30') node.remove()
     })
-    document.querySelectorAll('.route-map .route-sequence').forEach(function (node) {
+    document.querySelectorAll('.route-map:not(.api-trip-route-map) .route-sequence').forEach(function (node) {
       node.remove()
     })
     normalizeTravelRecordRows()
@@ -264,6 +264,7 @@
   function normalizeTravelRecordRows() {
     if (!pageHeadingIs('\uC5EC\uD589')) return
     document.querySelectorAll('.travel-row').forEach(function (row) {
+      if (row.classList.contains('api-travel-record-card')) return
       normalizeTravelRecordMapButton(row)
       normalizeTravelRecordText(row)
     })
