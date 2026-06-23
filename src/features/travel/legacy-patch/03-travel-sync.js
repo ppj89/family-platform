@@ -52,7 +52,19 @@
     return Promise.resolve()
   }
 
+  function purgeStaleTravelCreateTripQueueOnce() {
+    var cleanupKey = 'family-platform-travel-create-trip-queue-cleaned-20260623-01'
+    if (localStorage.getItem(cleanupKey) === 'true') return
+    var queue = readSyncQueue()
+    var next = queue.filter(function (task) {
+      return !task || task.type !== 'createTrip'
+    })
+    if (next.length !== queue.length) writeSyncQueue(next)
+    localStorage.setItem(cleanupKey, 'true')
+  }
+
   function flushApiQueue() {
+    purgeStaleTravelCreateTripQueueOnce()
     var queue = readSyncQueue()
     if (!queue.length) return
     var remaining = []

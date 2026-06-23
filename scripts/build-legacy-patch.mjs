@@ -50,6 +50,11 @@ function validateLegacyPatchInvariants(source) {
     source.includes("postJson('/trips?familyId=' + encodeURIComponent(familyId), payload)"),
     'travel trip creation must save through the trips API',
   )
+  assertLegacyPatchInvariant(
+    source.includes('function purgeStaleTravelCreateTripQueueOnce()') &&
+      source.includes('family-platform-travel-create-trip-queue-cleaned-20260623-01'),
+    'stale queued travel createTrip tasks must be purged before sync replay',
+  )
 }
 
 validateLegacyPatchInvariants(output)
