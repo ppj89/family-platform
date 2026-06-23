@@ -9137,9 +9137,11 @@
         '<b class="api-travel-record-order">' + escapeHtml(order) + '</b>' +
         '<div class="travel-thumb empty api-travel-record-thumb" aria-hidden="true">' + renderTravelRecordThumbIcon() + '</div>' +
         '<div class="travel-main api-travel-record-body">' +
-        '<div class="api-travel-record-head"><strong>' + escapeHtml(record.title || '\uC5EC\uD589 \uAE30\uB85D') + '</strong><span>' + escapeHtml(cost) + '</span></div>' +
-        '<span class="api-travel-record-meta">' + escapeHtml(dateTime + (note ? ' \u00B7 ' + note : '')) + '</span>' +
+        '<time class="api-travel-record-date">' + escapeHtml(dateTime) + '</time>' +
+        '<strong class="api-travel-record-title">' + escapeHtml(record.title || '\uC5EC\uD589 \uAE30\uB85D') + '</strong>' +
+        (note ? '<span class="api-travel-record-note">' + escapeHtml(note) + '</span>' : '') +
         (location ? '<small class="api-travel-record-location">' + escapeHtml(location) + '</small>' : '') +
+        '<span class="api-travel-record-cost">' + escapeHtml(cost) + '</span>' +
         '</div>' +
         '<div class="travel-record-actions api-travel-record-actions">' +
         (hasTravelRecordCoordinates(record) ? '<button type="button" data-api-travel-record-map="' + escapeHtml(record.id || '') + '">\uC9C0\uB3C4</button>' : '') +
