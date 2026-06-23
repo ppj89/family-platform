@@ -10485,11 +10485,16 @@ select {
 }
 
 .api-trip-route-map {
+  position: relative !important;
+  overflow: hidden !important;
   min-height: 250px !important;
   margin: 0 !important;
+  border-radius: 18px !important;
+  background: #f2f4f6 !important;
 }
 
 .api-trip-route-map .route-map-osm {
+  display: block !important;
   min-height: 250px !important;
 }
 
@@ -10541,16 +10546,18 @@ select {
 }
 
 .api-location-map-box .location-map-osm {
-  display: grid !important;
+  display: block !important;
   min-height: 180px !important;
-  place-items: center !important;
   color: #6b7684 !important;
   font-size: 13px !important;
   font-weight: 700 !important;
   overflow: hidden !important;
+  border-radius: 16px !important;
+  background: #f2f4f6 !important;
 }
 
 .api-location-map-box iframe {
+  display: block !important;
   width: 100% !important;
   height: 180px !important;
   border: 0 !important;

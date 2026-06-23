@@ -62,7 +62,11 @@
     if (!input || !item) return
     var label = placeCandidateLabel(item)
     var detail = placeCandidateDetail(item)
+    input.dataset.placeSelecting = 'true'
     setNativeInputValue(input, label || detail)
+    window.setTimeout(function () {
+      delete input.dataset.placeSelecting
+    }, 0)
     if (Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude)) && Number(item.latitude) !== 0 && Number(item.longitude) !== 0) {
       input.dataset.latitude = String(item.latitude)
       input.dataset.longitude = String(item.longitude)
@@ -173,6 +177,7 @@
     }
 
     input.addEventListener('input', function () {
+      if (input.dataset.placeSelecting === 'true') return
       queuePlaceSearch(true)
     })
     input.addEventListener('focus', function () {
@@ -180,8 +185,10 @@
         queuePlaceSearch(false)
       }
     })
-    input.addEventListener('blur', function () {
-      window.setTimeout(hideCandidates, 220)
+    document.addEventListener('pointerdown', function (event) {
+      var target = event.target
+      if (target === input || candidates.contains(target)) return
+      hideCandidates()
     })
   }
 

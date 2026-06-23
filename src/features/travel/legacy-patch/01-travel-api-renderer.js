@@ -327,18 +327,29 @@
     var input = form.querySelector('[data-field="travel-location"]')
     var map = form.querySelector('[data-travel-location-map]')
     if (!input || !map) return
+    renderApiLocationDefault(map)
     input.addEventListener('family-platform-location-selected', function (event) {
       var data = event.detail || {}
       renderApiLocationPreview(map, data.latitude, data.longitude, data.label || input.value)
     })
   }
 
+  function renderApiGoogleMap(map, label, query, zoom) {
+    if (!map) return
+    map.innerHTML = '<iframe title="' + escapeHtml(label || '\uC9C0\uB3C4') + '" src="https://maps.google.com/maps?q=' +
+      encodeURIComponent(query || '\uB300\uD55C\uBBFC\uAD6D') + '&z=' + encodeURIComponent(zoom || 12) +
+      '&output=embed" loading="lazy"></iframe>'
+  }
+
+  function renderApiLocationDefault(map) {
+    renderApiGoogleMap(map, '\uC704\uCE58 \uC9C0\uB3C4', '\uB300\uD55C\uBBFC\uAD6D', 7)
+  }
+
   function renderApiLocationPreview(map, latitude, longitude, label) {
     latitude = Number(latitude)
     longitude = Number(longitude)
     if (!map || !Number.isFinite(latitude) || !Number.isFinite(longitude) || latitude === 0 || longitude === 0) return
-    map.innerHTML = '<iframe title="' + escapeHtml(label || '\uC704\uCE58') + '" src="https://maps.google.com/maps?q=' +
-      encodeURIComponent(latitude + ',' + longitude) + '&z=15&output=embed" loading="lazy"></iframe>'
+    renderApiGoogleMap(map, label || '\uC704\uCE58', latitude + ',' + longitude, 15)
   }
 
   function setTripDetailMode(panel, enabled) {
@@ -399,14 +410,13 @@
       return hasTravelRecordCoordinates(record) || String(record.location || '').trim()
     })
     if (!candidates.length) {
-      map.innerHTML = ''
+      renderApiGoogleMap(map, '\uC5EC\uD589 \uACBD\uB85C \uC9C0\uB3C4', '\uB300\uD55C\uBBFC\uAD6D', 7)
       if (empty) empty.hidden = false
       return
     }
     var first = candidates.find(hasTravelRecordCoordinates) || candidates[0]
     var query = hasTravelRecordCoordinates(first) ? first.latitude + ',' + first.longitude : first.location
-    map.innerHTML = '<iframe loading="lazy" title="\uC5EC\uD589 \uACBD\uB85C \uC9C0\uB3C4" src="https://maps.google.com/maps?q=' +
-      encodeURIComponent(query) + '&z=13&output=embed"></iframe>'
+    renderApiGoogleMap(map, '\uC5EC\uD589 \uACBD\uB85C \uC9C0\uB3C4', query, 13)
     if (empty) empty.hidden = true
   }
 
