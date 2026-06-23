@@ -3,7 +3,8 @@
     var panel = document.querySelector('.trip-manager')
     var headerAction = document.querySelector('.panel-header .passive-header-chip, .panel.wide.full-span .panel-header button')
     if (!panel && !headerAction) return
-    var shouldForceList = !!window.__familyTravelForceListMode || (panel && !panel.classList.contains('detail-mode'))
+    var hasApiDetail = panel && !!panel.querySelector('.api-trip-detail')
+    var shouldForceList = !!window.__familyTravelForceListMode || !hasApiDetail
     if (shouldForceList) resetTravelApiListMode(panel)
     var existingList = panel && panel.querySelector('.trip-list')
     var hasRenderedList = existingList && (existingList.querySelector('.api-trip-card') || existingList.querySelector('.api-empty-row'))

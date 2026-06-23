@@ -43,7 +43,8 @@ function validateLegacyPatchInvariants(source) {
   assertLegacyPatchInvariant(
     source.includes('window.__familyTravelForceListMode') &&
       source.includes('function resetTravelApiListMode(panel)') &&
-      source.includes('resetTravelApiListMode(panel)'),
+      source.includes('resetTravelApiListMode(panel)') &&
+      source.includes('var hasApiDetail = panel && !!panel.querySelector(\'.api-trip-detail\')'),
     'travel menu entry must reset to top-level trip list before detail opens',
   )
   assertLegacyPatchInvariant(
