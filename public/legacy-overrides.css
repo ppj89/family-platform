@@ -10626,11 +10626,12 @@ select {
 
 .api-travel-record-card {
   display: grid !important;
-  grid-template-columns: 44px 64px minmax(0, 1fr) auto !important;
-  align-items: center !important;
-  gap: 14px !important;
+  grid-template-columns: 34px 44px minmax(0, 1fr) !important;
+  grid-template-rows: auto auto !important;
+  align-items: start !important;
+  gap: 10px 12px !important;
   border-radius: 18px !important;
-  padding: 14px 16px !important;
+  padding: 14px !important;
   background: #f7f8fa !important;
   box-shadow: inset 0 0 0 1px #e5e8eb !important;
 }
@@ -10638,38 +10639,48 @@ select {
 .api-travel-record-order {
   display: grid !important;
   place-items: center !important;
-  width: 44px !important;
-  height: 44px !important;
-  border-radius: 14px !important;
+  grid-row: 1 / span 2 !important;
+  width: 34px !important;
+  height: 34px !important;
+  margin-top: 2px !important;
+  border-radius: 11px !important;
   background: #e8f3ff !important;
   color: #1b64da !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 900 !important;
 }
 
 .api-travel-record-thumb {
   display: grid !important;
   place-items: center !important;
-  width: 56px !important;
-  height: 56px !important;
-  border-radius: 14px !important;
+  grid-row: 1 / span 2 !important;
+  width: 44px !important;
+  height: 44px !important;
+  border-radius: 12px !important;
   color: #8b95a1 !important;
   background: #e9edf2 !important;
 }
 
 .api-travel-record-body {
   display: grid !important;
+  grid-column: 3 !important;
+  grid-row: 1 !important;
   gap: 6px !important;
   min-width: 0 !important;
+  overflow: hidden !important;
 }
 
 .api-travel-record-date {
   display: block !important;
   margin: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
   color: #6b7684 !important;
   font-size: 13px !important;
   font-weight: 700 !important;
   line-height: 1.35 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
 }
 
 .api-travel-record-title {
@@ -10700,10 +10711,30 @@ select {
 .api-travel-record-cost {
   display: block !important;
   margin-top: 2px !important;
+  max-width: 100% !important;
+  overflow: hidden !important;
   color: #1b64da !important;
   font-size: 13px !important;
   font-weight: 800 !important;
   line-height: 1.35 !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.api-travel-record-actions {
+  grid-column: 3 !important;
+  grid-row: 2 !important;
+  align-self: end !important;
+  justify-content: flex-end !important;
+  gap: 7px !important;
+  min-width: 0 !important;
+}
+
+.api-travel-record-card .api-travel-record-actions button {
+  min-height: 32px !important;
+  padding: 0 11px !important;
+  border-radius: 11px !important;
+  font-size: 12px !important;
 }
 
 .api-travel-record-head {
@@ -10851,23 +10882,39 @@ select {
   }
 
   .api-travel-record-card {
-    grid-template-columns: 34px minmax(0, 1fr) !important;
+    grid-template-columns: 30px 38px minmax(0, 1fr) !important;
+    grid-template-rows: auto auto !important;
     align-items: start !important;
-    gap: 10px !important;
-    padding: 14px !important;
+    gap: 9px 10px !important;
+    padding: 13px !important;
     border-radius: 16px !important;
     background: #ffffff !important;
   }
 
   .api-travel-record-order {
-    width: 32px !important;
-    height: 32px !important;
-    border-radius: 11px !important;
+    grid-row: 1 / span 2 !important;
+    width: 30px !important;
+    height: 30px !important;
+    border-radius: 10px !important;
     font-size: 12px !important;
   }
 
   .api-travel-record-thumb {
-    display: none !important;
+    display: grid !important;
+    grid-row: 1 / span 2 !important;
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 11px !important;
+  }
+
+  .api-travel-record-thumb svg {
+    width: 15px !important;
+    height: 15px !important;
+  }
+
+  .api-travel-record-body {
+    grid-column: 3 !important;
+    grid-row: 1 !important;
   }
 
   .api-travel-record-date {
@@ -10885,9 +10932,19 @@ select {
   }
 
   .api-travel-record-actions {
-    grid-column: 1 / -1 !important;
-    gap: 8px !important;
-    margin-top: 2px !important;
+    grid-column: 3 !important;
+    grid-row: 2 !important;
+    justify-content: flex-end !important;
+    gap: 6px !important;
+    margin-top: 4px !important;
+  }
+
+  .api-travel-record-card .api-travel-record-actions button {
+    flex: 0 0 auto !important;
+    min-height: 30px !important;
+    padding: 0 10px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
   }
 
   .trip-card-actions,
