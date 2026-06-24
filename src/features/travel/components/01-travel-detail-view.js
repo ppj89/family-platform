@@ -15,11 +15,12 @@
   }
 
   function renderTravelRecordFormShell() {
+    var defaultCategory = getFamilyCommonDefaultCode('travelRecordCostCategory', '\uAD50\uD1B5')
     return [
       '<form class="travel-form api-travel-record-form">',
       '<h3>\uC5EC\uD589 \uAE30\uB85D \uCD94\uAC00</h3>',
       '<label class="form-field"><span class="form-label">\uC21C\uC11C</span><input class="form-control" data-field="travel-sort-order" inputmode="numeric" value="1" /></label>',
-      '<label class="form-field travel-category-field"><span class="form-label">\uBE44\uC6A9 \uAD6C\uBD84</span><input type="hidden" data-field="travel-category" value="\uAD50\uD1B5" />' + renderTravelCategorySelect() + '</label>',
+      '<label class="form-field travel-category-field"><span class="form-label">\uBE44\uC6A9 \uAD6C\uBD84</span><input type="hidden" data-field="travel-category" value="' + escapeHtml(defaultCategory) + '" />' + renderTravelCategorySelect(defaultCategory) + '</label>',
       '<label class="form-field travel-title-field"><span class="form-label">\uC81C\uBAA9 <em class="required-mark">*</em></span><input class="form-control" data-field="travel-title" /></label>',
       '<label class="form-field date-picker-field travel-record-date-field"><span class="form-label">\uB0A0\uC9DC <em class="required-mark">*</em></span><input type="hidden" data-field="travel-record-date" value="' + todayText() + '" /><button type="button" class="date-picker-trigger form-control" data-api-travel-record-date-trigger><span>' + todayText().replace(/-/g, '.') + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M16 2v4M8 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></label>',
       '<label class="form-field"><span class="form-label">\uC2DC\uAC04 <em class="required-mark">*</em></span><input class="form-control" data-field="travel-record-time" type="text" inputmode="numeric" maxlength="5" autocomplete="off" value="' + currentTimeText() + '" /></label>',
@@ -32,6 +33,6 @@
     ].join('')
   }
 
-  function renderTravelCategorySelect() {
-    return '<div class="custom-select api-travel-category-select" data-api-travel-category-select><button type="button" class="custom-select-trigger form-control" data-api-travel-category-trigger><span>\uAD50\uD1B5</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="custom-select-list" hidden><button type="button" data-api-travel-category-value="\uAD50\uD1B5" class="selected">\uAD50\uD1B5</button><button type="button" data-api-travel-category-value="\uC219\uBC15">\uC219\uBC15</button><button type="button" data-api-travel-category-value="\uC2DD\uBE44">\uC2DD\uBE44</button><button type="button" data-api-travel-category-value="\uAD00\uAD11">\uAD00\uAD11</button><button type="button" data-api-travel-category-value="\uAE30\uD0C0">\uAE30\uD0C0</button></div></div>'
+  function renderTravelCategorySelect(selectedValue) {
+    return '<div class="custom-select api-travel-category-select" data-api-travel-category-select><button type="button" class="custom-select-trigger form-control" data-api-travel-category-trigger><span>' + escapeHtml(selectedValue) + '</span><svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="custom-select-list" hidden>' + renderFamilyCommonCodeButtons('travelRecordCostCategory', 'data-api-travel-category-value', selectedValue) + '</div></div>'
   }
