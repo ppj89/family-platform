@@ -10626,10 +10626,10 @@ select {
 
 .api-travel-record-card {
   display: grid !important;
-  grid-template-columns: 34px minmax(0, 1fr) !important;
-  grid-template-rows: auto auto auto !important;
+  grid-template-columns: 56px minmax(0, 1fr) !important;
+  grid-template-rows: 32px minmax(54px, 1fr) auto !important;
   align-items: start !important;
-  gap: 4px 12px !important;
+  gap: 6px 12px !important;
   border-radius: 18px !important;
   padding: 10px 12px !important;
   background: #f7f8fa !important;
@@ -10643,6 +10643,7 @@ select {
   grid-row: 1 !important;
   width: 32px !important;
   height: 32px !important;
+  justify-self: center !important;
   margin-top: 0 !important;
   border-radius: 11px !important;
   background: #e8f3ff !important;
@@ -10655,9 +10656,11 @@ select {
   display: grid !important;
   place-items: center !important;
   grid-column: 1 !important;
-  grid-row: 2 !important;
-  width: 32px !important;
-  height: 32px !important;
+  grid-row: 2 / span 2 !important;
+  align-self: stretch !important;
+  width: 56px !important;
+  min-height: 60px !important;
+  height: 100% !important;
   border-radius: 12px !important;
   color: #8b95a1 !important;
   background: #e9edf2 !important;
@@ -10897,10 +10900,10 @@ select {
   }
 
   .api-travel-record-card {
-    grid-template-columns: 34px minmax(0, 1fr) !important;
-    grid-template-rows: auto auto auto !important;
+    grid-template-columns: 52px minmax(0, 1fr) !important;
+    grid-template-rows: 30px minmax(52px, 1fr) auto !important;
     align-items: start !important;
-    gap: 4px 12px !important;
+    gap: 6px 12px !important;
     padding: 10px 12px !important;
     border-radius: 16px !important;
     background: #ffffff !important;
@@ -10909,8 +10912,9 @@ select {
   .api-travel-record-order {
     grid-column: 1 !important;
     grid-row: 1 !important;
-    width: 32px !important;
-    height: 32px !important;
+    width: 30px !important;
+    height: 30px !important;
+    justify-self: center !important;
     border-radius: 10px !important;
     font-size: 12px !important;
   }
@@ -10918,9 +10922,11 @@ select {
   .api-travel-record-thumb {
     display: grid !important;
     grid-column: 1 !important;
-    grid-row: 2 !important;
-    width: 32px !important;
-    height: 32px !important;
+    grid-row: 2 / span 2 !important;
+    align-self: stretch !important;
+    width: 52px !important;
+    min-height: 58px !important;
+    height: 100% !important;
     margin-top: 0 !important;
     border-radius: 11px !important;
   }
