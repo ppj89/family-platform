@@ -10626,8 +10626,8 @@ select {
 
 .api-travel-record-card {
   display: grid !important;
-  grid-template-columns: 56px minmax(0, 1fr) !important;
-  grid-template-rows: 32px minmax(54px, 1fr) auto !important;
+  grid-template-columns: 76px minmax(0, 1fr) !important;
+  grid-template-rows: 34px minmax(62px, 1fr) auto !important;
   align-items: start !important;
   gap: 6px 12px !important;
   border-radius: 18px !important;
@@ -10641,8 +10641,8 @@ select {
   place-items: center !important;
   grid-column: 1 !important;
   grid-row: 1 !important;
-  width: 32px !important;
-  height: 32px !important;
+  width: 46px !important;
+  height: 34px !important;
   justify-self: center !important;
   margin-top: 0 !important;
   border-radius: 11px !important;
@@ -10658,8 +10658,8 @@ select {
   grid-column: 1 !important;
   grid-row: 2 / span 2 !important;
   align-self: stretch !important;
-  width: 56px !important;
-  min-height: 60px !important;
+  width: 76px !important;
+  min-height: 70px !important;
   height: 100% !important;
   border-radius: 12px !important;
   color: #8b95a1 !important;
@@ -10900,8 +10900,8 @@ select {
   }
 
   .api-travel-record-card {
-    grid-template-columns: 52px minmax(0, 1fr) !important;
-    grid-template-rows: 30px minmax(52px, 1fr) auto !important;
+    grid-template-columns: 70px minmax(0, 1fr) !important;
+    grid-template-rows: 32px minmax(60px, 1fr) auto !important;
     align-items: start !important;
     gap: 6px 12px !important;
     padding: 10px 12px !important;
@@ -10912,8 +10912,8 @@ select {
   .api-travel-record-order {
     grid-column: 1 !important;
     grid-row: 1 !important;
-    width: 30px !important;
-    height: 30px !important;
+    width: 42px !important;
+    height: 32px !important;
     justify-self: center !important;
     border-radius: 10px !important;
     font-size: 12px !important;
@@ -10924,8 +10924,8 @@ select {
     grid-column: 1 !important;
     grid-row: 2 / span 2 !important;
     align-self: stretch !important;
-    width: 52px !important;
-    min-height: 58px !important;
+    width: 70px !important;
+    min-height: 68px !important;
     height: 100% !important;
     margin-top: 0 !important;
     border-radius: 11px !important;
