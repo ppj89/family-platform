@@ -10641,7 +10641,7 @@ select {
   place-items: center !important;
   grid-column: 1 !important;
   grid-row: 1 !important;
-  width: 104px !important;
+  width: 48px !important;
   height: 34px !important;
   justify-self: center !important;
   margin-top: 0 !important;
@@ -10912,7 +10912,7 @@ select {
   .api-travel-record-order {
     grid-column: 1 !important;
     grid-row: 1 !important;
-    width: 96px !important;
+    width: 44px !important;
     height: 32px !important;
     justify-self: center !important;
     border-radius: 10px !important;
