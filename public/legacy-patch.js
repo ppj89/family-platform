@@ -497,6 +497,23 @@
     document.body.classList.toggle('api-loading-blocked', !!visible)
   }
 
+  function resetApiLoadingState() {
+    apiLoadingState.count = 0
+    if (apiLoadingState.watchdogTimer) {
+      window.clearTimeout(apiLoadingState.watchdogTimer)
+      apiLoadingState.watchdogTimer = 0
+    }
+    if (apiLoadingState.showTimer) {
+      window.clearTimeout(apiLoadingState.showTimer)
+      apiLoadingState.showTimer = 0
+    }
+    if (apiLoadingState.hideTimer) {
+      window.clearTimeout(apiLoadingState.hideTimer)
+      apiLoadingState.hideTimer = 0
+    }
+    setApiLoadingVisible(false)
+  }
+
   function beginApiLoading() {
     apiLoadingState.count += 1
     if (apiLoadingState.watchdogTimer) window.clearTimeout(apiLoadingState.watchdogTimer)
@@ -602,6 +619,11 @@
         event.stopPropagation()
         if (event.stopImmediatePropagation) event.stopImmediatePropagation()
       }, true)
+    })
+    window.addEventListener('pageshow', resetApiLoadingState)
+    window.addEventListener('focus', resetApiLoadingState)
+    document.addEventListener('visibilitychange', function () {
+      if (document.visibilityState === 'visible') resetApiLoadingState()
     })
   }
 

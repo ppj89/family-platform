@@ -1,0 +1,151 @@
+.fp-admin {
+  position: relative;
+  display: grid;
+  gap: 16px;
+}
+
+.fp-admin-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px;
+}
+
+.fp-admin-header h2,
+.fp-admin-panel h3 {
+  margin: 0;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.fp-admin-header p {
+  margin: 6px 0 0;
+  color: #718096;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fp-admin-header > span {
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #526070;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.fp-admin-header > span.active {
+  background: #eaf3ff;
+  color: #1264d8;
+}
+
+.fp-admin-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.fp-admin-panel {
+  display: grid;
+  gap: 16px;
+  padding: 20px;
+}
+
+.fp-admin-panel.span-2 {
+  grid-column: span 2;
+}
+
+.fp-admin-panel dl {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+
+.fp-admin-panel dl > div,
+.fp-admin-list article,
+.fp-admin-menu-grid article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f7f9fc;
+}
+
+.fp-admin-panel dl > div,
+.fp-admin-list article,
+.fp-admin-menu-grid article,
+.fp-admin-panel dd,
+.fp-admin-panel strong {
+  min-width: 0;
+}
+
+.fp-admin-panel dt,
+.fp-admin-panel span,
+.fp-admin-metric span {
+  color: #718096;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fp-admin-panel dd,
+.fp-admin-panel strong,
+.fp-admin-metric strong {
+  margin: 0;
+  color: #111827;
+  font-weight: 900;
+  overflow-wrap: anywhere;
+}
+
+.fp-admin-metric {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 16px;
+  background: #eef6ff;
+}
+
+.fp-admin-metric strong {
+  color: #1264d8;
+  font-size: 28px;
+}
+
+.fp-admin-list,
+.fp-admin-menu-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.fp-admin-menu-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.fp-admin-menu-grid article {
+  display: grid;
+  justify-content: stretch;
+}
+
+@media (max-width: 1024px) {
+  .fp-admin-grid,
+  .fp-admin-menu-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fp-admin-panel.span-2 {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .fp-admin-header {
+    flex-direction: column;
+  }
+
+  .fp-admin-panel dl > div,
+  .fp-admin-list article {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

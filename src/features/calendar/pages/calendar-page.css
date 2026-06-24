@@ -1,0 +1,472 @@
+.fp-calendar {
+  position: relative;
+  padding: 24px;
+}
+
+.fp-loading-blocker {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.72);
+  color: #1264d8;
+  font-weight: 900;
+}
+
+.fp-calendar-header,
+.fp-schedule-panel-header,
+.fp-schedule-form header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.fp-calendar-header h2,
+.fp-schedule-panel h3,
+.fp-schedule-form h3 {
+  margin: 0;
+}
+
+.fp-calendar-header p,
+.fp-schedule-panel-header p {
+  margin: 6px 0 0;
+  color: #718096;
+  font-weight: 700;
+}
+
+.fp-calendar-actions {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fp-calendar-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #f1f5f9;
+}
+
+.fp-calendar-tabs button {
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #526070;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fp-calendar-tabs button.active {
+  background: #fff;
+  color: #1264d8;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
+}
+
+.fp-button-muted {
+  color: #1264d8;
+  background: #eef6ff;
+}
+
+.fp-field {
+  display: grid;
+  gap: 8px;
+  color: #526070;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fp-field input,
+.fp-field select,
+.fp-field textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid #cfd9e6;
+  border-radius: 14px;
+  background: #fff;
+  color: #191f28;
+  font-weight: 600;
+}
+
+.fp-field input,
+.fp-field select {
+  height: 48px;
+  padding: 0 14px;
+}
+
+.fp-field textarea {
+  min-height: 120px;
+  padding: 14px;
+  resize: vertical;
+}
+
+.fp-month-field,
+.fp-date-field {
+  width: 160px;
+}
+
+.fp-form-date-picker {
+  width: 100%;
+}
+
+.fp-date-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.fp-date-control button {
+  height: 48px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: #eef6ff;
+  color: #1264d8;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fp-message {
+  margin: 18px 0 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #eef6ff;
+  color: #1264d8;
+  font-weight: 800;
+}
+
+.fp-calendar-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.fp-calendar-board,
+.fp-week-board,
+.fp-day-board,
+.fp-schedule-panel,
+.fp-schedule-form {
+  border: 1px solid #e1e7ef;
+  border-radius: 16px;
+  padding: 16px;
+  background: #f8fafc;
+}
+
+.fp-weekdays,
+.fp-month-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fp-weekdays {
+  margin-bottom: 8px;
+  color: #718096;
+  font-size: 13px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.fp-month-cell {
+  min-height: 96px;
+  padding: 10px;
+  border: 1px solid #e1e7ef;
+  border-radius: 14px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fp-month-cell.empty {
+  cursor: default;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fp-month-cell.selected {
+  border-color: #2f80ed;
+  box-shadow: 0 0 0 2px rgba(47, 128, 237, 0.15);
+}
+
+.fp-month-grid strong,
+.fp-month-schedule-chip,
+.fp-month-grid small {
+  display: block;
+}
+
+.fp-month-schedule-chip {
+  overflow: hidden;
+  width: 100%;
+  margin-top: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #1264d8;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fp-month-grid small {
+  margin-top: 6px;
+  color: #718096;
+  font-weight: 800;
+}
+
+.fp-week-board {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fp-week-board button {
+  display: grid;
+  align-content: start;
+  min-height: 150px;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #e1e7ef;
+  border-radius: 14px;
+  background: #fff;
+  color: #191f28;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fp-week-board button.active {
+  border-color: #2f80ed;
+  box-shadow: 0 0 0 2px rgba(47, 128, 237, 0.15);
+}
+
+.fp-week-board span {
+  color: #1264d8;
+  font-weight: 900;
+}
+
+.fp-week-board small {
+  overflow: hidden;
+  color: #526070;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-day-board {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.fp-day-board h3,
+.fp-day-board p {
+  margin: 0;
+}
+
+.fp-day-board p {
+  color: #718096;
+  font-weight: 800;
+}
+
+.fp-schedule-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.fp-schedule-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid #e1e7ef;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.fp-schedule-row p,
+.fp-schedule-row small,
+.fp-schedule-row em {
+  display: block;
+  margin: 6px 0 0;
+  color: #526070;
+  font-weight: 700;
+}
+
+.fp-schedule-row em {
+  color: #1264d8;
+  font-style: normal;
+}
+
+.fp-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fp-row-actions button {
+  height: 38px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 12px;
+  background: #eef6ff;
+  color: #1264d8;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fp-row-actions button.danger {
+  background: #fff0f0;
+  color: #ef4444;
+}
+
+.fp-empty-text {
+  margin: 0;
+  padding: 24px;
+  border: 1px solid #e1e7ef;
+  border-radius: 14px;
+  background: #fff;
+  color: #718096;
+  text-align: center;
+  font-weight: 800;
+}
+
+.fp-schedule-form {
+  margin-top: 18px;
+}
+
+.fp-calendar .fp-schedule-form input,
+.fp-calendar .fp-schedule-form select,
+.fp-calendar .fp-schedule-form textarea,
+.fp-calendar .fp-date-picker-trigger strong {
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.fp-form-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 16px 0;
+}
+
+.span-2 {
+  grid-column: span 2;
+}
+
+.fp-calendar-popup-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(39, 49, 65, 0.46);
+}
+
+.fp-calendar-popup {
+  width: min(520px, 100%);
+  max-height: min(720px, calc(100vh - 40px));
+  overflow: auto;
+  padding: 20px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
+}
+
+.fp-calendar-popup header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fp-calendar-popup h3 {
+  margin: 0;
+}
+
+.fp-calendar-popup header button {
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 12px;
+  background: #f3f6fa;
+  color: #191f28;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+@media (max-width: 1180px) {
+  .fp-calendar-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .fp-schedule-panel {
+    order: 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .fp-calendar {
+    padding: 16px;
+  }
+
+  .fp-calendar-header,
+  .fp-calendar-actions,
+  .fp-schedule-panel-header,
+  .fp-schedule-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .fp-calendar-actions {
+    width: 100%;
+  }
+
+  .fp-month-field,
+  .fp-date-field,
+  .fp-calendar-actions .fp-button {
+    width: 100%;
+  }
+
+  .fp-calendar-tabs {
+    width: 100%;
+  }
+
+  .fp-calendar-tabs button {
+    flex: 1;
+  }
+
+  .fp-weekdays,
+  .fp-month-grid {
+    gap: 4px;
+  }
+
+  .fp-week-board {
+    grid-template-columns: 1fr;
+  }
+
+  .fp-month-cell {
+    min-height: 70px;
+    padding: 8px;
+  }
+
+  .fp-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .span-2 {
+    grid-column: auto;
+  }
+}

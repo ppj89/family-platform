@@ -2122,6 +2122,17 @@ func (a *app) rejectFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 	if !ok {
 		return
 	}
+	var familyID int64
+	var inviterUserID int64
+	err := a.db.QueryRow(r.Context(), `
+		select family_id, inviter_user_id
+		from family_invitations
+		where id = $1 and invitee_user_id = $2 and status = 'PENDING'
+	`, invitationID, user.ID).Scan(&familyID, &inviterUserID)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "invitation not found")
+		return
+	}
 	tag, err := a.db.Exec(r.Context(), `
 		update family_invitations
 		set status = 'REJECTED', responded_at = now()
@@ -2131,6 +2142,11 @@ func (a *app) rejectFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 		writeError(w, http.StatusNotFound, "invitation not found")
 		return
 	}
+	rejectedName := a.displayName(r.Context(), user)
+	_, _ = a.db.Exec(r.Context(), `
+		insert into app_notifications (user_id, family_id, type, title, body, target_date, created_at)
+		values ($1, $2, 'FAMILY_INVITE_REJECTED', $3, $4, current_date, now())
+	`, inviterUserID, familyID, rejectedName+" 님이 초대를 거절하셨습니다.", rejectedName+" 님이 가족 초대를 거절하셨습니다.")
 	writeJSON(w, http.StatusOK, map[string]string{"status": "REJECTED"})
 }
 

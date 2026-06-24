@@ -1,0 +1,135 @@
+.fp-date-picker-field {
+  position: relative;
+  width: 160px;
+}
+
+.fp-date-picker-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 48px;
+  border: 1px solid #cfd9e6;
+  border-radius: 14px;
+  padding: 0 14px;
+  background: #fff;
+  color: #191f28;
+  cursor: pointer;
+}
+
+.fp-date-picker-trigger strong {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-date-picker-trigger span {
+  color: #2f80ed;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.fp-date-picker-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 80;
+  width: 286px;
+  padding: 14px;
+  border: 1px solid #e1e7ef;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 20px 46px rgba(15, 23, 42, 0.18);
+}
+
+.fp-date-picker-popover header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.fp-date-picker-popover header strong {
+  color: #191f28;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.fp-date-picker-popover header button,
+.fp-date-picker-days button,
+.fp-date-picker-months button,
+.fp-date-picker-today {
+  border: 0;
+  border-radius: 12px;
+  background: #f3f6fa;
+  color: #191f28;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fp-date-picker-popover header button {
+  width: 36px;
+  height: 36px;
+}
+
+.fp-date-picker-weekdays,
+.fp-date-picker-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.fp-date-picker-weekdays {
+  margin-bottom: 6px;
+  color: #718096;
+  font-size: 12px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.fp-date-picker-days button {
+  height: 34px;
+  background: transparent;
+}
+
+.fp-date-picker-days button:disabled {
+  cursor: default;
+}
+
+.fp-date-picker-days button.selected,
+.fp-date-picker-months button.selected {
+  background: #2f80ed;
+  color: #fff;
+}
+
+.fp-date-picker-months {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fp-date-picker-months button {
+  height: 38px;
+}
+
+.fp-date-picker-today {
+  display: block;
+  width: 100%;
+  height: 38px;
+  margin-top: 12px;
+  background: #eef6ff;
+  color: #1264d8;
+}
+
+@media (max-width: 760px) {
+  .fp-date-picker-field {
+    width: 100%;
+  }
+
+  .fp-date-picker-popover {
+    width: min(286px, calc(100vw - 56px));
+  }
+}

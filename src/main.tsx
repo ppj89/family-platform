@@ -1,3 +1,5 @@
+import { createRoot } from 'react-dom/client'
+import App from './App'
 import './index.css'
 
 declare global {
@@ -17,6 +19,14 @@ const legacyPatchScriptPath = '/legacy-patch.js?v=20260624-10'
 const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260614-11'
 
 const root = document.getElementById('root')
+const reactParams = new URLSearchParams(window.location.search)
+const useReactApp = reactParams.get('react') === '1' ||
+  window.localStorage.getItem('family-platform-react-migration') === 'true'
+
+if (useReactApp && root) {
+  window.localStorage.setItem('family-platform-react-migration', 'true')
+  createRoot(root).render(<App />)
+} else {
 
 if (!document.querySelector(`link[href="${legacyCssPath}"]`)) {
   const link = document.createElement('link')
@@ -120,3 +130,4 @@ window.setInterval(() => {
   }
   window.location.replace(url.toString())
 }, 500)
+}

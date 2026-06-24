@@ -1,0 +1,161 @@
+.fp-ledger {
+  position: relative;
+  padding: 24px;
+}
+
+.fp-ledger-header,
+.fp-ledger-form header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.fp-ledger-header h2,
+.fp-ledger-form h3 {
+  margin: 0;
+}
+
+.fp-ledger-header p {
+  margin: 6px 0 0;
+  color: #718096;
+  font-weight: 700;
+}
+
+.fp-ledger-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.fp-ledger-summary article {
+  padding: 16px;
+  border-radius: 14px;
+  background: #f8fafc;
+}
+
+.fp-ledger-summary span,
+.fp-ledger-row span {
+  display: block;
+  color: #718096;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fp-ledger-summary strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.fp-ledger-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 18px;
+  margin-top: 18px;
+}
+
+.fp-ledger-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.fp-ledger-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid #e1e7ef;
+  border-radius: 14px;
+  background: #fff;
+}
+
+.fp-ledger-row-main {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fp-ledger-row-main strong {
+  display: block;
+  overflow: hidden;
+  color: #191f28;
+  font-size: 16px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-ledger-row-main span {
+  overflow: hidden;
+  margin-top: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-ledger-row > b {
+  font-size: 16px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.expense {
+  color: #ef4444;
+}
+
+.income {
+  color: #1264d8;
+}
+
+.fp-ledger-form {
+  padding: 16px;
+  border: 1px solid #e1e7ef;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.ledger-form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 1180px) {
+  .fp-ledger-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .fp-ledger {
+    padding: 16px;
+  }
+
+  .fp-ledger-header,
+  .fp-ledger-form header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .fp-ledger-summary,
+  .ledger-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .fp-ledger-row {
+    grid-template-columns: 1fr;
+  }
+
+  .fp-row-actions {
+    justify-content: stretch;
+  }
+
+  .fp-row-actions button {
+    flex: 1;
+  }
+}

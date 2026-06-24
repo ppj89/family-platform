@@ -1,0 +1,241 @@
+.fp-community {
+  position: relative;
+  display: grid;
+  gap: 16px;
+}
+
+.fp-community-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px;
+}
+
+.fp-community-header h2,
+.fp-community-list h3,
+.fp-community-form h3,
+.fp-community-detail h3 {
+  margin: 0;
+  color: #111827;
+  line-height: 1.2;
+}
+
+.fp-community-header p,
+.fp-community-list article span,
+.fp-community-list article p,
+.fp-community-detail article span,
+.fp-community-detail article p,
+.fp-community-comment span {
+  margin: 0;
+  color: #718096;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.fp-community-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.fp-community-tabs button {
+  height: 40px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 999px;
+  background: #f1f5f9;
+  color: #526070;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fp-community-tabs button.active {
+  background: #eaf3ff;
+  color: #1264d8;
+}
+
+.fp-community-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 0.75fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.fp-community-list,
+.fp-community-form,
+.fp-community-detail {
+  padding: 20px;
+}
+
+.fp-community-list header,
+.fp-community-form header,
+.fp-community-detail header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.fp-community-list header span {
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: #1264d8;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.fp-community-list {
+  display: grid;
+  gap: 10px;
+}
+
+.fp-community-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+  border-radius: 14px;
+  background: #f7f9fc;
+}
+
+.fp-community-list article.active {
+  outline: 2px solid #2f80ed;
+  background: #eef6ff;
+}
+
+.fp-community-list article > button {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fp-community-list article strong {
+  overflow: hidden;
+  color: #111827;
+  font-size: 16px;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-community-list article p {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-community-side {
+  display: grid;
+  gap: 16px;
+}
+
+.fp-community-form {
+  display: grid;
+  gap: 14px;
+}
+
+.fp-community-form textarea {
+  min-height: 160px;
+}
+
+.fp-community-form > .fp-button {
+  justify-self: end;
+}
+
+.fp-community-detail {
+  display: grid;
+  gap: 16px;
+}
+
+.fp-community-detail article {
+  display: grid;
+  gap: 10px;
+}
+
+.fp-community-detail article p {
+  color: #2d3748;
+  white-space: pre-wrap;
+}
+
+.fp-community-comments {
+  display: grid;
+  gap: 10px;
+}
+
+.fp-community-comments > strong {
+  color: #111827;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.fp-community-comment {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  background: #f7f9fc;
+}
+
+.fp-community-comment > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fp-community-comment b {
+  color: #111827;
+  font-weight: 900;
+}
+
+.fp-community-comment p {
+  margin: 0;
+  color: #2d3748;
+  font-weight: 700;
+  white-space: pre-wrap;
+}
+
+.fp-community-comment-form {
+  display: grid;
+  gap: 10px;
+}
+
+@media (max-width: 1180px) {
+  .fp-community-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .fp-community-header,
+  .fp-community-list article,
+  .fp-community-list header,
+  .fp-community-form header,
+  .fp-community-detail header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .fp-community-list article {
+    grid-template-columns: 1fr;
+  }
+
+  .fp-community-list .fp-row-actions,
+  .fp-community-detail .fp-row-actions {
+    justify-content: stretch;
+  }
+
+  .fp-community-list .fp-row-actions button,
+  .fp-community-detail .fp-row-actions button {
+    flex: 1;
+  }
+}
