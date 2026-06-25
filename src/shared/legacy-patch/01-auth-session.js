@@ -408,6 +408,14 @@
     window.setTimeout(function () {
       if (document.querySelector('.auth-card') && getStoredAuthToken()) window.location.reload()
     }, 900)
+    window.setTimeout(function () {
+      var params = new URLSearchParams(window.location.search || '')
+      if (params.get('legacy') === '1' || !getStoredAuthToken()) return
+      params.delete('loggedOut')
+      params.delete('recover')
+      var nextSearch = params.toString()
+      window.location.replace(window.location.pathname + (nextSearch ? '?' + nextSearch : '') + window.location.hash)
+    }, 1000)
   }
 
   function focusPasswordConfirm(card) {
