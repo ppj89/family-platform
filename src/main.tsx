@@ -1,5 +1,6 @@
 import { createRoot } from 'react-dom/client'
 import App from './App'
+import { hasAuthToken } from './shared/api/auth'
 import './index.css'
 
 declare global {
@@ -20,7 +21,8 @@ const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260614-11'
 
 const root = document.getElementById('root')
 const reactParams = new URLSearchParams(window.location.search)
-const useLegacyApp = reactParams.get('legacy') === '1'
+const useLegacyApp = reactParams.get('legacy') === '1' ||
+  (!hasAuthToken() && reactParams.get('react') !== '1')
 
 if (!useLegacyApp && root) {
   window.localStorage.setItem('family-platform-react-migration', 'true')
