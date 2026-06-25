@@ -51,6 +51,9 @@
 }
 
 .fp-nav button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
   height: 52px;
   padding: 0 18px;
   border: 0;
@@ -62,9 +65,20 @@
   cursor: pointer;
 }
 
+.fp-nav-icon {
+  flex: 0 0 22px;
+  width: 22px;
+  height: 22px;
+  color: #8a96a3;
+}
+
 .fp-nav button.active {
   color: #1264d8;
   background: #dceeff;
+}
+
+.fp-nav button.active .fp-nav-icon {
+  color: #1264d8;
 }
 
 .fp-main {
@@ -365,6 +379,10 @@
   }
 
   .fp-nav button {
+    justify-content: center;
+    gap: 8px;
+    min-width: 88px;
+    padding: 0 12px;
     text-align: center;
     white-space: nowrap;
   }
