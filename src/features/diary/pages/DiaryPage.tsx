@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
-import { ConfirmDialog } from '../../../shared/components'
+import { ConfirmDialog, DatePickerField } from '../../../shared/components'
 import { monthInputValue, monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
 import { createDiary, deleteDiary, listDiaries, updateDiary } from '../api/diary'
 import type { DiaryItem, DiaryPayload } from '../types'
@@ -154,18 +154,17 @@ export default function DiaryPage() {
           <h2>일기</h2>
           <p>{diaryList.length}건</p>
         </div>
-        <div className="fp-diary-actions">
-          <label className="fp-field fp-month-field">
-            조회 월
-            <input
-              type="month"
-              value={monthInputValue(monthDate)}
-              onChange={(event) => setMonthDate(parseDateKey(`${event.target.value}-01`))}
-            />
-          </label>
-          <button className="fp-button fp-button-primary" type="button" onClick={reload}>조회</button>
-        </div>
       </header>
+      <div className="fp-diary-actions">
+        <DatePickerField
+          className="fp-month-field"
+          label="조회 월"
+          mode="month"
+          value={monthInputValue(monthDate)}
+          onChange={(value) => setMonthDate(parseDateKey(`${value}-01`))}
+        />
+        <button className="fp-button fp-button-primary" type="button" onClick={reload}>조회</button>
+      </div>
 
       {message ? <p className="fp-message">{message}</p> : null}
 
@@ -206,10 +205,11 @@ export default function DiaryPage() {
               제목 *
               <input value={form.title} onChange={(event) => setForm((value) => ({ ...value, title: event.target.value }))} />
             </label>
-            <label className="fp-field">
-              날짜 *
-              <input type="date" value={form.diaryDate} onChange={(event) => setForm((value) => ({ ...value, diaryDate: event.target.value }))} />
-            </label>
+            <DatePickerField
+              label="날짜 *"
+              value={form.diaryDate}
+              onChange={(value) => setForm((current) => ({ ...current, diaryDate: value }))}
+            />
             <label className="fp-field">
               날씨
               <select value={form.weather || ''} onChange={(event) => setForm((value) => ({ ...value, weather: event.target.value || null }))}>
