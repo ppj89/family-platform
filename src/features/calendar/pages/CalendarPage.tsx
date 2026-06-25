@@ -101,6 +101,7 @@ export default function CalendarPage() {
   const [editingSource, setEditingSource] = useState<ScheduleItem | null>(null)
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
   const [dayDialog, setDayDialog] = useState<{ date: string; items: CalendarScheduleInstance[] } | null>(null)
+  const [pendingMonthDialogDate, setPendingMonthDialogDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -159,6 +160,20 @@ export default function CalendarPage() {
     void reloadSchedules()
   }, [range.endDate])
 
+  useEffect(() => {
+    if (!pendingMonthDialogDate) return
+    const dayItems = visibleItems.filter((item) => item.occurrenceDate === pendingMonthDialogDate)
+    if (dayItems.length > 0) {
+      setDayDialog({ date: pendingMonthDialogDate, items: dayItems })
+      setPendingMonthDialogDate(null)
+      return
+    }
+    if (!loading) {
+      setDayDialog(null)
+      setPendingMonthDialogDate(null)
+    }
+  }, [loading, pendingMonthDialogDate, visibleItems])
+
   function setActiveDate(dateKey: string) {
     setSelectedDate(dateKey)
     if (view === 'day') setDayDate(dateKey)
@@ -171,8 +186,13 @@ export default function CalendarPage() {
     const dayItems = visibleItems.filter((item) => item.occurrenceDate === dateKey)
     setSelectedDate(dateKey)
     if (!editingId) setForm((value) => ({ ...value, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
-    if (dayItems.length > 0) setDayDialog({ date: dateKey, items: dayItems })
-    else setDayDialog(null)
+    setPendingMonthDialogDate(dateKey)
+    if (dayItems.length > 0) {
+      setDayDialog({ date: dateKey, items: dayItems })
+      setPendingMonthDialogDate(null)
+    } else if (!loading) {
+      setDayDialog(null)
+    }
   }
 
   function startCreate(dateKey = selectedDate) {
