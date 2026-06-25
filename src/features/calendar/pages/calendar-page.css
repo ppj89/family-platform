@@ -180,6 +180,8 @@
   border: 1px solid #e1e7ef;
   border-radius: 14px;
   background: #fff;
+  color: inherit;
+  font: inherit;
   text-align: left;
   cursor: pointer;
 }
@@ -214,7 +216,6 @@
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: pointer;
 }
 
 .fp-month-grid small {

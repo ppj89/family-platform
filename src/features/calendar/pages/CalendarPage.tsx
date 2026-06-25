@@ -167,10 +167,12 @@ export default function CalendarPage() {
     if (!editingId) setForm((value) => ({ ...value, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
   }
 
-  function openMonthDay(dateKey: string, dayItems: CalendarScheduleInstance[]) {
+  function openMonthDay(dateKey: string) {
+    const dayItems = visibleItems.filter((item) => item.occurrenceDate === dateKey)
     setSelectedDate(dateKey)
     if (!editingId) setForm((value) => ({ ...value, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
     if (dayItems.length > 0) setDayDialog({ date: dateKey, items: dayItems })
+    else setDayDialog(null)
   }
 
   function startCreate(dateKey = selectedDate) {
@@ -414,42 +416,31 @@ function startEdit(item: CalendarScheduleInstance) {
                 const dayItems = cell.dateKey ? visibleItems.filter((item) => item.occurrenceDate === cell.dateKey) : []
                 const date = cell.dateKey ? parseDateKey(cell.dateKey) : null
                 return (
-                  <div
+                  <button
                     className={[
                       'fp-month-cell',
                       cell.dateKey === selectedDate ? 'selected' : '',
                       !cell.dateKey ? 'empty' : '',
                     ].filter(Boolean).join(' ')}
+                    disabled={!cell.dateKey}
                     key={cell.key}
-                    role={cell.dateKey ? 'button' : undefined}
-                    tabIndex={cell.dateKey ? 0 : -1}
+                    type="button"
                     onClick={() => {
                       if (!cell.dateKey) return
-                      openMonthDay(cell.dateKey, dayItems)
-                    }}
-                    onKeyDown={(event) => {
-                      if (!cell.dateKey) return
-                      if (event.key !== 'Enter' && event.key !== ' ') return
-                      event.preventDefault()
-                      openMonthDay(cell.dateKey, dayItems)
+                      openMonthDay(cell.dateKey)
                     }}
                   >
                     {date ? <strong>{date.getDate()}</strong> : null}
                     {dayItems.slice(0, 3).map((item) => (
-                      <button
+                      <span
                         className="fp-month-schedule-chip"
                         key={item.instanceKey}
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation()
-                          if (cell.dateKey) openMonthDay(cell.dateKey, dayItems)
-                        }}
                       >
                         {item.title}
-                      </button>
+                      </span>
                     ))}
                     {dayItems.length > 3 ? <small>+{dayItems.length - 3}</small> : null}
-                  </div>
+                  </button>
                 )
               })}
             </div>
