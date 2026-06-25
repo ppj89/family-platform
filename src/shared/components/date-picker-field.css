@@ -19,8 +19,9 @@
 
 .fp-date-picker-trigger strong {
   overflow: hidden;
-  font-size: 15px;
-  font-weight: 600;
+  color: #4e5968;
+  font-size: 12px;
+  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }

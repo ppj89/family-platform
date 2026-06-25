@@ -216,8 +216,11 @@
   border: 1px solid #cfd9e6;
   border-radius: 14px;
   background: #fff;
-  color: #191f28;
-  font-weight: 600;
+  color: #4e5968;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
 }
 
 .fp-field input,

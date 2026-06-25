@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
-import { ConfirmDialog } from '../../../shared/components'
+import { ConfirmDialog, DatePickerField } from '../../../shared/components'
 import { TRAVEL_COST_CATEGORIES } from '../../../shared/constants/commonCodes'
 import { currentTimeText, todayKey } from '../../../shared/utils/date'
 import {
@@ -389,10 +389,12 @@ export default function TravelPage() {
                 제목 *
                 <input value={recordForm.title} onChange={(event) => setRecordForm((value) => ({ ...value, title: event.target.value }))} />
               </label>
-              <label className="fp-field">
-                날짜 *
-                <input type="date" value={recordForm.recordDate} onChange={(event) => setRecordForm((value) => ({ ...value, recordDate: event.target.value }))} />
-              </label>
+              <DatePickerField
+                className="fp-form-date-picker"
+                label="날짜 *"
+                value={recordForm.recordDate}
+                onChange={(nextDate) => setRecordForm((value) => ({ ...value, recordDate: nextDate }))}
+              />
               <label className="fp-field">
                 시간 *
                 <input inputMode="numeric" maxLength={5} value={recordForm.recordTime || ''} onChange={(event) => setRecordForm((value) => ({ ...value, recordTime: sanitizeTime(event.target.value) }))} />
@@ -418,7 +420,7 @@ export default function TravelPage() {
               </div>
               <label className="fp-field">
                 사용금액
-                <input inputMode="numeric" value={recordForm.amount || ''} onChange={(event) => setRecordForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))} />
+                <input inputMode="numeric" value={recordForm.amount ? recordForm.amount.toLocaleString('ko-KR') : ''} onChange={(event) => setRecordForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))} />
               </label>
               <label className="fp-field span-2">
                 내용
