@@ -15,6 +15,10 @@ import {
 import { createSchedule, createScheduleReminders, deleteSchedule, listSchedules, updateSchedule } from '../api/schedules'
 import type { ScheduleItem, SchedulePayload } from '../types'
 import { expandScheduleInstances, isRepeatRule, type CalendarScheduleInstance } from '../utils/repeat'
+import { CalendarDayDialog } from '../components/CalendarDayDialog'
+import { CalendarMonthBoard } from '../components/CalendarMonthBoard'
+import { CalendarScheduleRow } from '../components/CalendarScheduleRow'
+import { CalendarWeekBoard } from '../components/CalendarWeekBoard'
 import './calendar-page.css'
 
 type CalendarView = 'day' | 'week' | 'month'
@@ -38,10 +42,6 @@ const emptyPayload = (date: string): SchedulePayload => ({
   memo: '',
 })
 
-function scheduleTime(item: Pick<ScheduleItem, 'scheduleTime'>) {
-  return item.scheduleTime ? item.scheduleTime.slice(0, 5) : '시간 미정'
-}
-
 function normalizeTimeInput(value: string) {
   const digits = value.replace(/[^\d]/g, '').slice(0, 4)
   if (digits.length <= 2) return digits
@@ -50,13 +50,6 @@ function normalizeTimeInput(value: string) {
 
 function isCompleteTime(value: string | null | undefined) {
   return !value || /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)
-}
-
-function repeatLabel(rule?: string | null) {
-  if (rule === 'weekly') return '매주'
-  if (rule === 'monthly') return '매월'
-  if (rule === 'yearly') return '매년'
-  return '반복 없음'
 }
 
 function rangeForView(view: CalendarView, dayDate: string, weekDate: string, monthDate: Date) {
@@ -186,13 +179,13 @@ export default function CalendarPage() {
     const dayItems = visibleItems.filter((item) => item.occurrenceDate === dateKey)
     setSelectedDate(dateKey)
     if (!editingId) setForm((value) => ({ ...value, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
-    setPendingMonthDialogDate(dateKey)
     if (dayItems.length > 0) {
       setDayDialog({ date: dateKey, items: dayItems })
       setPendingMonthDialogDate(null)
-    } else if (!loading) {
-      setDayDialog(null)
+      return
     }
+    if (loading) setPendingMonthDialogDate(dateKey)
+    else setDayDialog(null)
   }
 
   function startCreate(dateKey = selectedDate) {
@@ -325,38 +318,14 @@ function startEdit(item: CalendarScheduleInstance) {
     void remove(item)
   }
 
-  function renderScheduleRow(item: CalendarScheduleInstance) {
-    return (
-      <article className="fp-schedule-row" key={item.instanceKey}>
-        <div>
-          <strong>{item.title}</strong>
-          <p>
-            {formatKoreanDate(item.occurrenceDate)} {scheduleTime(item)}
-            {' · '}
-            {item.category || '일정'}
-            {item.memberName ? ` · ${item.memberName}` : ''}
-          </p>
-          {isRepeatRule(item.repeatRule) ? <em>{repeatLabel(item.repeatRule)}</em> : null}
-          {item.memo ? <small>{item.memo}</small> : null}
-        </div>
-        <div className="fp-row-actions">
-          <button type="button" onClick={() => startEdit(item)}>수정</button>
-          <button
-            type="button"
-            className="danger"
-            onClick={() => setConfirm({
-              kind: 'delete',
-              item,
-              title: '일정을 삭제할까요?',
-              body: `${item.title} 일정을 삭제합니다.`,
-              danger: true,
-            })}
-          >
-            삭제
-          </button>
-        </div>
-      </article>
-    )
+  function requestDelete(item: CalendarScheduleInstance) {
+    setConfirm({
+      kind: 'delete',
+      item,
+      title: '일정을 삭제할까요?',
+      body: `${item.title} 일정을 삭제합니다.`,
+      danger: true,
+    })
   }
 
   return (
@@ -427,62 +396,19 @@ function startEdit(item: CalendarScheduleInstance) {
 
       <div className="fp-calendar-layout">
         {view === 'month' ? (
-          <section className="fp-calendar-board">
-            <div className="fp-weekdays">
-              {['일', '월', '화', '수', '목', '금', '토'].map((day) => <span key={day}>{day}</span>)}
-            </div>
-            <div className="fp-month-grid">
-              {cells.map((cell) => {
-                const dayItems = cell.dateKey ? visibleItems.filter((item) => item.occurrenceDate === cell.dateKey) : []
-                const date = cell.dateKey ? parseDateKey(cell.dateKey) : null
-                return (
-                  <button
-                    className={[
-                      'fp-month-cell',
-                      cell.dateKey === selectedDate ? 'selected' : '',
-                      !cell.dateKey ? 'empty' : '',
-                    ].filter(Boolean).join(' ')}
-                    disabled={!cell.dateKey}
-                    key={cell.key}
-                    type="button"
-                    onClick={() => {
-                      if (!cell.dateKey) return
-                      openMonthDay(cell.dateKey)
-                    }}
-                  >
-                    {date ? <strong>{date.getDate()}</strong> : null}
-                    {dayItems.slice(0, 3).map((item) => (
-                      <span
-                        className="fp-month-schedule-chip"
-                        key={item.instanceKey}
-                      >
-                        {item.title}
-                      </span>
-                    ))}
-                    {dayItems.length > 3 ? <small>+{dayItems.length - 3}</small> : null}
-                  </button>
-                )
-              })}
-            </div>
-          </section>
+          <CalendarMonthBoard
+            cells={cells}
+            onOpenDay={openMonthDay}
+            selectedDate={selectedDate}
+            visibleItems={visibleItems}
+          />
         ) : view === 'week' ? (
-          <section className="fp-week-board">
-            {weekDateKeys.map((dateKey) => {
-              const dayItems = visibleItems.filter((item) => item.occurrenceDate === dateKey)
-              return (
-                <button
-                  className={selectedDate === dateKey ? 'active' : ''}
-                  key={dateKey}
-                  type="button"
-                  onClick={() => setActiveDate(dateKey)}
-                >
-                  <strong>{formatKoreanDate(dateKey)}</strong>
-                  <span>{dayItems.length}건</span>
-                  {dayItems.slice(0, 2).map((item) => <small key={item.instanceKey}>{item.title}</small>)}
-                </button>
-              )
-            })}
-          </section>
+          <CalendarWeekBoard
+            dates={weekDateKeys}
+            onSelectDate={setActiveDate}
+            selectedDate={selectedDate}
+            visibleItems={visibleItems}
+          />
         ) : (
           <section className="fp-day-board">
             <h3>{formatKoreanDate(dayDate)}</h3>
@@ -500,7 +426,14 @@ function startEdit(item: CalendarScheduleInstance) {
             <button className="fp-button fp-button-muted" type="button" onClick={createTodayReminder}>알림 확인</button>
           </div>
           <div className="fp-schedule-list">
-            {selectedItems.length ? selectedItems.map(renderScheduleRow) : <p className="fp-empty-text">선택한 날짜에 등록된 일정이 없습니다.</p>}
+            {selectedItems.length ? selectedItems.map((item) => (
+              <CalendarScheduleRow
+                item={item}
+                key={item.instanceKey}
+                onDelete={requestDelete}
+                onEdit={startEdit}
+              />
+            )) : <p className="fp-empty-text">선택한 날짜에 등록된 일정이 없습니다.</p>}
           </div>
         </aside>
       </div>
@@ -567,17 +500,13 @@ function startEdit(item: CalendarScheduleInstance) {
       </form>
 
       {dayDialog ? (
-        <div className="fp-calendar-popup-backdrop" role="presentation" onClick={() => setDayDialog(null)}>
-          <section className="fp-calendar-popup" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <header>
-              <h3>{formatKoreanDate(dayDialog.date)} 일정</h3>
-              <button type="button" aria-label="닫기" onClick={() => setDayDialog(null)}>x</button>
-            </header>
-            <div className="fp-schedule-list">
-              {dayDialog.items.map(renderScheduleRow)}
-            </div>
-          </section>
-        </div>
+        <CalendarDayDialog
+          date={dayDialog.date}
+          items={dayDialog.items}
+          onClose={() => setDayDialog(null)}
+          onDelete={requestDelete}
+          onEdit={startEdit}
+        />
       ) : null}
 
       {confirm ? (
