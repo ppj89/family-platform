@@ -29,27 +29,11 @@
     </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
-      ;(function () {
-        if (!('serviceWorker' in navigator)) return
+      if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
-          navigator.serviceWorker.getRegistrations()
-            .then(function (registrations) {
-              registrations.forEach(function (registration) {
-                registration.unregister().catch(function () {})
-              })
-            })
-            .catch(function () {})
-          if ('caches' in window) {
-            window.caches.keys()
-              .then(function (keys) {
-                keys.forEach(function (key) {
-                  window.caches.delete(key).catch(function () {})
-                })
-              })
-              .catch(function () {})
-          }
+          navigator.serviceWorker.register('/sw.js').catch(function () {})
         })
-      })()
+      }
     </script>
   </body>
 </html>
