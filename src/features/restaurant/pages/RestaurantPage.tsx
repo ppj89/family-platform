@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
-import { ConfirmDialog } from '../../../shared/components'
+import { ConfirmDialog, DatePickerField } from '../../../shared/components'
 import { todayKey } from '../../../shared/utils/date'
 import TravelMap from '../../travel/components/TravelMap'
 import { createRestaurant, deleteRestaurant, listRestaurants, searchPlaces, updateRestaurant } from '../api/restaurant'
@@ -269,10 +269,12 @@ export default function RestaurantPage() {
                 {ratingOptions.map((option) => <option key={option.label} value={option.value}>{option.label}</option>)}
               </select>
             </label>
-            <label className="fp-field">
-              방문일 *
-              <input type="date" value={form.visitDate} onChange={(event) => setForm((value) => ({ ...value, visitDate: event.target.value }))} />
-            </label>
+            <DatePickerField
+              className="fp-form-date-picker"
+              label="방문일 *"
+              value={form.visitDate}
+              onChange={(visitDate) => setForm((value) => ({ ...value, visitDate }))}
+            />
             <label className="fp-field span-2 fp-place-field">
               위치
               <input value={form.location || ''} onChange={(event) => setForm((value) => ({ ...value, location: event.target.value, latitude: null, longitude: null }))} />
