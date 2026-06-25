@@ -20,10 +20,9 @@ const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260614-11'
 
 const root = document.getElementById('root')
 const reactParams = new URLSearchParams(window.location.search)
-const useReactApp = reactParams.get('react') === '1' ||
-  window.localStorage.getItem('family-platform-react-migration') === 'true'
+const useLegacyApp = reactParams.get('legacy') === '1'
 
-if (useReactApp && root) {
+if (!useLegacyApp && root) {
   window.localStorage.setItem('family-platform-react-migration', 'true')
   createRoot(root).render(<App />)
 } else {
