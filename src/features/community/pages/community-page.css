@@ -78,13 +78,6 @@
   margin-bottom: 14px;
 }
 
-.fp-community-list header > div {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
 .fp-community-list header span {
   padding: 8px 12px;
   border-radius: 999px;
@@ -234,10 +227,6 @@
 
   .fp-community-list article {
     grid-template-columns: 1fr;
-  }
-
-  .fp-community-list header > div {
-    justify-content: space-between;
   }
 
   .fp-community-list .fp-row-actions,

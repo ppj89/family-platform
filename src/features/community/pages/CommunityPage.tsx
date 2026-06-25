@@ -42,7 +42,6 @@ export default function CommunityPage() {
   const [comments, setComments] = useState<CommunityComment[]>([])
   const [form, setForm] = useState(initialForm)
   const [editingPost, setEditingPost] = useState<CommunityPost | null>(null)
-  const [composingPost, setComposingPost] = useState(false)
   const [commentText, setCommentText] = useState('')
   const [editingComment, setEditingComment] = useState<CommunityComment | null>(null)
   const [loading, setLoading] = useState(false)
@@ -87,7 +86,6 @@ export default function CommunityPage() {
     setComments([])
     setEditingPost(null)
     setEditingComment(null)
-    setComposingPost(false)
     setForm(initialForm)
     loadPosts(activeBoard)
   }, [activeBoard])
@@ -95,7 +93,6 @@ export default function CommunityPage() {
   function resetForm() {
     setForm(initialForm)
     setEditingPost(null)
-    setComposingPost(false)
   }
 
   async function savePost() {
@@ -139,18 +136,7 @@ export default function CommunityPage() {
 
   function startEditPost(post: CommunityPost) {
     setEditingPost(post)
-    setComposingPost(true)
     setForm({ title: post.title, body: post.body || '' })
-  }
-
-  function startWritePost() {
-    setSelectedPost(null)
-    setComments([])
-    setEditingPost(null)
-    setEditingComment(null)
-    setCommentText('')
-    setForm(initialForm)
-    setComposingPost(true)
   }
 
   function requestDeletePost(post: CommunityPost) {
@@ -266,15 +252,8 @@ export default function CommunityPage() {
       <div className="fp-community-layout">
         <section className="fp-card fp-community-list">
           <header>
-            <div>
-              <h3>{boardLabels[activeBoard]}</h3>
-              <span>{posts.length}건</span>
-            </div>
-            {writable ? (
-              <button className="fp-button fp-button-primary" type="button" onClick={startWritePost}>
-                글 작성
-              </button>
-            ) : null}
+            <h3>{boardLabels[activeBoard]}</h3>
+            <span>{posts.length}건</span>
           </header>
           {posts.length ? posts.map((post) => (
             <article className={selectedPost?.id === post.id ? 'active' : ''} key={post.id}>
@@ -292,24 +271,22 @@ export default function CommunityPage() {
         </section>
 
         <aside className="fp-community-side">
-          {composingPost ? (
-            <form className="fp-card fp-community-form" onSubmit={requestSavePost}>
-              <header>
-                <h3>{editingPost ? '게시글 수정' : '글 작성'}</h3>
-                <button className="fp-button fp-button-muted" type="button" onClick={resetForm}>취소</button>
-              </header>
-              {!writable ? <p className="fp-empty-text">이 게시판은 관리자만 작성할 수 있습니다.</p> : null}
-              <label className="fp-field">
-                제목 *
-                <input value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} disabled={!writable} />
-              </label>
-              <label className="fp-field">
-                내용
-                <textarea value={form.body} onChange={(event) => setForm((prev) => ({ ...prev, body: event.target.value }))} disabled={!writable} />
-              </label>
-              <button className="fp-button fp-button-primary" type="submit" disabled={!writable}>{editingPost ? '저장' : '등록'}</button>
-            </form>
-          ) : null}
+          <form className="fp-card fp-community-form" onSubmit={requestSavePost}>
+            <header>
+              <h3>{editingPost ? '게시글 수정' : '새 글 작성'}</h3>
+              {editingPost ? <button className="fp-button fp-button-muted" type="button" onClick={resetForm}>취소</button> : null}
+            </header>
+            {!writable ? <p className="fp-empty-text">이 게시판은 관리자만 작성할 수 있습니다.</p> : null}
+            <label className="fp-field">
+              제목 *
+              <input value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} disabled={!writable} />
+            </label>
+            <label className="fp-field">
+              내용
+              <textarea value={form.body} onChange={(event) => setForm((prev) => ({ ...prev, body: event.target.value }))} disabled={!writable} />
+            </label>
+            <button className="fp-button fp-button-primary" type="submit" disabled={!writable}>{editingPost ? '저장' : '등록'}</button>
+          </form>
 
           <section className="fp-card fp-community-detail">
             {selectedPost ? (
