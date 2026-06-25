@@ -8,8 +8,11 @@
 .fp-sidebar {
   position: sticky;
   top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
   height: 100vh;
-  padding: 28px 20px;
+  padding: 22px 18px;
   background: #f8fafc;
   border-right: 1px solid #dce3ed;
 }
@@ -18,14 +21,14 @@
   display: flex;
   gap: 12px;
   align-items: center;
-  margin-bottom: 32px;
+  padding: 0 6px 10px;
 }
 
 .fp-brand > span {
   display: grid;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
   color: #fff;
   background: #2f80ed;
@@ -35,6 +38,11 @@
 .fp-brand strong,
 .fp-brand small {
   display: block;
+}
+
+.fp-brand strong {
+  font-size: 16px;
+  line-height: 1.2;
 }
 
 .fp-brand small,
@@ -47,20 +55,21 @@
 
 .fp-nav {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .fp-nav button {
   display: flex;
   align-items: center;
-  gap: 14px;
-  height: 52px;
-  padding: 0 18px;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
   border: 0;
   border-radius: 12px;
   background: transparent;
   color: #465160;
-  font-weight: 800;
+  font-weight: 700;
   text-align: left;
   cursor: pointer;
 }
@@ -72,9 +81,15 @@
   color: #8a96a3;
 }
 
+.fp-nav button:hover {
+  background: #e9edf2;
+  color: #191f28;
+}
+
 .fp-nav button.active {
   color: #1264d8;
   background: #dceeff;
+  font-weight: 900;
 }
 
 .fp-nav button.active .fp-nav-icon {
@@ -83,20 +98,20 @@
 
 .fp-main {
   min-width: 0;
-  padding: 28px 36px 48px;
+  padding: 30px;
 }
 
 .fp-topbar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 10px;
+  margin-bottom: 24px;
 }
 
 .fp-topbar h1 {
   margin: 4px 0 0;
-  font-size: 32px;
+  font-size: 34px;
   line-height: 1.2;
 }
 
@@ -107,7 +122,10 @@
 }
 
 .fp-topbar-button,
-.fp-notification-button {
+.fp-notification-button,
+.fp-icon-button {
+  display: inline-grid;
+  place-items: center;
   min-width: 48px;
   height: 44px;
   padding: 0 16px;
@@ -117,6 +135,22 @@
   color: #1f2937;
   font-weight: 800;
   cursor: pointer;
+}
+
+.fp-icon-button,
+.fp-notification-button {
+  width: 48px;
+  padding: 0;
+}
+
+.fp-icon-button svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .fp-card {
@@ -266,10 +300,6 @@
   position: relative;
 }
 
-.fp-notification-button {
-  padding: 0;
-}
-
 .fp-notification-dot {
   position: absolute;
   top: 9px;
@@ -362,7 +392,7 @@
   font-weight: 700;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 720px) {
   .fp-shell {
     grid-template-columns: 1fr;
   }
@@ -370,7 +400,7 @@
   .fp-sidebar {
     position: static;
     height: auto;
-    padding: 16px;
+    padding: 14px;
   }
 
   .fp-nav {
@@ -379,16 +409,33 @@
   }
 
   .fp-nav button {
+    flex-direction: column;
     justify-content: center;
-    gap: 8px;
+    gap: 4px;
     min-width: 88px;
-    padding: 0 12px;
+    min-height: 54px;
+    padding: 6px 4px;
+    font-size: 11px;
+    line-height: 1.1;
     text-align: center;
     white-space: nowrap;
   }
 
+  .fp-nav button span {
+    display: block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .fp-nav-icon {
+    width: 20px;
+    height: 20px;
+  }
+
   .fp-main {
-    padding: 18px 14px 40px;
+    padding: 18px;
   }
 }
 

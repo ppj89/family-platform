@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import HomePage from './features/home/pages/HomePage'
 import CalendarPage from './features/calendar/pages/CalendarPage'
 import LedgerPage from './features/ledger/pages/LedgerPage'
@@ -10,7 +10,7 @@ import RestaurantPage from './features/restaurant/pages/RestaurantPage'
 import CommunityPage from './features/community/pages/CommunityPage'
 import AdminPage from './features/admin/pages/AdminPage'
 import { NotificationBell } from './shared/components/NotificationBell'
-import { getStoredUser, hasAuthToken } from './shared/api/auth'
+import { hasAuthToken } from './shared/api/auth'
 import './app.css'
 
 const menuItems = [
@@ -62,7 +62,6 @@ function LegacyNotice({ label }: { label: string }) {
 
 export default function App() {
   const [activeMenu, setActiveMenu] = useState('홈')
-  const user = useMemo(() => getStoredUser(), [])
 
   if (!hasAuthToken()) {
     return (
@@ -116,6 +115,11 @@ export default function App() {
             <h1>{activeMenu}</h1>
           </div>
           <div className="fp-topbar-actions">
+            <button className="fp-icon-button" type="button" aria-label="테마">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 14.4A7.8 7.8 0 0 1 9.6 3a8.6 8.6 0 1 0 11.4 11.4Z" />
+              </svg>
+            </button>
             <NotificationBell />
             <button className="fp-topbar-button" type="button">내 정보</button>
             <button
@@ -132,7 +136,6 @@ export default function App() {
             </button>
           </div>
         </header>
-        <div className="fp-user-line">{user?.nickname || user?.email || '사용자'}</div>
         {activeMenu === '홈' ? <HomePage /> : null}
         {activeMenu === '캘린더' ? <CalendarPage /> : null}
         {activeMenu === '가계부' ? <LedgerPage /> : null}
