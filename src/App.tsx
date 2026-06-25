@@ -111,7 +111,7 @@ export default function App() {
       <main className="fp-main">
         <header className="fp-topbar">
           <div>
-            <span className="fp-eyebrow">가족 공유 운영</span>
+            <span className="fp-eyebrow">오늘의 가족 기록</span>
             <h1>{activeMenu}</h1>
           </div>
           <div className="fp-topbar-actions">
