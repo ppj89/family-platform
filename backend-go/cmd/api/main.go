@@ -1359,6 +1359,10 @@ func (a *app) findEmail(w http.ResponseWriter, r *http.Request) {
 	var req struct {
 		Nickname string `json:"nickname"`
 	}
+	type foundAccount struct {
+		Email         string `json:"email"`
+		LoginProvider string `json:"loginProvider"`
+	}
 	if !readJSON(w, r, &req) {
 		return
 	}
@@ -1368,7 +1372,8 @@ func (a *app) findEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows, err := a.db.Query(r.Context(), `
-		select email
+		select email,
+		       coalesce(provider, case when login_id is not null and login_id <> '' then 'admin' else 'password' end)
 		from app_users
 		where lower(nickname) = lower($1)
 		order by created_at desc
@@ -1380,19 +1385,26 @@ func (a *app) findEmail(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	emails := []string{}
+	accounts := []foundAccount{}
 	for rows.Next() {
 		var email string
-		if err := rows.Scan(&email); err != nil {
+		var provider string
+		if err := rows.Scan(&email, &provider); err != nil {
 			writeError(w, http.StatusInternalServerError, "database read failed")
 			return
 		}
-		emails = append(emails, maskEmail(email))
+		maskedEmail := maskEmail(email)
+		emails = append(emails, maskedEmail)
+		accounts = append(accounts, foundAccount{
+			Email:         maskedEmail,
+			LoginProvider: strings.ToLower(strings.TrimSpace(provider)),
+		})
 	}
 	if rows.Err() != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"emails": emails})
+	writeJSON(w, http.StatusOK, map[string]any{"emails": emails, "accounts": accounts})
 }
 
 func (a *app) requestPasswordReset(w http.ResponseWriter, r *http.Request) {

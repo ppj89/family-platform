@@ -9,11 +9,17 @@ type AuthMode = 'login' | 'register'
 type AuthTheme = 'light' | 'dark'
 type RecoveryMode = 'find-email' | 'reset-request' | 'reset-password' | 'inquiry'
 type SsoProvider = 'naver' | 'kakao' | 'google'
+type NicknameCheckState = 'idle' | 'checking' | 'available' | 'unavailable' | 'error'
 
 interface SsoProviderInfo {
   provider: string
   configured?: boolean
   startUrl?: string
+}
+
+interface FindEmailAccount {
+  email?: string
+  loginProvider?: string
 }
 
 const rememberedEmailKey = 'family-platform-remember-email'
@@ -24,6 +30,13 @@ const providerLabels: Record<SsoProvider, string> = {
   naver: '네이버 로그인',
   kakao: '카카오 로그인',
   google: '구글 로그인',
+}
+const providerDisplayNames: Record<string, string> = {
+  naver: '네이버',
+  kakao: '카카오',
+  google: '구글',
+  password: '이메일',
+  admin: '관리자',
 }
 
 function getApiBaseUrl() {
@@ -62,6 +75,20 @@ function getErrorMessage(error: unknown) {
   return '요청을 처리하지 못했습니다.'
 }
 
+function isValidNicknameValue(value: string) {
+  return /^[가-힣A-Za-z0-9]{1,12}$/.test(value.trim())
+}
+
+function formatFoundAccount(account: FindEmailAccount) {
+  const provider = (account.loginProvider || 'password').toLowerCase()
+  const providerName = providerDisplayNames[provider] || provider
+  const email = account.email?.trim()
+  if (provider === 'password' || provider === 'admin') {
+    return email ? `${providerName}: ${email}` : providerName
+  }
+  return email ? `${providerName} 계정: ${email}` : `${providerName} 계정`
+}
+
 export function LoginPage() {
   const rememberedEmail = useMemo(() => window.localStorage.getItem(rememberedEmailKey) || '', [])
   const initialTheme = useMemo<AuthTheme>(() => {
@@ -74,6 +101,9 @@ export function LoginPage() {
   const [theme, setTheme] = useState<AuthTheme>(initialTheme)
   const [email, setEmail] = useState(rememberedEmail)
   const [nickname, setNickname] = useState('')
+  const [nicknameCheckState, setNicknameCheckState] = useState<NicknameCheckState>('idle')
+  const [nicknameCheckMessage, setNicknameCheckMessage] = useState('')
+  const [nicknameCheckedValue, setNicknameCheckedValue] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
   const [recoveryMode, setRecoveryMode] = useState<RecoveryMode | null>(resetToken ? 'reset-password' : null)
@@ -128,6 +158,9 @@ export function LoginPage() {
     setPassword('')
     setPasswordConfirm('')
     setRequiredConsent(false)
+    setNicknameCheckState('idle')
+    setNicknameCheckMessage('')
+    setNicknameCheckedValue('')
   }
 
   function toggleTheme() {
@@ -154,6 +187,51 @@ export function LoginPage() {
     }
   }
 
+  function handleNicknameChange(value: string) {
+    setNickname(value)
+    if (value.trim() !== nicknameCheckedValue) {
+      setNicknameCheckState('idle')
+      setNicknameCheckMessage('')
+      setNicknameCheckedValue('')
+    }
+  }
+
+  async function checkNickname() {
+    const value = nickname.trim()
+    if (!value) {
+      setNicknameCheckState('error')
+      setNicknameCheckMessage('닉네임을 입력해주세요.')
+      return
+    }
+    if (!isValidNicknameValue(value)) {
+      setNicknameCheckState('error')
+      setNicknameCheckMessage('닉네임은 한글, 영문, 숫자 12자 이내로 입력해주세요.')
+      return
+    }
+    setNicknameCheckState('checking')
+    setNicknameCheckMessage('닉네임을 확인하고 있습니다.')
+    try {
+      const response = await apiRequest<{ available?: boolean; exists?: boolean; nickname?: string }>('/auth/nickname/check', {
+        method: 'POST',
+        body: { nickname: value },
+      })
+      const available = response.available ?? !response.exists
+      if (available) {
+        setNicknameCheckState('available')
+        setNicknameCheckMessage('사용할 수 있는 닉네임입니다.')
+        setNicknameCheckedValue(value)
+      } else {
+        setNicknameCheckState('unavailable')
+        setNicknameCheckMessage('이미 사용 중인 닉네임입니다.')
+        setNicknameCheckedValue('')
+      }
+    } catch (error) {
+      setNicknameCheckState('error')
+      setNicknameCheckMessage(getErrorMessage(error))
+      setNicknameCheckedValue('')
+    }
+  }
+
   function recoveryTitle(currentMode: RecoveryMode) {
     if (currentMode === 'find-email') return '아이디 찾기'
     if (currentMode === 'reset-password') return '새 비밀번호 설정'
@@ -175,12 +253,12 @@ export function LoginPage() {
       }
       setRecoveryBusy(true)
       try {
-        const response = await apiRequest<{ emails?: string[] }>('/auth/recovery/find-email', {
+        const response = await apiRequest<{ emails?: string[]; accounts?: FindEmailAccount[] }>('/auth/recovery/find-email', {
           method: 'POST',
           body: { nickname: value },
         })
-        const emails = response.emails || []
-        setRecoveryResult(emails.length ? `가입 이메일: ${emails.join(', ')}` : '일치하는 계정을 찾지 못했습니다.')
+        const accounts = response.accounts?.length ? response.accounts : (response.emails || []).map((foundEmail) => ({ email: foundEmail, loginProvider: 'password' }))
+        setRecoveryResult(accounts.length ? `가입 계정: ${accounts.map(formatFoundAccount).join(', ')}` : '일치하는 계정을 찾지 못했습니다.')
       } catch (error) {
         setRecoveryResult(getErrorMessage(error))
       } finally {
@@ -276,6 +354,14 @@ export function LoginPage() {
     if (mode === 'register') {
       if (!nickname.trim()) {
         setMessage('닉네임을 입력해주세요.')
+        return
+      }
+      if (!isValidNicknameValue(nickname)) {
+        setMessage('닉네임은 한글, 영문, 숫자 12자 이내로 입력해주세요.')
+        return
+      }
+      if (nicknameCheckState !== 'available' || nicknameCheckedValue !== nickname.trim()) {
+        setMessage('닉네임 중복확인을 해주세요.')
         return
       }
       if (password !== passwordConfirm) {
@@ -408,9 +494,15 @@ export function LoginPage() {
             <input value={email} onChange={(event) => setEmail(event.target.value)} inputMode="email" placeholder="이메일" type="text" autoComplete="username" />
           </label>
           {mode === 'register' ? (
-            <label>
+            <label className="auth-nickname-field">
               <span>닉네임</span>
-              <input value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder="닉네임" type="text" autoComplete="nickname" />
+              <div className="auth-nickname-row">
+                <input value={nickname} onChange={(event) => handleNicknameChange(event.target.value)} placeholder="닉네임" type="text" autoComplete="nickname" maxLength={12} />
+                <button type="button" onClick={checkNickname} disabled={nicknameCheckState === 'checking'}>
+                  {nicknameCheckState === 'checking' ? '확인 중' : '중복확인'}
+                </button>
+              </div>
+              {nicknameCheckMessage ? <small className={`auth-nickname-status ${nicknameCheckState}`}>{nicknameCheckMessage}</small> : null}
             </label>
           ) : null}
           <label>
@@ -518,7 +610,7 @@ export function LoginPage() {
               </>
             ) : recoveryMode === 'find-email' ? (
               <>
-                <p className="auth-recovery-guide">소셜 계정으로 가입했다면 네이버, 카카오, 구글 로그인을 먼저 이용해주세요.</p>
+                <p className="auth-recovery-guide">닉네임으로 가입 계정과 로그인 방식을 확인합니다. 소셜 계정은 해당 SSO 버튼으로 로그인해주세요.</p>
                 <label>
                   <span>닉네임</span>
                   <input value={recoveryNickname} onChange={(event) => setRecoveryNickname(event.target.value)} type="text" placeholder="닉네임" />
