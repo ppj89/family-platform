@@ -9,6 +9,7 @@ import FamilyPage from './features/family/pages/FamilyPage'
 import RestaurantPage from './features/restaurant/pages/RestaurantPage'
 import CommunityPage from './features/community/pages/CommunityPage'
 import AdminPage from './features/admin/pages/AdminPage'
+import { LoginPage } from './features/auth/pages/LoginPage'
 import { NotificationBell } from './shared/components/NotificationBell'
 import { getStoredUser, hasAuthToken } from './shared/api/auth'
 import './app.css'
@@ -29,24 +30,7 @@ export default function App() {
   const user = useMemo(() => getStoredUser(), [])
 
   if (!hasAuthToken()) {
-    return (
-      <main className="fp-auth-bridge">
-        <section className="fp-card">
-          <h1>로그인이 필요합니다</h1>
-          <p>React 이관 화면은 로그인 세션이 있을 때 확인할 수 있습니다.</p>
-          <button
-            className="fp-button fp-button-primary"
-            type="button"
-            onClick={() => {
-              window.localStorage.removeItem('family-platform-react-migration')
-              window.location.href = '/'
-            }}
-          >
-            로그인 화면으로 이동
-          </button>
-        </section>
-      </main>
-    )
+    return <LoginPage />
   }
 
   return (
