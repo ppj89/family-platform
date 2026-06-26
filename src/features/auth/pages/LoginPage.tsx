@@ -6,6 +6,8 @@ import type { AuthSessionResponse } from '../../../shared/api/auth'
 import './login.css'
 
 type AuthMode = 'login' | 'register'
+type AuthTheme = 'light' | 'dark'
+type RecoveryMode = 'find-email' | 'reset-request' | 'reset-password' | 'inquiry'
 type SsoProvider = 'naver' | 'kakao' | 'google'
 
 interface SsoProviderInfo {
@@ -16,6 +18,7 @@ interface SsoProviderInfo {
 
 const rememberedEmailKey = 'family-platform-remember-email'
 const autoLoginKey = 'family-platform-auto-login'
+const authThemeKey = 'family-platform-auth-theme'
 const providerOrder: SsoProvider[] = ['naver', 'kakao', 'google']
 const providerLabels: Record<SsoProvider, string> = {
   naver: '네이버 로그인',
@@ -61,11 +64,27 @@ function getErrorMessage(error: unknown) {
 
 export function LoginPage() {
   const rememberedEmail = useMemo(() => window.localStorage.getItem(rememberedEmailKey) || '', [])
+  const initialTheme = useMemo<AuthTheme>(() => {
+    const stored = window.localStorage.getItem(authThemeKey)
+    if (stored === 'dark' || stored === 'light') return stored
+    return window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ? 'dark' : 'light'
+  }, [])
+  const resetToken = useMemo(() => new URLSearchParams(window.location.search).get('resetToken') || '', [])
   const [mode, setMode] = useState<AuthMode>('login')
+  const [theme, setTheme] = useState<AuthTheme>(initialTheme)
   const [email, setEmail] = useState(rememberedEmail)
   const [nickname, setNickname] = useState('')
   const [password, setPassword] = useState('')
   const [passwordConfirm, setPasswordConfirm] = useState('')
+  const [recoveryMode, setRecoveryMode] = useState<RecoveryMode | null>(resetToken ? 'reset-password' : null)
+  const [recoveryEmail, setRecoveryEmail] = useState('')
+  const [recoveryNickname, setRecoveryNickname] = useState('')
+  const [recoveryContact, setRecoveryContact] = useState('')
+  const [recoveryMessage, setRecoveryMessage] = useState('')
+  const [recoveryPassword, setRecoveryPassword] = useState('')
+  const [recoveryPasswordConfirm, setRecoveryPasswordConfirm] = useState('')
+  const [recoveryResult, setRecoveryResult] = useState('')
+  const [recoveryBusy, setRecoveryBusy] = useState(false)
   const [rememberEmail, setRememberEmail] = useState(Boolean(rememberedEmail))
   const [autoLogin, setAutoLogin] = useState(window.localStorage.getItem(autoLoginKey) === 'true')
   const [requiredConsent, setRequiredConsent] = useState(false)
@@ -98,12 +117,146 @@ export function LoginPage() {
     }
   }, [])
 
+  useEffect(() => {
+    window.localStorage.setItem(authThemeKey, theme)
+  }, [theme])
+
   function resetMode(nextMode: AuthMode) {
     setMode(nextMode)
     setMessage('')
+    setRecoveryMode(null)
     setPassword('')
     setPasswordConfirm('')
     setRequiredConsent(false)
+  }
+
+  function toggleTheme() {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+  }
+
+  function openRecovery(nextMode: RecoveryMode) {
+    setRecoveryMode(nextMode)
+    setMessage('')
+    setRecoveryResult('')
+    setRecoveryEmail(email.includes('@') ? email.trim() : '')
+    setRecoveryNickname(nickname)
+    setRecoveryContact('')
+    setRecoveryMessage('')
+    setRecoveryPassword('')
+    setRecoveryPasswordConfirm('')
+  }
+
+  function closeRecovery() {
+    setRecoveryMode(null)
+    setRecoveryResult('')
+    if (resetToken) {
+      window.history.replaceState({}, document.title, window.location.pathname)
+    }
+  }
+
+  function recoveryTitle(currentMode: RecoveryMode) {
+    if (currentMode === 'find-email') return '아이디 찾기'
+    if (currentMode === 'reset-password') return '새 비밀번호 설정'
+    if (currentMode === 'inquiry') return '관리자 문의'
+    return '비밀번호 찾기'
+  }
+
+  async function submitRecovery() {
+    if (!recoveryMode || recoveryBusy) {
+      return
+    }
+    setRecoveryResult('')
+
+    if (recoveryMode === 'find-email') {
+      const value = recoveryNickname.trim()
+      if (!value) {
+        setRecoveryResult('닉네임을 입력해주세요.')
+        return
+      }
+      setRecoveryBusy(true)
+      try {
+        const response = await apiRequest<{ emails?: string[] }>('/auth/recovery/find-email', {
+          method: 'POST',
+          body: { nickname: value },
+        })
+        const emails = response.emails || []
+        setRecoveryResult(emails.length ? `가입 이메일: ${emails.join(', ')}` : '일치하는 계정을 찾지 못했습니다.')
+      } catch (error) {
+        setRecoveryResult(getErrorMessage(error))
+      } finally {
+        setRecoveryBusy(false)
+      }
+      return
+    }
+
+    if (recoveryMode === 'reset-request') {
+      const value = recoveryEmail.trim()
+      if (!value) {
+        setRecoveryResult('이메일을 입력해주세요.')
+        return
+      }
+      setRecoveryBusy(true)
+      try {
+        await apiRequest('/auth/recovery/password/request', {
+          method: 'POST',
+          body: { email: value },
+        })
+        setRecoveryResult('비밀번호 재설정 메일을 보냈습니다.')
+      } catch (error) {
+        setRecoveryResult(getErrorMessage(error))
+      } finally {
+        setRecoveryBusy(false)
+      }
+      return
+    }
+
+    if (recoveryMode === 'reset-password') {
+      if (recoveryPassword.length < 8) {
+        setRecoveryResult('비밀번호는 8자 이상 입력해주세요.')
+        return
+      }
+      if (recoveryPassword !== recoveryPasswordConfirm) {
+        setRecoveryResult('비밀번호 확인이 일치하지 않습니다.')
+        return
+      }
+      setRecoveryBusy(true)
+      try {
+        await apiRequest('/auth/recovery/password/reset', {
+          method: 'POST',
+          body: { token: resetToken, password: recoveryPassword },
+        })
+        window.history.replaceState({}, document.title, window.location.pathname)
+        setRecoveryResult('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.')
+      } catch (error) {
+        setRecoveryResult(getErrorMessage(error))
+      } finally {
+        setRecoveryBusy(false)
+      }
+      return
+    }
+
+    if (!recoveryEmail.trim() && !recoveryContact.trim()) {
+      setRecoveryResult('회신받을 이메일이나 연락처를 입력해주세요.')
+      return
+    }
+    setRecoveryBusy(true)
+    try {
+      await apiRequest('/auth/recovery/inquiry', {
+        method: 'POST',
+        body: {
+          email: recoveryEmail.trim(),
+          nickname: recoveryNickname.trim(),
+          contact: recoveryContact.trim(),
+          recoveryType: '관리자 계정 복구 문의',
+          message: recoveryMessage.trim(),
+        },
+      })
+      setRecoveryResult('관리자 문의가 접수되었습니다.')
+    } catch (error) {
+      setRecoveryResult(getErrorMessage(error))
+    } finally {
+      setRecoveryBusy(false)
+    }
   }
 
   async function submitAuth(forceLogin = false) {
@@ -198,7 +351,7 @@ export function LoginPage() {
   }
 
   return (
-    <main className="auth-shell theme-light">
+    <main className={`auth-shell theme-${theme}`}>
       <section className="auth-layout">
         <div className="auth-visual" data-auth-landing-ready="true">
           <div className="brand auth-brand">
@@ -234,8 +387,8 @@ export function LoginPage() {
         </div>
 
         <form className="auth-card" data-auth-mode={mode} onSubmit={handleSubmit}>
-          <button className="auth-theme-button" type="button" aria-label="다크모드">
-            다크모드
+          <button className="auth-theme-button" type="button" aria-label={theme === 'dark' ? '라이트모드' : '다크모드'} onClick={toggleTheme}>
+            {theme === 'dark' ? '라이트모드' : '다크모드'}
           </button>
           <div className="auth-tabs" role="tablist" aria-label="로그인 모드">
             <button className={mode === 'login' ? 'active' : ''} type="button" onClick={() => resetMode('login')}>
@@ -319,12 +472,92 @@ export function LoginPage() {
           </div>
 
           <div className="auth-helper">
-            <button type="button">비밀번호 찾기</button>
-            <button type="button">아이디 찾기</button>
-            <button type="button">관리자 문의</button>
+            <button type="button" onClick={() => openRecovery('reset-request')}>
+              비밀번호 찾기
+            </button>
+            <button type="button" onClick={() => openRecovery('find-email')}>
+              아이디 찾기
+            </button>
+            <button type="button" onClick={() => openRecovery('inquiry')}>
+              관리자 문의
+            </button>
           </div>
         </form>
       </section>
+
+      {recoveryMode ? (
+        <div className="auth-recovery-backdrop" role="presentation">
+          <section className="auth-recovery-dialog" role="dialog" aria-modal="true" aria-labelledby="auth-recovery-title">
+            <div className="auth-recovery-header">
+              <strong id="auth-recovery-title">{recoveryTitle(recoveryMode)}</strong>
+              <button type="button" aria-label="닫기" onClick={closeRecovery}>
+                X
+              </button>
+            </div>
+            {recoveryMode === 'inquiry' ? (
+              <>
+                <p className="auth-recovery-guide">이메일이나 닉네임이 기억나지 않을 때 관리자에게 계정 확인을 요청합니다.</p>
+                <div className="auth-recovery-grid">
+                  <label>
+                    <span>이메일</span>
+                    <input value={recoveryEmail} onChange={(event) => setRecoveryEmail(event.target.value)} type="email" placeholder="email@example.com" />
+                  </label>
+                  <label>
+                    <span>닉네임</span>
+                    <input value={recoveryNickname} onChange={(event) => setRecoveryNickname(event.target.value)} type="text" placeholder="닉네임" />
+                  </label>
+                </div>
+                <label>
+                  <span>연락받을 정보</span>
+                  <input value={recoveryContact} onChange={(event) => setRecoveryContact(event.target.value)} type="text" placeholder="회신받을 이메일이나 연락처" />
+                </label>
+                <label>
+                  <span>문의 내용</span>
+                  <textarea value={recoveryMessage} onChange={(event) => setRecoveryMessage(event.target.value)} rows={4} placeholder="기억나는 계정 정보나 상황을 적어주세요." />
+                </label>
+              </>
+            ) : recoveryMode === 'find-email' ? (
+              <>
+                <p className="auth-recovery-guide">소셜 계정으로 가입했다면 네이버, 카카오, 구글 로그인을 먼저 이용해주세요.</p>
+                <label>
+                  <span>닉네임</span>
+                  <input value={recoveryNickname} onChange={(event) => setRecoveryNickname(event.target.value)} type="text" placeholder="닉네임" />
+                </label>
+              </>
+            ) : recoveryMode === 'reset-password' ? (
+              <>
+                <p className="auth-recovery-guide">메일로 받은 링크에서 새 비밀번호를 설정합니다.</p>
+                <label>
+                  <span>새 비밀번호</span>
+                  <input value={recoveryPassword} onChange={(event) => setRecoveryPassword(event.target.value)} type="password" autoComplete="new-password" placeholder="8자 이상" />
+                </label>
+                <label>
+                  <span>새 비밀번호 확인</span>
+                  <input
+                    value={recoveryPasswordConfirm}
+                    onChange={(event) => setRecoveryPasswordConfirm(event.target.value)}
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="비밀번호 다시 입력"
+                  />
+                </label>
+              </>
+            ) : (
+              <>
+                <p className="auth-recovery-guide">소셜 계정으로 가입했다면 네이버, 카카오, 구글 로그인을 먼저 이용해주세요.</p>
+                <label>
+                  <span>이메일</span>
+                  <input value={recoveryEmail} onChange={(event) => setRecoveryEmail(event.target.value)} type="email" placeholder="email@example.com" />
+                </label>
+              </>
+            )}
+            {recoveryResult ? <div className="auth-recovery-result">{recoveryResult}</div> : null}
+            <button className="auth-recovery-submit" type="button" onClick={submitRecovery} disabled={recoveryBusy}>
+              {recoveryBusy ? '처리 중' : recoveryTitle(recoveryMode)}
+            </button>
+          </section>
+        </div>
+      ) : null}
 
       {sessionConfirmOpen ? (
         <div className="auth-session-backdrop" role="presentation">
