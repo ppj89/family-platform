@@ -841,7 +841,7 @@ func isValidNickname(nickname string) bool {
 		if r >= 'a' && r <= 'z' {
 			continue
 		}
-		if r >= '?' && r <= '?' {
+		if r >= '\uAC00' && r <= '\uD7A3' {
 			continue
 		}
 		return false
