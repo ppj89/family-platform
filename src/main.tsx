@@ -20,8 +20,12 @@ const legacyScriptPath = '/legacy/assets/index-DFjbaB-2.js?v=20260614-11'
 
 const root = document.getElementById('root')
 const reactParams = new URLSearchParams(window.location.search)
-const useReactApp = reactParams.get('react') === '1' ||
-  window.localStorage.getItem('family-platform-react-migration') === 'true'
+const reactMode = reactParams.get('react')
+if (reactMode === '0') {
+  window.localStorage.removeItem('family-platform-react-migration')
+}
+const useReactApp = reactMode === '1' ||
+  (reactMode !== '0' && window.localStorage.getItem('family-platform-react-migration') === 'true')
 
 if (useReactApp && root) {
   window.localStorage.setItem('family-platform-react-migration', 'true')
