@@ -3,6 +3,15 @@ import { apiRequest } from '../../../shared/api/client'
 import type { ApiError } from '../../../shared/api/client'
 import { clearAuthSession, storeAuthSession } from '../../../shared/api/auth'
 import type { AuthSessionResponse } from '../../../shared/api/auth'
+import { LoginFields, RegisterFields } from '../components/AuthModeFields'
+import {
+  createFindEmailFormState,
+  createInquiryFormState,
+  createLoginFormState,
+  createRegisterFormState,
+  createResetPasswordFormState,
+  createResetRequestFormState,
+} from '../types/formState'
 import './login.css'
 
 type AuthMode = 'login' | 'register'
@@ -99,20 +108,16 @@ export function LoginPage() {
   const resetToken = useMemo(() => new URLSearchParams(window.location.search).get('resetToken') || '', [])
   const [mode, setMode] = useState<AuthMode>('login')
   const [theme, setTheme] = useState<AuthTheme>(initialTheme)
-  const [email, setEmail] = useState(rememberedEmail)
-  const [nickname, setNickname] = useState('')
+  const [loginForm, setLoginForm] = useState(() => createLoginFormState(rememberedEmail))
+  const [registerForm, setRegisterForm] = useState(() => createRegisterFormState())
   const [nicknameCheckState, setNicknameCheckState] = useState<NicknameCheckState>('idle')
   const [nicknameCheckMessage, setNicknameCheckMessage] = useState('')
   const [nicknameCheckedValue, setNicknameCheckedValue] = useState('')
-  const [password, setPassword] = useState('')
-  const [passwordConfirm, setPasswordConfirm] = useState('')
   const [recoveryMode, setRecoveryMode] = useState<RecoveryMode | null>(resetToken ? 'reset-password' : null)
-  const [recoveryEmail, setRecoveryEmail] = useState('')
-  const [recoveryNickname, setRecoveryNickname] = useState('')
-  const [recoveryContact, setRecoveryContact] = useState('')
-  const [recoveryMessage, setRecoveryMessage] = useState('')
-  const [recoveryPassword, setRecoveryPassword] = useState('')
-  const [recoveryPasswordConfirm, setRecoveryPasswordConfirm] = useState('')
+  const [findEmailForm, setFindEmailForm] = useState(() => createFindEmailFormState())
+  const [resetRequestForm, setResetRequestForm] = useState(() => createResetRequestFormState())
+  const [resetPasswordForm, setResetPasswordForm] = useState(() => createResetPasswordFormState())
+  const [inquiryForm, setInquiryForm] = useState(() => createInquiryFormState())
   const [recoveryResult, setRecoveryResult] = useState('')
   const [recoveryBusy, setRecoveryBusy] = useState(false)
   const [rememberEmail, setRememberEmail] = useState(Boolean(rememberedEmail))
@@ -155,8 +160,6 @@ export function LoginPage() {
     setMode(nextMode)
     setMessage('')
     setRecoveryMode(null)
-    setPassword('')
-    setPasswordConfirm('')
     setRequiredConsent(false)
     setNicknameCheckState('idle')
     setNicknameCheckMessage('')
@@ -171,12 +174,6 @@ export function LoginPage() {
     setRecoveryMode(nextMode)
     setMessage('')
     setRecoveryResult('')
-    setRecoveryEmail(email.includes('@') ? email.trim() : '')
-    setRecoveryNickname(nickname)
-    setRecoveryContact('')
-    setRecoveryMessage('')
-    setRecoveryPassword('')
-    setRecoveryPasswordConfirm('')
   }
 
   function closeRecovery() {
@@ -188,7 +185,7 @@ export function LoginPage() {
   }
 
   function handleNicknameChange(value: string) {
-    setNickname(value)
+    setRegisterForm((current) => ({ ...current, nickname: value }))
     if (value.trim() !== nicknameCheckedValue) {
       setNicknameCheckState('idle')
       setNicknameCheckMessage('')
@@ -197,7 +194,7 @@ export function LoginPage() {
   }
 
   async function checkNickname() {
-    const value = nickname.trim()
+    const value = registerForm.nickname.trim()
     if (!value) {
       setNicknameCheckState('error')
       setNicknameCheckMessage('닉네임을 입력해주세요.')
@@ -246,7 +243,7 @@ export function LoginPage() {
     setRecoveryResult('')
 
     if (recoveryMode === 'find-email') {
-      const value = recoveryNickname.trim()
+      const value = findEmailForm.nickname.trim()
       if (!value) {
         setRecoveryResult('닉네임을 입력해주세요.')
         return
@@ -268,7 +265,7 @@ export function LoginPage() {
     }
 
     if (recoveryMode === 'reset-request') {
-      const value = recoveryEmail.trim()
+      const value = resetRequestForm.email.trim()
       if (!value) {
         setRecoveryResult('이메일을 입력해주세요.')
         return
@@ -289,11 +286,11 @@ export function LoginPage() {
     }
 
     if (recoveryMode === 'reset-password') {
-      if (recoveryPassword.length < 8) {
+      if (resetPasswordForm.password.length < 8) {
         setRecoveryResult('비밀번호는 8자 이상 입력해주세요.')
         return
       }
-      if (recoveryPassword !== recoveryPasswordConfirm) {
+      if (resetPasswordForm.password !== resetPasswordForm.passwordConfirm) {
         setRecoveryResult('비밀번호 확인이 일치하지 않습니다.')
         return
       }
@@ -301,7 +298,7 @@ export function LoginPage() {
       try {
         await apiRequest('/auth/recovery/password/reset', {
           method: 'POST',
-          body: { token: resetToken, password: recoveryPassword },
+          body: { token: resetToken, password: resetPasswordForm.password },
         })
         window.history.replaceState({}, document.title, window.location.pathname)
         setRecoveryResult('비밀번호가 변경되었습니다. 새 비밀번호로 로그인해주세요.')
@@ -313,7 +310,7 @@ export function LoginPage() {
       return
     }
 
-    if (!recoveryEmail.trim() && !recoveryContact.trim()) {
+    if (!inquiryForm.email.trim() && !inquiryForm.contact.trim()) {
       setRecoveryResult('회신받을 이메일이나 연락처를 입력해주세요.')
       return
     }
@@ -322,11 +319,11 @@ export function LoginPage() {
       await apiRequest('/auth/recovery/inquiry', {
         method: 'POST',
         body: {
-          email: recoveryEmail.trim(),
-          nickname: recoveryNickname.trim(),
-          contact: recoveryContact.trim(),
+          email: inquiryForm.email.trim(),
+          nickname: inquiryForm.nickname.trim(),
+          contact: inquiryForm.contact.trim(),
           recoveryType: '관리자 계정 복구 문의',
-          message: recoveryMessage.trim(),
+          message: inquiryForm.message.trim(),
         },
       })
       setRecoveryResult('관리자 문의가 접수되었습니다.')
@@ -343,28 +340,31 @@ export function LoginPage() {
     }
     setMessage('')
 
-    if (!email.trim()) {
+    const activeEmail = mode === 'login' ? loginForm.email : registerForm.email
+    const activePassword = mode === 'login' ? loginForm.password : registerForm.password
+
+    if (!activeEmail.trim()) {
       setMessage('이메일을 입력해주세요.')
       return
     }
-    if (!password) {
+    if (!activePassword) {
       setMessage('비밀번호를 입력해주세요.')
       return
     }
     if (mode === 'register') {
-      if (!nickname.trim()) {
+      if (!registerForm.nickname.trim()) {
         setMessage('닉네임을 입력해주세요.')
         return
       }
-      if (!isValidNicknameValue(nickname)) {
+      if (!isValidNicknameValue(registerForm.nickname)) {
         setMessage('닉네임은 한글, 영문, 숫자 12자 이내로 입력해주세요.')
         return
       }
-      if (nicknameCheckState !== 'available' || nicknameCheckedValue !== nickname.trim()) {
+      if (nicknameCheckState !== 'available' || nicknameCheckedValue !== registerForm.nickname.trim()) {
         setMessage('닉네임 중복확인을 해주세요.')
         return
       }
-      if (password !== passwordConfirm) {
+      if (registerForm.password !== registerForm.passwordConfirm) {
         setMessage('비밀번호가 일치하지 않습니다.')
         return
       }
@@ -380,21 +380,23 @@ export function LoginPage() {
         method: 'POST',
         body:
           mode === 'login'
-            ? { email: email.trim(), password, forceLogin }
+            ? { email: loginForm.email.trim(), password: loginForm.password, forceLogin }
             : {
-                email: email.trim(),
-                nickname: nickname.trim(),
-                password,
-                passwordConfirm,
+                email: registerForm.email.trim(),
+                nickname: registerForm.nickname.trim(),
+                password: registerForm.password,
+                passwordConfirm: registerForm.passwordConfirm,
                 requiredConsent,
                 forceLogin,
               },
       })
 
-      if (rememberEmail) {
-        window.localStorage.setItem(rememberedEmailKey, email.trim())
-      } else {
-        window.localStorage.removeItem(rememberedEmailKey)
+      if (mode === 'login') {
+        if (rememberEmail) {
+          window.localStorage.setItem(rememberedEmailKey, loginForm.email.trim())
+        } else {
+          window.localStorage.removeItem(rememberedEmailKey)
+        }
       }
       window.localStorage.setItem(autoLoginKey, autoLogin ? 'true' : 'false')
 
@@ -489,63 +491,26 @@ export function LoginPage() {
             <p>{mode === 'login' ? '가입한 이메일 또는 관리자 아이디로 접속합니다.' : '가족 운영 워크스페이스 계정을 만듭니다.'}</p>
           </div>
 
-          <label>
-            <span>이메일</span>
-            <input value={email} onChange={(event) => setEmail(event.target.value)} inputMode="email" placeholder="이메일" type="text" autoComplete="username" />
-          </label>
-          {mode === 'register' ? (
-            <label className="auth-nickname-field">
-              <span>닉네임</span>
-              <div className="auth-nickname-row">
-                <input value={nickname} onChange={(event) => handleNicknameChange(event.target.value)} placeholder="닉네임" type="text" autoComplete="nickname" maxLength={12} />
-                <button type="button" onClick={checkNickname} disabled={nicknameCheckState === 'checking'}>
-                  {nicknameCheckState === 'checking' ? '확인 중' : '중복확인'}
-                </button>
-              </div>
-              {nicknameCheckMessage ? <small className={`auth-nickname-status ${nicknameCheckState}`}>{nicknameCheckMessage}</small> : null}
-            </label>
-          ) : null}
-          <label>
-            <span>비밀번호</span>
-            <input
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              placeholder="8자 이상"
-              type="password"
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              minLength={8}
-            />
-          </label>
-          {mode === 'register' ? (
-            <label>
-              <span>비밀번호 확인</span>
-              <input
-                value={passwordConfirm}
-                onChange={(event) => setPasswordConfirm(event.target.value)}
-                placeholder="비밀번호 재입력"
-                type="password"
-                autoComplete="new-password"
-                minLength={8}
-              />
-            </label>
-          ) : null}
-
           {mode === 'login' ? (
-            <div className="auth-login-preferences">
-              <label className={rememberEmail ? 'is-checked' : ''}>
-                <input checked={rememberEmail} onChange={(event) => setRememberEmail(event.target.checked)} type="checkbox" />
-                <span>아이디 저장</span>
-              </label>
-              <label className={autoLogin ? 'is-checked' : ''}>
-                <input checked={autoLogin} onChange={(event) => setAutoLogin(event.target.checked)} type="checkbox" />
-                <span>자동 로그인</span>
-              </label>
-            </div>
+            <LoginFields
+              autoLogin={autoLogin}
+              loginForm={loginForm}
+              rememberEmail={rememberEmail}
+              setAutoLogin={setAutoLogin}
+              setLoginForm={setLoginForm}
+              setRememberEmail={setRememberEmail}
+            />
           ) : (
-            <label className="auth-required-consent">
-              <input checked={requiredConsent} onChange={(event) => setRequiredConsent(event.target.checked)} type="checkbox" />
-              <span>필수 약관과 개인정보 처리방침에 동의합니다.</span>
-            </label>
+            <RegisterFields
+              checkNickname={checkNickname}
+              handleNicknameChange={handleNicknameChange}
+              nicknameCheckMessage={nicknameCheckMessage}
+              nicknameCheckState={nicknameCheckState}
+              registerForm={registerForm}
+              requiredConsent={requiredConsent}
+              setRegisterForm={setRegisterForm}
+              setRequiredConsent={setRequiredConsent}
+            />
           )}
 
           {message ? <div className="auth-message">{message}</div> : null}
@@ -592,20 +557,20 @@ export function LoginPage() {
                 <div className="auth-recovery-grid">
                   <label>
                     <span>이메일</span>
-                    <input value={recoveryEmail} onChange={(event) => setRecoveryEmail(event.target.value)} type="email" placeholder="email@example.com" />
+                    <input value={inquiryForm.email} onChange={(event) => setInquiryForm((current) => ({ ...current, email: event.target.value }))} type="email" placeholder="email@example.com" />
                   </label>
                   <label>
                     <span>닉네임</span>
-                    <input value={recoveryNickname} onChange={(event) => setRecoveryNickname(event.target.value)} type="text" placeholder="닉네임" />
+                    <input value={inquiryForm.nickname} onChange={(event) => setInquiryForm((current) => ({ ...current, nickname: event.target.value }))} type="text" placeholder="닉네임" />
                   </label>
                 </div>
                 <label>
                   <span>연락받을 정보</span>
-                  <input value={recoveryContact} onChange={(event) => setRecoveryContact(event.target.value)} type="text" placeholder="회신받을 이메일이나 연락처" />
+                  <input value={inquiryForm.contact} onChange={(event) => setInquiryForm((current) => ({ ...current, contact: event.target.value }))} type="text" placeholder="회신받을 이메일이나 연락처" />
                 </label>
                 <label>
                   <span>문의 내용</span>
-                  <textarea value={recoveryMessage} onChange={(event) => setRecoveryMessage(event.target.value)} rows={4} placeholder="기억나는 계정 정보나 상황을 적어주세요." />
+                  <textarea value={inquiryForm.message} onChange={(event) => setInquiryForm((current) => ({ ...current, message: event.target.value }))} rows={4} placeholder="기억나는 계정 정보나 상황을 적어주세요." />
                 </label>
               </>
             ) : recoveryMode === 'find-email' ? (
@@ -613,7 +578,7 @@ export function LoginPage() {
                 <p className="auth-recovery-guide">닉네임으로 가입 계정과 로그인 방식을 확인합니다. 소셜 계정은 해당 SSO 버튼으로 로그인해주세요.</p>
                 <label>
                   <span>닉네임</span>
-                  <input value={recoveryNickname} onChange={(event) => setRecoveryNickname(event.target.value)} type="text" placeholder="닉네임" />
+                  <input value={findEmailForm.nickname} onChange={(event) => setFindEmailForm((current) => ({ ...current, nickname: event.target.value }))} type="text" placeholder="닉네임" />
                 </label>
               </>
             ) : recoveryMode === 'reset-password' ? (
@@ -621,13 +586,19 @@ export function LoginPage() {
                 <p className="auth-recovery-guide">메일로 받은 링크에서 새 비밀번호를 설정합니다.</p>
                 <label>
                   <span>새 비밀번호</span>
-                  <input value={recoveryPassword} onChange={(event) => setRecoveryPassword(event.target.value)} type="password" autoComplete="new-password" placeholder="8자 이상" />
+                  <input
+                    value={resetPasswordForm.password}
+                    onChange={(event) => setResetPasswordForm((current) => ({ ...current, password: event.target.value }))}
+                    type="password"
+                    autoComplete="new-password"
+                    placeholder="8자 이상"
+                  />
                 </label>
                 <label>
                   <span>새 비밀번호 확인</span>
                   <input
-                    value={recoveryPasswordConfirm}
-                    onChange={(event) => setRecoveryPasswordConfirm(event.target.value)}
+                    value={resetPasswordForm.passwordConfirm}
+                    onChange={(event) => setResetPasswordForm((current) => ({ ...current, passwordConfirm: event.target.value }))}
                     type="password"
                     autoComplete="new-password"
                     placeholder="비밀번호 다시 입력"
@@ -639,7 +610,7 @@ export function LoginPage() {
                 <p className="auth-recovery-guide">소셜 계정으로 가입했다면 네이버, 카카오, 구글 로그인을 먼저 이용해주세요.</p>
                 <label>
                   <span>이메일</span>
-                  <input value={recoveryEmail} onChange={(event) => setRecoveryEmail(event.target.value)} type="email" placeholder="email@example.com" />
+                  <input value={resetRequestForm.email} onChange={(event) => setResetRequestForm((current) => ({ ...current, email: event.target.value }))} type="email" placeholder="email@example.com" />
                 </label>
               </>
             )}
