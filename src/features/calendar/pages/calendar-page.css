@@ -460,17 +460,18 @@
 
 .fp-schedule-list {
   display: grid;
-  gap: 12px;
-  margin-top: 14px;
+  gap: 10px;
+  margin-top: 12px;
 }
 
 .fp-schedule-row {
   display: grid;
-  grid-template-columns: 52px minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  column-gap: 24px;
+  row-gap: 10px;
   align-items: center;
   min-width: 0;
-  padding: 12px;
+  padding: 16px 14px;
   border: 0;
   border-radius: 16px;
   background: #fff;
@@ -479,7 +480,8 @@
 
 .fp-schedule-date-pill {
   display: grid;
-  width: 52px;
+  min-width: 82px;
+  width: 82px;
   height: 52px;
   min-height: 0;
   place-items: center;
@@ -496,15 +498,16 @@
 .fp-schedule-row small,
 .fp-schedule-row em {
   display: block;
-  margin: 6px 0 0;
-  color: #526070;
-  font-size: var(--fp-font-body);
-  font-weight: var(--fp-weight-body);
+  margin: 3px 0 0;
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 400;
 }
 
 .fp-schedule-row em {
   color: #1264d8;
   font-style: normal;
+  font-weight: 700;
 }
 
 .fp-row-actions {
@@ -514,13 +517,13 @@
   gap: 8px;
 }
 
-.fp-row-actions button {
+.fp-calendar .fp-row-actions button {
   min-width: 54px;
   min-height: 34px;
   height: 34px;
-  padding: 0 12px;
+  padding: 0 10px;
   border: 0;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #edf4ff;
   color: #1b64da;
   font-size: 13px;
@@ -538,7 +541,14 @@
   line-height: 1.25;
 }
 
-.fp-row-actions button.danger {
+.fp-schedule-row > div:nth-child(2) {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  padding-left: 4px;
+}
+
+.fp-calendar .fp-row-actions button.danger {
   background: #fff1f3;
   color: #f04452;
   box-shadow: inset 0 0 0 1px #ffc2ca;
@@ -621,11 +631,11 @@
 }
 
 .fp-calendar-popup {
-  width: min(520px, 100%);
-  max-height: min(720px, calc(100vh - 40px));
+  width: min(420px, 100%);
+  max-height: min(680px, calc(100vh - 40px));
   overflow: auto;
-  padding: 20px;
-  border-radius: 18px;
+  padding: 18px;
+  border-radius: 20px;
   background: #fff;
   box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22);
 }
@@ -642,14 +652,14 @@
 }
 
 .fp-calendar-popup header button {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   border: 0;
   border-radius: 12px;
   background: #f3f6fa;
   color: #191f28;
-  font-size: var(--fp-font-control);
-  font-weight: var(--fp-weight-strong);
+  font-size: 16px;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -725,8 +735,19 @@
   }
 
   .fp-schedule-row {
-    grid-template-columns: 52px minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: 88px minmax(0, 1fr);
+    column-gap: 18px;
+    row-gap: 10px;
+    padding: 16px 14px;
+    border-radius: 14px;
+  }
+
+  .fp-schedule-date-pill {
+    min-width: 82px;
+    width: 82px;
+    height: 52px;
+    border-radius: 16px;
+    font-size: 12px;
   }
 
   .fp-row-actions {
