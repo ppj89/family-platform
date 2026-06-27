@@ -318,8 +318,13 @@
   color: #3182f6;
 }
 
-.fp-month-cell.outside strong {
-  color: #a6b0bd;
+.fp-month-cell.outside > strong {
+  color: #a6b0bd !important;
+}
+
+.fp-month-cell.outside .fp-holiday-name,
+.fp-month-cell.outside .fp-lunar-note {
+  color: #8b95a1;
 }
 
 .fp-holiday-name {
@@ -670,7 +675,7 @@
 
   .fp-weekdays,
   .fp-month-grid {
-    gap: 4px;
+    gap: 7px;
   }
 
   .fp-week-board {
@@ -682,7 +687,7 @@
   }
 
   .fp-month-cell {
-    min-height: 74px;
+    min-height: 90px;
     gap: 3px;
     border-radius: 12px;
     padding: 6px 4px;
