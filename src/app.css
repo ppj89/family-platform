@@ -162,7 +162,7 @@
 
 .fp-topbar-button,
 .fp-notification-button {
-  min-width: 48px;
+  min-width: 44px;
   height: 44px;
   padding: 0 16px;
   border: 1px solid #dce3ed;
@@ -172,6 +172,21 @@
   font-size: var(--fp-font-control);
   font-weight: var(--fp-weight-strong);
   cursor: pointer;
+}
+
+.fp-icon-button,
+.fp-notification-button {
+  width: 44px;
+  padding: 0;
+}
+
+.fp-action-icon {
+  width: 22px;
+  height: 22px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .fp-card {

@@ -1,49 +1,50 @@
 .fp-home {
   position: relative;
   display: grid;
-  gap: 26px;
+  gap: 18px;
 }
 
 .fp-home-summary {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 14px;
 }
 
 .fp-home-summary article {
   display: grid;
   align-content: start;
-  gap: 8px;
-  min-height: 92px;
-  padding: 16px;
-  border: 1px solid #edf1f6;
-  border-radius: 16px;
+  min-height: 112px;
+  padding: 20px;
+  border: 0;
+  border-radius: 8px;
   background: #fff;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
+  box-shadow: 0 1px 2px rgba(25, 31, 40, 0.06);
 }
 
 .fp-home-summary span,
 .fp-home-panel header p,
 .fp-home-updated {
   margin: 0;
-  color: #596579;
-  font-size: var(--fp-font-caption);
-  font-weight: var(--fp-weight-strong);
+  color: #8b95a1;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .fp-home-summary strong {
+  display: block;
+  margin-top: 20px;
   color: #111827;
-  font-size: var(--fp-font-metric);
-  font-weight: var(--fp-weight-title);
-  line-height: 1.2;
+  font-size: 26px;
+  font-weight: 900;
+  line-height: 1.15;
 }
 
 .fp-home-summary article.expense strong {
-  color: #f04462;
+  color: #f04452;
 }
 
 .fp-home-summary article.travel strong {
-  color: #05a98b;
+  color: #00a886;
 }
 
 .fp-home-summary article.baby strong {
@@ -53,14 +54,15 @@
 .fp-home-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 0;
+  gap: 18px;
 }
 
 .fp-home-panel {
   min-width: 0;
   padding: 22px;
-  border-color: #edf1f6;
-  border-radius: 18px;
+  border: 0;
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgba(25, 31, 40, 0.06);
 }
 
 .fp-home-panel header {
@@ -73,9 +75,9 @@
 
 .fp-home-panel h2 {
   margin: 0;
-  color: #111827;
+  color: #191f28;
   font-size: var(--fp-font-section-title);
-  font-weight: var(--fp-weight-title);
+  font-weight: 900;
   line-height: 1.2;
 }
 
@@ -85,21 +87,22 @@
 }
 
 .fp-home-list article {
-  display: flex;
+  display: grid;
   align-items: center;
-  justify-content: space-between;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
   min-width: 0;
-  padding: 16px;
-  border-radius: 14px;
-  background: #f7f9fc;
+  border: 0;
+  border-radius: 8px;
+  padding: 15px;
+  background: #f7f8fa;
 }
 
 .fp-home-list b {
   flex: 0 0 auto;
-  color: #f04462;
-  font-size: var(--fp-font-day);
-  font-weight: var(--fp-weight-title);
+  color: #f04452;
+  font-size: var(--fp-font-body);
+  font-weight: 900;
   white-space: nowrap;
 }
 
@@ -118,9 +121,9 @@
 .fp-home-list strong {
   display: block;
   overflow: hidden;
-  color: #111827;
+  color: #191f28;
   font-size: var(--fp-font-body);
-  font-weight: var(--fp-weight-title);
+  font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -128,8 +131,8 @@
 .fp-home-list p {
   overflow: hidden;
   margin-top: 4px;
-  color: #596579;
-  font-size: var(--fp-font-body);
+  color: #8b95a1;
+  font-size: 12px;
   font-weight: var(--fp-weight-body);
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -147,20 +150,32 @@
 
 @media (max-width: 640px) {
   .fp-home {
-    gap: 26px;
+    gap: 18px;
   }
 
   .fp-home-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
-  .fp-home-summary article,
+  .fp-home-summary article {
+    min-height: 66px;
+    border-radius: 14px;
+    padding: 11px 12px;
+  }
+
+  .fp-home-summary span {
+    font-size: 11px;
+  }
+
+  .fp-home-summary strong {
+    margin-top: 5px;
+    font-size: 18px;
+    line-height: 1.1;
+  }
+
   .fp-home-panel {
     padding: 16px;
     border-radius: 16px;
-  }
-
-  .fp-home-list b {
-    font-size: var(--fp-font-control);
   }
 }

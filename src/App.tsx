@@ -33,8 +33,8 @@ const menuItems: MenuItem[] = [
     label: '홈',
     icon: (
       <MenuSvg>
-        <path d="M4 11.5 12 4l8 7.5" />
-        <path d="M6.5 10.5V20h4.2v-5.7h2.6V20h4.2v-9.5" />
+        <path d="m3 9 9-7 9 7" />
+        <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
       </MenuSvg>
     ),
   },
@@ -42,9 +42,9 @@ const menuItems: MenuItem[] = [
     label: '캘린더',
     icon: (
       <MenuSvg>
-        <path d="M7 3.7v3M17 3.7v3M4.8 9.1h14.4" />
-        <rect width="16.8" height="16.2" x="3.6" y="5.2" rx="2.8" />
-        <path d="M8.1 13h.1M12 13h.1M15.9 13h.1M8.1 16.6h.1M12 16.6h.1M15.9 16.6h.1" />
+        <path d="M8 2v4M16 2v4M3 10h18" />
+        <rect width="18" height="18" x="3" y="4" rx="2" />
+        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" />
       </MenuSvg>
     ),
   },
@@ -52,8 +52,8 @@ const menuItems: MenuItem[] = [
     label: '가계부',
     icon: (
       <MenuSvg>
-        <rect width="16.4" height="13.6" x="3.8" y="5.2" rx="2" />
-        <path d="m4.5 7 7.5 5.2L19.5 7" />
+        <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5" />
+        <path d="M18 12h.01" />
       </MenuSvg>
     ),
   },
@@ -70,10 +70,10 @@ const menuItems: MenuItem[] = [
     label: '육아',
     icon: (
       <MenuSvg>
-        <path d="M16.7 7.2a5.3 5.3 0 1 0 1.4 6.8" />
-        <path d="M18.4 6.2c.5.2 1.2.8 1.2 1.8 0 1.4-1.2 2.1-2.4 2.1h-1.1" />
-        <path d="M9.8 13.2c.8.7 2.5.7 3.3 0" />
-        <path d="M9.2 10h.1M14.6 10h.1" />
+        <path d="M9 12h.01M15 12h.01" />
+        <path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5" />
+        <path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 1 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c1 0 1.9.2 2.8.5" />
+        <path d="M16.5 3.5c1.7 0 3 1.3 3 3 0 1.4-1 2.6-2.3 2.9" />
       </MenuSvg>
     ),
   },
@@ -81,8 +81,8 @@ const menuItems: MenuItem[] = [
     label: '일기',
     icon: (
       <MenuSvg>
-        <path d="M6.5 3.8h7.7l3.3 3.4v13H6.5z" />
-        <path d="M14 3.8v3.7h3.5M9.2 11.2h5.6M9.2 14.4h5.6M9.2 17.6h3.2" />
+        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+        <path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8" />
       </MenuSvg>
     ),
   },
@@ -90,10 +90,10 @@ const menuItems: MenuItem[] = [
     label: '가족그룹',
     icon: (
       <MenuSvg>
-        <circle cx="8.2" cy="8.4" r="3" />
-        <circle cx="16.1" cy="9.1" r="2.5" />
-        <path d="M3.8 19.8c.5-3 2.2-5 4.4-5s3.9 2 4.4 5" />
-        <path d="M13.7 15.4c2.2.2 3.9 1.7 4.5 4.4" />
+        <path d="M18 21a8 8 0 0 0-16 0" />
+        <circle cx="10" cy="8" r="5" />
+        <path d="M22 20c0-3.4-2-6.3-5-7.6" />
+        <path d="M17 3.3a5 5 0 0 1 0 9.4" />
       </MenuSvg>
     ),
   },
@@ -102,7 +102,7 @@ const menuItems: MenuItem[] = [
     icon: (
       <MenuSvg>
         <path d="M12 21s6-5.5 6-11a6 6 0 0 0-12 0c0 5.5 6 11 6 11Z" />
-        <path d="M10.6 8.2v4.4M13.5 8.2v4.4M10.5 10.4h3.1" />
+        <circle cx="12" cy="10" r="2.2" />
       </MenuSvg>
     ),
   },
@@ -170,6 +170,11 @@ export default function App() {
             <h1>{activeMenu}</h1>
           </div>
           <div className="fp-topbar-actions">
+            <button className="fp-topbar-button fp-icon-button" type="button" aria-label="다크모드">
+              <svg className="fp-action-icon" aria-hidden="true" fill="none" viewBox="0 0 24 24">
+                <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
+              </svg>
+            </button>
             <NotificationBell />
             <button className="fp-topbar-button" type="button">내 정보</button>
             <button
