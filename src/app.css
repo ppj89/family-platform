@@ -10,37 +10,41 @@
   --fp-weight-strong: 700;
   --fp-weight-title: 800;
   display: grid;
-  grid-template-columns: 300px minmax(0, 1fr);
+  grid-template-columns: 268px minmax(0, 1fr);
   min-height: 100vh;
   background: #eef1f5;
+  color: #191f28;
 }
 
 .fp-sidebar {
   position: sticky;
   top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
   height: 100vh;
-  padding: 28px 20px;
-  background: #f8fafc;
-  border-right: 1px solid #dce3ed;
+  border-right: 1px solid #e2e6ea;
+  padding: 22px 18px;
+  background: #f7f8fa;
 }
 
 .fp-brand {
   display: flex;
-  gap: 12px;
   align-items: center;
-  margin-bottom: 32px;
+  gap: 12px;
+  padding: 0 6px 10px;
 }
 
 .fp-brand > span {
   display: grid;
+  width: 42px;
+  height: 42px;
   place-items: center;
-  width: 44px;
-  height: 44px;
   border-radius: 12px;
-  color: #fff;
-  background: #2f80ed;
-  font-size: var(--fp-font-control);
-  font-weight: var(--fp-weight-title);
+  background: #3182f6;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 900;
 }
 
 .fp-brand strong,
@@ -50,43 +54,49 @@
 
 .fp-brand small,
 .fp-eyebrow {
-  color: #718096;
-  font-size: var(--fp-font-caption);
-  font-weight: var(--fp-weight-strong);
+  color: #8b95a1;
+  font-size: 12px;
+}
+
+.fp-brand strong {
+  color: #191f28;
+  font-size: 16px;
+  font-weight: 900;
 }
 
 .fp-nav {
   display: grid;
-  gap: 8px;
+  gap: 4px;
 }
 
 .fp-nav button {
-  display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  display: flex;
   align-items: center;
-  gap: 10px;
-  height: 54px;
+  gap: 12px;
+  width: 100%;
+  min-height: 48px;
   padding: 0 14px;
   border: 0;
   border-radius: 12px;
   background: transparent;
-  color: #465160;
-  font-size: var(--fp-font-body);
-  font-weight: var(--fp-weight-strong);
+  color: #4e5968;
+  font: inherit;
+  font-weight: 700;
   text-align: left;
   cursor: pointer;
 }
 
 .fp-nav button.active {
-  color: #1264d8;
-  background: #dceeff;
+  color: #1b64da;
+  background: #dcecff;
+  font-weight: 900;
 }
 
 .fp-nav-icon {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   color: #8b95a1;
 }
 
@@ -96,27 +106,28 @@
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
-  stroke-width: 2.1;
+  stroke-width: 2;
 }
 
 .fp-nav-label {
+  display: block;
   min-width: 0;
-  line-height: 1.15;
+  line-height: 1.1;
 }
 
 .fp-nav button.active .fp-nav-icon,
 .fp-nav button.active .fp-nav-label {
-  color: #1264d8;
+  color: #3182f6;
 }
 
 .fp-nav-icon.community {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: #eef6ff;
-  color: #2f80ed;
-  font-size: 15px;
-  font-weight: var(--fp-weight-title);
+  width: 24px;
+  height: 24px;
+  border-radius: 9px;
+  background: #edf4ff;
+  color: #3182f6;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .fp-community-letter {
@@ -415,7 +426,7 @@
   font-weight: var(--fp-weight-body);
 }
 
-@media (max-width: 900px) {
+@media (max-width: 980px) {
   .fp-shell {
     grid-template-columns: 1fr;
   }
@@ -423,47 +434,44 @@
   .fp-sidebar {
     position: static;
     height: auto;
-    padding: 20px 20px 30px;
+    padding: 14px;
+  }
+
+  .fp-brand {
+    padding-bottom: 2px;
   }
 
   .fp-nav {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    column-gap: 22px;
-    row-gap: 18px;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 4px;
   }
 
   .fp-nav button {
-    grid-template-columns: 1fr;
-    align-content: center;
-    justify-items: center;
-    gap: 6px;
-    height: 78px;
-    padding: 8px 0;
-    border-radius: 18px;
-    font-size: var(--fp-font-caption);
-    font-weight: var(--fp-weight-strong);
+    flex-direction: column;
+    justify-content: center;
+    gap: 4px;
+    min-height: 54px;
+    padding: 6px 4px;
+    font-size: 11px;
+    line-height: 1.1;
     text-align: center;
     white-space: nowrap;
   }
 
-  .fp-nav-icon {
-    width: 28px;
-    height: 28px;
-  }
-
-  .fp-nav-icon svg {
-    width: 26px;
-    height: 26px;
-  }
-
-  .fp-nav-icon.community {
-    width: 28px;
-    height: 28px;
-    font-size: 14px;
+  .fp-nav-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .fp-main {
     padding: 18px 14px 40px;
+  }
+}
+
+@media (max-width: 620px) {
+  .fp-nav {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
