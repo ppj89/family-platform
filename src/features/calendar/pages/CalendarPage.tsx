@@ -12,7 +12,7 @@ import {
   todayKey,
   weekRange,
 } from '../../../shared/utils/date'
-import { createSchedule, createScheduleReminders, deleteSchedule, listSchedules, updateSchedule } from '../api/schedules'
+import { createSchedule, deleteSchedule, listSchedules, updateSchedule } from '../api/schedules'
 import type { ScheduleItem, SchedulePayload } from '../types'
 import { expandScheduleInstances, isRepeatRule, type CalendarScheduleInstance } from '../utils/repeat'
 import './calendar-page.css'
@@ -67,14 +67,17 @@ function rangeForView(view: CalendarView, dayDate: string, weekDate: string, mon
 
 function monthCells(monthDate: Date) {
   const firstDay = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1)
-  const lastDate = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0).getDate()
-  return [
-    ...Array.from({ length: firstDay.getDay() }, (_, index) => ({ key: `empty-${index}`, dateKey: '' })),
-    ...Array.from({ length: lastDate }, (_, index) => {
-      const date = new Date(monthDate.getFullYear(), monthDate.getMonth(), index + 1)
-      return { key: formatDateKey(date), dateKey: formatDateKey(date) }
-    }),
-  ]
+  const start = new Date(firstDay)
+  start.setDate(firstDay.getDate() - firstDay.getDay())
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(start)
+    date.setDate(start.getDate() + index)
+    return {
+      key: formatDateKey(date),
+      dateKey: formatDateKey(date),
+      inMonth: date.getMonth() === monthDate.getMonth(),
+    }
+  })
 }
 
 function weekDays(weekDate: string) {
@@ -110,6 +113,8 @@ export default function CalendarPage() {
     () => visibleItems.filter((item) => item.occurrenceDate === selectedDate),
     [selectedDate, visibleItems],
   )
+  const agendaItems = view === 'month' ? visibleItems : selectedItems
+  const agendaTitle = view === 'month' ? '월간 일정표' : formatKoreanDate(selectedDate)
   const cells = useMemo(() => monthCells(monthDate), [monthDate])
   const weekDateKeys = useMemo(() => weekDays(weekDate), [weekDate])
 
@@ -248,19 +253,6 @@ function startEdit(item: CalendarScheduleInstance) {
     }
   }
 
-  async function createTodayReminder() {
-    setLoading(true)
-    setMessage('')
-    try {
-      const result = await createScheduleReminders(todayKey())
-      setMessage(`오늘 일정 알림 생성 확인: ${result.created}건`)
-    } catch (error) {
-      setMessage(apiActionMessage(error, '일정 알림을 확인하지 못했습니다.'))
-    } finally {
-      setLoading(false)
-    }
-  }
-
   function confirmAction() {
     if (!confirm) return
     if (confirm.kind === 'save') {
@@ -306,10 +298,11 @@ function startEdit(item: CalendarScheduleInstance) {
   function renderScheduleRow(item: CalendarScheduleInstance) {
     return (
       <article className="fp-schedule-row" key={item.instanceKey}>
+        <strong className="fp-schedule-date-pill">{formatKoreanDate(item.occurrenceDate).replace(/^\d{4}-\d{2}-/, '')}</strong>
         <div>
           <strong>{item.title}</strong>
           <p>
-            {formatKoreanDate(item.occurrenceDate)} {scheduleTime(item)}
+            {scheduleTime(item)}
             {' · '}
             {item.category || '일정'}
             {item.memberName ? ` · ${item.memberName}` : ''}
@@ -341,11 +334,28 @@ function startEdit(item: CalendarScheduleInstance) {
     <section className="fp-calendar fp-card">
       {loading ? <div className="fp-loading-blocker">처리 중입니다.</div> : null}
       <header className="fp-calendar-header">
-        <div>
-          <h2>캘린더</h2>
-          <p>월별 일정과 가족 공유 알림을 확인합니다.</p>
-        </div>
         <div className="fp-calendar-actions">
+          {view === 'month' ? (
+            <div className="fp-calendar-month-nav">
+              <button type="button" className="fp-button fp-button-muted" aria-label="이전 달" onClick={() => setMonthDate(addMonths(monthDate, -1))}>‹</button>
+              <DatePickerField
+                className="fp-month-field"
+                label="조회 월"
+                mode="month"
+                value={formatDateKey(monthDate).slice(0, 7)}
+                onChange={changeMonth}
+              />
+              <button type="button" className="fp-button fp-button-muted" aria-label="다음 달" onClick={() => setMonthDate(addMonths(monthDate, 1))}>›</button>
+            </div>
+          ) : (
+            <DatePickerField
+              className="fp-date-field"
+              key={view}
+              label={view === 'day' ? '조회 일' : '조회 주'}
+              value={view === 'day' ? dayDate : weekDate}
+              onChange={view === 'day' ? changeDayDate : changeWeekDate}
+            />
+          )}
           <div className="fp-calendar-tabs" role="tablist" aria-label="캘린더 보기">
             {[
               ['day', '일간'],
@@ -363,41 +373,6 @@ function startEdit(item: CalendarScheduleInstance) {
               </button>
             ))}
           </div>
-          {view === 'month' ? (
-            <>
-              <button type="button" className="fp-button fp-button-muted" onClick={() => setMonthDate(addMonths(monthDate, -1))}>이전</button>
-              <DatePickerField
-                className="fp-month-field"
-                label="조회 월"
-                mode="month"
-                value={formatDateKey(monthDate).slice(0, 7)}
-                onChange={changeMonth}
-              />
-              <button type="button" className="fp-button fp-button-muted" onClick={() => setMonthDate(addMonths(monthDate, 1))}>다음</button>
-            </>
-          ) : (
-            <DatePickerField
-              className="fp-date-field"
-              key={view}
-              label={view === 'day' ? '조회 일' : '조회 주'}
-              value={view === 'day' ? dayDate : weekDate}
-              onChange={view === 'day' ? changeDayDate : changeWeekDate}
-            />
-          )}
-          <button
-            type="button"
-            className="fp-button fp-button-muted"
-            onClick={() => {
-              setDayDate(today)
-              setWeekDate(today)
-              setMonthDate(parseDateKey(today))
-              setSelectedDate(today)
-              if (!editingId) setForm((value) => ({ ...value, scheduleDate: today }))
-            }}
-          >
-            오늘
-          </button>
-          <button type="button" className="fp-button fp-button-primary" onClick={reloadSchedules}>조회</button>
         </div>
       </header>
 
@@ -418,17 +393,15 @@ function startEdit(item: CalendarScheduleInstance) {
                     className={[
                       'fp-month-cell',
                       cell.dateKey === selectedDate ? 'selected' : '',
-                      !cell.dateKey ? 'empty' : '',
+                      !cell.inMonth ? 'outside' : '',
                     ].filter(Boolean).join(' ')}
                     key={cell.key}
-                    role={cell.dateKey ? 'button' : undefined}
-                    tabIndex={cell.dateKey ? 0 : -1}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => {
-                      if (!cell.dateKey) return
                       openMonthDay(cell.dateKey, dayItems)
                     }}
                     onKeyDown={(event) => {
-                      if (!cell.dateKey) return
                       if (event.key !== 'Enter' && event.key !== ' ') return
                       event.preventDefault()
                       openMonthDay(cell.dateKey, dayItems)
@@ -480,19 +453,19 @@ function startEdit(item: CalendarScheduleInstance) {
           </section>
         )}
 
-        <aside className="fp-schedule-panel">
-          <div className="fp-schedule-panel-header">
-            <div>
-              <h3>{formatKoreanDate(selectedDate)}</h3>
-              <p>{selectedItems.length}건</p>
-            </div>
-            <button className="fp-button fp-button-muted" type="button" onClick={createTodayReminder}>알림 확인</button>
-          </div>
-          <div className="fp-schedule-list">
-            {selectedItems.length ? selectedItems.map(renderScheduleRow) : <p className="fp-empty-text">선택한 날짜에 등록된 일정이 없습니다.</p>}
-          </div>
-        </aside>
       </div>
+
+      <section className="fp-schedule-panel">
+        <div className="fp-schedule-panel-header">
+          <div>
+            <h3>{agendaTitle}</h3>
+            <p>{agendaItems.length}건</p>
+          </div>
+        </div>
+        <div className="fp-schedule-list">
+          {agendaItems.length ? agendaItems.map(renderScheduleRow) : <p className="fp-empty-text">등록된 일정이 없습니다.</p>}
+        </div>
+      </section>
 
       <form className="fp-schedule-form" onSubmit={requestSave}>
         <header>
@@ -503,6 +476,13 @@ function startEdit(item: CalendarScheduleInstance) {
           <label className="fp-field span-2">
             <span>일정명 *</span>
             <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
+          </label>
+          <label className="fp-field">
+            <span>기준</span>
+            <select value={form.calendarBasis} onChange={(event) => setForm({ ...form, calendarBasis: event.target.value as 'solar' | 'lunar' })}>
+              <option value="solar">양력</option>
+              <option value="lunar">음력</option>
+            </select>
           </label>
           <div className="fp-field">
             <DatePickerField
@@ -524,11 +504,12 @@ function startEdit(item: CalendarScheduleInstance) {
             />
           </label>
           <label className="fp-field">
-            <span>기준</span>
-            <select value={form.calendarBasis} onChange={(event) => setForm({ ...form, calendarBasis: event.target.value as 'solar' | 'lunar' })}>
-              <option value="solar">양력</option>
-              <option value="lunar">음력</option>
-            </select>
+            <span>구분</span>
+            <input value={form.category || ''} onChange={(event) => setForm({ ...form, category: event.target.value || null })} />
+          </label>
+          <label className="fp-field">
+            <span>가족</span>
+            <input value={form.memberName || ''} onChange={(event) => setForm({ ...form, memberName: event.target.value || null })} />
           </label>
           <label className="fp-field">
             <span>반복</span>
@@ -538,14 +519,6 @@ function startEdit(item: CalendarScheduleInstance) {
               <option value="monthly">매월</option>
               <option value="yearly">매년</option>
             </select>
-          </label>
-          <label className="fp-field">
-            <span>분류</span>
-            <input value={form.category || ''} onChange={(event) => setForm({ ...form, category: event.target.value || null })} />
-          </label>
-          <label className="fp-field">
-            <span>대상</span>
-            <input value={form.memberName || ''} onChange={(event) => setForm({ ...form, memberName: event.target.value || null })} />
           </label>
           <label className="fp-field span-2">
             <span>메모</span>

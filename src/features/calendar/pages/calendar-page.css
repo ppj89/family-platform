@@ -1,6 +1,6 @@
 .fp-calendar {
   position: relative;
-  padding: 24px;
+  padding: 22px;
 }
 
 .fp-loading-blocker {
@@ -38,25 +38,44 @@
 }
 
 .fp-calendar-actions {
-  display: flex;
+  display: grid;
+  gap: 14px;
+  width: 100%;
+}
+
+.fp-calendar-month-nav {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr) 54px;
+  gap: 10px;
   align-items: end;
-  flex-wrap: wrap;
-  gap: 8px;
+  width: 100%;
+}
+
+.fp-calendar-month-nav .fp-button {
+  min-height: 54px;
+  padding: 0;
+  border: 1px solid #e1e7ef;
+  border-radius: 16px;
+  background: #fff;
+  color: #4e5968;
+  font-size: 30px;
+  line-height: 1;
 }
 
 .fp-calendar-tabs {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
-  padding: 4px;
-  border-radius: 14px;
+  padding: 5px;
+  border-radius: 18px;
   background: #f1f5f9;
 }
 
 .fp-calendar-tabs button {
-  height: 40px;
+  height: 48px;
   padding: 0 16px;
   border: 0;
-  border-radius: 11px;
+  border-radius: 16px;
   background: transparent;
   color: #526070;
   font-weight: 900;
@@ -108,7 +127,7 @@
 
 .fp-month-field,
 .fp-date-field {
-  width: 160px;
+  width: 100%;
 }
 
 .fp-form-date-picker {
@@ -143,9 +162,9 @@
 
 .fp-calendar-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
-  gap: 18px;
-  margin-top: 20px;
+  grid-template-columns: 1fr;
+  gap: 0;
+  margin-top: 18px;
 }
 
 .fp-calendar-board,
@@ -153,10 +172,10 @@
 .fp-day-board,
 .fp-schedule-panel,
 .fp-schedule-form {
-  border: 1px solid #e1e7ef;
-  border-radius: 16px;
-  padding: 16px;
-  background: #f8fafc;
+  border: 1px solid #edf1f6;
+  border-radius: 18px;
+  padding: 18px;
+  background: #fff;
 }
 
 .fp-weekdays,
@@ -167,7 +186,7 @@
 }
 
 .fp-weekdays {
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   color: #718096;
   font-size: 13px;
   font-weight: 900;
@@ -175,8 +194,8 @@
 }
 
 .fp-month-cell {
-  min-height: 96px;
-  padding: 10px;
+  min-height: 104px;
+  padding: 10px 8px;
   border: 1px solid #e1e7ef;
   border-radius: 14px;
   background: #fff;
@@ -184,10 +203,9 @@
   cursor: pointer;
 }
 
-.fp-month-cell.empty {
-  cursor: default;
-  opacity: 0;
-  pointer-events: none;
+.fp-month-cell.outside {
+  background: #f4f6f9;
+  color: #a6b0bd;
 }
 
 .fp-month-cell.selected {
@@ -199,6 +217,16 @@
 .fp-month-schedule-chip,
 .fp-month-grid small {
   display: block;
+}
+
+.fp-month-grid strong {
+  color: #191f28;
+  font-size: 18px;
+  line-height: 1.1;
+}
+
+.fp-month-cell.outside strong {
+  color: #a6b0bd;
 }
 
 .fp-month-schedule-chip {
@@ -284,13 +312,28 @@
 }
 
 .fp-schedule-row {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 14px;
+  display: grid;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  padding: 18px;
   border: 1px solid #e1e7ef;
   border-radius: 14px;
   background: #fff;
+}
+
+.fp-schedule-date-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  border-radius: 999px;
+  background: #eaf4ff;
+  color: #1264d8;
+  font-size: 15px;
+  font-weight: 900;
+  white-space: nowrap;
 }
 
 .fp-schedule-row p,
@@ -311,6 +354,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  grid-column: 2;
 }
 
 .fp-row-actions button {
@@ -342,6 +386,16 @@
 
 .fp-schedule-form {
   margin-top: 18px;
+}
+
+.fp-schedule-form > .fp-button-primary {
+  width: 100%;
+  min-height: 56px;
+}
+
+.fp-schedule-panel {
+  margin-top: 18px;
+  background: #f8fafc;
 }
 
 .fp-calendar .fp-schedule-form input,
@@ -411,10 +465,6 @@
   .fp-calendar-layout {
     grid-template-columns: 1fr;
   }
-
-  .fp-schedule-panel {
-    order: 2;
-  }
 }
 
 @media (max-width: 760px) {
@@ -427,7 +477,6 @@
   .fp-schedule-panel-header,
   .fp-schedule-row {
     align-items: stretch;
-    flex-direction: column;
   }
 
   .fp-calendar-actions {
@@ -435,13 +484,12 @@
   }
 
   .fp-month-field,
-  .fp-date-field,
-  .fp-calendar-actions .fp-button {
+  .fp-date-field {
     width: 100%;
   }
 
-  .fp-calendar-tabs {
-    width: 100%;
+  .fp-calendar-month-nav {
+    grid-template-columns: 54px minmax(0, 1fr) 54px;
   }
 
   .fp-calendar-tabs button {
@@ -458,8 +506,25 @@
   }
 
   .fp-month-cell {
-    min-height: 70px;
-    padding: 8px;
+    min-height: 104px;
+    padding: 9px 7px;
+  }
+
+  .fp-month-grid strong {
+    font-size: 17px;
+  }
+
+  .fp-month-schedule-chip {
+    font-size: 11px;
+  }
+
+  .fp-schedule-row {
+    grid-template-columns: 128px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .fp-row-actions {
+    grid-column: 1 / -1;
   }
 
   .fp-form-grid {
@@ -467,6 +532,16 @@
   }
 
   .span-2 {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 360px) {
+  .fp-schedule-row {
+    grid-template-columns: 1fr;
+  }
+
+  .fp-row-actions {
     grid-column: auto;
   }
 }
