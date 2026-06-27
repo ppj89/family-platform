@@ -40,6 +40,29 @@ const emptyPayload = (date: string): SchedulePayload => ({
 
 const categoryOptions = ['일정', '가족행사', '기념일', '병원', '학교', '여행', '기타']
 const memberOptions = ['아빠', '엄마', '가족']
+const holidayNames: Record<string, string> = {
+  '2026-01-01': '신정',
+  '2026-02-16': '설연휴',
+  '2026-02-17': '설날',
+  '2026-02-18': '설연휴',
+  '2026-03-01': '3·1절',
+  '2026-03-02': '대체공휴일',
+  '2026-05-05': '어린이날',
+  '2026-05-24': '부처님오신날',
+  '2026-05-25': '대체공휴일',
+  '2026-06-03': '지방선거',
+  '2026-06-06': '현충일',
+  '2026-08-15': '광복절',
+  '2026-08-17': '대체공휴일',
+  '2026-09-24': '추석연휴',
+  '2026-09-25': '추석',
+  '2026-09-26': '추석연휴',
+  '2026-10-03': '개천절',
+  '2026-10-05': '대체공휴일',
+  '2026-10-09': '한글날',
+  '2026-12-25': '성탄절',
+}
+const lunarFormatter = new Intl.DateTimeFormat('ko-KR-u-ca-chinese', { month: 'numeric', day: 'numeric' })
 
 function scheduleTime(item: Pick<ScheduleItem, 'scheduleTime'>) {
   return item.scheduleTime ? item.scheduleTime.slice(0, 5) : '시간 미정'
@@ -85,6 +108,13 @@ function monthCells(monthDate: Date) {
       inMonth: date.getMonth() === monthDate.getMonth(),
     }
   })
+}
+
+function lunarLabel(date: Date) {
+  if (date.getDate() % 5 !== 0) return ''
+  const parts = lunarFormatter.format(date).match(/\d+/g)
+  if (!parts || parts.length < 2) return ''
+  return `음 ${Number(parts[0])}월 ${Number(parts[1])}일`
 }
 
 function weekDays(weekDate: string) {
@@ -420,12 +450,18 @@ function startEdit(item: CalendarScheduleInstance) {
               {cells.map((cell) => {
                 const dayItems = cell.dateKey ? visibleItems.filter((item) => item.occurrenceDate === cell.dateKey) : []
                 const date = cell.dateKey ? parseDateKey(cell.dateKey) : null
+                const holidayName = cell.dateKey ? holidayNames[cell.dateKey] || '' : ''
+                const lunarText = date ? lunarLabel(date) : ''
+                const isHoliday = Boolean(date && (holidayName || date.getDay() === 0))
+                const isSaturday = Boolean(date && date.getDay() === 6)
                 return (
                   <div
                     className={[
                       'fp-month-cell',
                       cell.dateKey === selectedDate ? 'selected' : '',
                       !cell.inMonth ? 'outside' : '',
+                      isHoliday ? 'holiday' : '',
+                      isSaturday ? 'saturday' : '',
                     ].filter(Boolean).join(' ')}
                     key={cell.key}
                     role="button"
@@ -440,6 +476,8 @@ function startEdit(item: CalendarScheduleInstance) {
                     }}
                   >
                     {date ? <strong>{date.getDate()}</strong> : null}
+                    {holidayName ? <span className="fp-holiday-name">{holidayName}</span> : null}
+                    {lunarText ? <span className="fp-lunar-note">{lunarText}</span> : null}
                     {dayItems.slice(0, 3).map((item) => (
                       <button
                         className="fp-month-schedule-chip"
