@@ -152,6 +152,13 @@
   font-weight: 800;
 }
 
+.fp-calendar .fp-required-mark {
+  margin-left: 3px;
+  color: #f04452;
+  font-style: normal;
+  font-weight: 900;
+}
+
 .fp-field input,
 .fp-field select,
 .fp-field textarea {

@@ -527,7 +527,7 @@ function startEdit(item: CalendarScheduleInstance) {
         </header>
         <div className="fp-form-grid">
           <label className="fp-field span-2">
-            <span>일정명</span>
+            <span>일정명<em className="fp-required-mark">*</em></span>
             <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
           </label>
           <label className="fp-field">
@@ -541,6 +541,7 @@ function startEdit(item: CalendarScheduleInstance) {
             <DatePickerField
               className="fp-form-date-picker"
               label="날짜"
+              required
               value={form.scheduleDate}
               onChange={(value) => setForm({ ...form, scheduleDate: value })}
             />

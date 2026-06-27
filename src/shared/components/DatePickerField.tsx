@@ -6,6 +6,7 @@ interface DatePickerFieldProps {
   className?: string
   label?: string
   mode?: 'date' | 'month'
+  required?: boolean
   value: string
   onChange: (value: string) => void
 }
@@ -43,7 +44,7 @@ function initialViewDate(value: string, mode: 'date' | 'month') {
   return parseDateKey(value || todayKey())
 }
 
-export function DatePickerField({ className = '', label, mode = 'date', value, onChange }: DatePickerFieldProps) {
+export function DatePickerField({ className = '', label, mode = 'date', required = false, value, onChange }: DatePickerFieldProps) {
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => initialViewDate(value, mode))
   const rootRef = useRef<HTMLLabelElement>(null)
@@ -91,7 +92,7 @@ export function DatePickerField({ className = '', label, mode = 'date', value, o
 
   return (
     <label className={`fp-field fp-date-picker-field ${className}`} ref={rootRef}>
-      {label ? <span>{label}</span> : null}
+      {label ? <span>{label}{required ? <em className="fp-required-mark">*</em> : null}</span> : null}
       <button className="fp-date-picker-trigger" type="button" onClick={() => setOpen((current) => !current)}>
         <strong>{mode === 'month' ? displayMonth(value) : displayDate(value)}</strong>
         {mode === 'month' ? (
