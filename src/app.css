@@ -58,6 +58,10 @@
   font-size: 12px;
 }
 
+.fp-eyebrow {
+  font-weight: 900;
+}
+
 .fp-brand strong {
   color: #191f28;
   font-size: 16px;
@@ -101,8 +105,8 @@
 }
 
 .fp-nav-icon svg {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
@@ -141,36 +145,43 @@
 
 .fp-topbar {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 10px;
+  margin-bottom: 22px;
 }
 
 .fp-topbar h1 {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
   font-size: var(--fp-font-page-title);
-  font-weight: var(--fp-weight-title);
-  line-height: 1.2;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: 0;
 }
 
 .fp-topbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
 }
 
 .fp-topbar-button,
 .fp-notification-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   min-width: 44px;
+  min-height: 44px;
   height: 44px;
-  padding: 0 16px;
-  border: 1px solid #dce3ed;
+  padding: 0 12px;
+  border: 0;
   border-radius: 12px;
   background: #fff;
-  color: #1f2937;
-  font-size: var(--fp-font-control);
-  font-weight: var(--fp-weight-strong);
+  color: #4e5968;
+  font-size: 13px;
+  font-weight: 800;
+  box-shadow: inset 0 0 0 1px #e2e6ea;
   cursor: pointer;
 }
 
@@ -178,11 +189,14 @@
 .fp-notification-button {
   width: 44px;
   padding: 0;
+  border-radius: 14px;
+  font-size: var(--fp-font-control);
+  font-weight: 800;
 }
 
 .fp-action-icon {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;

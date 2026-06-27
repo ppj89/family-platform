@@ -22,7 +22,7 @@ type MenuItem = {
 
 function MenuSvg({ children }: { children: ReactNode }) {
   return (
-    <svg aria-hidden="true" fill="none" viewBox="0 0 24 24">
+    <svg aria-hidden="true" fill="none" height="20" viewBox="0 0 24 24" width="20" xmlns="http://www.w3.org/2000/svg">
       {children}
     </svg>
   )
@@ -33,8 +33,8 @@ const menuItems: MenuItem[] = [
     label: '홈',
     icon: (
       <MenuSvg>
-        <path d="m3 9 9-7 9 7" />
-        <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
+        <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" />
+        <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
       </MenuSvg>
     ),
   },
@@ -42,9 +42,16 @@ const menuItems: MenuItem[] = [
     label: '캘린더',
     icon: (
       <MenuSvg>
-        <path d="M8 2v4M16 2v4M3 10h18" />
+        <path d="M8 2v4" />
+        <path d="M16 2v4" />
         <rect width="18" height="18" x="3" y="4" rx="2" />
-        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" />
+        <path d="M3 10h18" />
+        <path d="M8 14h.01" />
+        <path d="M12 14h.01" />
+        <path d="M16 14h.01" />
+        <path d="M8 18h.01" />
+        <path d="M12 18h.01" />
+        <path d="M16 18h.01" />
       </MenuSvg>
     ),
   },
@@ -52,8 +59,9 @@ const menuItems: MenuItem[] = [
     label: '가계부',
     icon: (
       <MenuSvg>
-        <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5" />
-        <path d="M18 12h.01" />
+        <rect width="18" height="18" x="3" y="3" rx="2" />
+        <path d="M3 9a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2" />
+        <path d="M3 11h3c.8 0 1.6.3 2.1.9l1.1.9c1.6 1.6 4.1 1.6 5.7 0l1.1-.9c.5-.5 1.3-.9 2.1-.9H21" />
       </MenuSvg>
     ),
   },
@@ -61,8 +69,9 @@ const menuItems: MenuItem[] = [
     label: '여행',
     icon: (
       <MenuSvg>
-        <path d="M12 21s6-5.5 6-11a6 6 0 0 0-12 0c0 5.5 6 11 6 11Z" />
-        <circle cx="12" cy="10" r="2.2" />
+        <path d="M18 8c0 3.613-3.869 7.429-5.393 8.795a1 1 0 0 1-1.214 0C9.87 15.429 6 11.613 6 8a6 6 0 0 1 12 0" />
+        <circle cx="12" cy="8" r="2" />
+        <path d="M8.714 14h-3.71a1 1 0 0 0-.948.683l-2.004 6A1 1 0 0 0 3 22h18a1 1 0 0 0 .948-1.316l-2-6a1 1 0 0 0-.949-.684h-3.712" />
       </MenuSvg>
     ),
   },
@@ -70,10 +79,10 @@ const menuItems: MenuItem[] = [
     label: '육아',
     icon: (
       <MenuSvg>
-        <path d="M9 12h.01M15 12h.01" />
         <path d="M10 16c.5.3 1.2.5 2 .5s1.5-.2 2-.5" />
-        <path d="M19 6.3a9 9 0 0 1 1.8 3.9 2 2 0 0 1 0 3.6 9 9 0 1 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c1 0 1.9.2 2.8.5" />
-        <path d="M16.5 3.5c1.7 0 3 1.3 3 3 0 1.4-1 2.6-2.3 2.9" />
+        <path d="M15 12h.01" />
+        <path d="M19.38 6.813A9 9 0 0 1 20.8 10.2a2 2 0 0 1 0 3.6 9 9 0 0 1-17.6 0 2 2 0 0 1 0-3.6A9 9 0 0 1 12 3c2 0 3.5 1.1 3.5 2.5s-.9 2.5-2 2.5c-.8 0-1.5-.4-1.5-1" />
+        <path d="M9 12h.01" />
       </MenuSvg>
     ),
   },
@@ -81,8 +90,11 @@ const menuItems: MenuItem[] = [
     label: '일기',
     icon: (
       <MenuSvg>
-        <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-        <path d="M14 2v4a2 2 0 0 0 2 2h4M10 9H8M16 13H8M16 17H8" />
+        <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" />
+        <path d="M14 2v5a1 1 0 0 0 1 1h5" />
+        <path d="M10 9H8" />
+        <path d="M16 13H8" />
+        <path d="M16 17H8" />
       </MenuSvg>
     ),
   },
@@ -90,10 +102,10 @@ const menuItems: MenuItem[] = [
     label: '가족그룹',
     icon: (
       <MenuSvg>
-        <path d="M18 21a8 8 0 0 0-16 0" />
-        <circle cx="10" cy="8" r="5" />
-        <path d="M22 20c0-3.4-2-6.3-5-7.6" />
-        <path d="M17 3.3a5 5 0 0 1 0 9.4" />
+        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+        <path d="M16 3.128a4 4 0 0 1 0 7.744" />
+        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+        <circle cx="9" cy="7" r="4" />
       </MenuSvg>
     ),
   },
@@ -101,8 +113,9 @@ const menuItems: MenuItem[] = [
     label: '맛집',
     icon: (
       <MenuSvg>
-        <path d="M12 21s6-5.5 6-11a6 6 0 0 0-12 0c0 5.5 6 11 6 11Z" />
-        <circle cx="12" cy="10" r="2.2" />
+        <path d="M18 8c0 3.613-3.869 7.429-5.393 8.795a1 1 0 0 1-1.214 0C9.87 15.429 6 11.613 6 8a6 6 0 0 1 12 0" />
+        <circle cx="12" cy="8" r="2" />
+        <path d="M8.714 14h-3.71a1 1 0 0 0-.948.683l-2.004 6A1 1 0 0 0 3 22h18a1 1 0 0 0 .948-1.316l-2-6a1 1 0 0 0-.949-.684h-3.712" />
       </MenuSvg>
     ),
   },
@@ -115,8 +128,8 @@ const menuItems: MenuItem[] = [
     label: '관리자',
     icon: (
       <MenuSvg>
-        <path d="M9.8 4.3 10.4 3h3.2l.6 1.3 1.5.6 1.3-.5 2.2 2.2-.5 1.3.6 1.5 1.3.6v3.2l-1.3.6-.6 1.5.5 1.3-2.2 2.2-1.3-.5-1.5.6-.6 1.3h-3.2l-.6-1.3-1.5-.6-1.3.5-2.2-2.2.5-1.3-.6-1.5-1.3-.6V10l1.3-.6.6-1.5-.5-1.3 2.2-2.2 1.3.5z" />
-        <circle cx="12" cy="11.6" r="3" />
+        <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915" />
+        <circle cx="12" cy="12" r="3" />
       </MenuSvg>
     ),
   },
