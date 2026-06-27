@@ -17,7 +17,7 @@ import type { ScheduleItem, SchedulePayload } from '../types'
 import { expandScheduleInstances, isRepeatRule, type CalendarScheduleInstance } from '../utils/repeat'
 import './calendar-page.css'
 
-type CalendarView = 'day' | 'week' | 'month'
+type CalendarView = 'day' | 'week' | 'month' | 'year'
 
 type ConfirmState =
   | { kind: 'save'; title: string; body: string; danger?: boolean }
@@ -62,6 +62,10 @@ function repeatLabel(rule?: string | null) {
 function rangeForView(view: CalendarView, dayDate: string, weekDate: string, monthDate: Date) {
   if (view === 'day') return { startDate: dayDate, endDate: dayDate }
   if (view === 'week') return weekRange(weekDate)
+  if (view === 'year') {
+    const year = monthDate.getFullYear()
+    return { startDate: `${year}-01-01`, endDate: `${year}-12-31` }
+  }
   return monthRange(monthDate)
 }
 
@@ -91,6 +95,17 @@ function weekDays(weekDate: string) {
   return days
 }
 
+function yearMonths(year: number) {
+  return Array.from({ length: 12 }, (_, index) => {
+    const month = index + 1
+    return {
+      key: `${year}-${String(month).padStart(2, '0')}`,
+      label: `${month}월`,
+      month,
+    }
+  })
+}
+
 export default function CalendarPage() {
   const today = todayKey()
   const [view, setView] = useState<CalendarView>('month')
@@ -113,10 +128,11 @@ export default function CalendarPage() {
     () => visibleItems.filter((item) => item.occurrenceDate === selectedDate),
     [selectedDate, visibleItems],
   )
-  const agendaItems = view === 'month' ? visibleItems : selectedItems
-  const agendaTitle = view === 'month' ? '월간 일정표' : formatKoreanDate(selectedDate)
+  const agendaItems = view === 'month' || view === 'year' ? visibleItems : selectedItems
+  const agendaTitle = view === 'year' ? '연간 일정표' : view === 'month' ? '월간 일정표' : formatKoreanDate(selectedDate)
   const cells = useMemo(() => monthCells(monthDate), [monthDate])
   const weekDateKeys = useMemo(() => weekDays(weekDate), [weekDate])
+  const yearMonthItems = useMemo(() => yearMonths(monthDate.getFullYear()), [monthDate])
 
   function changeDayDate(value: string) {
     setDayDate(value)
@@ -141,6 +157,10 @@ export default function CalendarPage() {
     }
     if (nextView === 'week') {
       setSelectedDate(weekDate)
+      return
+    }
+    if (nextView === 'year') {
+      setSelectedDate(`${monthDate.getFullYear()}-01-01`)
       return
     }
     const monthKey = formatDateKey(monthDate).slice(0, 7)
@@ -347,6 +367,14 @@ function startEdit(item: CalendarScheduleInstance) {
               />
               <button type="button" className="fp-button fp-button-muted" aria-label="다음 달" onClick={() => setMonthDate(addMonths(monthDate, 1))}>›</button>
             </div>
+          ) : view === 'year' ? (
+            <div className="fp-calendar-month-nav fp-calendar-year-nav">
+              <button type="button" className="fp-button fp-button-muted" aria-label="이전 연도" onClick={() => setMonthDate(addMonths(monthDate, -12))}>‹</button>
+              <button type="button" className="fp-calendar-year-title" aria-label="조회 연도">
+                <strong>{monthDate.getFullYear()}년</strong>
+              </button>
+              <button type="button" className="fp-button fp-button-muted" aria-label="다음 연도" onClick={() => setMonthDate(addMonths(monthDate, 12))}>›</button>
+            </div>
           ) : (
             <DatePickerField
               className="fp-date-field"
@@ -361,6 +389,7 @@ function startEdit(item: CalendarScheduleInstance) {
               ['day', '일간'],
               ['week', '주간'],
               ['month', '월간'],
+              ['year', '연간'],
             ].map(([value, label]) => (
               <button
                 aria-selected={view === value}
@@ -426,6 +455,28 @@ function startEdit(item: CalendarScheduleInstance) {
                 )
               })}
             </div>
+          </section>
+        ) : view === 'year' ? (
+          <section className="fp-year-board">
+            {yearMonthItems.map((monthItem) => {
+              const monthSchedules = visibleItems.filter((item) => item.occurrenceDate.startsWith(monthItem.key))
+              return (
+                <button
+                  className={formatDateKey(monthDate).startsWith(monthItem.key) ? 'active' : ''}
+                  key={monthItem.key}
+                  type="button"
+                  onClick={() => {
+                    setMonthDate(new Date(monthDate.getFullYear(), monthItem.month - 1, 1))
+                    setSelectedDate(`${monthItem.key}-01`)
+                    setView('month')
+                  }}
+                >
+                  <strong>{monthItem.label}</strong>
+                  <span>{monthSchedules.length}건</span>
+                  {monthSchedules.slice(0, 3).map((item) => <small key={item.instanceKey}>{item.title}</small>)}
+                </button>
+              )
+            })}
           </section>
         ) : view === 'week' ? (
           <section className="fp-week-board">

@@ -20,7 +20,7 @@ function displayDate(value: string) {
 function displayMonth(value: string) {
   if (!value) return '월 선택'
   const [year, month] = value.split('-')
-  return `${year}.${month}`
+  return `${year}년 ${Number(month)}월`
 }
 
 function monthDays(viewDate: Date) {
