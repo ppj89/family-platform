@@ -49,8 +49,7 @@
 }
 
 .fp-brand small,
-.fp-eyebrow,
-.fp-user-line {
+.fp-eyebrow {
   color: #718096;
   font-size: var(--fp-font-caption);
   font-weight: var(--fp-weight-strong);
@@ -62,13 +61,17 @@
 }
 
 .fp-nav button {
-  height: 52px;
-  padding: 0 18px;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  height: 54px;
+  padding: 0 14px;
   border: 0;
   border-radius: 12px;
   background: transparent;
   color: #465160;
-  font-size: var(--fp-font-control);
+  font-size: var(--fp-font-body);
   font-weight: var(--fp-weight-strong);
   text-align: left;
   cursor: pointer;
@@ -77,6 +80,47 @@
 .fp-nav button.active {
   color: #1264d8;
   background: #dceeff;
+}
+
+.fp-nav-icon {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  color: #8b95a1;
+}
+
+.fp-nav-icon svg {
+  width: 24px;
+  height: 24px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2.1;
+}
+
+.fp-nav-label {
+  min-width: 0;
+  line-height: 1.15;
+}
+
+.fp-nav button.active .fp-nav-icon,
+.fp-nav button.active .fp-nav-label {
+  color: #1264d8;
+}
+
+.fp-nav-icon.community {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #eef6ff;
+  color: #2f80ed;
+  font-size: 15px;
+  font-weight: var(--fp-weight-title);
+}
+
+.fp-community-letter {
+  line-height: 1;
 }
 
 .fp-main {
@@ -379,16 +423,43 @@
   .fp-sidebar {
     position: static;
     height: auto;
-    padding: 16px;
+    padding: 20px 20px 30px;
   }
 
   .fp-nav {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    column-gap: 22px;
+    row-gap: 18px;
   }
 
   .fp-nav button {
+    grid-template-columns: 1fr;
+    align-content: center;
+    justify-items: center;
+    gap: 6px;
+    height: 78px;
+    padding: 8px 0;
+    border-radius: 18px;
+    font-size: var(--fp-font-caption);
+    font-weight: var(--fp-weight-strong);
     text-align: center;
     white-space: nowrap;
+  }
+
+  .fp-nav-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .fp-nav-icon svg {
+    width: 26px;
+    height: 26px;
+  }
+
+  .fp-nav-icon.community {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
   }
 
   .fp-main {
