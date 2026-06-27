@@ -5,6 +5,7 @@
 1. `docs/common-ui-guidelines.md`
 2. `docs/menu-source-structure.md`
 3. `docs/component-source-structure.md`
+4. `docs/legacy-design-migration.md`
 
 ## 필수 원칙
 
@@ -31,6 +32,14 @@
 - 운영 배포 전후로 같은 사용자 흐름을 다시 확인하고, 운영 화면에서 재현 캡처 또는 DOM 상태를 확인하지 않은 작업은 완료로 말하지 않는다.
 - 항상 PC, 태블릿, 모바일, 앱 환경에서 보이는 화면을 기준으로 작업하고, 모든 화면 크기에서 깨짐/겹침/가로 스크롤이 없는지 테스트한 뒤 반영한다.
 - 운영 반영이 필요한 작업은 배포 후 운영 화면/헬스체크까지 확인한다.
+
+## Legacy Design Migration Rule
+
+- When matching a React screen to a legacy screen, inspect the whole legacy screen before editing.
+- Do not fix only the single item the user pointed out. Compare and apply all visible design details for that screen: layout, section order, card size, control height, spacing, border radius, colors, font size, font weight, line-height, icon type, button size, selected/disabled/outside states, empty states, and data display rules.
+- Use the legacy implementation source as the source of truth when it exists. Check both legacy CSS and legacy JS behavior, then reproduce the same behavior in the React component/CSS files.
+- For calendar/month views, verify each cell part separately: day number, outside-month day, holiday color, lunar text, schedule chip, `+N` count, selected day border, fixed cell height, grid gap, month header, view tabs, and schedule list below.
+- Before reporting completion, verify the rendered React screen with realistic data, including crowded states that can change layout height or overflow.
 
 ## Mandatory Actual Testing Before Reporting Done
 
