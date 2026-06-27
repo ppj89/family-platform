@@ -26,6 +26,12 @@ select {
   font: inherit;
 }
 
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  background: #ffffff;
+}
+
 button {
   -webkit-tap-highlight-color: transparent;
 }

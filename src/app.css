@@ -400,3 +400,10 @@
     grid-column: auto;
   }
 }
+
+.fp-shell input:not([type="checkbox"]):not([type="radio"]),
+.fp-shell textarea,
+.fp-shell select,
+.fp-shell .custom-select-trigger {
+  background: #ffffff;
+}
