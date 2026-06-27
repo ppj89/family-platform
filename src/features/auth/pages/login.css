@@ -787,9 +787,16 @@
 .auth-shell.theme-dark .auth-card textarea,
 .auth-shell.theme-dark .auth-recovery-dialog input,
 .auth-shell.theme-dark .auth-recovery-dialog textarea {
-  background: #ffffff;
-  color: #191f28;
+  background: #303944;
+  color: #f7f8fa;
   box-shadow: inset 0 0 0 1px rgba(107, 118, 132, 0.36);
+}
+
+.auth-shell.theme-dark .auth-card input::placeholder,
+.auth-shell.theme-dark .auth-card textarea::placeholder,
+.auth-shell.theme-dark .auth-recovery-dialog input::placeholder,
+.auth-shell.theme-dark .auth-recovery-dialog textarea::placeholder {
+  color: #9aa6b2;
 }
 
 .auth-shell.theme-dark .auth-card .auth-login-preferences label,
