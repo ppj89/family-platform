@@ -1,4 +1,12 @@
 .auth-shell {
+  --auth-font-caption: 14px;
+  --auth-font-body: 15px;
+  --auth-font-control: 16px;
+  --auth-font-title: 24px;
+  --auth-font-hero-compact: 36px;
+  --auth-weight-body: 600;
+  --auth-weight-strong: 700;
+  --auth-weight-title: 800;
   position: relative;
   min-height: 100vh;
   overflow: hidden;
@@ -70,22 +78,22 @@
   border-radius: 14px;
   background: #3182f6;
   color: #ffffff;
-  font-size: 16px;
-  font-weight: 900;
+  font-size: var(--auth-font-control);
+  font-weight: var(--auth-weight-title);
 }
 
 .auth-brand p {
   margin: 0;
   color: #191f28;
-  font-size: 18px;
-  font-weight: 900;
+  font-size: var(--auth-font-control);
+  font-weight: var(--auth-weight-title);
   line-height: 1.2;
 }
 
 .auth-brand span,
 .auth-brand small {
   color: #8b95a1;
-  font-size: 12px;
+  font-size: var(--auth-font-caption);
   letter-spacing: 0;
 }
 
@@ -104,8 +112,8 @@
   padding: 0 14px;
   background: rgba(49, 130, 246, 0.1);
   color: #1b64da;
-  font-size: 13px;
-  font-weight: 900;
+  font-size: var(--auth-font-caption);
+  font-weight: var(--auth-weight-strong);
 }
 
 .auth-copy h1 {
@@ -120,7 +128,7 @@
   max-width: 520px;
   margin: 0;
   color: #6b7684;
-  font-size: 16px;
+  font-size: var(--auth-font-control);
   line-height: 1.75;
 }
 
@@ -144,13 +152,13 @@
 
 .auth-preview strong {
   color: #191f28;
-  font-size: 15px;
-  font-weight: 900;
+  font-size: var(--auth-font-body);
+  font-weight: var(--auth-weight-title);
 }
 
 .auth-preview span {
   color: #6b7684;
-  font-size: 13px;
+  font-size: var(--auth-font-caption);
   line-height: 1.55;
 }
 
@@ -176,8 +184,8 @@
   background: #f2f4f6;
   color: #4e5968;
   font: inherit;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--auth-font-caption);
+  font-weight: var(--auth-weight-strong);
   cursor: pointer;
 }
 
@@ -201,7 +209,8 @@
   background: transparent;
   color: #6b7684;
   font: inherit;
-  font-weight: 800;
+  font-size: var(--auth-font-control);
+  font-weight: var(--auth-weight-strong);
   cursor: pointer;
 }
 
@@ -218,14 +227,16 @@
 
 .auth-heading strong {
   color: #191f28;
-  font-size: 24px;
+  font-size: var(--auth-font-title);
+  font-weight: var(--auth-weight-title);
   letter-spacing: 0;
 }
 
 .auth-heading p {
   margin: 0;
   color: #8b95a1;
-  font-size: 14px;
+  font-size: var(--auth-font-caption);
+  font-weight: var(--auth-weight-body);
   line-height: 1.45;
 }
 
@@ -236,8 +247,8 @@
 
 .auth-card label span {
   color: #4e5968;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--auth-font-caption);
+  font-weight: var(--auth-weight-strong);
 }
 
 .auth-card input {
@@ -248,6 +259,8 @@
   background: #ffffff;
   color: #191f28;
   font: inherit;
+  font-size: var(--auth-font-body);
+  font-weight: var(--auth-weight-body);
   box-shadow: inset 0 0 0 1px #e5e8eb;
   outline: none;
 }
@@ -274,8 +287,8 @@
   background: #edf6ff;
   color: #1b64da;
   font: inherit;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--auth-font-caption);
+  font-weight: var(--auth-weight-strong);
   cursor: pointer;
 }
 
@@ -286,8 +299,8 @@
 
 .auth-nickname-status {
   color: #6b7684;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--auth-font-caption);
+  font-weight: var(--auth-weight-strong);
   line-height: 1.45;
 }
 
@@ -309,6 +322,8 @@
   background: #ffffff;
   color: #191f28;
   font: inherit;
+  font-size: var(--auth-font-body);
+  font-weight: var(--auth-weight-body);
   resize: vertical;
   box-shadow: inset 0 0 0 1px #e5e8eb;
   outline: none;
@@ -342,7 +357,7 @@
   display: inline;
   min-width: 0;
   color: #4e5968;
-  font-size: 13px;
+  font-size: var(--auth-font-caption);
   line-height: 1.45;
 }
 
@@ -365,8 +380,8 @@
   padding: 0 12px;
   background: #f7f8fa;
   color: #4e5968;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--auth-font-caption);
+  font-weight: var(--auth-weight-strong);
   cursor: pointer;
   transition: background 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease;
 }
@@ -406,8 +421,8 @@
   border-radius: 50%;
   background: #ffffff;
   color: #ffffff;
-  font-size: 11px;
-  font-weight: 900;
+  font-size: var(--auth-font-caption);
+  font-weight: var(--auth-weight-strong);
   line-height: 1;
   transition: background 0.16s ease, border-color 0.16s ease, transform 0.16s ease;
 }
@@ -437,8 +452,8 @@
   border-radius: 14px;
   background: #edf6ff;
   color: #1b64da;
-  font-size: 14px;
-  font-weight: 800;
+  font-size: var(--auth-font-body);
+  font-weight: var(--auth-weight-strong);
 }
 
 .auth-submit {
@@ -451,7 +466,8 @@
   background: #3182f6;
   color: #ffffff;
   font: inherit;
-  font-weight: 900;
+  font-size: var(--auth-font-control);
+  font-weight: var(--auth-weight-strong);
   cursor: pointer;
 }
 
@@ -470,8 +486,8 @@
   background: transparent;
   color: #6b7684;
   font: inherit;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--auth-font-caption);
+  font-weight: var(--auth-weight-strong);
   cursor: pointer;
 }
 
@@ -486,8 +502,8 @@
   align-items: center;
   gap: 10px;
   color: #8b95a1;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--auth-font-caption);
+  font-weight: var(--auth-weight-strong);
 }
 
 .auth-sso-divider::before,
@@ -504,8 +520,8 @@
   border-radius: 14px;
   cursor: pointer;
   font: inherit;
-  font-size: 14px;
-  font-weight: 900;
+  font-size: var(--auth-font-control);
+  font-weight: var(--auth-weight-strong);
 }
 
 .auth-sso-button.naver {
@@ -550,9 +566,9 @@
   width: calc(100% - 62px);
   max-width: none;
   margin: 0;
-  font-size: clamp(22px, 5vw, 26px);
+  font-size: var(--auth-font-title);
   line-height: 1.35;
-  font-weight: 600;
+  font-weight: var(--auth-weight-body);
   word-break: keep-all;
   overflow-wrap: break-word;
 }
@@ -560,9 +576,9 @@
 .auth-session-dialog p {
   margin: 0;
   color: #4e5968;
-  font-size: 16px;
+  font-size: var(--auth-font-control);
   line-height: 1.5;
-  font-weight: 500;
+  font-weight: var(--auth-weight-body);
 }
 
 .auth-session-close {
@@ -578,8 +594,8 @@
   border-radius: 14px;
   background: #f2f4f6;
   color: #191f28;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--auth-font-control);
+  font-weight: var(--auth-weight-body);
   line-height: 1;
 }
 
@@ -594,8 +610,8 @@
   min-height: 52px;
   border: 0;
   border-radius: 14px;
-  font-size: 16px;
-  font-weight: 600;
+  font-size: var(--auth-font-control);
+  font-weight: var(--auth-weight-body);
 }
 
 .auth-session-actions button:first-child {
@@ -637,9 +653,9 @@
 }
 
 .auth-recovery-header strong {
-  font-size: 24px;
+  font-size: var(--auth-font-title);
   line-height: 1.25;
-  font-weight: 900;
+  font-weight: var(--auth-weight-title);
 }
 
 .auth-recovery-header button {
@@ -653,8 +669,8 @@
   background: #f2f4f6;
   color: #191f28;
   font: inherit;
-  font-size: 15px;
-  font-weight: 800;
+  font-size: var(--auth-font-control);
+  font-weight: var(--auth-weight-strong);
   line-height: 1;
   cursor: pointer;
 }
@@ -662,7 +678,8 @@
 .auth-recovery-guide {
   margin: 0;
   color: #6b7684;
-  font-size: 14px;
+  font-size: var(--auth-font-body);
+  font-weight: var(--auth-weight-body);
   line-height: 1.55;
 }
 
@@ -673,8 +690,8 @@
 
 .auth-recovery-dialog label span {
   color: #4e5968;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--auth-font-caption);
+  font-weight: var(--auth-weight-strong);
 }
 
 .auth-recovery-dialog input {
@@ -685,6 +702,8 @@
   background: #ffffff;
   color: #191f28;
   font: inherit;
+  font-size: var(--auth-font-body);
+  font-weight: var(--auth-weight-body);
   box-shadow: inset 0 0 0 1px #e5e8eb;
   outline: none;
 }
@@ -707,8 +726,8 @@
   padding: 12px 14px;
   background: #edf6ff;
   color: #1b64da;
-  font-size: 14px;
-  font-weight: 800;
+  font-size: var(--auth-font-body);
+  font-weight: var(--auth-weight-strong);
 }
 
 .auth-recovery-submit {
@@ -721,7 +740,8 @@
   background: #3182f6;
   color: #ffffff;
   font: inherit;
-  font-weight: 900;
+  font-size: var(--auth-font-control);
+  font-weight: var(--auth-weight-strong);
   cursor: pointer;
 }
 
@@ -848,7 +868,7 @@
   }
 
   .auth-copy h1 {
-    font-size: 32px;
+    font-size: var(--auth-font-hero-compact);
   }
 
   .auth-preview {
@@ -869,11 +889,11 @@
   }
 
   .auth-copy h1 {
-    font-size: 36px;
+    font-size: var(--auth-font-hero-compact);
   }
 
   .auth-copy p {
-    font-size: 15px;
+    font-size: var(--auth-font-body);
   }
 
   .auth-preview div {
@@ -892,7 +912,7 @@
 
   .auth-session-dialog h2 {
     width: calc(100% - 56px);
-    font-size: 23px;
+    font-size: var(--auth-font-title);
   }
 
   .auth-recovery-dialog {

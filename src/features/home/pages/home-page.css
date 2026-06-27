@@ -24,17 +24,17 @@
 
 .fp-home-summary span,
 .fp-home-panel header p,
-.fp-home-list p,
 .fp-home-updated {
   margin: 0;
   color: #596579;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fp-font-caption);
+  font-weight: var(--fp-weight-strong);
 }
 
 .fp-home-summary strong {
   color: #111827;
-  font-size: 24px;
+  font-size: var(--fp-font-metric);
+  font-weight: var(--fp-weight-title);
   line-height: 1.2;
 }
 
@@ -74,7 +74,8 @@
 .fp-home-panel h2 {
   margin: 0;
   color: #111827;
-  font-size: 20px;
+  font-size: var(--fp-font-section-title);
+  font-weight: var(--fp-weight-title);
   line-height: 1.2;
 }
 
@@ -97,8 +98,8 @@
 .fp-home-list b {
   flex: 0 0 auto;
   color: #f04462;
-  font-size: 18px;
-  font-weight: 900;
+  font-size: var(--fp-font-day);
+  font-weight: var(--fp-weight-title);
   white-space: nowrap;
 }
 
@@ -118,8 +119,8 @@
   display: block;
   overflow: hidden;
   color: #111827;
-  font-size: 15px;
-  font-weight: 900;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-title);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -127,6 +128,9 @@
 .fp-home-list p {
   overflow: hidden;
   margin-top: 4px;
+  color: #596579;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-body);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -157,6 +161,6 @@
   }
 
   .fp-home-list b {
-    font-size: 16px;
+    font-size: var(--fp-font-control);
   }
 }

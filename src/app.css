@@ -1,4 +1,14 @@
 .fp-shell {
+  --fp-font-caption: 14px;
+  --fp-font-body: 15px;
+  --fp-font-control: 16px;
+  --fp-font-section-title: 24px;
+  --fp-font-page-title: 32px;
+  --fp-font-metric: 28px;
+  --fp-font-day: 18px;
+  --fp-weight-body: 600;
+  --fp-weight-strong: 700;
+  --fp-weight-title: 800;
   display: grid;
   grid-template-columns: 300px minmax(0, 1fr);
   min-height: 100vh;
@@ -29,7 +39,8 @@
   border-radius: 12px;
   color: #fff;
   background: #2f80ed;
-  font-weight: 800;
+  font-size: var(--fp-font-control);
+  font-weight: var(--fp-weight-title);
 }
 
 .fp-brand strong,
@@ -41,8 +52,8 @@
 .fp-eyebrow,
 .fp-user-line {
   color: #718096;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: var(--fp-font-caption);
+  font-weight: var(--fp-weight-strong);
 }
 
 .fp-nav {
@@ -57,7 +68,8 @@
   border-radius: 12px;
   background: transparent;
   color: #465160;
-  font-weight: 800;
+  font-size: var(--fp-font-control);
+  font-weight: var(--fp-weight-strong);
   text-align: left;
   cursor: pointer;
 }
@@ -82,7 +94,8 @@
 
 .fp-topbar h1 {
   margin: 4px 0 0;
-  font-size: 32px;
+  font-size: var(--fp-font-page-title);
+  font-weight: var(--fp-weight-title);
   line-height: 1.2;
 }
 
@@ -101,7 +114,8 @@
   border-radius: 12px;
   background: #fff;
   color: #1f2937;
-  font-weight: 800;
+  font-size: var(--fp-font-control);
+  font-weight: var(--fp-weight-strong);
   cursor: pointer;
 }
 
@@ -121,7 +135,8 @@
   padding: 0 18px;
   border: 0;
   border-radius: 12px;
-  font-weight: 800;
+  font-size: var(--fp-font-control);
+  font-weight: var(--fp-weight-strong);
   cursor: pointer;
 }
 
@@ -149,15 +164,16 @@
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.72);
   color: #1264d8;
-  font-weight: 900;
+  font-size: var(--fp-font-control);
+  font-weight: var(--fp-weight-title);
 }
 
 .fp-field {
   display: grid;
   gap: 8px;
   color: #526070;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--fp-font-caption);
+  font-weight: var(--fp-weight-strong);
 }
 
 .fp-field input,
@@ -169,7 +185,8 @@
   border-radius: 14px;
   background: #fff;
   color: #191f28;
-  font-weight: 600;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-body);
 }
 
 .fp-field input,
@@ -208,7 +225,8 @@
   border-radius: 10px;
   background: #eef6ff;
   color: #1264d8;
-  font-weight: 800;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-strong);
   cursor: pointer;
 }
 
@@ -223,7 +241,8 @@
   border-radius: 12px;
   background: #eef6ff;
   color: #1264d8;
-  font-weight: 800;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-strong);
 }
 
 .fp-empty-text {
@@ -232,7 +251,8 @@
   border: 1px solid #e1e7ef;
   border-radius: 14px;
   color: #718096;
-  font-weight: 800;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-strong);
   text-align: center;
 }
 
@@ -329,7 +349,8 @@
 
 .fp-confirm-dialog h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: var(--fp-font-section-title);
+  font-weight: var(--fp-weight-title);
 }
 
 .fp-confirm-dialog header button {
@@ -338,14 +359,16 @@
   border: 0;
   border-radius: 12px;
   background: #f3f6fa;
-  font-weight: 800;
+  font-size: var(--fp-font-control);
+  font-weight: var(--fp-weight-strong);
   cursor: pointer;
 }
 
 .fp-confirm-dialog p {
   margin: 18px 0 22px;
   color: #526070;
-  font-weight: 700;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-body);
 }
 
 @media (max-width: 900px) {
@@ -380,7 +403,7 @@
   }
 
   .fp-topbar h1 {
-    font-size: 30px;
+    font-size: var(--fp-font-page-title);
     word-break: keep-all;
   }
 

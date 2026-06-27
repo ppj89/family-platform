@@ -12,7 +12,8 @@
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.72);
   color: #1264d8;
-  font-weight: 900;
+  font-size: var(--fp-font-control);
+  font-weight: var(--fp-weight-title);
 }
 
 .fp-calendar-header,
@@ -28,13 +29,17 @@
 .fp-schedule-panel h3,
 .fp-schedule-form h3 {
   margin: 0;
+  font-size: var(--fp-font-section-title);
+  font-weight: var(--fp-weight-title);
+  line-height: 1.2;
 }
 
 .fp-calendar-header p,
 .fp-schedule-panel-header p {
   margin: 6px 0 0;
   color: #718096;
-  font-weight: 700;
+  font-size: var(--fp-font-caption);
+  font-weight: var(--fp-weight-strong);
 }
 
 .fp-calendar-actions {
@@ -58,7 +63,8 @@
   border-radius: 16px;
   background: #fff;
   color: #4e5968;
-  font-size: 30px;
+  font-size: var(--fp-font-section-title);
+  font-weight: var(--fp-weight-strong);
   line-height: 1;
 }
 
@@ -78,7 +84,8 @@
   border-radius: 16px;
   background: transparent;
   color: #526070;
-  font-weight: 900;
+  font-size: var(--fp-font-control);
+  font-weight: var(--fp-weight-strong);
   cursor: pointer;
 }
 
@@ -97,8 +104,8 @@
   display: grid;
   gap: 8px;
   color: #526070;
-  font-size: 13px;
-  font-weight: 800;
+  font-size: var(--fp-font-caption);
+  font-weight: var(--fp-weight-strong);
 }
 
 .fp-field input,
@@ -110,7 +117,8 @@
   border-radius: 14px;
   background: #fff;
   color: #191f28;
-  font-weight: 600;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-body);
 }
 
 .fp-field input,
@@ -147,7 +155,8 @@
   border-radius: 12px;
   background: #eef6ff;
   color: #1264d8;
-  font-weight: 900;
+  font-size: var(--fp-font-control);
+  font-weight: var(--fp-weight-strong);
   cursor: pointer;
 }
 
@@ -157,7 +166,8 @@
   border-radius: 12px;
   background: #eef6ff;
   color: #1264d8;
-  font-weight: 800;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-strong);
 }
 
 .fp-calendar-layout {
@@ -188,8 +198,8 @@
 .fp-weekdays {
   margin-bottom: 10px;
   color: #718096;
-  font-size: 13px;
-  font-weight: 900;
+  font-size: var(--fp-font-caption);
+  font-weight: var(--fp-weight-strong);
   text-align: center;
 }
 
@@ -221,7 +231,8 @@
 
 .fp-month-grid strong {
   color: #191f28;
-  font-size: 18px;
+  font-size: var(--fp-font-day);
+  font-weight: var(--fp-weight-strong);
   line-height: 1.1;
 }
 
@@ -237,8 +248,8 @@
   border: 0;
   background: transparent;
   color: #1264d8;
-  font-size: 12px;
-  font-weight: 800;
+  font-size: var(--fp-font-caption);
+  font-weight: var(--fp-weight-strong);
   text-align: left;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -248,7 +259,8 @@
 .fp-month-grid small {
   margin-top: 6px;
   color: #718096;
-  font-weight: 800;
+  font-size: var(--fp-font-caption);
+  font-weight: var(--fp-weight-strong);
 }
 
 .fp-week-board {
@@ -278,13 +290,15 @@
 
 .fp-week-board span {
   color: #1264d8;
-  font-weight: 900;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-strong);
 }
 
 .fp-week-board small {
   overflow: hidden;
   color: #526070;
-  font-weight: 800;
+  font-size: var(--fp-font-caption);
+  font-weight: var(--fp-weight-strong);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -302,7 +316,8 @@
 
 .fp-day-board p {
   color: #718096;
-  font-weight: 800;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-strong);
 }
 
 .fp-schedule-list {
@@ -331,8 +346,8 @@
   border-radius: 999px;
   background: #eaf4ff;
   color: #1264d8;
-  font-size: 15px;
-  font-weight: 900;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-strong);
   white-space: nowrap;
 }
 
@@ -342,7 +357,8 @@
   display: block;
   margin: 6px 0 0;
   color: #526070;
-  font-weight: 700;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-body);
 }
 
 .fp-schedule-row em {
@@ -364,8 +380,18 @@
   border-radius: 12px;
   background: #eef6ff;
   color: #1264d8;
-  font-weight: 900;
+  font-size: var(--fp-font-control);
+  font-weight: var(--fp-weight-strong);
   cursor: pointer;
+}
+
+.fp-week-board button strong,
+.fp-day-board h3,
+.fp-schedule-row > div > strong {
+  color: #191f28;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-title);
+  line-height: 1.25;
 }
 
 .fp-row-actions button.danger {
@@ -381,7 +407,8 @@
   background: #fff;
   color: #718096;
   text-align: center;
-  font-weight: 800;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-strong);
 }
 
 .fp-schedule-form {
@@ -403,8 +430,8 @@
 .fp-calendar .fp-schedule-form textarea,
 .fp-calendar .fp-date-picker-trigger strong {
   font-family: inherit;
-  font-size: 15px;
-  font-weight: 600;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-body);
   line-height: 1.2;
 }
 
@@ -457,7 +484,8 @@
   border-radius: 12px;
   background: #f3f6fa;
   color: #191f28;
-  font-weight: 900;
+  font-size: var(--fp-font-control);
+  font-weight: var(--fp-weight-strong);
   cursor: pointer;
 }
 
@@ -511,11 +539,11 @@
   }
 
   .fp-month-grid strong {
-    font-size: 17px;
+    font-size: var(--fp-font-day);
   }
 
   .fp-month-schedule-chip {
-    font-size: 11px;
+    font-size: var(--fp-font-caption);
   }
 
   .fp-schedule-row {
