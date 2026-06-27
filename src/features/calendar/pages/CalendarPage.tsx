@@ -478,7 +478,7 @@ function startEdit(item: CalendarScheduleInstance) {
                     {date ? <strong>{date.getDate()}</strong> : null}
                     {holidayName ? <span className="fp-holiday-name">{holidayName}</span> : null}
                     {lunarText ? <span className="fp-lunar-note">{lunarText}</span> : null}
-                    {dayItems.slice(0, 3).map((item) => (
+                    {dayItems.slice(0, 1).map((item) => (
                       <button
                         className="fp-month-schedule-chip"
                         key={item.instanceKey}
@@ -491,7 +491,7 @@ function startEdit(item: CalendarScheduleInstance) {
                         {item.title}
                       </button>
                     ))}
-                    {dayItems.length > 3 ? <small>+{dayItems.length - 3}</small> : null}
+                    {dayItems.length > 1 ? <small>+{dayItems.length - 1}</small> : null}
                   </div>
                 )
               })}
