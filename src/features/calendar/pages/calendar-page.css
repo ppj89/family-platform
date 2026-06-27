@@ -326,7 +326,15 @@
 }
 
 .fp-month-cell.outside > strong {
-  color: #a6b0bd !important;
+  color: #a6b0bd;
+}
+
+.fp-month-cell.outside.holiday > strong {
+  color: #f04452;
+}
+
+.fp-month-cell.outside.saturday > strong {
+  color: #3182f6;
 }
 
 .fp-month-cell.outside .fp-holiday-name,
@@ -682,7 +690,7 @@
 
   .fp-weekdays,
   .fp-month-grid {
-    gap: 7px;
+    gap: 4px;
   }
 
   .fp-week-board {
@@ -694,7 +702,7 @@
   }
 
   .fp-month-cell {
-    min-height: 90px;
+    min-height: 74px;
     gap: 3px;
     border-radius: 12px;
     padding: 6px 4px;
