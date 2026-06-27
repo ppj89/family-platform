@@ -94,7 +94,24 @@ export function DatePickerField({ className = '', label, mode = 'date', value, o
       {label ? <span>{label}</span> : null}
       <button className="fp-date-picker-trigger" type="button" onClick={() => setOpen((current) => !current)}>
         <strong>{mode === 'month' ? displayMonth(value) : displayDate(value)}</strong>
-        <span aria-hidden="true">▾</span>
+        {mode === 'month' ? (
+          <span aria-hidden="true" className="fp-date-picker-caret">▾</span>
+        ) : (
+          <span aria-hidden="true" className="fp-date-picker-calendar-icon">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <path d="M8 2v4" />
+              <path d="M16 2v4" />
+              <rect width="18" height="18" x="3" y="4" rx="2" />
+              <path d="M3 10h18" />
+              <path d="M8 14h.01" />
+              <path d="M12 14h.01" />
+              <path d="M16 14h.01" />
+              <path d="M8 18h.01" />
+              <path d="M12 18h.01" />
+              <path d="M16 18h.01" />
+            </svg>
+          </span>
+        )}
       </button>
       {open ? (
         <div className="fp-date-picker-popover">

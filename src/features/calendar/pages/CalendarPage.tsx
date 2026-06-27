@@ -33,10 +33,13 @@ const emptyPayload = (date: string): SchedulePayload => ({
   scheduleDate: date,
   scheduleTime: currentTimeText(),
   category: '일정',
-  memberName: '',
+  memberName: '아빠',
   repeatRule: 'none',
   memo: '',
 })
+
+const categoryOptions = ['일정', '가족행사', '기념일', '병원', '학교', '여행', '기타']
+const memberOptions = ['아빠', '엄마', '가족']
 
 function scheduleTime(item: Pick<ScheduleItem, 'scheduleTime'>) {
   return item.scheduleTime ? item.scheduleTime.slice(0, 5) : '시간 미정'
@@ -215,7 +218,7 @@ function startEdit(item: CalendarScheduleInstance) {
       scheduleDate: item.occurrenceDate,
       scheduleTime: source.scheduleTime ? source.scheduleTime.slice(0, 5) : '',
       category: source.category || '일정',
-      memberName: source.memberName || '',
+      memberName: source.memberName || '아빠',
       repeatRule: source.repeatRule || 'none',
       memo: source.memo || '',
     })
@@ -510,7 +513,6 @@ function startEdit(item: CalendarScheduleInstance) {
         <div className="fp-schedule-panel-header">
           <div>
             <h3>{agendaTitle}</h3>
-            <p>{agendaItems.length}건</p>
           </div>
         </div>
         <div className="fp-schedule-list">
@@ -525,7 +527,7 @@ function startEdit(item: CalendarScheduleInstance) {
         </header>
         <div className="fp-form-grid">
           <label className="fp-field span-2">
-            <span>일정명 *</span>
+            <span>일정명</span>
             <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
           </label>
           <label className="fp-field">
@@ -538,7 +540,7 @@ function startEdit(item: CalendarScheduleInstance) {
           <div className="fp-field">
             <DatePickerField
               className="fp-form-date-picker"
-              label="날짜 *"
+              label="날짜"
               value={form.scheduleDate}
               onChange={(value) => setForm({ ...form, scheduleDate: value })}
             />
@@ -556,11 +558,15 @@ function startEdit(item: CalendarScheduleInstance) {
           </label>
           <label className="fp-field">
             <span>구분</span>
-            <input value={form.category || ''} onChange={(event) => setForm({ ...form, category: event.target.value || null })} />
+            <select value={form.category || '일정'} onChange={(event) => setForm({ ...form, category: event.target.value || null })}>
+              {categoryOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
           </label>
           <label className="fp-field">
             <span>가족</span>
-            <input value={form.memberName || ''} onChange={(event) => setForm({ ...form, memberName: event.target.value || null })} />
+            <select value={form.memberName || '아빠'} onChange={(event) => setForm({ ...form, memberName: event.target.value || null })}>
+              {memberOptions.map((option) => <option key={option} value={option}>{option}</option>)}
+            </select>
           </label>
           <label className="fp-field">
             <span>반복</span>

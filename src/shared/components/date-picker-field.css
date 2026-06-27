@@ -25,10 +25,29 @@
   white-space: nowrap;
 }
 
-.fp-date-picker-trigger span {
+.fp-date-picker-caret {
   color: #2f80ed;
   font-size: 13px;
   font-weight: 900;
+}
+
+.fp-date-picker-calendar-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  color: #2f80ed;
+}
+
+.fp-date-picker-calendar-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .fp-date-picker-popover {

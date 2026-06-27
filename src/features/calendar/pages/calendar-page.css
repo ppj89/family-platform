@@ -147,9 +147,9 @@
 .fp-field {
   display: grid;
   gap: 8px;
-  color: #526070;
-  font-size: var(--fp-font-caption);
-  font-weight: var(--fp-weight-strong);
+  color: #4e5968;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .fp-field input,
@@ -161,19 +161,26 @@
   border-radius: 14px;
   background: #fff;
   color: #191f28;
-  font-size: var(--fp-font-body);
-  font-weight: var(--fp-weight-body);
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .fp-field input,
 .fp-field select {
-  height: 48px;
-  padding: 0 14px;
+  height: 42px;
+  padding: 0 12px;
+}
+
+.fp-calendar .fp-schedule-form input,
+.fp-calendar .fp-schedule-form select {
+  height: 42px;
+  padding: 0 12px;
 }
 
 .fp-field textarea {
-  min-height: 120px;
-  padding: 14px;
+  min-height: 104px;
+  padding: 12px;
+  line-height: 1.5;
   resize: vertical;
 }
 
@@ -184,6 +191,11 @@
 
 .fp-form-date-picker {
   width: 100%;
+}
+
+.fp-schedule-form .fp-date-picker-trigger {
+  height: 42px;
+  padding: 0 12px;
 }
 
 .fp-date-control {
@@ -205,12 +217,12 @@
 }
 
 .fp-message {
-  margin: 18px 0 0;
-  padding: 12px 14px;
+  margin: 0;
+  padding: 10px 12px;
   border-radius: 12px;
   background: #eef6ff;
   color: #1264d8;
-  font-size: var(--fp-font-body);
+  font-size: 13px;
   font-weight: var(--fp-weight-strong);
 }
 
@@ -284,8 +296,8 @@
 
 .fp-month-grid strong {
   color: #191f28;
-  font-size: var(--fp-font-day);
-  font-weight: 700;
+  font-size: 17px;
+  font-weight: 800;
   line-height: 1.1;
 }
 
@@ -499,6 +511,7 @@
 .fp-schedule-form {
   margin-top: 18px;
   gap: 14px;
+  padding: 18px;
   box-shadow: 0 1px 2px rgba(25, 31, 40, 0.06);
 }
 
@@ -522,8 +535,8 @@
 .fp-calendar .fp-schedule-form textarea,
 .fp-calendar .fp-date-picker-trigger strong {
   font-family: inherit;
-  font-size: var(--fp-font-body);
-  font-weight: var(--fp-weight-body);
+  font-size: 13px;
+  font-weight: 600;
   line-height: 1.2;
 }
 
@@ -643,16 +656,19 @@
   }
 
   .fp-month-cell {
-    min-height: 104px;
-    padding: 9px 7px;
+    min-height: 74px;
+    gap: 3px;
+    border-radius: 12px;
+    padding: 6px 4px;
   }
 
   .fp-month-grid strong {
-    font-size: var(--fp-font-day);
+    font-size: 14px;
   }
 
   .fp-month-schedule-chip {
-    font-size: var(--fp-font-caption);
+    padding: 2px 4px;
+    font-size: 9px;
   }
 
   .fp-schedule-row {
