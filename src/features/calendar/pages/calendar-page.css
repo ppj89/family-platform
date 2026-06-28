@@ -541,11 +541,60 @@
   line-height: 1.25;
 }
 
-.fp-schedule-row > div:nth-child(2) {
+.fp-schedule-row-content {
   display: grid;
   gap: 5px;
   min-width: 0;
   padding-left: 4px;
+}
+
+.fp-schedule-row.fp-schedule-row-compact {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 10px;
+  row-gap: 0;
+  align-items: center;
+  min-height: 56px;
+  padding: 10px 12px;
+}
+
+.fp-schedule-row-compact .fp-schedule-row-content {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+  min-width: 0;
+  padding-left: 0;
+  white-space: nowrap;
+}
+
+.fp-schedule-row-compact .fp-schedule-row-content > * {
+  overflow: hidden;
+  margin: 0;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-schedule-row-compact .fp-schedule-row-content > strong {
+  flex: 0 1 84px;
+  font-size: 14px;
+}
+
+.fp-schedule-row-compact .fp-schedule-row-content > p {
+  flex: 0 1 112px;
+}
+
+.fp-schedule-row-compact .fp-schedule-row-content > em {
+  flex: 0 1 auto;
+}
+
+.fp-schedule-row-compact .fp-schedule-row-content > small {
+  flex: 1 1 80px;
+}
+
+.fp-schedule-row-compact .fp-row-actions {
+  grid-column: auto;
+  flex: 0 0 auto;
 }
 
 .fp-calendar .fp-row-actions button.danger {

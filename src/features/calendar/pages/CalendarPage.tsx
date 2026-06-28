@@ -348,11 +348,14 @@ function startEdit(item: CalendarScheduleInstance) {
     void remove(item)
   }
 
-  function renderScheduleRow(item: CalendarScheduleInstance) {
+  function renderScheduleRow(item: CalendarScheduleInstance, options?: { compact?: boolean }) {
+    const compact = Boolean(options?.compact)
     return (
-      <article className="fp-schedule-row" key={item.instanceKey}>
-        <strong className="fp-schedule-date-pill">{formatKoreanDate(item.occurrenceDate).replace(/^\d{4}-\d{2}-/, '')}</strong>
-        <div>
+      <article className={compact ? 'fp-schedule-row fp-schedule-row-compact' : 'fp-schedule-row'} key={item.instanceKey}>
+        {compact ? null : (
+          <strong className="fp-schedule-date-pill">{formatKoreanDate(item.occurrenceDate).replace(/^\d{4}-\d{2}-/, '')}</strong>
+        )}
+        <div className="fp-schedule-row-content">
           <strong>{item.title}</strong>
           <p>
             {scheduleTime(item)}
@@ -554,7 +557,7 @@ function startEdit(item: CalendarScheduleInstance) {
           </div>
         </div>
         <div className="fp-schedule-list">
-          {agendaItems.length ? agendaItems.map(renderScheduleRow) : <p className="fp-empty-text">등록된 일정이 없습니다.</p>}
+          {agendaItems.length ? agendaItems.map((item) => renderScheduleRow(item)) : <p className="fp-empty-text">등록된 일정이 없습니다.</p>}
         </div>
       </section>
 
@@ -632,7 +635,7 @@ function startEdit(item: CalendarScheduleInstance) {
               <button type="button" aria-label="닫기" onClick={() => setDayDialog(null)}>x</button>
             </header>
             <div className="fp-schedule-list">
-              {dayDialog.items.map(renderScheduleRow)}
+              {dayDialog.items.map((item) => renderScheduleRow(item, { compact: true }))}
             </div>
           </section>
         </div>
