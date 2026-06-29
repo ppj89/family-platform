@@ -9,6 +9,7 @@ export interface StoredUser {
 
 export interface AuthSessionResponse {
   token?: string
+  accessToken?: string
   user?: StoredUser
   userId?: number
   email?: string
@@ -52,13 +53,14 @@ export function normalizeAuthUser(response: AuthSessionResponse): StoredUser {
 }
 
 export function storeAuthSession(response: AuthSessionResponse, persistent: boolean) {
-  if (!response.token) {
+  const token = response.token || response.accessToken
+  if (!token) {
     return
   }
 
   const target = persistent ? window.localStorage : window.sessionStorage
   const other = persistent ? window.sessionStorage : window.localStorage
-  target.setItem(tokenKey, response.token)
+  target.setItem(tokenKey, token)
   target.setItem(userKey, JSON.stringify(normalizeAuthUser(response)))
   other.removeItem(tokenKey)
   other.removeItem(userKey)
