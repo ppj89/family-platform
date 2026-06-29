@@ -110,7 +110,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   margin: 6px 0 0;
   color: #718096;
   font-size: var(--fp-font-caption);
-  font-weight: var(--fp-weight-strong);
+  font-weight: 400;
 }
 
 .fp-calendar-actions {
@@ -149,7 +149,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   background: #fff;
   color: #333d4b;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1;
   box-shadow: inset 0 0 0 1px #e5e8eb;
 }
@@ -187,6 +187,12 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   box-shadow: inset 0 0 0 1px #d9e0e8;
 }
 
+.fp-calendar .fp-calendar-month-nav .fp-date-picker-trigger.date-picker-trigger {
+  height: 38px !important;
+  min-height: 38px !important;
+  padding: 0 14px !important;
+}
+
 .fp-calendar-month-nav .fp-date-picker-trigger strong,
 .fp-calendar-year-title strong {
   display: block;
@@ -195,7 +201,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   overflow: hidden;
   color: #191f28;
   font-size: 15px !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
   line-height: 1.15;
   text-align: center;
   text-overflow: ellipsis;
@@ -237,7 +243,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   background: transparent;
   color: #6b7684;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1;
   white-space: nowrap;
   cursor: pointer;
@@ -259,7 +265,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   gap: 8px;
   color: #4e5968;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .fp-calendar .fp-required-mark {
@@ -281,7 +287,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   background: #fff;
   color: #191f28;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
   box-shadow: inset 0 0 0 1px #dfe5ec;
   outline: none;
 }
@@ -352,7 +358,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   cursor: pointer;
   font: inherit;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
 }
 
 .fp-schedule-form .custom-select-trigger.open,
@@ -399,7 +405,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   cursor: pointer;
   font: inherit;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 500;
   text-align: left;
 }
 
@@ -423,7 +429,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   background: #eef6ff;
   color: #1264d8;
   font-size: var(--fp-font-control);
-  font-weight: var(--fp-weight-strong);
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -434,7 +440,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   background: #eef6ff;
   color: #1264d8;
   font-size: 13px;
-  font-weight: var(--fp-weight-strong);
+  font-weight: 500;
 }
 
 .fp-calendar-layout {
@@ -475,7 +481,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   padding: 0 6px 4px;
   color: #8b95a1;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 600;
   text-align: center;
 }
 
@@ -485,7 +491,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   padding: 0 6px 4px;
   color: #8b95a1;
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 600;
   line-height: 16px;
   text-align: center;
 }
@@ -585,7 +591,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   background: #edf4ff;
   color: #1b64da;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 600;
   line-height: 1.25;
   text-align: left;
   text-overflow: ellipsis;
@@ -602,7 +608,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   background: #3182f6;
   color: #fff;
   font-size: 10px;
-  font-weight: 900;
+  font-weight: 600;
   line-height: 20px;
   text-align: center;
 }
@@ -643,7 +649,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-year-board span {
   color: #1264d8;
   font-size: var(--fp-font-body);
-  font-weight: var(--fp-weight-strong);
+  font-weight: 500;
 }
 
 .fp-week-board small,
@@ -651,7 +657,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   overflow: hidden;
   color: #526070;
   font-size: var(--fp-font-caption);
-  font-weight: var(--fp-weight-strong);
+  font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -670,7 +676,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-day-board p {
   color: #718096;
   font-size: var(--fp-font-body);
-  font-weight: var(--fp-weight-strong);
+  font-weight: 400;
 }
 
 .fp-calendar .selected-day-card {
@@ -708,12 +714,14 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   color: #526070;
   font: inherit;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
   white-space: nowrap;
   cursor: pointer;
 }
 
 .fp-calendar .selected-day-card .schedule-list {
+  display: grid;
+  gap: 12px;
   margin-top: 0;
 }
 
@@ -725,7 +733,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   background: #fff;
   color: #6b7684;
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 400;
   line-height: 1.5;
   text-align: center;
   box-shadow: inset 0 0 0 1px #dfe5ec;
@@ -772,7 +780,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-calendar .fp-week-board .agenda-day-column strong {
   color: #191f28;
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 600;
   line-height: 1.25;
 }
 
@@ -780,7 +788,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-calendar .fp-week-board .agenda-day-column small {
   color: #8b95a1;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 400;
   line-height: 1.25;
 }
 
@@ -794,7 +802,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   color: #3182f6;
   font-size: 11px;
   font-style: normal;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -829,14 +837,113 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   background: #edf4ff;
   color: #1b64da;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 600;
 }
 
 .fp-calendar .fp-year-board .year-month-card > span {
   color: #8b95a1;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.35;
+}
+
+.fp-calendar .year-mode-tabs {
+  display: inline-flex;
+  width: fit-content;
+  gap: 4px;
+  align-items: center;
+  margin: 0 0 10px;
+  border-radius: 16px;
+  padding: 4px;
+  background: #f2f4f6;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+}
+
+.fp-calendar .year-mode-tabs button {
+  min-width: 82px;
+  height: 34px;
+  border: 0;
+  border-radius: 13px;
+  background: transparent;
+  color: #6b7684;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.fp-calendar .year-mode-tabs button.active {
+  background: #fff;
+  color: #1b64da;
+  box-shadow: 0 8px 18px rgba(25, 31, 40, 0.08);
+}
+
+.fp-calendar .fp-year-board.year-mode-calendar {
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+}
+
+.fp-calendar .fp-year-board.year-mode-calendar .year-month-card {
+  min-height: 230px;
+  max-height: none;
+}
+
+.fp-calendar .fp-year-board.year-mode-list .year-month-card {
+  min-height: 132px;
+}
+
+.fp-calendar .year-mini-calendar {
+  display: grid;
+  gap: 7px;
+}
+
+.fp-calendar .year-mini-weekdays,
+.fp-calendar .year-mini-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 3px;
+}
+
+.fp-calendar .year-mini-weekdays span {
+  color: #8b95a1 !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  text-align: center;
+}
+
+.fp-calendar .year-mini-days span {
+  display: grid;
+  min-height: 24px;
+  place-items: center;
+  border-radius: 9px;
+  color: #4e5968 !important;
+  font-size: 10px !important;
+  font-weight: 400 !important;
+}
+
+.fp-calendar .year-mini-days span.has-event {
+  background: #edf4ff;
+  color: #1b64da !important;
+  box-shadow: inset 0 0 0 1px #bfdcff;
+}
+
+.fp-calendar .year-event-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-height: 30px;
+  margin-top: 2px;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #edf4ff;
+  color: #1b64da !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+}
+
+.fp-calendar .year-event-count.is-empty {
+  background: #f2f4f7;
+  color: #8b95a1 !important;
 }
 
 .fp-schedule-list {
@@ -868,13 +975,45 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   min-height: 0;
   align-items: center;
   justify-content: center;
+  gap: 3px;
   padding: 0;
   border-radius: 999px;
   background: #eaf4ff;
-  color: #1264d8;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 500;
   white-space: nowrap;
+}
+
+.fp-schedule-date-pill .schedule-date-day,
+.fp-schedule-date-pill .schedule-date-weekday {
+  display: inline;
+  color: #191f28;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+}
+
+.fp-calendar .schedule-date-badge .schedule-date-day,
+.fp-calendar .schedule-date-badge .schedule-date-weekday {
+  color: #191f28 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+}
+
+.fp-calendar .schedule-date-badge .schedule-date-day::after,
+.fp-calendar .schedule-date-badge .schedule-date-weekday::before,
+.fp-calendar .schedule-date-badge .schedule-date-weekday::after {
+  content: none !important;
+}
+
+.fp-schedule-date-pill.sunday .schedule-date-day,
+.fp-schedule-date-pill.sunday .schedule-date-weekday {
+  color: #f04452 !important;
+}
+
+.fp-schedule-date-pill.saturday .schedule-date-day,
+.fp-schedule-date-pill.saturday .schedule-date-weekday {
+  color: #3182f6 !important;
 }
 
 .fp-schedule-row p,
@@ -890,7 +1029,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-schedule-row em {
   color: #1264d8;
   font-style: normal;
-  font-weight: 700;
+  font-weight: 500;
 }
 
 .fp-row-actions {
@@ -910,7 +1049,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   background: #edf4ff;
   color: #1b64da;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 600;
   box-shadow: inset 0 0 0 1px #bfdcff;
   cursor: pointer;
 }
@@ -1030,7 +1169,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   color: #718096;
   text-align: center;
   font-size: var(--fp-font-body);
-  font-weight: var(--fp-weight-strong);
+  font-weight: 400;
 }
 
 .fp-schedule-form {
@@ -1049,7 +1188,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   margin-top: 4px;
   background: #3182f6;
   font-size: 12px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .fp-schedule-panel {
@@ -1072,19 +1211,19 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-calendar .custom-select-trigger {
   font-family: inherit;
   font-size: 13px;
-  font-weight: 800;
+  font-weight: 500;
   line-height: 1.2;
 }
 
 .fp-calendar .fp-calendar-month-nav .fp-date-picker-trigger strong {
   font-size: 15px !important;
-  font-weight: 700 !important;
+  font-weight: 600 !important;
   line-height: 1.15;
 }
 
 .fp-calendar .fp-month-schedule-chip {
   font-size: 11px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
 }
 
 .fp-form-grid {
@@ -1138,7 +1277,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   margin: 0 !important;
   color: #4e5968 !important;
   font-size: 12px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   line-height: 1.35 !important;
 }
 
@@ -1159,7 +1298,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   color: #191f28 !important;
   font-family: inherit !important;
   font-size: 13px !important;
-  font-weight: 800 !important;
+  font-weight: 500 !important;
   box-shadow: inset 0 0 0 1px #dfe5ec !important;
   outline: none !important;
 }
@@ -1177,7 +1316,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-calendar .schedule-form-card .custom-select-trigger span {
   color: #191f28 !important;
   font-size: 13px !important;
-  font-weight: 800 !important;
+  font-weight: 500 !important;
   line-height: 1.2 !important;
 }
 
@@ -1307,7 +1446,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   background: #edf4ff;
   color: #1b64da;
   font-size: 13px;
-  font-weight: 900;
+  font-weight: 500;
 }
 
 .fp-schedule-detail-dialog h3 {
@@ -1352,7 +1491,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   cursor: pointer;
   font: inherit;
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 600;
   box-shadow: inset 0 0 0 1px #bfdcff;
 }
 

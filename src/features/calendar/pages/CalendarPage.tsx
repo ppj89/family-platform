@@ -18,6 +18,7 @@ import { expandScheduleInstances, isRepeatRule, type CalendarScheduleInstance } 
 import './calendar-page.css'
 
 type CalendarView = 'day' | 'week' | 'month' | 'year'
+type YearDisplayMode = 'calendar' | 'list'
 
 const shortWeekdays = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -146,6 +147,18 @@ function yearMonths(year: number) {
   })
 }
 
+function yearMiniCells(year: number, month: number, eventDays: number[]) {
+  const first = new Date(year, month - 1, 1)
+  const lastDate = new Date(year, month, 0).getDate()
+  return [
+    ...Array.from({ length: first.getDay() }, (_, index) => ({ key: `blank-${index}`, day: 0, hasEvent: false })),
+    ...Array.from({ length: lastDate }, (_, index) => {
+      const day = index + 1
+      return { key: `${month}-${day}`, day, hasEvent: eventDays.includes(day) }
+    }),
+  ]
+}
+
 function CalendarNavChevron({ direction }: { direction: 'previous' | 'next' }) {
   return (
     <svg className="fp-calendar-nav-chevron" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
@@ -162,6 +175,18 @@ function formatShortKoreanDate(value: string) {
 function formatWeekTitle(value: string) {
   const range = weekRange(value)
   return `${formatShortKoreanDate(range.startDate)} - ${formatShortKoreanDate(range.endDate)}`
+}
+
+function ScheduleDateBadge({ value }: { value: string }) {
+  const date = parseDateKey(value)
+  const day = date.getDay()
+  const tone = day === 0 ? 'sunday' : day === 6 ? 'saturday' : 'weekday'
+  return (
+    <span className={`fp-schedule-date-pill schedule-date-badge ${tone}`}>
+      <span className="schedule-date-day">{date.getDate()}일</span>
+      <span className="schedule-date-weekday"> ({shortWeekdays[day]})</span>
+    </span>
+  )
 }
 
 function CalendarCustomSelect({
@@ -236,6 +261,7 @@ export default function CalendarPage() {
   const formRef = useRef<HTMLFormElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const [view, setView] = useState<CalendarView>('month')
+  const [yearMode, setYearMode] = useState<YearDisplayMode>('calendar')
   const [monthDate, setMonthDate] = useState(() => new Date())
   const [weekDate, setWeekDate] = useState(today)
   const [dayDate, setDayDate] = useState(today)
@@ -527,9 +553,7 @@ export default function CalendarPage() {
           setScheduleDetail(item)
         }}
       >
-        {compact ? null : (
-          <strong className="fp-schedule-date-pill schedule-date-badge">{formatKoreanDate(item.occurrenceDate).replace(/^\d{4}-\d{2}-/, '')}</strong>
-        )}
+        {compact ? null : <ScheduleDateBadge value={item.occurrenceDate} />}
         <div className="fp-schedule-row-content">
           <strong>{item.title}</strong>
           <p>
@@ -660,27 +684,70 @@ export default function CalendarPage() {
             </div>
                 </section>
               ) : view === 'year' ? (
-                <section className="fp-year-board year-schedule-grid">
-            {yearMonthItems.map((monthItem) => {
-              const monthSchedules = visibleItems.filter((item) => item.occurrenceDate.startsWith(monthItem.key))
-              return (
-                <button
-                  className={formatDateKey(monthDate).startsWith(monthItem.key) ? 'year-month-card active' : 'year-month-card'}
-                  key={monthItem.key}
-                  type="button"
-                  onClick={() => {
-                    setMonthDate(new Date(monthDate.getFullYear(), monthItem.month - 1, 1))
-                    setSelectedDate(`${monthItem.key}-01`)
-                    setView('month')
-                  }}
-                >
-                  <strong>{monthItem.label}</strong>
-                  <span>{monthSchedules.length}건</span>
-                  {monthSchedules.slice(0, 3).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
-                </button>
-              )
-            })}
-                </section>
+                <>
+                  <div className="year-mode-tabs" role="tablist" aria-label="연간 표시 방식">
+                    <button
+                      aria-selected={yearMode === 'calendar'}
+                      className={yearMode === 'calendar' ? 'active' : ''}
+                      type="button"
+                      onClick={() => setYearMode('calendar')}
+                    >
+                      캘린더형
+                    </button>
+                    <button
+                      aria-selected={yearMode === 'list'}
+                      className={yearMode === 'list' ? 'active' : ''}
+                      type="button"
+                      onClick={() => setYearMode('list')}
+                    >
+                      목록형
+                    </button>
+                  </div>
+                  <section className={`fp-year-board year-schedule-grid year-mode-${yearMode}`}>
+                    {yearMonthItems.map((monthItem) => {
+                      const monthSchedules = visibleItems.filter((item) => item.occurrenceDate.startsWith(monthItem.key))
+                      const eventDays = Array.from(new Set(monthSchedules.map((item) => parseDateKey(item.occurrenceDate).getDate())))
+                      return (
+                        <button
+                          className={formatDateKey(monthDate).startsWith(monthItem.key) ? 'year-month-card active' : 'year-month-card'}
+                          key={monthItem.key}
+                          type="button"
+                          onClick={() => {
+                            setMonthDate(new Date(monthDate.getFullYear(), monthItem.month - 1, 1))
+                            setSelectedDate(`${monthItem.key}-01`)
+                            setView('month')
+                          }}
+                        >
+                          <strong>{monthItem.label}</strong>
+                          {yearMode === 'calendar' ? (
+                            <>
+                              <div className="year-mini-calendar" aria-hidden="true">
+                                <div className="year-mini-weekdays">
+                                  {shortWeekdays.map((day) => <span key={day}>{day}</span>)}
+                                </div>
+                                <div className="year-mini-days">
+                                  {yearMiniCells(monthDate.getFullYear(), monthItem.month, eventDays).map((cell) => (
+                                    <span className={cell.hasEvent ? 'has-event' : ''} key={cell.key}>
+                                      {cell.day || ''}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                              <span className={monthSchedules.length ? 'year-event-count' : 'year-event-count is-empty'}>
+                                {monthSchedules.length ? `${monthSchedules.length}건` : '일정 없음'}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <span>{monthSchedules.length}건</span>
+                              {monthSchedules.slice(0, 3).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
+                            </>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </section>
+                </>
               ) : view === 'week' ? (
                 <section className="fp-week-board week-agenda-grid">
             {weekDateKeys.map((dateKey) => {
