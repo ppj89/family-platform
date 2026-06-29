@@ -144,6 +144,14 @@ function yearMonths(year: number) {
   })
 }
 
+function CalendarNavChevron({ direction }: { direction: 'previous' | 'next' }) {
+  return (
+    <svg className="fp-calendar-nav-chevron" aria-hidden="true" focusable="false" viewBox="0 0 24 24">
+      <path d={direction === 'previous' ? 'M15 18l-6-6 6-6' : 'M9 6l6 6-6 6'} />
+    </svg>
+  )
+}
+
 function CalendarCustomSelect({
   label,
   options,
@@ -502,7 +510,9 @@ export default function CalendarPage() {
               <div className="fp-calendar-actions calendar-toolbar">
                 {view === 'month' ? (
                   <div className="fp-calendar-month-nav calendar-nav">
-                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="이전 달" onClick={() => setMonthDate(addMonths(monthDate, -1))}>‹</button>
+                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="이전 달" onClick={() => setMonthDate(addMonths(monthDate, -1))}>
+                      <CalendarNavChevron direction="previous" />
+                    </button>
                     <DatePickerField
                       className="fp-month-field calendar-title-button"
                       label="조회 월"
@@ -510,15 +520,21 @@ export default function CalendarPage() {
                       value={formatDateKey(monthDate).slice(0, 7)}
                       onChange={changeMonth}
                     />
-                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="다음 달" onClick={() => setMonthDate(addMonths(monthDate, 1))}>›</button>
+                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="다음 달" onClick={() => setMonthDate(addMonths(monthDate, 1))}>
+                      <CalendarNavChevron direction="next" />
+                    </button>
                   </div>
                 ) : view === 'year' ? (
                   <div className="fp-calendar-month-nav fp-calendar-year-nav calendar-nav">
-                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="이전 연도" onClick={() => setMonthDate(addMonths(monthDate, -12))}>‹</button>
+                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="이전 연도" onClick={() => setMonthDate(addMonths(monthDate, -12))}>
+                      <CalendarNavChevron direction="previous" />
+                    </button>
                     <button type="button" className="fp-calendar-year-title calendar-title-button" aria-label="조회 연도">
                       <strong>{monthDate.getFullYear()}년</strong>
                     </button>
-                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="다음 연도" onClick={() => setMonthDate(addMonths(monthDate, 12))}>›</button>
+                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="다음 연도" onClick={() => setMonthDate(addMonths(monthDate, 12))}>
+                      <CalendarNavChevron direction="next" />
+                    </button>
                   </div>
                 ) : (
                   <DatePickerField
