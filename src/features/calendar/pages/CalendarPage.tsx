@@ -423,63 +423,66 @@ export default function CalendarPage() {
   return (
     <section className="fp-calendar fp-card">
       {loading ? <div className="fp-loading-blocker">처리 중입니다.</div> : null}
-      <header className="fp-calendar-header">
-        <div className="fp-calendar-actions">
-          {view === 'month' ? (
-            <div className="fp-calendar-month-nav">
-              <button type="button" className="fp-button fp-button-muted" aria-label="이전 달" onClick={() => setMonthDate(addMonths(monthDate, -1))}>‹</button>
-              <DatePickerField
-                className="fp-month-field"
-                label="조회 월"
-                mode="month"
-                value={formatDateKey(monthDate).slice(0, 7)}
-                onChange={changeMonth}
-              />
-              <button type="button" className="fp-button fp-button-muted" aria-label="다음 달" onClick={() => setMonthDate(addMonths(monthDate, 1))}>›</button>
-            </div>
-          ) : view === 'year' ? (
-            <div className="fp-calendar-month-nav fp-calendar-year-nav">
-              <button type="button" className="fp-button fp-button-muted" aria-label="이전 연도" onClick={() => setMonthDate(addMonths(monthDate, -12))}>‹</button>
-              <button type="button" className="fp-calendar-year-title" aria-label="조회 연도">
-                <strong>{monthDate.getFullYear()}년</strong>
-              </button>
-              <button type="button" className="fp-button fp-button-muted" aria-label="다음 연도" onClick={() => setMonthDate(addMonths(monthDate, 12))}>›</button>
-            </div>
-          ) : (
-            <DatePickerField
-              className="fp-date-field"
-              key={view}
-              label={view === 'day' ? '조회 일' : '조회 주'}
-              value={view === 'day' ? dayDate : weekDate}
-              onChange={view === 'day' ? changeDayDate : changeWeekDate}
-            />
-          )}
-          <div className="fp-calendar-tabs" role="tablist" aria-label="캘린더 보기">
-            {[
-              ['day', '일간'],
-              ['week', '주간'],
-              ['month', '월간'],
-              ['year', '연간'],
-            ].map(([value, label]) => (
-              <button
-                aria-selected={view === value}
-                className={view === value ? 'active' : ''}
-                key={value}
-                type="button"
-                onClick={() => changeView(value as CalendarView)}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-      </header>
+      <div className="fp-calendar-main">
+        <div className="fp-calendar-left">
+          <section className="fp-calendar-left-card">
+            <header className="fp-calendar-header">
+              <div className="fp-calendar-actions">
+                {view === 'month' ? (
+                  <div className="fp-calendar-month-nav">
+                    <button type="button" className="fp-button fp-button-muted" aria-label="이전 달" onClick={() => setMonthDate(addMonths(monthDate, -1))}>‹</button>
+                    <DatePickerField
+                      className="fp-month-field"
+                      label="조회 월"
+                      mode="month"
+                      value={formatDateKey(monthDate).slice(0, 7)}
+                      onChange={changeMonth}
+                    />
+                    <button type="button" className="fp-button fp-button-muted" aria-label="다음 달" onClick={() => setMonthDate(addMonths(monthDate, 1))}>›</button>
+                  </div>
+                ) : view === 'year' ? (
+                  <div className="fp-calendar-month-nav fp-calendar-year-nav">
+                    <button type="button" className="fp-button fp-button-muted" aria-label="이전 연도" onClick={() => setMonthDate(addMonths(monthDate, -12))}>‹</button>
+                    <button type="button" className="fp-calendar-year-title" aria-label="조회 연도">
+                      <strong>{monthDate.getFullYear()}년</strong>
+                    </button>
+                    <button type="button" className="fp-button fp-button-muted" aria-label="다음 연도" onClick={() => setMonthDate(addMonths(monthDate, 12))}>›</button>
+                  </div>
+                ) : (
+                  <DatePickerField
+                    className="fp-date-field"
+                    key={view}
+                    label={view === 'day' ? '조회 일' : '조회 주'}
+                    value={view === 'day' ? dayDate : weekDate}
+                    onChange={view === 'day' ? changeDayDate : changeWeekDate}
+                  />
+                )}
+                <div className="fp-calendar-tabs" role="tablist" aria-label="캘린더 보기">
+                  {[
+                    ['day', '일간'],
+                    ['week', '주간'],
+                    ['month', '월간'],
+                    ['year', '연간'],
+                  ].map(([value, label]) => (
+                    <button
+                      aria-selected={view === value}
+                      className={view === value ? 'active' : ''}
+                      key={value}
+                      type="button"
+                      onClick={() => changeView(value as CalendarView)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </header>
 
-      {message ? <p className="fp-message">{message}</p> : null}
+            {message ? <p className="fp-message">{message}</p> : null}
 
-      <div className="fp-calendar-layout">
-        {view === 'month' ? (
-          <section className="fp-calendar-board">
+            <div className="fp-calendar-layout">
+              {view === 'month' ? (
+                <section className="fp-calendar-board">
             <div className="fp-weekdays">
               {['일', '월', '화', '수', '목', '금', '토'].map((day) => <span key={day}>{day}</span>)}
             </div>
@@ -533,9 +536,9 @@ export default function CalendarPage() {
                 )
               })}
             </div>
-          </section>
-        ) : view === 'year' ? (
-          <section className="fp-year-board">
+                </section>
+              ) : view === 'year' ? (
+                <section className="fp-year-board">
             {yearMonthItems.map((monthItem) => {
               const monthSchedules = visibleItems.filter((item) => item.occurrenceDate.startsWith(monthItem.key))
               return (
@@ -555,9 +558,9 @@ export default function CalendarPage() {
                 </button>
               )
             })}
-          </section>
-        ) : view === 'week' ? (
-          <section className="fp-week-board">
+                </section>
+              ) : view === 'week' ? (
+                <section className="fp-week-board">
             {weekDateKeys.map((dateKey) => {
               const dayItems = visibleItems.filter((item) => item.occurrenceDate === dateKey)
               return (
@@ -573,33 +576,35 @@ export default function CalendarPage() {
                 </button>
               )
             })}
-          </section>
-        ) : (
-          <section className="fp-day-board">
+                </section>
+              ) : (
+                <section className="fp-day-board">
             <h3>{formatKoreanDate(dayDate)}</h3>
             <p>{visibleItems.length}건</p>
             <button type="button" className="fp-button fp-button-muted" onClick={() => startCreate(dayDate)}>이 날짜에 일정 추가</button>
+                </section>
+              )}
+            </div>
           </section>
-        )}
 
-      </div>
-
-      <section className="fp-schedule-panel">
-        <div className="fp-schedule-panel-header">
-          <div>
-            <h3>{agendaTitle}</h3>
-          </div>
+          <section className="fp-schedule-panel">
+            <div className="fp-schedule-panel-header">
+              <div>
+                <h3>{agendaTitle}</h3>
+              </div>
+            </div>
+            <div className="fp-schedule-list">
+              {agendaItems.length ? agendaItems.map((item) => renderScheduleRow(item)) : <p className="fp-empty-text">등록된 일정이 없습니다.</p>}
+            </div>
+          </section>
         </div>
-        <div className="fp-schedule-list">
-          {agendaItems.length ? agendaItems.map((item) => renderScheduleRow(item)) : <p className="fp-empty-text">등록된 일정이 없습니다.</p>}
-        </div>
-      </section>
 
-      <form className="fp-schedule-form" ref={formRef} onSubmit={requestSave}>
-        <header>
-          <h3>{editingId ? '일정 수정' : '일정 추가'}</h3>
-          {editingId ? <button type="button" className="fp-button fp-button-muted" onClick={() => startCreate(form.scheduleDate)}>취소</button> : null}
-        </header>
+        <aside className="fp-calendar-right">
+          <form className="fp-schedule-form" ref={formRef} onSubmit={requestSave}>
+            <header>
+              <h3>{editingId ? '일정 수정' : '일정 추가'}</h3>
+              {editingId ? <button type="button" className="fp-button fp-button-muted" onClick={() => startCreate(form.scheduleDate)}>취소</button> : null}
+            </header>
         <div className="fp-form-grid">
           <label className="fp-field span-2">
             <span>일정명<em className="fp-required-mark">*</em></span>
@@ -658,8 +663,10 @@ export default function CalendarPage() {
             <textarea value={form.memo || ''} onChange={(event) => setForm({ ...form, memo: event.target.value || null })} />
           </label>
         </div>
-        <button className="fp-button fp-button-primary" type="submit">{editingId ? '저장' : '추가'}</button>
-      </form>
+            <button className="fp-button fp-button-primary" type="submit">{editingId ? '저장' : '추가'}</button>
+          </form>
+        </aside>
+      </div>
 
       {dayDialog ? (
         <div className="fp-calendar-popup-backdrop" role="presentation" onClick={() => setDayDialog(null)}>
