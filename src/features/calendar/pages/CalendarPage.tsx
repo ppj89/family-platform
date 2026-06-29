@@ -152,6 +152,7 @@ export default function CalendarPage() {
   const [editingSource, setEditingSource] = useState<ScheduleItem | null>(null)
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
   const [dayDialog, setDayDialog] = useState<{ date: string; items: CalendarScheduleInstance[] } | null>(null)
+  const [scheduleDetail, setScheduleDetail] = useState<CalendarScheduleInstance | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
 
@@ -253,6 +254,7 @@ function startEdit(item: CalendarScheduleInstance) {
       memo: source.memo || '',
     })
     setDayDialog(null)
+    setScheduleDetail(null)
   }
 
   function requestSave(event: FormEvent) {
@@ -298,6 +300,7 @@ function startEdit(item: CalendarScheduleInstance) {
       await deleteSchedule(item.id)
       await reloadSchedules()
       setDayDialog(null)
+      setScheduleDetail(null)
       setMessage('일정을 삭제했습니다.')
     } catch (error) {
       setMessage(apiActionMessage(error, '일정을 삭제하지 못했습니다.'))
@@ -351,7 +354,21 @@ function startEdit(item: CalendarScheduleInstance) {
   function renderScheduleRow(item: CalendarScheduleInstance, options?: { compact?: boolean }) {
     const compact = Boolean(options?.compact)
     return (
-      <article className={compact ? 'fp-schedule-row fp-schedule-row-compact' : 'fp-schedule-row'} key={item.instanceKey}>
+      <article
+        className={compact ? 'fp-schedule-row fp-schedule-row-compact' : 'fp-schedule-row'}
+        key={item.instanceKey}
+        role={compact ? 'button' : undefined}
+        tabIndex={compact ? 0 : undefined}
+        onClick={compact ? (event) => {
+          if ((event.target as HTMLElement).closest('button')) return
+          setScheduleDetail(item)
+        } : undefined}
+        onKeyDown={compact ? (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
+          setScheduleDetail(item)
+        } : undefined}
+      >
         {compact ? null : (
           <strong className="fp-schedule-date-pill">{formatKoreanDate(item.occurrenceDate).replace(/^\d{4}-\d{2}-/, '')}</strong>
         )}
@@ -636,6 +653,42 @@ function startEdit(item: CalendarScheduleInstance) {
             </header>
             <div className="fp-schedule-list">
               {dayDialog.items.map((item) => renderScheduleRow(item, { compact: true }))}
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {scheduleDetail ? (
+        <div className="fp-schedule-detail-backdrop" role="presentation" onClick={() => setScheduleDetail(null)}>
+          <section className="fp-schedule-detail-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <button className="fp-schedule-detail-close" type="button" aria-label="?リ린" onClick={() => setScheduleDetail(null)}>x</button>
+            <span className="fp-schedule-detail-date">{formatKoreanDate(scheduleDetail.occurrenceDate)}</span>
+            <h3>{scheduleDetail.title}</h3>
+            <p>
+              {scheduleTime(scheduleDetail)}
+              {' 쨌 '}
+              {scheduleDetail.category || '?쇱젙'}
+              {scheduleDetail.memberName ? ` 쨌 ${scheduleDetail.memberName}` : ''}
+              {isRepeatRule(scheduleDetail.repeatRule) ? ` 쨌 ${repeatLabel(scheduleDetail.repeatRule)}` : ''}
+            </p>
+            <div className="fp-schedule-detail-memo">
+              {scheduleDetail.memo || '?깅줉???硫붾え媛 ?놁뒿?덈떎.'}
+            </div>
+            <div className="fp-schedule-detail-actions">
+              <button type="button" onClick={() => startEdit(scheduleDetail)}>?섏젙</button>
+              <button
+                type="button"
+                className="danger"
+                onClick={() => setConfirm({
+                  kind: 'delete',
+                  item: scheduleDetail,
+                  title: '?쇱젙????젣?좉퉴??',
+                  body: `${scheduleDetail.title} ?쇱젙????젣?⑸땲??`,
+                  danger: true,
+                })}
+              >
+                ??젣
+              </button>
             </div>
           </section>
         </div>
