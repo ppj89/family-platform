@@ -256,7 +256,9 @@
 
 .fp-field input,
 .fp-field select,
-.fp-field textarea {
+.fp-field textarea,
+.fp-field .custom-select-trigger,
+.fp-field .date-picker-trigger {
   width: 100%;
   min-width: 0;
   border: 0;
@@ -270,13 +272,17 @@
 }
 
 .fp-field input,
-.fp-field select {
+.fp-field select,
+.fp-field .custom-select-trigger,
+.fp-field .date-picker-trigger {
   height: 46px;
   padding: 0 12px;
 }
 
 .fp-calendar .fp-schedule-form input,
-.fp-calendar .fp-schedule-form select {
+.fp-calendar .fp-schedule-form select,
+.fp-calendar .fp-schedule-form .custom-select-trigger,
+.fp-calendar .fp-schedule-form .date-picker-trigger {
   height: 46px;
   padding: 0 12px;
 }
@@ -311,6 +317,81 @@
   background: #fff;
   box-shadow: inset 0 0 0 1px #dfe5ec;
   outline: none;
+}
+
+.fp-schedule-form .custom-select {
+  position: relative;
+  z-index: 1200;
+  min-width: 0;
+}
+
+.fp-schedule-form .custom-select.open {
+  z-index: 10000;
+}
+
+.fp-schedule-form .custom-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fp-schedule-form .custom-select-trigger.open,
+.fp-schedule-form .custom-select-trigger:focus-visible,
+.fp-schedule-form .date-picker-trigger:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px #3182f6;
+}
+
+.fp-schedule-form .custom-select-trigger svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: #6b7684;
+}
+
+.fp-schedule-form .custom-select-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 10001;
+  display: grid;
+  width: 100%;
+  max-height: 220px;
+  gap: 3px;
+  overflow-y: auto;
+  border-radius: 16px;
+  padding: 6px;
+  background: #fff;
+  box-shadow: 0 18px 42px rgba(25, 31, 40, 0.16);
+}
+
+.fp-schedule-form .custom-select-list[hidden] {
+  display: none;
+}
+
+.fp-schedule-form .custom-select-list button {
+  min-height: 36px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 10px;
+  background: transparent;
+  color: #333d4b;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
+}
+
+.fp-schedule-form .custom-select-list button:hover,
+.fp-schedule-form .custom-select-list button.selected {
+  background: #edf4ff;
+  color: #1b64da;
 }
 
 .fp-date-control {
@@ -806,7 +887,8 @@
 .fp-calendar .fp-schedule-form input,
 .fp-calendar .fp-schedule-form select,
 .fp-calendar .fp-schedule-form textarea,
-.fp-calendar .fp-date-picker-trigger strong {
+.fp-calendar .fp-date-picker-trigger strong,
+.fp-calendar .custom-select-trigger {
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;
@@ -847,6 +929,104 @@
 
 .fp-calendar-right.schedule-form-card > .fp-button-primary {
   margin-top: 18px;
+}
+
+.fp-calendar .schedule-form-card {
+  display: grid !important;
+  gap: 14px !important;
+  border-radius: 18px !important;
+  padding: 18px !important;
+  background: #ffffff !important;
+  box-shadow: 0 1px 2px rgba(25, 31, 40, 0.06) !important;
+}
+
+.fp-calendar .schedule-form-card header {
+  margin-bottom: 2px !important;
+}
+
+.fp-calendar .schedule-form-card label,
+.fp-calendar .schedule-form-card .date-picker-field {
+  display: grid !important;
+  gap: 8px !important;
+  margin: 0 !important;
+}
+
+.fp-calendar .schedule-form-card label > span,
+.fp-calendar .schedule-form-card .date-picker-field > span {
+  display: block !important;
+  margin: 0 !important;
+  color: #4e5968 !important;
+  font-size: 12px !important;
+  font-weight: 800 !important;
+  line-height: 1.35 !important;
+}
+
+.fp-calendar .schedule-form-card .fp-required-mark {
+  color: #f04452 !important;
+}
+
+.fp-calendar .schedule-form-card input,
+.fp-calendar .schedule-form-card select,
+.fp-calendar .schedule-form-card textarea,
+.fp-calendar .schedule-form-card .date-picker-trigger,
+.fp-calendar .schedule-form-card .custom-select-trigger {
+  width: 100% !important;
+  min-width: 0 !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  background: #ffffff !important;
+  color: #191f28 !important;
+  font-family: inherit !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  box-shadow: inset 0 0 0 1px #dfe5ec !important;
+  outline: none !important;
+}
+
+.fp-calendar .schedule-form-card input,
+.fp-calendar .schedule-form-card select,
+.fp-calendar .schedule-form-card .date-picker-trigger,
+.fp-calendar .schedule-form-card .custom-select-trigger {
+  height: 42px !important;
+  min-height: 42px !important;
+  padding: 0 12px !important;
+}
+
+.fp-calendar .schedule-form-card .date-picker-trigger strong,
+.fp-calendar .schedule-form-card .custom-select-trigger span {
+  color: #191f28 !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+}
+
+.fp-calendar .schedule-form-card textarea {
+  min-height: 104px !important;
+  height: 104px !important;
+  padding: 12px !important;
+  line-height: 1.5 !important;
+  resize: vertical !important;
+}
+
+.fp-calendar .schedule-form-card input:focus,
+.fp-calendar .schedule-form-card textarea:focus,
+.fp-calendar .schedule-form-card .date-picker-trigger:focus-visible,
+.fp-calendar .schedule-form-card .custom-select-trigger.open,
+.fp-calendar .schedule-form-card .custom-select-trigger:focus-visible {
+  box-shadow: inset 0 0 0 2px #3182f6 !important;
+}
+
+.fp-calendar .schedule-form-card .date-picker-field,
+.fp-calendar .schedule-form-card .custom-select {
+  width: 100% !important;
+}
+
+.fp-calendar .schedule-form-card > .fp-button-primary {
+  width: 100% !important;
+  min-height: 46px !important;
+  height: 46px !important;
+  border-radius: 14px !important;
+  margin-top: 4px !important;
 }
 
 .fp-calendar-popup-backdrop {

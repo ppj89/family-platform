@@ -91,9 +91,9 @@ export function DatePickerField({ className = '', label, mode = 'date', required
   }
 
   return (
-    <label className={`fp-field fp-date-picker-field ${className}`} ref={rootRef}>
+    <label className={`fp-field fp-date-picker-field date-picker-field ${className}`} ref={rootRef}>
       {label ? <span>{label}{required ? <em className="fp-required-mark">*</em> : null}</span> : null}
-      <button className="fp-date-picker-trigger" type="button" onClick={() => setOpen((current) => !current)}>
+      <button className="fp-date-picker-trigger date-picker-trigger" type="button" onClick={() => setOpen((current) => !current)}>
         <strong>{mode === 'month' ? displayMonth(value) : displayDate(value)}</strong>
         {mode === 'month' ? (
           <span aria-hidden="true" className="fp-date-picker-caret">▾</span>

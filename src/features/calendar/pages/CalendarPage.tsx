@@ -25,6 +25,11 @@ type ConfirmState =
   | { kind: 'repeat-save'; title: string; body: string }
   | { kind: 'repeat-delete'; item: CalendarScheduleInstance; title: string; body: string; danger?: boolean }
 
+type CalendarSelectOption = {
+  label: string
+  value: string
+}
+
 const scheduleStartDate = '2000-01-01'
 
 const emptyPayload = (date: string): SchedulePayload => ({
@@ -137,6 +142,73 @@ function yearMonths(year: number) {
       month,
     }
   })
+}
+
+function CalendarCustomSelect({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  options: CalendarSelectOption[]
+  value: string
+  onChange: (value: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const selected = options.find((option) => option.value === value) ?? options[0]
+
+  useEffect(() => {
+    if (!open) return
+    function closeOnOutside(event: MouseEvent | FocusEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutside)
+    document.addEventListener('focusin', closeOnOutside)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutside)
+      document.removeEventListener('focusin', closeOnOutside)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [open])
+
+  return (
+    <label className="fp-field">
+      <span>{label}</span>
+      <div className={`custom-select${open ? ' open' : ''}`} ref={rootRef}>
+        <button
+          className={`custom-select-trigger${open ? ' open' : ''}`}
+          type="button"
+          onClick={() => setOpen((current) => !current)}
+        >
+          <span>{selected.label}</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+          </svg>
+        </button>
+        <div className="custom-select-list" hidden={!open}>
+          {options.map((option) => (
+            <button
+              className={option.value === selected.value ? 'selected' : ''}
+              key={option.value}
+              type="button"
+              onClick={() => {
+                onChange(option.value)
+                setOpen(false)
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </label>
+  )
 }
 
 export default function CalendarPage() {
@@ -607,22 +679,22 @@ export default function CalendarPage() {
             <span>일정명<em className="fp-required-mark">*</em></span>
             <input ref={titleInputRef} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
           </label>
-          <label className="fp-field">
-            <span>기준</span>
-            <select value={form.calendarBasis} onChange={(event) => setForm({ ...form, calendarBasis: event.target.value as 'solar' | 'lunar' })}>
-              <option value="solar">양력</option>
-              <option value="lunar">음력</option>
-            </select>
-          </label>
-          <div className="fp-field">
-            <DatePickerField
-              className="fp-form-date-picker"
-              label="날짜"
-              required
-              value={form.scheduleDate}
-              onChange={(value) => setForm({ ...form, scheduleDate: value })}
-            />
-          </div>
+          <CalendarCustomSelect
+            label="기준"
+            value={form.calendarBasis}
+            options={[
+              { label: '양력', value: 'solar' },
+              { label: '음력', value: 'lunar' },
+            ]}
+            onChange={(value) => setForm({ ...form, calendarBasis: value as 'solar' | 'lunar' })}
+          />
+          <DatePickerField
+            className="fp-form-date-picker"
+            label="날짜"
+            required
+            value={form.scheduleDate}
+            onChange={(value) => setForm({ ...form, scheduleDate: value })}
+          />
           <label className="fp-field">
             <span>시간</span>
             <input
@@ -634,27 +706,29 @@ export default function CalendarPage() {
               onChange={(event) => setForm({ ...form, scheduleTime: normalizeTimeInput(event.target.value) })}
             />
           </label>
-          <label className="fp-field">
-            <span>구분</span>
-            <select value={form.category || '일정'} onChange={(event) => setForm({ ...form, category: event.target.value || null })}>
-              {categoryOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-            </select>
-          </label>
-          <label className="fp-field">
-            <span>가족</span>
-            <select value={form.memberName || '아빠'} onChange={(event) => setForm({ ...form, memberName: event.target.value || null })}>
-              {memberOptions.map((option) => <option key={option} value={option}>{option}</option>)}
-            </select>
-          </label>
-          <label className="fp-field">
-            <span>반복</span>
-            <select value={form.repeatRule || 'none'} onChange={(event) => setForm({ ...form, repeatRule: event.target.value })}>
-              <option value="none">반복 없음</option>
-              <option value="weekly">매주</option>
-              <option value="monthly">매월</option>
-              <option value="yearly">매년</option>
-            </select>
-          </label>
+          <CalendarCustomSelect
+            label="구분"
+            value={form.category || '일정'}
+            options={categoryOptions.map((option) => ({ label: option, value: option }))}
+            onChange={(value) => setForm({ ...form, category: value || null })}
+          />
+          <CalendarCustomSelect
+            label="가족"
+            value={form.memberName || '아빠'}
+            options={memberOptions.map((option) => ({ label: option, value: option }))}
+            onChange={(value) => setForm({ ...form, memberName: value || null })}
+          />
+          <CalendarCustomSelect
+            label="반복"
+            value={form.repeatRule || 'none'}
+            options={[
+              { label: '반복 없음', value: 'none' },
+              { label: '매주', value: 'weekly' },
+              { label: '매월', value: 'monthly' },
+              { label: '매년', value: 'yearly' },
+            ]}
+            onChange={(value) => setForm({ ...form, repeatRule: value })}
+          />
           <label className="fp-field span-2">
             <span>메모</span>
             <textarea value={form.memo || ''} onChange={(event) => setForm({ ...form, memo: event.target.value || null })} />
