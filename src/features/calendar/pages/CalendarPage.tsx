@@ -421,9 +421,9 @@ export default function CalendarPage() {
   }
 
   return (
-    <section className="fp-calendar fp-card">
-      {loading ? <div className="fp-loading-blocker">처리 중입니다.</div> : null}
-      <div className="fp-calendar-main content-grid">
+    <>
+      <section className="fp-calendar content-grid">
+        {loading ? <div className="fp-loading-blocker">처리 중입니다.</div> : null}
         <article className="fp-calendar-left panel wide family-calendar-panel">
           <section className="fp-calendar-left-card">
             <header className="fp-calendar-header">
@@ -666,7 +666,7 @@ export default function CalendarPage() {
             <button className="fp-button fp-button-primary" type="submit">{editingId ? '저장' : '추가'}</button>
           </form>
         </aside>
-      </div>
+      </section>
 
       {dayDialog ? (
         <div className="fp-calendar-popup-backdrop" role="presentation" onClick={() => setDayDialog(null)}>
@@ -728,6 +728,6 @@ export default function CalendarPage() {
           onConfirm={confirmAction}
         />
       ) : null}
-    </section>
+    </>
   )
 }

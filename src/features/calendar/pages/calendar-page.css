@@ -9,13 +9,17 @@
   box-shadow: none;
 }
 
-.fp-calendar-main {
+.fp-calendar.content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
   gap: 16px;
   align-items: start;
   width: 100%;
   max-width: none;
+}
+
+.fp-calendar-main {
+  display: contents;
 }
 
 .fp-calendar-left {
@@ -50,6 +54,17 @@
   top: 18px;
 }
 
+.fp-calendar-right.schedule-form-card {
+  display: grid;
+  gap: 14px;
+  align-self: start;
+  border: 0;
+  border-radius: 18px;
+  padding: 18px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(25, 31, 40, 0.06);
+}
+
 .fp-loading-blocker {
   position: absolute;
   inset: 0;
@@ -79,6 +94,10 @@
   font-size: var(--fp-font-section-title);
   font-weight: var(--fp-weight-title);
   line-height: 1.2;
+}
+
+.fp-calendar-right .fp-schedule-form h3 {
+  font-size: 20px;
 }
 
 .fp-calendar-header p,
@@ -119,7 +138,7 @@
   padding: 0;
   border: 0;
   border-radius: 13px;
-  background: #f2f4f6;
+  background: #fff;
   color: #333d4b;
   font-size: var(--fp-font-section-title);
   font-weight: var(--fp-weight-strong);
@@ -236,12 +255,14 @@
 .fp-field textarea {
   width: 100%;
   min-width: 0;
-  border: 1px solid #cfd9e6;
+  border: 0;
   border-radius: 14px;
   background: #fff;
   color: #191f28;
   font-size: 13px;
   font-weight: 600;
+  box-shadow: inset 0 0 0 1px #dfe5ec;
+  outline: none;
 }
 
 .fp-field input,
@@ -274,7 +295,11 @@
 
 .fp-schedule-form .fp-date-picker-trigger {
   height: 42px;
+  border: 0;
   padding: 0 12px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #dfe5ec;
+  outline: none;
 }
 
 .fp-date-control {
@@ -537,12 +562,13 @@
 
 .fp-schedule-row {
   display: grid;
-  grid-template-columns: 96px minmax(0, 1fr) auto;
-  column-gap: 24px;
-  row-gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 14px;
+  row-gap: 8px;
   align-items: center;
   min-width: 0;
-  padding: 16px 14px;
+  min-height: 78px;
+  padding: 12px 14px;
   border: 0;
   border-radius: 16px;
   background: #fff;
@@ -550,14 +576,15 @@
 }
 
 .fp-schedule-date-pill {
-  display: grid;
-  min-width: 82px;
-  width: 82px;
-  height: 52px;
+  display: inline-flex;
+  min-width: 76px;
+  width: 76px;
+  height: 38px;
   min-height: 0;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
   padding: 0;
-  border-radius: 16px;
+  border-radius: 999px;
   background: #eaf4ff;
   color: #1264d8;
   font-size: 13px;
@@ -616,7 +643,7 @@
   display: grid;
   gap: 5px;
   min-width: 0;
-  padding-left: 4px;
+  padding-left: 0;
 }
 
 .fp-schedule-row.fp-schedule-row-compact {
@@ -686,9 +713,10 @@
 
 .fp-schedule-form {
   gap: 14px;
-  padding: 18px;
-  border: 1px solid #e1e7ef;
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .fp-schedule-form > .fp-button-primary {
@@ -742,12 +770,12 @@
   grid-column: span 2;
 }
 
-.fp-calendar-right .fp-form-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.fp-calendar-right.schedule-form-card .fp-form-grid {
+  grid-template-columns: 1fr;
 }
 
-.fp-calendar-right .span-2 {
-  grid-column: span 2;
+.fp-calendar-right.schedule-form-card .fp-form-grid .span-2 {
+  grid-column: 1 / -1;
 }
 
 .fp-calendar-popup-backdrop {
@@ -903,13 +931,13 @@
 }
 
 @media (min-width: 621px) and (max-width: 1368px) {
-  .fp-calendar-main {
+  .fp-calendar.content-grid {
     max-width: 980px;
   }
 }
 
 @media (min-width: 621px) and (max-width: 1120px) {
-  .fp-calendar-main {
+  .fp-calendar.content-grid {
     grid-template-columns: 1fr;
     max-width: 760px;
   }
@@ -938,7 +966,7 @@
     padding: 0;
   }
 
-  .fp-calendar-main {
+  .fp-calendar.content-grid {
     grid-template-columns: minmax(0, 1fr);
     max-width: none;
   }
@@ -1031,18 +1059,19 @@
   }
 
   .fp-schedule-row {
-    grid-template-columns: 88px minmax(0, 1fr);
-    column-gap: 18px;
-    row-gap: 10px;
-    padding: 16px 14px;
+    grid-template-columns: 76px minmax(0, 1fr);
+    column-gap: 14px;
+    row-gap: 8px;
+    min-height: 78px;
+    padding: 12px 14px;
     border-radius: 14px;
   }
 
   .fp-schedule-date-pill {
-    min-width: 82px;
-    width: 82px;
-    height: 52px;
-    border-radius: 16px;
+    min-width: 76px;
+    width: 76px;
+    height: 38px;
+    border-radius: 999px;
     font-size: 12px;
   }
 
@@ -1064,6 +1093,10 @@
 
   .fp-calendar-right .span-2 {
     grid-column: auto;
+  }
+
+  .fp-calendar-right .fp-schedule-form {
+    padding: 0;
   }
 }
 

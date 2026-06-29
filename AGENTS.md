@@ -35,6 +35,7 @@
 
 ## Legacy Design Migration Rule
 
+- 전체적으로 화면 전부다 확인해서 반영 하기. 무조건 PC, 태블릿, 모바일, 앱 WebView의 전체 화면을 레거시와 비교하고 빠진 차이를 남기지 않는다.
 - When matching a React screen to a legacy screen, inspect the whole legacy screen before editing.
 - Do not fix only the single item the user pointed out. Compare and apply all visible design details for that screen: layout, section order, card size, control height, spacing, border radius, colors, font size, font weight, line-height, icon type, button size, selected/disabled/outside states, empty states, and data display rules.
 - Use the legacy implementation source as the source of truth when it exists. Check both legacy CSS and legacy JS behavior, then reproduce the same behavior in the React component/CSS files.
