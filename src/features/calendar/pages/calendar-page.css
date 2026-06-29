@@ -15,13 +15,19 @@
   gap: 16px;
   align-items: start;
   width: 100%;
-  max-width: 980px;
+  max-width: none;
 }
 
 .fp-calendar-left {
   display: grid;
   min-width: 0;
   gap: 18px;
+}
+
+.fp-calendar-left.panel.wide.family-calendar-panel {
+  width: 100%;
+  min-width: 0;
+  overflow: visible;
 }
 
 .fp-calendar-left-card,
@@ -85,21 +91,29 @@
 
 .fp-calendar-actions {
   display: grid;
+  grid-template-columns: minmax(250px, 320px) minmax(0, 1fr);
+  align-items: center;
   gap: 10px;
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .fp-calendar-month-nav {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) 38px;
-  gap: 8px;
+  grid-template-columns: 38px minmax(140px, 1fr) 38px;
+  gap: 7px;
   align-items: center;
   width: 100%;
+  max-width: 320px;
+  min-width: 0;
+  overflow: hidden;
 }
 
 .fp-calendar-month-nav .fp-button {
   width: 38px;
   min-width: 38px;
+  max-width: 38px;
   height: 38px;
   min-height: 38px;
   padding: 0;
@@ -123,11 +137,13 @@
   align-items: center;
   justify-content: center;
   width: 100%;
+  min-width: 0;
   height: 38px;
   min-height: 38px;
   border: 0;
   border-radius: 14px;
   padding: 0 14px;
+  overflow: hidden;
   background: #fff;
   color: #191f28;
   box-shadow: inset 0 0 0 1px #d9e0e8;
@@ -135,11 +151,17 @@
 
 .fp-calendar-month-nav .fp-date-picker-trigger strong,
 .fp-calendar-year-title strong {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
   color: #191f28;
   font-size: 15px !important;
   font-weight: 700 !important;
   line-height: 1.15;
   text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fp-calendar-month-nav .fp-date-picker-trigger > span {
@@ -153,11 +175,15 @@
 }
 
 .fp-calendar-tabs {
+  justify-self: end;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
+  width: min(100%, 280px);
+  max-width: 280px;
   min-width: 0;
   min-height: 38px;
+  overflow: hidden;
   padding: 3px;
   border-radius: 14px;
   background: #f2f4f6;
@@ -165,6 +191,7 @@
 
 .fp-calendar-tabs button {
   min-width: 0;
+  width: auto;
   height: 32px;
   padding: 0 8px;
   border: 0;
@@ -678,6 +705,11 @@
   box-shadow: none;
 }
 
+.fp-schedule-panel.schedule-list-card {
+  width: 100%;
+  min-width: 0;
+}
+
 .fp-calendar .fp-schedule-form input,
 .fp-calendar .fp-schedule-form select,
 .fp-calendar .fp-schedule-form textarea,
@@ -870,7 +902,13 @@
   box-shadow: inset 0 0 0 1px #ffc2ca;
 }
 
-@media (max-width: 1120px) {
+@media (min-width: 621px) and (max-width: 1368px) {
+  .fp-calendar-main {
+    max-width: 980px;
+  }
+}
+
+@media (min-width: 621px) and (max-width: 1120px) {
   .fp-calendar-main {
     grid-template-columns: 1fr;
     max-width: 760px;
@@ -879,11 +917,34 @@
   .fp-calendar-right {
     position: static;
   }
+
+  .fp-calendar-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fp-calendar-month-nav {
+    max-width: none;
+  }
+
+  .fp-calendar-tabs {
+    justify-self: stretch;
+    width: 100%;
+    max-width: none;
+  }
 }
 
 @media (max-width: 760px) {
   .fp-calendar {
     padding: 0;
+  }
+
+  .fp-calendar-main {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: none;
+  }
+
+  .fp-calendar-right {
+    position: static;
   }
 
   .fp-calendar-left-card,
@@ -899,7 +960,9 @@
   }
 
   .fp-calendar-actions {
+    grid-template-columns: minmax(0, 1fr);
     width: 100%;
+    overflow: visible;
   }
 
   .fp-month-field,
@@ -909,12 +972,28 @@
 
   .fp-calendar-month-nav {
     grid-template-columns: 38px minmax(0, 1fr) 38px;
+    max-width: none;
+  }
+
+  .fp-calendar-tabs {
+    justify-self: stretch;
+    width: 100%;
+    max-width: none;
+    min-height: 44px;
+    padding: 4px;
+    border-radius: 16px;
+    overflow: visible;
   }
 
   .fp-calendar-tabs button {
-    flex: 1;
-    height: 32px;
-    font-size: 13px;
+    display: inline-flex;
+    min-width: 0;
+    height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    font-size: 12px;
+    line-height: 1;
   }
 
   .fp-weekdays,

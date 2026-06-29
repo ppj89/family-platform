@@ -423,16 +423,16 @@ export default function CalendarPage() {
   return (
     <section className="fp-calendar fp-card">
       {loading ? <div className="fp-loading-blocker">처리 중입니다.</div> : null}
-      <div className="fp-calendar-main">
-        <div className="fp-calendar-left">
+      <div className="fp-calendar-main content-grid">
+        <article className="fp-calendar-left panel wide family-calendar-panel">
           <section className="fp-calendar-left-card">
             <header className="fp-calendar-header">
-              <div className="fp-calendar-actions">
+              <div className="fp-calendar-actions calendar-toolbar">
                 {view === 'month' ? (
-                  <div className="fp-calendar-month-nav">
+                  <div className="fp-calendar-month-nav calendar-nav">
                     <button type="button" className="fp-button fp-button-muted" aria-label="이전 달" onClick={() => setMonthDate(addMonths(monthDate, -1))}>‹</button>
                     <DatePickerField
-                      className="fp-month-field"
+                      className="fp-month-field calendar-title-button"
                       label="조회 월"
                       mode="month"
                       value={formatDateKey(monthDate).slice(0, 7)}
@@ -441,9 +441,9 @@ export default function CalendarPage() {
                     <button type="button" className="fp-button fp-button-muted" aria-label="다음 달" onClick={() => setMonthDate(addMonths(monthDate, 1))}>›</button>
                   </div>
                 ) : view === 'year' ? (
-                  <div className="fp-calendar-month-nav fp-calendar-year-nav">
+                  <div className="fp-calendar-month-nav fp-calendar-year-nav calendar-nav">
                     <button type="button" className="fp-button fp-button-muted" aria-label="이전 연도" onClick={() => setMonthDate(addMonths(monthDate, -12))}>‹</button>
-                    <button type="button" className="fp-calendar-year-title" aria-label="조회 연도">
+                    <button type="button" className="fp-calendar-year-title calendar-title-button" aria-label="조회 연도">
                       <strong>{monthDate.getFullYear()}년</strong>
                     </button>
                     <button type="button" className="fp-button fp-button-muted" aria-label="다음 연도" onClick={() => setMonthDate(addMonths(monthDate, 12))}>›</button>
@@ -457,7 +457,7 @@ export default function CalendarPage() {
                     onChange={view === 'day' ? changeDayDate : changeWeekDate}
                   />
                 )}
-                <div className="fp-calendar-tabs" role="tablist" aria-label="캘린더 보기">
+                <div className="fp-calendar-tabs calendar-view-tabs" role="tablist" aria-label="캘린더 보기">
                   {[
                     ['day', '일간'],
                     ['week', '주간'],
@@ -587,7 +587,7 @@ export default function CalendarPage() {
             </div>
           </section>
 
-          <section className="fp-schedule-panel">
+          <section className="fp-schedule-panel schedule-list-card">
             <div className="fp-schedule-panel-header">
               <div>
                 <h3>{agendaTitle}</h3>
@@ -597,9 +597,9 @@ export default function CalendarPage() {
               {agendaItems.length ? agendaItems.map((item) => renderScheduleRow(item)) : <p className="fp-empty-text">등록된 일정이 없습니다.</p>}
             </div>
           </section>
-        </div>
+        </article>
 
-        <aside className="fp-calendar-right">
+        <aside className="fp-calendar-right panel entry-panel schedule-form-card">
           <form className="fp-schedule-form" ref={formRef} onSubmit={requestSave}>
             <header>
               <h3>{editingId ? '일정 수정' : '일정 추가'}</h3>
