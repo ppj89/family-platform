@@ -11,9 +11,11 @@
 
 .fp-calendar-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 16px;
   align-items: start;
+  width: 100%;
+  max-width: 980px;
 }
 
 .fp-calendar-left {
@@ -39,7 +41,7 @@
 
 .fp-calendar-right {
   position: sticky;
-  top: 20px;
+  top: 18px;
 }
 
 .fp-loading-blocker {
@@ -565,7 +567,7 @@
   height: 34px;
   padding: 0 10px;
   border: 0;
-  border-radius: 10px;
+  border-radius: 12px;
   background: #edf4ff;
   color: #1b64da;
   font-size: 13px;
@@ -578,7 +580,7 @@
 .fp-day-board h3,
 .fp-schedule-row > div > strong {
   color: #191f28;
-  font-size: var(--fp-font-body);
+  font-size: 15px;
   font-weight: var(--fp-weight-title);
   line-height: 1.25;
 }
@@ -672,7 +674,7 @@
   display: grid;
   gap: 12px;
   padding: 16px;
-  background: #f8fafc;
+  background: #f7f8fa;
   box-shadow: none;
 }
 
@@ -709,11 +711,11 @@
 }
 
 .fp-calendar-right .fp-form-grid {
-  grid-template-columns: 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .fp-calendar-right .span-2 {
-  grid-column: auto;
+  grid-column: span 2;
 }
 
 .fp-calendar-popup-backdrop {
@@ -868,9 +870,10 @@
   box-shadow: inset 0 0 0 1px #ffc2ca;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1120px) {
   .fp-calendar-main {
     grid-template-columns: 1fr;
+    max-width: 760px;
   }
 
   .fp-calendar-right {
@@ -972,7 +975,15 @@
     grid-template-columns: 1fr;
   }
 
+  .fp-calendar-right .fp-form-grid {
+    grid-template-columns: 1fr;
+  }
+
   .span-2 {
+    grid-column: auto;
+  }
+
+  .fp-calendar-right .span-2 {
     grid-column: auto;
   }
 }
