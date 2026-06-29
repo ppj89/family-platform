@@ -19,6 +19,8 @@ import './calendar-page.css'
 
 type CalendarView = 'day' | 'week' | 'month' | 'year'
 
+const shortWeekdays = ['일', '월', '화', '수', '목', '금', '토']
+
 type ConfirmState =
   | { kind: 'save'; title: string; body: string; danger?: boolean }
   | { kind: 'delete'; item: CalendarScheduleInstance; title: string; body: string; danger?: boolean }
@@ -152,6 +154,16 @@ function CalendarNavChevron({ direction }: { direction: 'previous' | 'next' }) {
   )
 }
 
+function formatShortKoreanDate(value: string) {
+  const date = parseDateKey(value)
+  return `${date.getMonth() + 1}월 ${date.getDate()}일 (${shortWeekdays[date.getDay()]})`
+}
+
+function formatWeekTitle(value: string) {
+  const range = weekRange(value)
+  return `${formatShortKoreanDate(range.startDate)} - ${formatShortKoreanDate(range.endDate)}`
+}
+
 function CalendarCustomSelect({
   label,
   options,
@@ -245,7 +257,7 @@ export default function CalendarPage() {
     [selectedDate, visibleItems],
   )
   const agendaItems = view === 'month' || view === 'year' ? visibleItems : selectedItems
-  const agendaTitle = view === 'year' ? '연간 일정표' : view === 'month' ? '월간 일정표' : formatKoreanDate(selectedDate)
+  const agendaTitle = view === 'year' ? '연간 일정표' : view === 'month' ? '월간 일정표' : view === 'week' ? '주간 일정표' : '일간 일정표'
   const cells = useMemo(() => monthCells(monthDate), [monthDate])
   const weekDateKeys = useMemo(() => weekDays(weekDate), [weekDate])
   const yearMonthItems = useMemo(() => yearMonths(monthDate.getFullYear()), [monthDate])
@@ -258,11 +270,29 @@ export default function CalendarPage() {
 
   function changeWeekDate(value: string) {
     setWeekDate(value)
+    setSelectedDate(value)
+    if (!editingId) setForm((current) => ({ ...current, scheduleDate: value }))
   }
 
   function changeMonth(value: string) {
     setMonthDate(parseDateKey(`${value}-01`))
     if (view === 'month' && !selectedDate.startsWith(value)) setSelectedDate(`${value}-01`)
+  }
+
+  function moveCalendarRange(amount: number) {
+    if (view === 'day') {
+      changeDayDate(addDays(dayDate, amount))
+      return
+    }
+    if (view === 'week') {
+      changeWeekDate(addDays(weekDate, amount * 7))
+      return
+    }
+    if (view === 'year') {
+      setMonthDate(addMonths(monthDate, amount * 12))
+      return
+    }
+    setMonthDate(addMonths(monthDate, amount))
   }
 
   function changeView(nextView: CalendarView) {
@@ -437,6 +467,48 @@ export default function CalendarPage() {
     void remove(item)
   }
 
+  function renderCalendarNavigation() {
+    if (view === 'year') {
+      return (
+        <div className="fp-calendar-month-nav fp-calendar-year-nav calendar-nav">
+          <button type="button" className="icon-button fp-button fp-button-muted" aria-label="이전 연도" onClick={() => moveCalendarRange(-1)}>
+            <CalendarNavChevron direction="previous" />
+          </button>
+          <button type="button" className="fp-calendar-year-title calendar-title-button" aria-label="조회 연도">
+            <strong>{monthDate.getFullYear()}년</strong>
+          </button>
+          <button type="button" className="icon-button fp-button fp-button-muted" aria-label="다음 연도" onClick={() => moveCalendarRange(1)}>
+            <CalendarNavChevron direction="next" />
+          </button>
+        </div>
+      )
+    }
+
+    const isMonth = view === 'month'
+    const pickerValue = isMonth ? formatDateKey(monthDate).slice(0, 7) : view === 'day' ? dayDate : weekDate
+    const pickerLabel = isMonth ? '조회 월' : view === 'day' ? '조회 일' : '조회 주'
+    const pickerDisplay = isMonth ? undefined : view === 'day' ? formatShortKoreanDate(dayDate) : formatWeekTitle(weekDate)
+
+    return (
+      <div className="fp-calendar-month-nav calendar-nav">
+        <button type="button" className="icon-button fp-button fp-button-muted" aria-label="이전" onClick={() => moveCalendarRange(-1)}>
+          <CalendarNavChevron direction="previous" />
+        </button>
+        <DatePickerField
+          className={`${isMonth ? 'fp-month-field' : 'fp-date-field'} calendar-title-button`}
+          displayValue={pickerDisplay}
+          label={pickerLabel}
+          mode={isMonth ? 'month' : 'date'}
+          value={pickerValue}
+          onChange={isMonth ? changeMonth : view === 'day' ? changeDayDate : changeWeekDate}
+        />
+        <button type="button" className="icon-button fp-button fp-button-muted" aria-label="다음" onClick={() => moveCalendarRange(1)}>
+          <CalendarNavChevron direction="next" />
+        </button>
+      </div>
+    )
+  }
+
   function renderScheduleRow(item: CalendarScheduleInstance, options?: { compact?: boolean }) {
     const compact = Boolean(options?.compact)
     return (
@@ -508,43 +580,7 @@ export default function CalendarPage() {
           <section className="fp-calendar-left-card">
             <header className="fp-calendar-header">
               <div className="fp-calendar-actions calendar-toolbar">
-                {view === 'month' ? (
-                  <div className="fp-calendar-month-nav calendar-nav">
-                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="이전 달" onClick={() => setMonthDate(addMonths(monthDate, -1))}>
-                      <CalendarNavChevron direction="previous" />
-                    </button>
-                    <DatePickerField
-                      className="fp-month-field calendar-title-button"
-                      label="조회 월"
-                      mode="month"
-                      value={formatDateKey(monthDate).slice(0, 7)}
-                      onChange={changeMonth}
-                    />
-                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="다음 달" onClick={() => setMonthDate(addMonths(monthDate, 1))}>
-                      <CalendarNavChevron direction="next" />
-                    </button>
-                  </div>
-                ) : view === 'year' ? (
-                  <div className="fp-calendar-month-nav fp-calendar-year-nav calendar-nav">
-                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="이전 연도" onClick={() => setMonthDate(addMonths(monthDate, -12))}>
-                      <CalendarNavChevron direction="previous" />
-                    </button>
-                    <button type="button" className="fp-calendar-year-title calendar-title-button" aria-label="조회 연도">
-                      <strong>{monthDate.getFullYear()}년</strong>
-                    </button>
-                    <button type="button" className="icon-button fp-button fp-button-muted" aria-label="다음 연도" onClick={() => setMonthDate(addMonths(monthDate, 12))}>
-                      <CalendarNavChevron direction="next" />
-                    </button>
-                  </div>
-                ) : (
-                  <DatePickerField
-                    className="fp-date-field"
-                    key={view}
-                    label={view === 'day' ? '조회 일' : '조회 주'}
-                    value={view === 'day' ? dayDate : weekDate}
-                    onChange={view === 'day' ? changeDayDate : changeWeekDate}
-                  />
-                )}
+                {renderCalendarNavigation()}
                 <div className="fp-calendar-tabs calendar-view-tabs" role="tablist" aria-label="캘린더 보기">
                   {[
                     ['day', '일간'],
@@ -624,12 +660,12 @@ export default function CalendarPage() {
             </div>
                 </section>
               ) : view === 'year' ? (
-                <section className="fp-year-board">
+                <section className="fp-year-board year-schedule-grid">
             {yearMonthItems.map((monthItem) => {
               const monthSchedules = visibleItems.filter((item) => item.occurrenceDate.startsWith(monthItem.key))
               return (
                 <button
-                  className={formatDateKey(monthDate).startsWith(monthItem.key) ? 'active' : ''}
+                  className={formatDateKey(monthDate).startsWith(monthItem.key) ? 'year-month-card active' : 'year-month-card'}
                   key={monthItem.key}
                   type="button"
                   onClick={() => {
@@ -640,37 +676,57 @@ export default function CalendarPage() {
                 >
                   <strong>{monthItem.label}</strong>
                   <span>{monthSchedules.length}건</span>
-                  {monthSchedules.slice(0, 3).map((item) => <small key={item.instanceKey}>{item.title}</small>)}
+                  {monthSchedules.slice(0, 3).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
                 </button>
               )
             })}
                 </section>
               ) : view === 'week' ? (
-                <section className="fp-week-board">
+                <section className="fp-week-board week-agenda-grid">
             {weekDateKeys.map((dateKey) => {
               const dayItems = visibleItems.filter((item) => item.occurrenceDate === dateKey)
+              const date = parseDateKey(dateKey)
+              const holidayName = holidayNames[dateKey] || ''
+              const isHoliday = Boolean(holidayName || date.getDay() === 0)
+              const isSaturday = date.getDay() === 6
               return (
                 <button
-                  className={selectedDate === dateKey ? 'active' : ''}
+                  className={[
+                    'agenda-day-column',
+                    selectedDate === dateKey ? 'active' : '',
+                    isHoliday ? 'holiday' : '',
+                    isSaturday ? 'saturday' : '',
+                  ].filter(Boolean).join(' ')}
                   key={dateKey}
                   type="button"
                   onClick={() => setActiveDate(dateKey)}
                 >
-                  <strong>{formatKoreanDate(dateKey)}</strong>
+                  <strong>{formatShortKoreanDate(dateKey)}</strong>
                   <span>{dayItems.length}건</span>
-                  {dayItems.slice(0, 2).map((item) => <small key={item.instanceKey}>{item.title}</small>)}
+                  {holidayName ? <small>{holidayName}</small> : null}
+                  {dayItems.slice(0, 2).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
                 </button>
               )
             })}
                 </section>
               ) : (
-                <section className="fp-day-board">
-            <h3>{formatKoreanDate(dayDate)}</h3>
-            <p>{visibleItems.length}건</p>
-            <button type="button" className="fp-button fp-button-muted" onClick={() => startCreate(dayDate)}>이 날짜에 일정 추가</button>
-                </section>
+                null
               )}
             </div>
+
+            {view === 'day' || view === 'week' ? (
+              <section className="panel-card selected-day-card">
+                <div className="panel-header">
+                  <h2>선택일</h2>
+                  <button type="button" className="passive-header-chip" onClick={() => startCreate(selectedDate)}>
+                    {formatShortKoreanDate(selectedDate)}
+                  </button>
+                </div>
+                <div className="schedule-list">
+                  {selectedItems.length ? selectedItems.map((item) => renderScheduleRow(item)) : <p className="empty-note">선택한 날짜에는 일정이 없습니다.</p>}
+                </div>
+              </section>
+            ) : null}
           </section>
 
           <section className="fp-schedule-panel schedule-list-card">

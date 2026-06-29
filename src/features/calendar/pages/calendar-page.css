@@ -18,6 +18,10 @@
   max-width: none;
 }
 
+body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
+  display: none;
+}
+
 .fp-calendar-main {
   display: contents;
 }
@@ -669,6 +673,172 @@
   font-weight: var(--fp-weight-strong);
 }
 
+.fp-calendar .selected-day-card {
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  border-radius: 18px;
+  padding: 0;
+  background: #fff;
+  box-shadow: none;
+}
+
+.fp-calendar .selected-day-card .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0;
+}
+
+.fp-calendar .selected-day-card h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.fp-calendar .selected-day-card .passive-header-chip {
+  min-height: 34px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 14px;
+  background: #f2f4f6;
+  color: #526070;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.fp-calendar .selected-day-card .schedule-list {
+  margin-top: 0;
+}
+
+.fp-calendar .selected-day-card .empty-note,
+.fp-calendar .selected-day-card .fp-empty-text {
+  margin: 0;
+  padding: 18px;
+  border-radius: 16px;
+  background: #fff;
+  color: #6b7684;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: center;
+  box-shadow: inset 0 0 0 1px #dfe5ec;
+}
+
+.fp-calendar .fp-week-board.week-agenda-grid {
+  grid-template-columns: repeat(7, minmax(120px, 1fr));
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.fp-calendar .fp-week-board .agenda-day-column,
+.fp-calendar .fp-year-board .year-month-card {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  border: 0;
+  border-radius: 16px;
+  background: #fff;
+  color: #191f28;
+  text-align: left;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+  cursor: pointer;
+}
+
+.fp-calendar .fp-week-board .agenda-day-column {
+  min-height: 160px;
+  padding: 14px;
+}
+
+.fp-calendar .fp-week-board .agenda-day-column.active {
+  border-color: #3182f6;
+  box-shadow: inset 0 0 0 2px #3182f6, 0 12px 28px rgba(49, 130, 246, 0.13);
+}
+
+.fp-calendar .fp-week-board .agenda-day-column.holiday > strong {
+  color: #f04452;
+}
+
+.fp-calendar .fp-week-board .agenda-day-column.saturday > strong {
+  color: #3182f6;
+}
+
+.fp-calendar .fp-week-board .agenda-day-column strong {
+  color: #191f28;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.25;
+}
+
+.fp-calendar .fp-week-board .agenda-day-column span,
+.fp-calendar .fp-week-board .agenda-day-column small {
+  color: #8b95a1;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.fp-calendar .fp-week-board .agenda-day-column em,
+.fp-calendar .fp-year-board .year-month-card em {
+  overflow: hidden;
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 4px 7px;
+  background: #edf4ff;
+  color: #3182f6;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-calendar .fp-year-board.year-schedule-grid {
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 10px;
+}
+
+.fp-calendar .fp-year-board .year-month-card {
+  min-height: 132px;
+  max-height: 180px;
+  overflow: auto;
+  padding: 12px;
+}
+
+.fp-calendar .fp-year-board .year-month-card:hover,
+.fp-calendar .fp-year-board .year-month-card.active {
+  border-color: #dbeafe;
+  background: #f8fbff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.fp-calendar .fp-year-board .year-month-card strong {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 28px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0 10px;
+  background: #edf4ff;
+  color: #1b64da;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.fp-calendar .fp-year-board .year-month-card > span {
+  color: #8b95a1;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .fp-schedule-list {
   display: grid;
   gap: 10px;
@@ -1311,6 +1481,15 @@
   }
 
   .fp-year-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fp-calendar .fp-week-board.week-agenda-grid {
+    grid-template-columns: 1fr;
+    overflow-x: visible;
+  }
+
+  .fp-calendar .fp-year-board.year-schedule-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 

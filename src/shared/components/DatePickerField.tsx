@@ -4,6 +4,7 @@ import './date-picker-field.css'
 
 interface DatePickerFieldProps {
   className?: string
+  displayValue?: string
   label?: string
   mode?: 'date' | 'month'
   required?: boolean
@@ -44,7 +45,7 @@ function initialViewDate(value: string, mode: 'date' | 'month') {
   return parseDateKey(value || todayKey())
 }
 
-export function DatePickerField({ className = '', label, mode = 'date', required = false, value, onChange }: DatePickerFieldProps) {
+export function DatePickerField({ className = '', displayValue, label, mode = 'date', required = false, value, onChange }: DatePickerFieldProps) {
   const [open, setOpen] = useState(false)
   const [viewDate, setViewDate] = useState(() => initialViewDate(value, mode))
   const rootRef = useRef<HTMLLabelElement>(null)
@@ -94,7 +95,7 @@ export function DatePickerField({ className = '', label, mode = 'date', required
     <label className={`fp-field fp-date-picker-field date-picker-field ${className}`} ref={rootRef}>
       {label ? <span>{label}{required ? <em className="fp-required-mark">*</em> : null}</span> : null}
       <button className="fp-date-picker-trigger date-picker-trigger" type="button" onClick={() => setOpen((current) => !current)}>
-        <strong>{mode === 'month' ? displayMonth(value) : displayDate(value)}</strong>
+        <strong>{displayValue || (mode === 'month' ? displayMonth(value) : displayDate(value))}</strong>
         {mode === 'month' ? (
           <span aria-hidden="true" className="fp-date-picker-caret">▾</span>
         ) : (
