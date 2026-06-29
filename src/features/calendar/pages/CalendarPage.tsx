@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField } from '../../../shared/components'
 import {
@@ -141,6 +141,8 @@ function yearMonths(year: number) {
 
 export default function CalendarPage() {
   const today = todayKey()
+  const formRef = useRef<HTMLFormElement>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
   const [view, setView] = useState<CalendarView>('month')
   const [monthDate, setMonthDate] = useState(() => new Date())
   const [weekDate, setWeekDate] = useState(today)
@@ -238,7 +240,7 @@ export default function CalendarPage() {
     setForm(emptyPayload(dateKey))
   }
 
-function startEdit(item: CalendarScheduleInstance) {
+  function startEdit(item: CalendarScheduleInstance) {
     const source = items.find((candidate) => candidate.id === item.id) || item
     setEditingId(source.id)
     setEditingSource(source)
@@ -255,6 +257,10 @@ function startEdit(item: CalendarScheduleInstance) {
     })
     setDayDialog(null)
     setScheduleDetail(null)
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      titleInputRef.current?.focus({ preventScroll: true })
+    }, 0)
   }
 
   function requestSave(event: FormEvent) {
@@ -357,17 +363,17 @@ function startEdit(item: CalendarScheduleInstance) {
       <article
         className={compact ? 'fp-schedule-row fp-schedule-row-compact' : 'fp-schedule-row'}
         key={item.instanceKey}
-        role={compact ? 'button' : undefined}
-        tabIndex={compact ? 0 : undefined}
-        onClick={compact ? (event) => {
+        role="button"
+        tabIndex={0}
+        onClick={(event) => {
           if ((event.target as HTMLElement).closest('button')) return
           setScheduleDetail(item)
-        } : undefined}
-        onKeyDown={compact ? (event) => {
+        }}
+        onKeyDown={(event) => {
           if (event.key !== 'Enter' && event.key !== ' ') return
           event.preventDefault()
           setScheduleDetail(item)
-        } : undefined}
+        }}
       >
         {compact ? null : (
           <strong className="fp-schedule-date-pill">{formatKoreanDate(item.occurrenceDate).replace(/^\d{4}-\d{2}-/, '')}</strong>
@@ -376,25 +382,36 @@ function startEdit(item: CalendarScheduleInstance) {
           <strong>{item.title}</strong>
           <p>
             {scheduleTime(item)}
-            {' · '}
+            {' \u00B7 '}
             {item.category || '일정'}
-            {item.memberName ? ` · ${item.memberName}` : ''}
+            {item.memberName ? ` \u00B7 ${item.memberName}` : ''}
           </p>
           {isRepeatRule(item.repeatRule) ? <em>{repeatLabel(item.repeatRule)}</em> : null}
           {item.memo ? <small>{item.memo}</small> : null}
         </div>
         <div className="fp-row-actions">
-          <button type="button" onClick={() => startEdit(item)}>수정</button>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation()
+              startEdit(item)
+            }}
+          >
+            수정
+          </button>
           <button
             type="button"
             className="danger"
-            onClick={() => setConfirm({
-              kind: 'delete',
-              item,
-              title: '일정을 삭제할까요?',
-              body: `${item.title} 일정을 삭제합니다.`,
-              danger: true,
-            })}
+            onClick={(event) => {
+              event.stopPropagation()
+              setConfirm({
+                kind: 'delete',
+                item,
+                title: '일정을 삭제할까요?',
+                body: `${item.title} 일정을 삭제합니다.`,
+                danger: true,
+              })
+            }}
           >
             삭제
           </button>
@@ -578,7 +595,7 @@ function startEdit(item: CalendarScheduleInstance) {
         </div>
       </section>
 
-      <form className="fp-schedule-form" onSubmit={requestSave}>
+      <form className="fp-schedule-form" ref={formRef} onSubmit={requestSave}>
         <header>
           <h3>{editingId ? '일정 수정' : '일정 추가'}</h3>
           {editingId ? <button type="button" className="fp-button fp-button-muted" onClick={() => startCreate(form.scheduleDate)}>취소</button> : null}
@@ -586,7 +603,7 @@ function startEdit(item: CalendarScheduleInstance) {
         <div className="fp-form-grid">
           <label className="fp-field span-2">
             <span>일정명<em className="fp-required-mark">*</em></span>
-            <input value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
+            <input ref={titleInputRef} value={form.title} onChange={(event) => setForm({ ...form, title: event.target.value })} />
           </label>
           <label className="fp-field">
             <span>기준</span>
@@ -661,33 +678,33 @@ function startEdit(item: CalendarScheduleInstance) {
       {scheduleDetail ? (
         <div className="fp-schedule-detail-backdrop" role="presentation" onClick={() => setScheduleDetail(null)}>
           <section className="fp-schedule-detail-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <button className="fp-schedule-detail-close" type="button" aria-label="?リ린" onClick={() => setScheduleDetail(null)}>x</button>
+            <button className="fp-schedule-detail-close" type="button" aria-label="닫기" onClick={() => setScheduleDetail(null)}>x</button>
             <span className="fp-schedule-detail-date">{formatKoreanDate(scheduleDetail.occurrenceDate)}</span>
             <h3>{scheduleDetail.title}</h3>
             <p>
               {scheduleTime(scheduleDetail)}
-              {' 쨌 '}
-              {scheduleDetail.category || '?쇱젙'}
-              {scheduleDetail.memberName ? ` 쨌 ${scheduleDetail.memberName}` : ''}
-              {isRepeatRule(scheduleDetail.repeatRule) ? ` 쨌 ${repeatLabel(scheduleDetail.repeatRule)}` : ''}
+              {' \u00B7 '}
+              {scheduleDetail.category || '일정'}
+              {scheduleDetail.memberName ? ` \u00B7 ${scheduleDetail.memberName}` : ''}
+              {isRepeatRule(scheduleDetail.repeatRule) ? ` \u00B7 ${repeatLabel(scheduleDetail.repeatRule)}` : ''}
             </p>
             <div className="fp-schedule-detail-memo">
-              {scheduleDetail.memo || '?깅줉???硫붾え媛 ?놁뒿?덈떎.'}
+              {scheduleDetail.memo || '등록된 메모가 없습니다.'}
             </div>
             <div className="fp-schedule-detail-actions">
-              <button type="button" onClick={() => startEdit(scheduleDetail)}>?섏젙</button>
+              <button type="button" onClick={() => startEdit(scheduleDetail)}>수정</button>
               <button
                 type="button"
                 className="danger"
                 onClick={() => setConfirm({
                   kind: 'delete',
                   item: scheduleDetail,
-                  title: '?쇱젙????젣?좉퉴??',
-                  body: `${scheduleDetail.title} ?쇱젙????젣?⑸땲??`,
+                  title: '일정을 삭제할까요?',
+                  body: `${scheduleDetail.title} 일정을 삭제합니다.`,
                   danger: true,
                 })}
               >
-                ??젣
+                삭제
               </button>
             </div>
           </section>
