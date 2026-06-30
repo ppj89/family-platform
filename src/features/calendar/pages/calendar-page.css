@@ -871,13 +871,13 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 
 .fp-calendar .fp-year-board.year-schedule-grid {
   grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
-  gap: 10px;
+  gap: 12px;
 }
 
 .fp-calendar .fp-year-board .year-month-card {
   min-height: 132px;
   max-height: 180px;
-  overflow: auto;
+  overflow: hidden;
   padding: 12px;
 }
 
@@ -889,8 +889,8 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 
 .fp-calendar .fp-year-board .year-month-card.active {
   border-color: #3182f6;
-  background: #eef6ff;
-  box-shadow: inset 0 0 0 2px #3182f6, 0 10px 24px rgba(49, 130, 246, 0.16);
+  background: #f8fbff;
+  box-shadow: inset 0 0 0 2px #3182f6, 0 10px 24px rgba(49, 130, 246, 0.12);
 }
 
 .fp-calendar .fp-year-board .year-month-card strong {
@@ -945,12 +945,16 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-calendar .fp-year-board.year-mode-calendar {
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
 }
 
 .fp-calendar .fp-year-board.year-mode-calendar .year-month-card {
-  min-height: 230px;
+  min-height: 250px;
   max-height: none;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 18px;
 }
 
 .fp-calendar .fp-year-board.year-mode-list .year-month-card {
@@ -959,30 +963,30 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 
 .fp-calendar .year-mini-calendar {
   display: grid;
-  gap: 7px;
+  gap: 10px;
 }
 
 .fp-calendar .year-mini-weekdays,
 .fp-calendar .year-mini-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 3px;
+  gap: 6px 3px;
 }
 
 .fp-calendar .year-mini-weekdays span {
   color: #8b95a1 !important;
-  font-size: 10px !important;
+  font-size: 12px !important;
   font-weight: 500 !important;
   text-align: center;
 }
 
 .fp-calendar .year-mini-days span {
   display: grid;
-  min-height: 24px;
+  min-height: 22px;
   place-items: center;
-  border-radius: 9px;
+  border-radius: 999px;
   color: #4e5968 !important;
-  font-size: 10px !important;
+  font-size: 12px !important;
   font-weight: 400 !important;
 }
 
@@ -997,19 +1001,29 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   align-items: center;
   justify-content: center;
   justify-self: start;
-  min-height: 30px;
+  min-height: 28px;
   margin-top: 2px;
   border-radius: 999px;
-  padding: 0 12px;
+  padding: 0 14px;
   background: #edf4ff;
   color: #1b64da !important;
-  font-size: 12px !important;
+  font-size: 13px !important;
   font-weight: 500 !important;
 }
 
 .fp-calendar .year-event-count.is-empty {
   background: #f2f4f7;
   color: #8b95a1 !important;
+}
+
+@media (max-width: 640px) {
+  .fp-calendar .fp-year-board.year-mode-calendar {
+    grid-template-columns: 1fr;
+  }
+
+  .fp-calendar .fp-year-board.year-mode-calendar .year-month-card {
+    min-height: 252px;
+  }
 }
 
 .fp-schedule-list {
@@ -1712,6 +1726,10 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 
   .fp-calendar .fp-year-board.year-schedule-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fp-calendar .fp-year-board.year-schedule-grid.year-mode-calendar {
+    grid-template-columns: 1fr;
   }
 
   .fp-month-cell {

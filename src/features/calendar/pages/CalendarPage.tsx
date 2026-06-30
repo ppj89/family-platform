@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { apiActionMessage } from '../../../shared/api/client'
+import { apiActionMessage, isAuthError } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField } from '../../../shared/components'
 import {
   addDays,
@@ -360,6 +360,7 @@ export default function CalendarPage() {
       const nextItems = await listSchedules(scheduleStartDate, range.endDate)
       setItems(nextItems)
     } catch (error) {
+      if (isAuthError(error)) return
       setMessage(apiActionMessage(error, '일정을 불러오지 못했습니다.'))
     } finally {
       setLoading(false)

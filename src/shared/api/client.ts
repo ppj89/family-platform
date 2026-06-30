@@ -54,3 +54,9 @@ export function apiActionMessage(error: unknown, fallback: string) {
   if (status >= 500 || raw.includes('database')) return '시스템 문제로 처리하지 못했습니다. 잠시 후 다시 시도해주세요.'
   return fallback
 }
+
+export function isAuthError(error: unknown) {
+  const status = typeof error === 'object' && error && 'status' in error ? Number((error as ApiError).status) : 0
+  const raw = error instanceof Error ? error.message : String(error || '')
+  return status === 401 || raw.includes('invalid session') || raw.includes('로그인이 필요합니다')
+}
