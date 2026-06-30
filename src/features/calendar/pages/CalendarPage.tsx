@@ -282,7 +282,12 @@ export default function CalendarPage() {
     () => visibleItems.filter((item) => item.occurrenceDate === selectedDate),
     [selectedDate, visibleItems],
   )
-  const agendaItems = view === 'month' || view === 'year' ? visibleItems : selectedItems
+  const selectedYearMonthKey = formatDateKey(monthDate).slice(0, 7)
+  const yearAgendaItems = useMemo(
+    () => visibleItems.filter((item) => item.occurrenceDate.startsWith(selectedYearMonthKey)),
+    [selectedYearMonthKey, visibleItems],
+  )
+  const agendaItems = view === 'year' ? yearAgendaItems : view === 'month' ? visibleItems : selectedItems
   const agendaTitle = view === 'year' ? '연간 일정표' : view === 'month' ? '월간 일정표' : view === 'week' ? '주간 일정표' : '일간 일정표'
   const cells = useMemo(() => monthCells(monthDate), [monthDate])
   const weekDateKeys = useMemo(() => weekDays(weekDate), [weekDate])
@@ -308,8 +313,9 @@ export default function CalendarPage() {
   function changeYear(value: string) {
     const year = Number(value)
     if (!Number.isFinite(year)) return
-    setMonthDate(new Date(year, monthDate.getMonth(), 1))
-    setSelectedDate(`${year}-01-01`)
+    const nextMonthDate = new Date(year, monthDate.getMonth(), 1)
+    setMonthDate(nextMonthDate)
+    setSelectedDate(formatDateKey(nextMonthDate))
   }
 
   function moveCalendarRange(amount: number) {
@@ -339,7 +345,7 @@ export default function CalendarPage() {
       return
     }
     if (nextView === 'year') {
-      setSelectedDate(`${monthDate.getFullYear()}-01-01`)
+      setSelectedDate(formatDateKey(monthDate))
       return
     }
     const monthKey = formatDateKey(monthDate).slice(0, 7)
@@ -726,7 +732,6 @@ export default function CalendarPage() {
                           onClick={() => {
                             setMonthDate(new Date(monthDate.getFullYear(), monthItem.month - 1, 1))
                             setSelectedDate(`${monthItem.key}-01`)
-                            setView('month')
                           }}
                         >
                           <strong>{monthItem.label}</strong>
@@ -777,12 +782,16 @@ export default function CalendarPage() {
                   ].filter(Boolean).join(' ')}
                   key={dateKey}
                   type="button"
-                  onClick={() => setActiveDate(dateKey)}
+                  onClick={() => {
+                    setActiveDate(dateKey)
+                    if (dayItems.length > 2) setDayDialog({ date: dateKey, items: dayItems })
+                  }}
                 >
                   <strong>{formatShortKoreanDate(dateKey)}</strong>
                   <span>{dayItems.length}건</span>
                   {holidayName ? <small>{holidayName}</small> : null}
                   {dayItems.slice(0, 2).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
+                  {dayItems.length > 2 ? <small className="agenda-more-count">+{dayItems.length}</small> : null}
                 </button>
               )
             })}

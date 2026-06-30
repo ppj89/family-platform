@@ -786,8 +786,10 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 
 .fp-calendar .fp-week-board.week-agenda-grid {
   grid-template-columns: repeat(7, minmax(120px, 1fr));
-  gap: 12px;
+  gap: 14px;
+  padding-bottom: 16px;
   overflow-x: auto;
+  scrollbar-gutter: stable;
 }
 
 .fp-calendar .fp-week-board .agenda-day-column,
@@ -805,7 +807,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-calendar .fp-week-board .agenda-day-column {
-  min-height: 160px;
+  min-height: 176px;
   padding: 14px;
 }
 
@@ -851,6 +853,20 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.fp-calendar .fp-week-board .agenda-day-column .agenda-more-count {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 22px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: #3182f6;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .fp-calendar .fp-year-board.year-schedule-grid {
