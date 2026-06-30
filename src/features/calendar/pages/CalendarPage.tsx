@@ -289,7 +289,7 @@ export default function CalendarPage() {
     [selectedYearMonthKey, visibleItems],
   )
   const agendaItems = view === 'year' ? yearAgendaItems : view === 'month' ? visibleItems : selectedItems
-  const agendaTitle = view === 'year' ? '연간 일정표' : view === 'month' ? '월간 일정표' : view === 'week' ? '주간 일정표' : '일간 일정표'
+  const agendaTitle = view === 'year' ? `${selectedYearMonthLabel} 일정표` : view === 'month' ? '월간 일정표' : view === 'week' ? '주간 일정표' : '일간 일정표'
   const cells = useMemo(() => monthCells(monthDate), [monthDate])
   const weekDateKeys = useMemo(() => weekDays(weekDate), [weekDate])
   const yearMonthItems = useMemo(() => yearMonths(monthDate.getFullYear()), [monthDate])
@@ -751,14 +751,14 @@ export default function CalendarPage() {
                                   ))}
                                 </div>
                               </div>
-                              <span className={monthSchedules.length ? 'year-event-count' : 'year-event-count is-empty'}>
-                                {monthSchedules.length ? `${monthSchedules.length}건` : '일정 없음'}
+                              <span className={eventDays.length ? 'year-event-count' : 'year-event-count is-empty'}>
+                                {eventDays.length ? `${eventDays.length}건` : '일정 없음'}
                               </span>
                             </>
                           ) : (
                             <>
-                              <span className={monthSchedules.length ? 'year-event-count' : 'year-event-count is-empty'}>
-                                {monthSchedules.length ? `${monthSchedules.length}건` : '일정 없음'}
+                              <span className={eventDays.length ? 'year-event-count' : 'year-event-count is-empty'}>
+                                {eventDays.length ? `${eventDays.length}건` : '일정 없음'}
                               </span>
                               {monthSchedules.slice(0, 3).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
                             </>
@@ -824,7 +824,6 @@ export default function CalendarPage() {
             <div className="fp-schedule-panel-header">
               <div>
                 <h3>{agendaTitle}</h3>
-                {view === 'year' ? <span className="fp-schedule-panel-month-chip">{selectedYearMonthLabel}</span> : null}
               </div>
             </div>
             <div className="fp-schedule-list">
