@@ -15,6 +15,28 @@ interface DatePickerFieldProps {
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
 const months = Array.from({ length: 12 }, (_, index) => index + 1)
 const years = Array.from({ length: 12 }, (_, index) => index)
+const holidays: Record<string, string> = {
+  '2026-01-01': '신정',
+  '2026-02-16': '설연휴',
+  '2026-02-17': '설날',
+  '2026-02-18': '설연휴',
+  '2026-03-01': '3.1절',
+  '2026-03-02': '대체공휴일',
+  '2026-05-05': '어린이날',
+  '2026-05-24': '부처님오신날',
+  '2026-05-25': '대체공휴일',
+  '2026-06-03': '지방선거',
+  '2026-06-06': '현충일',
+  '2026-08-15': '광복절',
+  '2026-08-17': '대체공휴일',
+  '2026-09-24': '추석연휴',
+  '2026-09-25': '추석',
+  '2026-09-26': '추석연휴',
+  '2026-10-03': '개천절',
+  '2026-10-05': '대체공휴일',
+  '2026-10-09': '한글날',
+  '2026-12-25': '성탄절',
+}
 
 function displayDate(value: string) {
   return value ? value.replace(/-/g, '.') : '날짜 선택'
@@ -107,7 +129,7 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
   }
 
   return (
-    <label className={`fp-field fp-date-picker-field date-picker-field ${className}`} ref={rootRef}>
+    <label className={`fp-field fp-date-picker-field date-picker-field ${open ? 'open' : ''} ${className}`} ref={rootRef}>
       {label ? <span>{label}{required ? <em className="fp-required-mark">*</em> : null}</span> : null}
       <button className="fp-date-picker-trigger date-picker-trigger" type="button" onClick={() => setOpen((current) => !current)}>
         <strong>{displayValue || (mode === 'year' ? displayYear(value) : mode === 'month' ? displayMonth(value) : displayDate(value))}</strong>
@@ -145,6 +167,11 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
               &gt;
             </button>
           </header>
+          {mode === 'date' ? (
+            <div className="fp-date-picker-today-row">
+              <button className="fp-date-picker-today" type="button" onClick={selectToday}>오늘</button>
+            </div>
+          ) : null}
           {mode === 'year' ? (
             <div className="fp-date-picker-years">
               {years.map((offset) => {
@@ -173,21 +200,31 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
                 {weekdays.map((day) => <span key={day}>{day}</span>)}
               </div>
               <div className="fp-date-picker-days">
-                {cells.map((cell) => (
-                  <button
-                    className={cell.dateKey === value ? 'selected' : ''}
-                    disabled={!cell.dateKey}
-                    key={cell.key}
-                    type="button"
-                    onClick={() => selectDate(cell.dateKey)}
-                  >
-                    {cell.dateKey ? parseDateKey(cell.dateKey).getDate() : ''}
-                  </button>
-                ))}
+                {cells.map((cell) => {
+                  const date = cell.dateKey ? parseDateKey(cell.dateKey) : null
+                  const day = date?.getDay()
+                  const dayClass = [
+                    cell.dateKey === value ? 'selected' : '',
+                    cell.dateKey === currentToday ? 'today' : '',
+                    day === 0 || (cell.dateKey && holidays[cell.dateKey]) ? 'sunday holiday' : '',
+                    day === 6 ? 'saturday' : '',
+                  ].filter(Boolean).join(' ')
+                  return (
+                    <button
+                      className={dayClass}
+                      disabled={!cell.dateKey}
+                      key={cell.key}
+                      type="button"
+                      onClick={() => selectDate(cell.dateKey)}
+                    >
+                      {date ? date.getDate() : ''}
+                    </button>
+                  )
+                })}
               </div>
             </>
           )}
-          <button className="fp-date-picker-today" type="button" onClick={selectToday}>오늘</button>
+          {mode !== 'date' ? <button className="fp-date-picker-today" type="button" onClick={selectToday}>오늘</button> : null}
         </div>
       ) : null}
     </label>
