@@ -151,10 +151,15 @@ function yearMiniCells(year: number, month: number, eventDays: number[]) {
   const first = new Date(year, month - 1, 1)
   const lastDate = new Date(year, month, 0).getDate()
   return [
-    ...Array.from({ length: first.getDay() }, (_, index) => ({ key: `blank-${index}`, day: 0, hasEvent: false })),
+    ...Array.from({ length: first.getDay() }, (_, index) => ({ key: `blank-${index}`, day: 0, dateKey: '', hasEvent: false })),
     ...Array.from({ length: lastDate }, (_, index) => {
       const day = index + 1
-      return { key: `${month}-${day}`, day, hasEvent: eventDays.includes(day) }
+      return {
+        key: `${month}-${day}`,
+        day,
+        dateKey: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        hasEvent: eventDays.includes(day),
+      }
     }),
   ]
 }
@@ -266,6 +271,7 @@ export default function CalendarPage() {
   const [weekDate, setWeekDate] = useState(today)
   const [dayDate, setDayDate] = useState(today)
   const [selectedDate, setSelectedDate] = useState(today)
+  const [yearAgendaDate, setYearAgendaDate] = useState<string | null>(null)
   const [items, setItems] = useState<ScheduleItem[]>([])
   const [form, setForm] = useState<SchedulePayload>(() => emptyPayload(today))
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -285,11 +291,11 @@ export default function CalendarPage() {
   const selectedYearMonthKey = formatDateKey(monthDate).slice(0, 7)
   const selectedYearMonthLabel = `${monthDate.getMonth() + 1}월`
   const yearAgendaItems = useMemo(
-    () => visibleItems.filter((item) => item.occurrenceDate.startsWith(selectedYearMonthKey)),
-    [selectedYearMonthKey, visibleItems],
+    () => visibleItems.filter((item) => (yearAgendaDate ? item.occurrenceDate === yearAgendaDate : item.occurrenceDate.startsWith(selectedYearMonthKey))),
+    [selectedYearMonthKey, visibleItems, yearAgendaDate],
   )
   const agendaItems = view === 'year' ? yearAgendaItems : view === 'month' ? visibleItems : selectedItems
-  const agendaTitle = view === 'year' ? `${selectedYearMonthLabel} 일정표` : view === 'month' ? '월간 일정표' : view === 'week' ? '주간 일정표' : '일간 일정표'
+  const agendaTitle = view === 'year' ? `${yearAgendaDate ? formatShortKoreanDate(yearAgendaDate) : selectedYearMonthLabel} 일정표` : view === 'month' ? '월간 일정표' : view === 'week' ? '주간 일정표' : '일간 일정표'
   const cells = useMemo(() => monthCells(monthDate), [monthDate])
   const weekDateKeys = useMemo(() => weekDays(weekDate), [weekDate])
   const yearMonthItems = useMemo(() => yearMonths(monthDate.getFullYear()), [monthDate])
@@ -317,6 +323,7 @@ export default function CalendarPage() {
     const nextMonthDate = new Date(year, monthDate.getMonth(), 1)
     setMonthDate(nextMonthDate)
     setSelectedDate(formatDateKey(nextMonthDate))
+    setYearAgendaDate(null)
   }
 
   function moveCalendarRange(amount: number) {
@@ -330,6 +337,7 @@ export default function CalendarPage() {
     }
     if (view === 'year') {
       setMonthDate(addMonths(monthDate, amount * 12))
+      setYearAgendaDate(null)
       return
     }
     setMonthDate(addMonths(monthDate, amount))
@@ -347,6 +355,7 @@ export default function CalendarPage() {
     }
     if (nextView === 'year') {
       setSelectedDate(formatDateKey(monthDate))
+      setYearAgendaDate(null)
       return
     }
     const monthKey = formatDateKey(monthDate).slice(0, 7)
@@ -376,6 +385,22 @@ export default function CalendarPage() {
     if (view === 'day') setDayDate(dateKey)
     if (view === 'week') setWeekDate(dateKey)
     if (view === 'month') setMonthDate(parseDateKey(dateKey))
+    if (!editingId) setForm((value) => ({ ...value, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
+  }
+
+  function selectYearMonth(monthKey: string, month: number) {
+    const nextDate = new Date(monthDate.getFullYear(), month - 1, 1)
+    setMonthDate(nextDate)
+    setSelectedDate(`${monthKey}-01`)
+    setYearAgendaDate(null)
+    if (!editingId) setForm((value) => ({ ...value, scheduleDate: `${monthKey}-01`, scheduleTime: currentTimeText() }))
+  }
+
+  function selectYearDay(dateKey: string) {
+    if (!dateKey) return
+    setMonthDate(parseDateKey(dateKey))
+    setSelectedDate(dateKey)
+    setYearAgendaDate(dateKey)
     if (!editingId) setForm((value) => ({ ...value, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
   }
 
@@ -726,28 +751,50 @@ export default function CalendarPage() {
                     {yearMonthItems.map((monthItem) => {
                       const monthSchedules = visibleItems.filter((item) => item.occurrenceDate.startsWith(monthItem.key))
                       const eventDays = Array.from(new Set(monthSchedules.map((item) => parseDateKey(item.occurrenceDate).getDate())))
+                      const isActiveMonth = formatDateKey(monthDate).startsWith(monthItem.key)
                       return (
-                        <button
-                          className={formatDateKey(monthDate).startsWith(monthItem.key) ? 'year-month-card active' : 'year-month-card'}
+                        <div
+                          className={isActiveMonth ? 'year-month-card active' : 'year-month-card'}
                           key={monthItem.key}
-                          type="button"
+                          role="button"
+                          tabIndex={0}
                           onClick={() => {
-                            setMonthDate(new Date(monthDate.getFullYear(), monthItem.month - 1, 1))
-                            setSelectedDate(`${monthItem.key}-01`)
+                            selectYearMonth(monthItem.key, monthItem.month)
+                          }}
+                          onKeyDown={(event) => {
+                            if (event.key !== 'Enter' && event.key !== ' ') return
+                            event.preventDefault()
+                            selectYearMonth(monthItem.key, monthItem.month)
                           }}
                         >
                           <strong>{monthItem.label}</strong>
                           {yearMode === 'calendar' ? (
                             <>
-                              <div className="year-mini-calendar" aria-hidden="true">
+                              <div className="year-mini-calendar">
                                 <div className="year-mini-weekdays">
                                   {shortWeekdays.map((day) => <span key={day}>{day}</span>)}
                                 </div>
                                 <div className="year-mini-days">
                                   {yearMiniCells(monthDate.getFullYear(), monthItem.month, eventDays).map((cell) => (
-                                    <span className={cell.hasEvent ? 'has-event' : ''} key={cell.key}>
-                                      {cell.day || ''}
-                                    </span>
+                                    cell.dateKey ? (
+                                      <button
+                                        aria-label={`${cell.dateKey} 일정 보기`}
+                                        className={[
+                                          cell.hasEvent ? 'has-event' : '',
+                                          yearAgendaDate === cell.dateKey ? 'selected' : '',
+                                        ].filter(Boolean).join(' ')}
+                                        key={cell.key}
+                                        type="button"
+                                        onClick={(event) => {
+                                          event.stopPropagation()
+                                          selectYearDay(cell.dateKey)
+                                        }}
+                                      >
+                                        {cell.day}
+                                      </button>
+                                    ) : (
+                                      <span key={cell.key} />
+                                    )
                                   ))}
                                 </div>
                               </div>
@@ -763,7 +810,7 @@ export default function CalendarPage() {
                               {monthSchedules.slice(0, 3).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
                             </>
                           )}
-                        </button>
+                        </div>
                       )
                     })}
                   </section>
