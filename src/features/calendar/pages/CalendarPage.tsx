@@ -283,6 +283,7 @@ export default function CalendarPage() {
     [selectedDate, visibleItems],
   )
   const selectedYearMonthKey = formatDateKey(monthDate).slice(0, 7)
+  const selectedYearMonthLabel = `${monthDate.getMonth() + 1}월`
   const yearAgendaItems = useMemo(
     () => visibleItems.filter((item) => item.occurrenceDate.startsWith(selectedYearMonthKey)),
     [selectedYearMonthKey, visibleItems],
@@ -820,6 +821,7 @@ export default function CalendarPage() {
             <div className="fp-schedule-panel-header">
               <div>
                 <h3>{agendaTitle}</h3>
+                {view === 'year' ? <span className="fp-schedule-panel-month-chip">{selectedYearMonthLabel}</span> : null}
               </div>
             </div>
             <div className="fp-schedule-list">

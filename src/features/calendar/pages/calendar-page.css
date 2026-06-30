@@ -931,12 +931,13 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   font: inherit;
   font-size: 13px;
   font-weight: 500;
+  box-shadow: inset 0 0 0 1px transparent;
 }
 
 .fp-calendar .year-mode-tabs button.active {
-  background: #fff;
-  color: #1b64da;
-  box-shadow: 0 8px 18px rgba(25, 31, 40, 0.08);
+  background: #e8f2ff;
+  color: #1264d8;
+  box-shadow: inset 0 0 0 2px #3182f6, 0 8px 18px rgba(49, 130, 246, 0.14);
 }
 
 .fp-calendar .fp-year-board.year-mode-calendar {
@@ -1263,6 +1264,22 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-schedule-panel.schedule-list-card {
   width: 100%;
   min-width: 0;
+}
+
+.fp-schedule-panel-month-chip {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 26px;
+  align-items: center;
+  margin-top: 8px;
+  border-radius: 999px;
+  padding: 0 11px;
+  background: #e8f2ff;
+  color: #1264d8;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+  box-shadow: inset 0 0 0 1px #b7d4ff;
 }
 
 .fp-calendar .fp-schedule-form input,
