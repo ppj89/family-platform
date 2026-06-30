@@ -757,7 +757,9 @@ export default function CalendarPage() {
                             </>
                           ) : (
                             <>
-                              <span>{monthSchedules.length}건</span>
+                              <span className={monthSchedules.length ? 'year-event-count' : 'year-event-count is-empty'}>
+                                {monthSchedules.length ? `${monthSchedules.length}건` : '일정 없음'}
+                              </span>
                               {monthSchedules.slice(0, 3).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
                             </>
                           )}
