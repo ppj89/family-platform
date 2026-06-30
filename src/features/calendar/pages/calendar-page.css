@@ -881,11 +881,16 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   padding: 12px;
 }
 
-.fp-calendar .fp-year-board .year-month-card:hover,
-.fp-calendar .fp-year-board .year-month-card.active {
+.fp-calendar .fp-year-board .year-month-card:hover {
   border-color: #dbeafe;
   background: #f8fbff;
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.fp-calendar .fp-year-board .year-month-card.active {
+  border-color: #3182f6;
+  background: #eef6ff;
+  box-shadow: inset 0 0 0 2px #3182f6, 0 10px 24px rgba(49, 130, 246, 0.16);
 }
 
 .fp-calendar .fp-year-board .year-month-card strong {
@@ -931,13 +936,12 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   font: inherit;
   font-size: 13px;
   font-weight: 500;
-  box-shadow: inset 0 0 0 1px transparent;
 }
 
 .fp-calendar .year-mode-tabs button.active {
-  background: #e8f2ff;
-  color: #1264d8;
-  box-shadow: inset 0 0 0 2px #3182f6, 0 8px 18px rgba(49, 130, 246, 0.14);
+  background: #fff;
+  color: #1b64da;
+  box-shadow: 0 8px 18px rgba(25, 31, 40, 0.08);
 }
 
 .fp-calendar .fp-year-board.year-mode-calendar {
