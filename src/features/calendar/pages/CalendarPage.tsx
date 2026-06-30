@@ -271,7 +271,6 @@ export default function CalendarPage() {
   const [weekDate, setWeekDate] = useState(today)
   const [dayDate, setDayDate] = useState(today)
   const [selectedDate, setSelectedDate] = useState(today)
-  const [yearAgendaDate, setYearAgendaDate] = useState<string | null>(null)
   const [items, setItems] = useState<ScheduleItem[]>([])
   const [form, setForm] = useState<SchedulePayload>(() => emptyPayload(today))
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -291,11 +290,11 @@ export default function CalendarPage() {
   const selectedYearMonthKey = formatDateKey(monthDate).slice(0, 7)
   const selectedYearMonthLabel = `${monthDate.getMonth() + 1}월`
   const yearAgendaItems = useMemo(
-    () => visibleItems.filter((item) => (yearAgendaDate ? item.occurrenceDate === yearAgendaDate : item.occurrenceDate.startsWith(selectedYearMonthKey))),
-    [selectedYearMonthKey, visibleItems, yearAgendaDate],
+    () => visibleItems.filter((item) => item.occurrenceDate.startsWith(selectedYearMonthKey)),
+    [selectedYearMonthKey, visibleItems],
   )
   const agendaItems = view === 'year' ? yearAgendaItems : view === 'month' ? visibleItems : selectedItems
-  const agendaTitle = view === 'year' ? `${yearAgendaDate ? formatShortKoreanDate(yearAgendaDate) : selectedYearMonthLabel} 일정표` : view === 'month' ? '월간 일정표' : view === 'week' ? '주간 일정표' : '일간 일정표'
+  const agendaTitle = view === 'year' ? `${selectedYearMonthLabel} 일정표` : view === 'month' ? '월간 일정표' : view === 'week' ? '주간 일정표' : '일간 일정표'
   const cells = useMemo(() => monthCells(monthDate), [monthDate])
   const weekDateKeys = useMemo(() => weekDays(weekDate), [weekDate])
   const yearMonthItems = useMemo(() => yearMonths(monthDate.getFullYear()), [monthDate])
@@ -323,7 +322,6 @@ export default function CalendarPage() {
     const nextMonthDate = new Date(year, monthDate.getMonth(), 1)
     setMonthDate(nextMonthDate)
     setSelectedDate(formatDateKey(nextMonthDate))
-    setYearAgendaDate(null)
   }
 
   function moveCalendarRange(amount: number) {
@@ -337,7 +335,6 @@ export default function CalendarPage() {
     }
     if (view === 'year') {
       setMonthDate(addMonths(monthDate, amount * 12))
-      setYearAgendaDate(null)
       return
     }
     setMonthDate(addMonths(monthDate, amount))
@@ -355,7 +352,6 @@ export default function CalendarPage() {
     }
     if (nextView === 'year') {
       setSelectedDate(formatDateKey(monthDate))
-      setYearAgendaDate(null)
       return
     }
     const monthKey = formatDateKey(monthDate).slice(0, 7)
@@ -392,16 +388,15 @@ export default function CalendarPage() {
     const nextDate = new Date(monthDate.getFullYear(), month - 1, 1)
     setMonthDate(nextDate)
     setSelectedDate(`${monthKey}-01`)
-    setYearAgendaDate(null)
     if (!editingId) setForm((value) => ({ ...value, scheduleDate: `${monthKey}-01`, scheduleTime: currentTimeText() }))
   }
 
-  function selectYearDay(dateKey: string) {
+  function selectYearDay(dateKey: string, dayItems: CalendarScheduleInstance[]) {
     if (!dateKey) return
     setMonthDate(parseDateKey(dateKey))
     setSelectedDate(dateKey)
-    setYearAgendaDate(dateKey)
     if (!editingId) setForm((value) => ({ ...value, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
+    if (dayItems.length > 0) setDayDialog({ date: dateKey, items: dayItems })
   }
 
   function openMonthDay(dateKey: string, dayItems: CalendarScheduleInstance[]) {
@@ -776,25 +771,27 @@ export default function CalendarPage() {
                                 </div>
                                 <div className="year-mini-days">
                                   {yearMiniCells(monthDate.getFullYear(), monthItem.month, eventDays).map((cell) => (
-                                    cell.dateKey ? (
-                                      <button
-                                        aria-label={`${cell.dateKey} 일정 보기`}
-                                        className={[
-                                          cell.hasEvent ? 'has-event' : '',
-                                          yearAgendaDate === cell.dateKey ? 'selected' : '',
-                                        ].filter(Boolean).join(' ')}
-                                        key={cell.key}
-                                        type="button"
-                                        onClick={(event) => {
-                                          event.stopPropagation()
-                                          selectYearDay(cell.dateKey)
-                                        }}
-                                      >
-                                        {cell.day}
-                                      </button>
-                                    ) : (
-                                      <span key={cell.key} />
-                                    )
+                                    (() => {
+                                      if (!cell.dateKey) return <span key={cell.key} />
+                                      const dayItems = monthSchedules.filter((item) => item.occurrenceDate === cell.dateKey)
+                                      return (
+                                        <button
+                                          aria-label={`${cell.dateKey} 일정 보기`}
+                                          className={[
+                                            cell.hasEvent ? 'has-event' : '',
+                                            selectedDate === cell.dateKey ? 'selected' : '',
+                                          ].filter(Boolean).join(' ')}
+                                          key={cell.key}
+                                          type="button"
+                                          onClick={(event) => {
+                                            event.stopPropagation()
+                                            selectYearDay(cell.dateKey, dayItems)
+                                          }}
+                                        >
+                                          {cell.day}
+                                        </button>
+                                      )
+                                    })()
                                   ))}
                                 </div>
                               </div>
