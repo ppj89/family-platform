@@ -305,6 +305,13 @@ export default function CalendarPage() {
     if (view === 'month' && !selectedDate.startsWith(value)) setSelectedDate(`${value}-01`)
   }
 
+  function changeYear(value: string) {
+    const year = Number(value)
+    if (!Number.isFinite(year)) return
+    setMonthDate(new Date(year, monthDate.getMonth(), 1))
+    setSelectedDate(`${year}-01-01`)
+  }
+
   function moveCalendarRange(amount: number) {
     if (view === 'day') {
       changeDayDate(addDays(dayDate, amount))
@@ -500,9 +507,13 @@ export default function CalendarPage() {
           <button type="button" className="icon-button fp-button fp-button-muted" aria-label="이전 연도" onClick={() => moveCalendarRange(-1)}>
             <CalendarNavChevron direction="previous" />
           </button>
-          <button type="button" className="fp-calendar-year-title calendar-title-button" aria-label="조회 연도">
-            <strong>{monthDate.getFullYear()}년</strong>
-          </button>
+          <DatePickerField
+            className="fp-year-field fp-calendar-year-title calendar-title-button"
+            label="조회 연도"
+            mode="year"
+            value={String(monthDate.getFullYear())}
+            onChange={changeYear}
+          />
           <button type="button" className="icon-button fp-button fp-button-muted" aria-label="다음 연도" onClick={() => moveCalendarRange(1)}>
             <CalendarNavChevron direction="next" />
           </button>

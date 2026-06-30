@@ -6,7 +6,7 @@ interface DatePickerFieldProps {
   className?: string
   displayValue?: string
   label?: string
-  mode?: 'date' | 'month'
+  mode?: 'date' | 'month' | 'year'
   required?: boolean
   value: string
   onChange: (value: string) => void
@@ -14,6 +14,7 @@ interface DatePickerFieldProps {
 
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
 const months = Array.from({ length: 12 }, (_, index) => index + 1)
+const years = Array.from({ length: 12 }, (_, index) => index)
 
 function displayDate(value: string) {
   return value ? value.replace(/-/g, '.') : '날짜 선택'
@@ -23,6 +24,10 @@ function displayMonth(value: string) {
   if (!value) return '월 선택'
   const [year, month] = value.split('-')
   return `${year}년 ${Number(month)}월`
+}
+
+function displayYear(value: string) {
+  return value ? `${value}년` : '연도 선택'
 }
 
 function monthDays(viewDate: Date) {
@@ -37,7 +42,11 @@ function monthDays(viewDate: Date) {
   ]
 }
 
-function initialViewDate(value: string, mode: 'date' | 'month') {
+function initialViewDate(value: string, mode: 'date' | 'month' | 'year') {
+  if (mode === 'year') {
+    const year = Number(value || new Date().getFullYear())
+    return new Date(Number.isFinite(year) ? year : new Date().getFullYear(), 0, 1)
+  }
   if (mode === 'month') {
     const source = value ? `${value}-01` : todayKey()
     return parseDateKey(source)
@@ -85,8 +94,14 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
     setOpen(false)
   }
 
+  function selectYear(year: number) {
+    onChange(String(year))
+    setOpen(false)
+  }
+
   function selectToday() {
-    if (mode === 'month') onChange(currentToday.slice(0, 7))
+    if (mode === 'year') onChange(currentToday.slice(0, 4))
+    else if (mode === 'month') onChange(currentToday.slice(0, 7))
     else onChange(currentToday)
     setOpen(false)
   }
@@ -95,8 +110,8 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
     <label className={`fp-field fp-date-picker-field date-picker-field ${className}`} ref={rootRef}>
       {label ? <span>{label}{required ? <em className="fp-required-mark">*</em> : null}</span> : null}
       <button className="fp-date-picker-trigger date-picker-trigger" type="button" onClick={() => setOpen((current) => !current)}>
-        <strong>{displayValue || (mode === 'month' ? displayMonth(value) : displayDate(value))}</strong>
-        {mode === 'month' ? (
+        <strong>{displayValue || (mode === 'year' ? displayYear(value) : mode === 'month' ? displayMonth(value) : displayDate(value))}</strong>
+        {mode === 'month' || mode === 'year' ? (
           <span aria-hidden="true" className="fp-date-picker-caret">▾</span>
         ) : (
           <span aria-hidden="true" className="fp-date-picker-calendar-icon">
@@ -116,17 +131,32 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
         )}
       </button>
       {open ? (
-        <div className="fp-date-picker-popover">
+        <div className={`fp-date-picker-popover fp-date-picker-popover-${mode}`}>
           <header>
-            <button type="button" aria-label="이전" onClick={() => setViewDate((current) => addMonths(current, mode === 'month' ? -12 : -1))}>
+            <button type="button" aria-label="이전" onClick={() => setViewDate((current) => addMonths(current, mode === 'year' ? -144 : mode === 'month' ? -12 : -1))}>
               &lt;
             </button>
-            <strong>{mode === 'month' ? `${viewDate.getFullYear()}년` : `${viewDate.getFullYear()}년 ${viewDate.getMonth() + 1}월`}</strong>
-            <button type="button" aria-label="다음" onClick={() => setViewDate((current) => addMonths(current, mode === 'month' ? 12 : 1))}>
+            <strong>
+              {mode === 'year'
+                ? `${Math.floor(viewDate.getFullYear() / 12) * 12} - ${Math.floor(viewDate.getFullYear() / 12) * 12 + 11}`
+                : mode === 'month' ? `${viewDate.getFullYear()}년` : `${viewDate.getFullYear()}년 ${viewDate.getMonth() + 1}월`}
+            </strong>
+            <button type="button" aria-label="다음" onClick={() => setViewDate((current) => addMonths(current, mode === 'year' ? 144 : mode === 'month' ? 12 : 1))}>
               &gt;
             </button>
           </header>
-          {mode === 'month' ? (
+          {mode === 'year' ? (
+            <div className="fp-date-picker-years">
+              {years.map((offset) => {
+                const year = Math.floor(viewDate.getFullYear() / 12) * 12 + offset
+                return (
+                  <button className={value === String(year) ? 'selected' : ''} key={year} type="button" onClick={() => selectYear(year)}>
+                    {year}년
+                  </button>
+                )
+              })}
+            </div>
+          ) : mode === 'month' ? (
             <div className="fp-date-picker-months">
               {months.map((month) => {
                 const monthValue = `${viewDate.getFullYear()}-${String(month).padStart(2, '0')}`

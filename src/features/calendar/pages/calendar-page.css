@@ -255,6 +255,14 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   font-weight: 700 !important;
 }
 
+.fp-calendar .fp-calendar-month-nav.calendar-nav > .fp-date-picker-field.calendar-title-button {
+  display: block;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
 .fp-calendar-tabs {
   justify-self: end;
   display: grid;

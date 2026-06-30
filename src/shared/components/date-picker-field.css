@@ -80,6 +80,7 @@
 .fp-date-picker-popover header button,
 .fp-date-picker-days button,
 .fp-date-picker-months button,
+.fp-date-picker-years button,
 .fp-date-picker-today {
   border: 0;
   border-radius: 12px;
@@ -119,18 +120,21 @@
 }
 
 .fp-date-picker-days button.selected,
-.fp-date-picker-months button.selected {
+.fp-date-picker-months button.selected,
+.fp-date-picker-years button.selected {
   background: #2f80ed;
   color: #fff;
 }
 
-.fp-date-picker-months {
+.fp-date-picker-months,
+.fp-date-picker-years {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
-.fp-date-picker-months button {
+.fp-date-picker-months button,
+.fp-date-picker-years button {
   height: 38px;
 }
 
