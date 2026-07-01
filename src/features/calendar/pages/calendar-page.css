@@ -1021,7 +1021,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-calendar .year-mini-days {
-  padding-top: 6px;
+  padding-top: 10px;
 }
 
 .fp-calendar .year-mini-weekdays span {
@@ -1073,7 +1073,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   justify-self: center;
   align-self: center;
   border-radius: 999px;
-  transform: translateY(2px);
+  transform: translateY(4px);
 }
 
 .fp-calendar .year-mini-days button.has-event {
