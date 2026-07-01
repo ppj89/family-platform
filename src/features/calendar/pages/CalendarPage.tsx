@@ -399,7 +399,7 @@ export default function CalendarPage() {
 
   function openYearMonth(monthKey: string, month: number, monthSchedules: CalendarScheduleInstance[], label: string) {
     selectYearMonth(monthKey, month)
-    setMonthDialog({ label, items: monthSchedules })
+    setMonthDialog(monthSchedules.length > 0 ? { label, items: monthSchedules } : null)
   }
 
   function selectYearDay(dateKey: string, dayItems: CalendarScheduleInstance[]) {
