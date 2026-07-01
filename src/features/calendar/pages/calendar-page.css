@@ -1068,16 +1068,17 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-calendar .year-mini-days button.has-event,
 .fp-calendar .year-mini-days button.selected {
   border-radius: 999px;
+  padding-bottom: 2px;
 }
 
 .fp-calendar .year-mini-days button.has-event {
-  background: radial-gradient(circle 10px at center, #edf4ff 0 9px, #bfdcff 9px 10px, transparent 10px);
+  background: radial-gradient(circle 10px at center calc(50% - 1px), #edf4ff 0 9px, #bfdcff 9px 10px, transparent 10px);
   color: #1b64da !important;
   box-shadow: none;
 }
 
 .fp-calendar .year-mini-days button.selected {
-  background: radial-gradient(circle 10px at center, #3182f6 0 10px, transparent 10px);
+  background: radial-gradient(circle 10px at center calc(50% - 1px), #3182f6 0 10px, transparent 10px);
   color: #fff !important;
   box-shadow: none;
 }
