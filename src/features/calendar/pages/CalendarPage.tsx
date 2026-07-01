@@ -271,6 +271,7 @@ export default function CalendarPage() {
   const [weekDate, setWeekDate] = useState(today)
   const [dayDate, setDayDate] = useState(today)
   const [selectedDate, setSelectedDate] = useState(today)
+  const [yearSelectedDate, setYearSelectedDate] = useState<string | null>(null)
   const [items, setItems] = useState<ScheduleItem[]>([])
   const [form, setForm] = useState<SchedulePayload>(() => emptyPayload(today))
   const [editingId, setEditingId] = useState<number | null>(null)
@@ -323,6 +324,7 @@ export default function CalendarPage() {
     const nextMonthDate = new Date(year, monthDate.getMonth(), 1)
     setMonthDate(nextMonthDate)
     setSelectedDate(formatDateKey(nextMonthDate))
+    setYearSelectedDate(null)
   }
 
   function moveCalendarRange(amount: number) {
@@ -336,6 +338,7 @@ export default function CalendarPage() {
     }
     if (view === 'year') {
       setMonthDate(addMonths(monthDate, amount * 12))
+      setYearSelectedDate(null)
       return
     }
     setMonthDate(addMonths(monthDate, amount))
@@ -353,6 +356,7 @@ export default function CalendarPage() {
     }
     if (nextView === 'year') {
       setSelectedDate(formatDateKey(monthDate))
+      setYearSelectedDate(null)
       return
     }
     const monthKey = formatDateKey(monthDate).slice(0, 7)
@@ -389,6 +393,7 @@ export default function CalendarPage() {
     const nextDate = new Date(monthDate.getFullYear(), month - 1, 1)
     setMonthDate(nextDate)
     setSelectedDate(`${monthKey}-01`)
+    setYearSelectedDate(null)
     if (!editingId) setForm((value) => ({ ...value, scheduleDate: `${monthKey}-01`, scheduleTime: currentTimeText() }))
   }
 
@@ -401,6 +406,7 @@ export default function CalendarPage() {
     if (!dateKey) return
     setMonthDate(parseDateKey(dateKey))
     setSelectedDate(dateKey)
+    setYearSelectedDate(dateKey)
     if (!editingId) setForm((value) => ({ ...value, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
     if (dayItems.length > 0) setDayDialog({ date: dateKey, items: dayItems })
   }
@@ -791,7 +797,7 @@ export default function CalendarPage() {
                                           aria-label={`${cell.dateKey} 일정 보기`}
                                           className={[
                                             cell.hasEvent ? 'has-event' : '',
-                                            selectedDate === cell.dateKey ? 'selected' : '',
+                                            yearSelectedDate === cell.dateKey ? 'selected' : '',
                                           ].filter(Boolean).join(' ')}
                                           key={cell.key}
                                           type="button"
@@ -814,7 +820,7 @@ export default function CalendarPage() {
                           ) : (
                             <>
                               <span className={eventDays.length ? 'year-event-count' : 'year-event-count is-empty'}>
-                                {monthSchedules.length ? `${monthSchedules.length}건` : '일정 없음'}
+                                {`${monthSchedules.length}건`}
                               </span>
                               {monthSchedules.slice(0, 2).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
                               {monthSchedules.length > 2 ? <small className="year-card-more">+{monthSchedules.length - 2}</small> : null}
