@@ -572,35 +572,42 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-month-grid strong,
 .fp-month-schedule-chip,
 .fp-month-grid small,
-.fp-holiday-name,
-.fp-lunar-note {
+.fp-holiday-name {
   display: block;
 }
 
+.fp-month-date-line {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 4px;
+}
+
 .fp-month-grid strong {
+  flex: 0 0 auto;
   color: #191f28;
   font-size: 17px;
   font-weight: 800;
   line-height: 1.1;
 }
 
-.fp-month-cell.holiday > strong {
+.fp-month-cell.holiday .fp-month-date-line > strong {
   color: #f04452;
 }
 
-.fp-month-cell.saturday > strong {
+.fp-month-cell.saturday .fp-month-date-line > strong {
   color: #3182f6;
 }
 
-.fp-month-cell.outside > strong {
+.fp-month-cell.outside .fp-month-date-line > strong {
   color: #a6b0bd;
 }
 
-.fp-month-cell.outside.holiday > strong {
+.fp-month-cell.outside.holiday .fp-month-date-line > strong {
   color: #f04452;
 }
 
-.fp-month-cell.outside.saturday > strong {
+.fp-month-cell.outside.saturday .fp-month-date-line > strong {
   color: #3182f6;
 }
 
@@ -620,10 +627,14 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-lunar-note {
+  overflow: hidden;
+  min-width: 0;
   color: #8b95a1;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 400;
-  line-height: 1.2;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fp-month-schedule-chip {

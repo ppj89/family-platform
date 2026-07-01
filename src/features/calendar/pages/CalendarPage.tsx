@@ -713,9 +713,13 @@ export default function CalendarPage() {
                       openMonthDay(cell.dateKey, dayItems)
                     }}
                   >
-                    {date ? <strong>{date.getDate()}</strong> : null}
+                    {date ? (
+                      <span className="fp-month-date-line">
+                        <strong>{date.getDate()}</strong>
+                        {lunarText ? <span className="fp-lunar-note">{lunarText}</span> : null}
+                      </span>
+                    ) : null}
                     {holidayName ? <span className="fp-holiday-name">{holidayName}</span> : null}
-                    {lunarText ? <span className="fp-lunar-note">{lunarText}</span> : null}
                     {dayItems.slice(0, 1).map((item) => (
                       <button
                         className="fp-month-schedule-chip"
