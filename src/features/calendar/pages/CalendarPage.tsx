@@ -761,11 +761,7 @@ export default function CalendarPage() {
                       const eventDays = Array.from(new Set(monthSchedules.map((item) => parseDateKey(item.occurrenceDate).getDate())))
                       const isActiveMonth = formatDateKey(monthDate).startsWith(monthItem.key)
                       const openMonth = () => {
-                        if (yearMode === 'list') {
-                          openYearMonth(monthItem.key, monthItem.month, monthSchedules, monthItem.label)
-                          return
-                        }
-                        selectYearMonth(monthItem.key, monthItem.month)
+                        openYearMonth(monthItem.key, monthItem.month, monthSchedules, monthItem.label)
                       }
                       return (
                         <div
