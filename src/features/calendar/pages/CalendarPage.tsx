@@ -813,7 +813,7 @@ export default function CalendarPage() {
                                             selectYearDay(cell.dateKey, dayItems)
                                           }}
                                         >
-                                          {cell.day}
+                                          <span className="year-mini-day-number">{cell.day}</span>
                                         </button>
                                       )
                                     })()
