@@ -1067,24 +1067,19 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 
 .fp-calendar .year-mini-days button.has-event,
 .fp-calendar .year-mini-days button.selected {
-  width: 20px;
-  height: 20px;
-  min-height: 20px;
-  justify-self: center;
-  align-self: center;
   border-radius: 999px;
 }
 
 .fp-calendar .year-mini-days button.has-event {
-  background: #edf4ff;
+  background: radial-gradient(circle 10px at center, #edf4ff 0 9px, #bfdcff 9px 10px, transparent 10px);
   color: #1b64da !important;
-  box-shadow: inset 0 0 0 1px #bfdcff;
+  box-shadow: none;
 }
 
 .fp-calendar .year-mini-days button.selected {
-  background: #3182f6;
+  background: radial-gradient(circle 10px at center, #3182f6 0 10px, transparent 10px);
   color: #fff !important;
-  box-shadow: 0 8px 16px rgba(49, 130, 246, 0.22);
+  box-shadow: none;
 }
 
 .fp-calendar .year-event-count {
