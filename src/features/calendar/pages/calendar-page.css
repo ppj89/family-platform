@@ -894,9 +894,9 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-calendar .fp-year-board .year-month-card.active {
-  border-color: #3182f6;
-  background: #eef6ff;
-  box-shadow: inset 0 0 0 2px #3182f6, 0 10px 24px rgba(49, 130, 246, 0.14);
+  border-color: #8fc1ff;
+  background: #f4f9ff;
+  box-shadow: inset 0 0 0 2px #8fc1ff, 0 10px 24px rgba(49, 130, 246, 0.08);
 }
 
 .fp-calendar .fp-year-board .year-month-card strong {
@@ -951,13 +951,13 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-calendar .fp-year-board.year-mode-calendar {
-  grid-template-columns: repeat(2, 260px);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   justify-content: start;
 }
 
 .fp-calendar .fp-year-board.year-mode-calendar .year-month-card {
-  width: 260px;
+  width: 100%;
   height: 252px;
   min-height: 252px;
   max-height: 252px;
@@ -1117,7 +1117,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-calendar .year-mini-days button.selected::before {
-  background: #3182f6;
+  background: #68a8ff;
 }
 
 .fp-calendar .year-event-count {
@@ -1849,6 +1849,10 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
     max-width: 980px;
   }
 
+  .fp-calendar .fp-year-board.year-mode-calendar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   body:has(.family-calendar-panel) .fp-topbar {
     min-height: 0;
     margin-bottom: 14px;
@@ -1869,6 +1873,10 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   .fp-calendar.content-grid {
     grid-template-columns: 1fr;
     max-width: 760px;
+  }
+
+  .fp-calendar .fp-year-board.year-mode-calendar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .fp-calendar-right {
