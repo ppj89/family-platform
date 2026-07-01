@@ -780,7 +780,14 @@ export default function CalendarPage() {
                             openMonth()
                           }}
                         >
-                          <strong>{monthItem.label}</strong>
+                          <header className="year-month-card-header">
+                            <strong>{monthItem.label}</strong>
+                            <span className={eventDays.length ? 'year-event-count' : 'year-event-count is-empty'}>
+                              {yearMode === 'calendar'
+                                ? eventDays.length ? `${eventDays.length}건` : '일정 없음'
+                                : `${monthSchedules.length}건`}
+                            </span>
+                          </header>
                           {yearMode === 'calendar' ? (
                             <>
                               <div className="year-mini-calendar">
@@ -813,15 +820,9 @@ export default function CalendarPage() {
                                   ))}
                                 </div>
                               </div>
-                              <span className={eventDays.length ? 'year-event-count' : 'year-event-count is-empty'}>
-                                {eventDays.length ? `${eventDays.length}건` : '일정 없음'}
-                              </span>
                             </>
                           ) : (
                             <>
-                              <span className={eventDays.length ? 'year-event-count' : 'year-event-count is-empty'}>
-                                {`${monthSchedules.length}건`}
-                              </span>
                               {monthSchedules.slice(0, 2).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
                               {monthSchedules.length > 2 ? <small className="year-card-more">+{monthSchedules.length - 2}</small> : null}
                             </>
