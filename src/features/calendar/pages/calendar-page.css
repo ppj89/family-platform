@@ -1020,6 +1020,10 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   gap: 3px;
 }
 
+.fp-calendar .year-mini-days {
+  padding-top: 6px;
+}
+
 .fp-calendar .year-mini-weekdays span {
   color: #8b95a1 !important;
   font-size: 10px !important;
@@ -1068,6 +1072,11 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-calendar .year-mini-days button.selected {
+  width: 20px;
+  height: 20px;
+  min-height: 20px;
+  justify-self: center;
+  align-self: center;
   background: #3182f6;
   color: #fff !important;
   box-shadow: 0 8px 16px rgba(49, 130, 246, 0.22);
