@@ -872,6 +872,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-calendar .fp-year-board.year-schedule-grid {
   grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
   gap: 12px;
+  align-items: start;
 }
 
 .fp-calendar .fp-year-board .year-month-card {
@@ -950,44 +951,68 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-calendar .fp-year-board.year-mode-calendar {
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .fp-calendar .fp-year-board.year-mode-calendar .year-month-card {
-  min-height: 250px;
+  min-height: 204px;
   max-height: none;
-  gap: 12px;
-  padding: 18px;
-  border-radius: 18px;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 16px;
 }
 
 .fp-calendar .fp-year-board.year-mode-list .year-month-card {
-  min-height: 132px;
-  gap: 12px;
-  padding: 18px;
-  border-radius: 18px;
+  min-height: 118px;
+  gap: 6px;
+  padding: 12px;
+  border-radius: 16px;
+}
+
+.fp-calendar .fp-year-board.year-mode-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .fp-calendar .fp-year-board.year-mode-list .year-month-card > .year-event-count {
-  margin-top: 2px;
+  margin-top: 0;
+}
+
+.fp-calendar .fp-year-board.year-mode-list .year-month-card strong {
+  min-height: 24px;
+  padding: 0 9px;
+  font-size: 12px;
+}
+
+.fp-calendar .fp-year-board.year-mode-list .year-month-card em {
+  padding: 2px 7px;
+  font-size: 10px;
+  line-height: 1.2;
 }
 
 .fp-calendar .year-mini-calendar {
   display: grid;
-  gap: 10px;
+  gap: 7px;
 }
 
 .fp-calendar .year-mini-weekdays,
 .fp-calendar .year-mini-days {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 6px 3px;
+  gap: 4px 2px;
+}
+
+.fp-calendar .year-mini-weekdays {
+  grid-auto-rows: 15px;
+}
+
+.fp-calendar .year-mini-days {
+  grid-auto-rows: 18px;
 }
 
 .fp-calendar .year-mini-weekdays span {
   color: #8b95a1 !important;
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-weight: 500 !important;
   text-align: center;
 }
@@ -995,7 +1020,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-calendar .year-mini-days span,
 .fp-calendar .year-mini-days button {
   display: grid;
-  min-height: 22px;
+  min-height: 18px;
   place-items: center;
   border: 0;
   border-radius: 999px;
@@ -1003,7 +1028,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   color: #4e5968 !important;
   cursor: pointer;
   font: inherit;
-  font-size: 12px !important;
+  font-size: 11px !important;
   font-weight: 400 !important;
 }
 
@@ -1037,14 +1062,28 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   align-items: center;
   justify-content: center;
   justify-self: start;
-  min-height: 28px;
+  min-height: 24px;
   margin-top: 2px;
   border-radius: 999px;
-  padding: 0 14px;
+  padding: 0 11px;
   background: #edf4ff;
   color: #1b64da !important;
-  font-size: 13px !important;
+  font-size: 12px !important;
   font-weight: 500 !important;
+}
+
+.fp-calendar .year-card-more {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 18px;
+  align-items: center;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #3182f6;
+  color: #fff !important;
+  font-size: 10px !important;
+  font-weight: 500 !important;
+  line-height: 1;
 }
 
 .fp-calendar .year-event-count.is-empty {
@@ -1059,7 +1098,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   }
 
   .fp-calendar .fp-year-board.year-mode-calendar .year-month-card {
-    min-height: 252px;
+    min-height: 206px;
   }
 }
 
@@ -1156,7 +1195,8 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   gap: 8px;
 }
 
-.fp-calendar .fp-row-actions button {
+.fp-calendar .fp-row-actions button,
+.fp-calendar-popup .fp-row-actions button {
   min-width: 54px;
   min-height: 34px;
   height: 34px;
@@ -1271,7 +1311,8 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   margin-left: 22px;
 }
 
-.fp-calendar .fp-row-actions button.danger {
+.fp-calendar .fp-row-actions button.danger,
+.fp-calendar-popup .fp-row-actions button.danger {
   background: #fff1f3;
   color: #f04452;
   box-shadow: inset 0 0 0 1px #ffc2ca;
@@ -1523,6 +1564,79 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
+}
+
+.fp-year-month-popup {
+  width: min(620px, calc(100vw - 40px));
+}
+
+.fp-month-popup-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.fp-month-popup-day {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 12px;
+  align-items: center;
+  min-height: 66px;
+  border: 0;
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: #fff;
+  color: #191f28;
+  text-align: left;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+  cursor: pointer;
+}
+
+.fp-month-popup-day:hover {
+  background: #f8fbff;
+  box-shadow: inset 0 0 0 1px #bfdcff;
+}
+
+.fp-month-popup-day > span {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.fp-month-popup-day strong {
+  overflow: hidden;
+  color: #191f28;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-month-popup-day small,
+.fp-month-popup-day em {
+  overflow: hidden;
+  color: #6b7684;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 400;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-month-popup-day em {
+  color: #1b64da;
+}
+
+@media (max-width: 640px) {
+  .fp-month-popup-day {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .fp-month-popup-day em {
+    grid-column: 1 / -1;
+  }
 }
 
 .fp-schedule-detail-backdrop {

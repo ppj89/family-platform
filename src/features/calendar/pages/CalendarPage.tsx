@@ -277,6 +277,7 @@ export default function CalendarPage() {
   const [editingSource, setEditingSource] = useState<ScheduleItem | null>(null)
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
   const [dayDialog, setDayDialog] = useState<{ date: string; items: CalendarScheduleInstance[] } | null>(null)
+  const [monthDialog, setMonthDialog] = useState<{ label: string; items: CalendarScheduleInstance[] } | null>(null)
   const [scheduleDetail, setScheduleDetail] = useState<CalendarScheduleInstance | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
@@ -391,6 +392,11 @@ export default function CalendarPage() {
     if (!editingId) setForm((value) => ({ ...value, scheduleDate: `${monthKey}-01`, scheduleTime: currentTimeText() }))
   }
 
+  function openYearMonth(monthKey: string, month: number, monthSchedules: CalendarScheduleInstance[], label: string) {
+    selectYearMonth(monthKey, month)
+    setMonthDialog({ label, items: monthSchedules })
+  }
+
   function selectYearDay(dateKey: string, dayItems: CalendarScheduleInstance[]) {
     if (!dateKey) return
     setMonthDate(parseDateKey(dateKey))
@@ -477,6 +483,7 @@ export default function CalendarPage() {
       await deleteSchedule(item.id)
       await reloadSchedules()
       setDayDialog(null)
+      setMonthDialog(null)
       setScheduleDetail(null)
       setMessage('일정을 삭제했습니다.')
     } catch (error) {
@@ -747,19 +754,24 @@ export default function CalendarPage() {
                       const monthSchedules = visibleItems.filter((item) => item.occurrenceDate.startsWith(monthItem.key))
                       const eventDays = Array.from(new Set(monthSchedules.map((item) => parseDateKey(item.occurrenceDate).getDate())))
                       const isActiveMonth = formatDateKey(monthDate).startsWith(monthItem.key)
+                      const openMonth = () => {
+                        if (yearMode === 'list') {
+                          openYearMonth(monthItem.key, monthItem.month, monthSchedules, monthItem.label)
+                          return
+                        }
+                        selectYearMonth(monthItem.key, monthItem.month)
+                      }
                       return (
                         <div
                           className={isActiveMonth ? 'year-month-card active' : 'year-month-card'}
                           key={monthItem.key}
                           role="button"
                           tabIndex={0}
-                          onClick={() => {
-                            selectYearMonth(monthItem.key, monthItem.month)
-                          }}
+                          onClick={openMonth}
                           onKeyDown={(event) => {
                             if (event.key !== 'Enter' && event.key !== ' ') return
                             event.preventDefault()
-                            selectYearMonth(monthItem.key, monthItem.month)
+                            openMonth()
                           }}
                         >
                           <strong>{monthItem.label}</strong>
@@ -802,9 +814,10 @@ export default function CalendarPage() {
                           ) : (
                             <>
                               <span className={eventDays.length ? 'year-event-count' : 'year-event-count is-empty'}>
-                                {eventDays.length ? `${eventDays.length}건` : '일정 없음'}
+                                {monthSchedules.length ? `${monthSchedules.length}건` : '일정 없음'}
                               </span>
-                              {monthSchedules.slice(0, 3).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
+                              {monthSchedules.slice(0, 2).map((item) => <em key={item.instanceKey}>{item.title}</em>)}
+                              {monthSchedules.length > 2 ? <small className="year-card-more">+{monthSchedules.length - 2}</small> : null}
                             </>
                           )}
                         </div>
@@ -954,6 +967,41 @@ export default function CalendarPage() {
             </header>
             <div className="fp-schedule-list">
               {dayDialog.items.map((item) => renderScheduleRow(item, { compact: true }))}
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {monthDialog ? (
+        <div className="fp-calendar-popup-backdrop" role="presentation" onClick={() => setMonthDialog(null)}>
+          <section className="fp-calendar-popup fp-year-month-popup" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <h3>{monthDialog.label} 일정</h3>
+              <button type="button" aria-label="닫기" onClick={() => setMonthDialog(null)}>x</button>
+            </header>
+            <div className="fp-month-popup-list">
+              {Array.from(new Set(monthDialog.items.map((item) => item.occurrenceDate))).map((dateKey) => {
+                const dayItems = monthDialog.items.filter((item) => item.occurrenceDate === dateKey)
+                return (
+                  <button
+                    className="fp-month-popup-day"
+                    key={dateKey}
+                    type="button"
+                    onClick={() => {
+                      setMonthDialog(null)
+                      selectYearDay(dateKey, dayItems)
+                    }}
+                  >
+                    <ScheduleDateBadge value={dateKey} />
+                    <span>
+                      <strong>{dayItems[0]?.title || '일정'}</strong>
+                      <small>{dayItems.length}건</small>
+                    </span>
+                    <em>{dayItems.slice(0, 2).map((item) => item.title).join(' · ')}{dayItems.length > 2 ? ` +${dayItems.length - 2}` : ''}</em>
+                  </button>
+                )
+              })}
+              {monthDialog.items.length ? null : <p className="fp-empty-text">등록된 일정이 없습니다.</p>}
             </div>
           </section>
         </div>
