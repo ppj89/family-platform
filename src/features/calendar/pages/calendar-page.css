@@ -974,7 +974,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-calendar .fp-year-board.year-mode-list {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .fp-calendar .fp-year-board.year-mode-list .year-month-card > .year-event-count {
@@ -1853,6 +1853,10 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .fp-calendar .fp-year-board.year-mode-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   body:has(.family-calendar-panel) .fp-topbar {
     min-height: 0;
     margin-bottom: 14px;
@@ -1876,6 +1880,10 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   }
 
   .fp-calendar .fp-year-board.year-mode-calendar {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .fp-calendar .fp-year-board.year-mode-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
