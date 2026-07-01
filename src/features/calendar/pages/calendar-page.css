@@ -1065,24 +1065,24 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   outline-offset: 1px;
 }
 
-.fp-calendar .year-mini-days button.has-event {
-  width: 20px;
-  height: 20px;
-  min-height: 20px;
-  justify-self: center;
-  align-self: center;
-  border-radius: 999px;
-  background: #edf4ff;
-  color: #1b64da !important;
-  box-shadow: inset 0 0 0 1px #bfdcff;
-}
-
+.fp-calendar .year-mini-days button.has-event,
 .fp-calendar .year-mini-days button.selected {
   width: 20px;
   height: 20px;
   min-height: 20px;
   justify-self: center;
   align-self: center;
+  border-radius: 999px;
+  transform: translateY(2px);
+}
+
+.fp-calendar .year-mini-days button.has-event {
+  background: #edf4ff;
+  color: #1b64da !important;
+  box-shadow: inset 0 0 0 1px #bfdcff;
+}
+
+.fp-calendar .year-mini-days button.selected {
   background: #3182f6;
   color: #fff !important;
   box-shadow: 0 8px 16px rgba(49, 130, 246, 0.22);
