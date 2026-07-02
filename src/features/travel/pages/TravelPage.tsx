@@ -1,8 +1,9 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
-import { ConfirmDialog, DatePickerField } from '../../../shared/components'
+import { ConfirmDialog, CustomSelect, DatePickerField, ToastMessage } from '../../../shared/components'
 import { TRAVEL_COST_CATEGORIES } from '../../../shared/constants/commonCodes'
 import { currentTimeText, todayKey } from '../../../shared/utils/date'
+import { formatNumberInput, normalizeAmount } from '../../../shared/utils/number'
 import {
   createTravelRecord,
   createTrip,
@@ -51,10 +52,6 @@ function sanitizeTime(value: string) {
   return `${digits.slice(0, 2)}:${digits.slice(2)}`
 }
 
-function normalizeAmount(value: string) {
-  return Number(value.replace(/[^\d.-]/g, '')) || 0
-}
-
 function sortedTrips(items: Trip[]) {
   return [...items].sort((a, b) => `${b.startDate} ${b.createdAt}`.localeCompare(`${a.startDate} ${a.createdAt}`))
 }
@@ -90,7 +87,7 @@ export default function TravelPage() {
   const [pendingRecordDelete, setPendingRecordDelete] = useState<TravelRecord | null>(null)
   const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null)
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
+  const [toastMessage, setToastMessage] = useState('')
   const [placeCandidates, setPlaceCandidates] = useState<PlaceSearchResult[]>([])
   const [placeSearching, setPlaceSearching] = useState(false)
   const tripNameInputRef = useRef<HTMLInputElement>(null)
@@ -109,11 +106,11 @@ export default function TravelPage() {
 
   async function reloadTrips() {
     setLoading(true)
-    setMessage('')
+    setToastMessage('')
     try {
       setTrips(await listTrips())
     } catch (error) {
-      setMessage(apiActionMessage(error, '여행 목록을 불러오지 못했습니다.'))
+      setToastMessage(apiActionMessage(error, '여행 목록을 불러오지 못했습니다.'))
     } finally {
       setLoading(false)
     }
@@ -121,7 +118,7 @@ export default function TravelPage() {
 
   async function reloadRecords(trip: Trip) {
     setLoading(true)
-    setMessage('')
+    setToastMessage('')
     try {
       const nextRecords = await listTravelRecords(trip.id)
       setRecords(nextRecords)
@@ -131,7 +128,7 @@ export default function TravelPage() {
         return emptyRecord(nextOrder(nextRecords))
       })
     } catch (error) {
-      setMessage(apiActionMessage(error, '여행 기록을 불러오지 못했습니다.'))
+      setToastMessage(apiActionMessage(error, '여행 기록을 불러오지 못했습니다.'))
     } finally {
       setLoading(false)
     }
@@ -189,7 +186,7 @@ export default function TravelPage() {
   function requestTripSave(event: FormEvent) {
     event.preventDefault()
     if (!tripForm.title.trim()) {
-      setMessage('여행명을 입력해주세요.')
+      setToastMessage('여행명을 입력해주세요.')
       return
     }
     setConfirmKind('trip-save')
@@ -202,7 +199,7 @@ export default function TravelPage() {
 
   async function confirmTripSave() {
     setLoading(true)
-    setMessage('')
+    setToastMessage('')
     try {
       const payload = {
         ...tripForm,
@@ -213,9 +210,9 @@ export default function TravelPage() {
       else await createTrip(payload)
       resetTripForm()
       await reloadTrips()
-      setMessage(editingTrip ? '여행을 수정했습니다.' : '여행을 추가했습니다.')
+      setToastMessage(editingTrip ? '여행을 수정했습니다.' : '여행을 추가했습니다.')
     } catch (error) {
-      setMessage(apiActionMessage(error, editingTrip ? '여행 수정에 실패했습니다.' : '여행 추가에 실패했습니다.'))
+      setToastMessage(apiActionMessage(error, editingTrip ? '여행 수정에 실패했습니다.' : '여행 추가에 실패했습니다.'))
     } finally {
       setConfirmKind(null)
       setLoading(false)
@@ -225,15 +222,15 @@ export default function TravelPage() {
   async function confirmTripDelete() {
     if (!pendingTripDelete) return
     setLoading(true)
-    setMessage('')
+    setToastMessage('')
     try {
       await deleteTrip(pendingTripDelete.id)
       if (selectedTrip?.id === pendingTripDelete.id) setSelectedTrip(null)
       if (editingTrip?.id === pendingTripDelete.id) resetTripForm()
       await reloadTrips()
-      setMessage('여행을 삭제했습니다.')
+      setToastMessage('여행을 삭제했습니다.')
     } catch (error) {
-      setMessage(apiActionMessage(error, '여행 삭제에 실패했습니다.'))
+      setToastMessage(apiActionMessage(error, '여행 삭제에 실패했습니다.'))
     } finally {
       setPendingTripDelete(null)
       setConfirmKind(null)
@@ -278,11 +275,11 @@ export default function TravelPage() {
     event.preventDefault()
     if (!selectedTrip) return
     if (!recordForm.title.trim()) {
-      setMessage('제목을 입력해주세요.')
+      setToastMessage('제목을 입력해주세요.')
       return
     }
     if (!recordForm.recordDate || !recordForm.recordTime) {
-      setMessage('날짜와 시간을 입력해주세요.')
+      setToastMessage('날짜와 시간을 입력해주세요.')
       return
     }
     setConfirmKind('record-save')
@@ -291,7 +288,7 @@ export default function TravelPage() {
   async function confirmRecordSave() {
     if (!selectedTrip) return
     setLoading(true)
-    setMessage('')
+    setToastMessage('')
     try {
       const payload = {
         ...recordForm,
@@ -304,9 +301,9 @@ export default function TravelPage() {
       if (editingRecord) await updateTravelRecord(editingRecord.id, payload)
       else await createTravelRecord(selectedTrip.id, payload)
       await reloadRecords(selectedTrip)
-      setMessage(editingRecord ? '여행 기록을 수정했습니다.' : '여행 기록을 추가했습니다.')
+      setToastMessage(editingRecord ? '여행 기록을 수정했습니다.' : '여행 기록을 추가했습니다.')
     } catch (error) {
-      setMessage(apiActionMessage(error, editingRecord ? '여행 기록 수정에 실패했습니다.' : '여행 기록 추가에 실패했습니다.'))
+      setToastMessage(apiActionMessage(error, editingRecord ? '여행 기록 수정에 실패했습니다.' : '여행 기록 추가에 실패했습니다.'))
     } finally {
       setConfirmKind(null)
       setLoading(false)
@@ -316,13 +313,13 @@ export default function TravelPage() {
   async function confirmRecordDelete() {
     if (!selectedTrip || !pendingRecordDelete) return
     setLoading(true)
-    setMessage('')
+    setToastMessage('')
     try {
       await deleteTravelRecord(pendingRecordDelete.id)
       await reloadRecords(selectedTrip)
-      setMessage('여행 기록을 삭제했습니다.')
+      setToastMessage('여행 기록을 삭제했습니다.')
     } catch (error) {
-      setMessage(apiActionMessage(error, '여행 기록 삭제에 실패했습니다.'))
+      setToastMessage(apiActionMessage(error, '여행 기록 삭제에 실패했습니다.'))
     } finally {
       setPendingRecordDelete(null)
       setConfirmKind(null)
@@ -333,6 +330,7 @@ export default function TravelPage() {
   if (selectedTrip) {
     return (
       <section className="fp-travel">
+        <ToastMessage message={toastMessage} onClose={() => setToastMessage('')} />
         {loading ? <div className="fp-loading-blocker">처리 중</div> : null}
         <header className="fp-travel-detail-header">
           <div>
@@ -341,8 +339,6 @@ export default function TravelPage() {
           </div>
           <button className="fp-button fp-button-muted" type="button" onClick={() => setSelectedTrip(null)}>목록</button>
         </header>
-
-        {message ? <p className="fp-message">{message}</p> : null}
 
         <div className="fp-travel-detail-layout">
           <section className="fp-travel-detail-main">
@@ -389,21 +385,21 @@ export default function TravelPage() {
             </header>
             <div className="fp-form-grid travel-record-grid">
               <label className="fp-field">
-                순서
+                <span>순서</span>
                 <input
                   inputMode="numeric"
                   value={recordForm.sortOrder || ''}
                   onChange={(event) => setRecordForm((value) => ({ ...value, sortOrder: Number(event.target.value.replace(/\D/g, '')) || null }))}
                 />
               </label>
-              <label className="fp-field">
-                비용 구분
-                <select value={recordForm.category || ''} onChange={(event) => setRecordForm((value) => ({ ...value, category: event.target.value }))}>
-                  {TRAVEL_COST_CATEGORIES.map((category) => <option key={category} value={category}>{category}</option>)}
-                </select>
-              </label>
+              <CustomSelect
+                label="비용 구분"
+                options={TRAVEL_COST_CATEGORIES.map((category) => ({ label: category, value: category }))}
+                value={recordForm.category || TRAVEL_COST_CATEGORIES[0]}
+                onChange={(value) => setRecordForm((current) => ({ ...current, category: value }))}
+              />
               <label className="fp-field span-2">
-                제목 *
+                <span>제목 <em className="fp-required-mark">*</em></span>
                 <input value={recordForm.title} onChange={(event) => setRecordForm((value) => ({ ...value, title: event.target.value }))} />
               </label>
               <DatePickerField
@@ -413,11 +409,11 @@ export default function TravelPage() {
                 onChange={(value) => setRecordForm((current) => ({ ...current, recordDate: value }))}
               />
               <label className="fp-field">
-                시간 *
+                <span>시간 <em className="fp-required-mark">*</em></span>
                 <input inputMode="numeric" maxLength={5} value={recordForm.recordTime || ''} onChange={(event) => setRecordForm((value) => ({ ...value, recordTime: sanitizeTime(event.target.value) }))} />
               </label>
               <label className="fp-field span-2 fp-place-field">
-                위치
+                <span>위치</span>
                 <input value={recordForm.location} onChange={(event) => setRecordForm((value) => ({ ...value, location: event.target.value, latitude: 0, longitude: 0 }))} />
                 {placeSearching ? <span className="fp-place-status">위치를 검색하는 중입니다.</span> : null}
                 {placeCandidates.length ? (
@@ -436,11 +432,11 @@ export default function TravelPage() {
                 <TravelMap point={recordForm.latitude && recordForm.longitude ? { latitude: recordForm.latitude, longitude: recordForm.longitude, label: recordForm.location } : null} className="preview" />
               </div>
               <label className="fp-field">
-                사용금액
-                <input inputMode="numeric" value={recordForm.amount || ''} onChange={(event) => setRecordForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))} />
+                <span>사용금액</span>
+                <input inputMode="numeric" value={formatNumberInput(recordForm.amount)} onChange={(event) => setRecordForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))} />
               </label>
               <label className="fp-field span-2">
-                내용
+                <span>내용</span>
                 <textarea value={recordForm.note || ''} onChange={(event) => setRecordForm((value) => ({ ...value, note: event.target.value }))} />
               </label>
             </div>
@@ -467,13 +463,14 @@ export default function TravelPage() {
 
   return (
     <section className="fp-card fp-travel fp-travel-list-panel">
+      <ToastMessage message={toastMessage} onClose={() => setToastMessage('')} />
       {loading ? <div className="fp-loading-blocker">처리 중</div> : null}
       <header className="fp-travel-list-header">
         <div>
           <h2>여행</h2>
         </div>
+        <p>{tripList.length}개</p>
       </header>
-      {message ? <p className="fp-message">{message}</p> : null}
       <form className="fp-trip-query-form" onSubmit={requestTripSearch}>
         <strong>여행 조회</strong>
         <input

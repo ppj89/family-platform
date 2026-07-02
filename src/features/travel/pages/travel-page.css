@@ -23,6 +23,14 @@
   margin-bottom: 0;
 }
 
+.fp-travel-detail-header .fp-button {
+  min-height: 40px;
+  border-radius: 14px;
+  padding: 0 16px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .fp-travel-list-header h2,
 .fp-travel-detail-header h2,
 .fp-travel-record-form h3 {
@@ -35,7 +43,7 @@
 
 .fp-travel-list-header p,
 .fp-travel-detail-header p {
-  margin: 6px 0 0;
+  margin: 0;
   color: #6b7684;
   font-size: 13px;
   font-weight: 700;
@@ -283,6 +291,10 @@
   display: grid;
   gap: 14px;
   min-width: 0;
+  border-radius: 14px;
+  padding: 16px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #e9edf2;
 }
 
 .fp-travel-summary {
@@ -441,6 +453,10 @@
   display: grid;
   gap: 14px;
   padding: 18px;
+  border: 0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #e1e7ef;
 }
 
 .fp-travel-record-form header {
@@ -452,6 +468,91 @@
 
 .travel-record-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fp-travel .fp-travel-record-form .fp-field,
+.fp-travel .fp-travel-record-form .date-picker-field {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 0;
+  color: #4e5968;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fp-travel .fp-travel-record-form .fp-field > span,
+.fp-travel .fp-travel-record-form .date-picker-field > span {
+  color: #4e5968;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.fp-travel .fp-travel-record-form .fp-required-mark {
+  margin-left: 2px;
+  color: #f04452;
+  font-style: normal;
+  font-weight: 900;
+}
+
+.fp-travel .fp-travel-record-form input,
+.fp-travel .fp-travel-record-form textarea,
+.fp-travel .fp-travel-record-form select,
+.fp-travel .fp-travel-record-form .date-picker-trigger,
+.fp-travel .fp-travel-record-form .custom-select-trigger {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  border-radius: 14px;
+  background: #fff;
+  color: #191f28;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  outline: none;
+  box-shadow: inset 0 0 0 1px #dfe5ec;
+}
+
+.fp-travel .fp-travel-record-form input,
+.fp-travel .fp-travel-record-form select,
+.fp-travel .fp-travel-record-form .date-picker-trigger,
+.fp-travel .fp-travel-record-form .custom-select-trigger {
+  height: 42px;
+  min-height: 42px;
+  padding: 0 12px;
+}
+
+.fp-travel .fp-travel-record-form textarea {
+  min-height: 104px;
+  padding: 12px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.fp-travel .fp-travel-record-form input:focus,
+.fp-travel .fp-travel-record-form textarea:focus,
+.fp-travel .fp-travel-record-form select:focus,
+.fp-travel .fp-travel-record-form .date-picker-trigger:focus-visible,
+.fp-travel .fp-travel-record-form .custom-select-trigger.open,
+.fp-travel .fp-travel-record-form .custom-select-trigger:focus-visible {
+  box-shadow: inset 0 0 0 2px #3182f6;
+}
+
+.fp-travel .fp-travel-record-form .custom-select-trigger {
+  display: inline-flex;
+}
+
+.fp-travel .fp-travel-record-form .custom-select-trigger span,
+.fp-travel .fp-travel-record-form .date-picker-trigger strong {
+  overflow: hidden;
+  color: #191f28;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .travel-record-grid .date-picker-field {
@@ -461,13 +562,6 @@
 .travel-record-grid .date-picker-trigger {
   width: 100%;
   min-width: 0;
-  border: 1px solid #cfd9e6;
-  border-radius: 14px;
-  background: #fff;
-  color: #191f28;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
 }
 
 .travel-record-grid .date-picker-trigger strong {

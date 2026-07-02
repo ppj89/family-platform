@@ -3,6 +3,7 @@ import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField } from '../../../shared/components'
 import { FAMILY_MEMBER_OPTIONS, LEDGER_CATEGORIES, LEDGER_ENTRY_TYPE_OPTIONS, LEDGER_PAYMENT_METHODS } from '../../../shared/constants/commonCodes'
 import { monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
+import { formatNumberInput, normalizeAmount } from '../../../shared/utils/number'
 import { createLedgerEntry, deleteLedgerEntry, getLedgerSummary, listLedgerEntries, updateLedgerEntry } from '../api/ledger'
 import type { LedgerEntry, LedgerPayload, LedgerSummary } from '../types'
 import './ledger-page.css'
@@ -32,10 +33,6 @@ function money(value: number) {
 
 function signedMoney(item: LedgerEntry) {
   return `${item.entryType === 'income' ? '+' : '-'}${money(item.amount)}`
-}
-
-function normalizeAmount(value: string) {
-  return Number(value.replace(/[^\d.-]/g, '')) || 0
 }
 
 function sortEntries(items: LedgerEntry[]) {
@@ -401,7 +398,7 @@ export default function LedgerPage() {
               <span>금액 <em className="fp-required-mark">*</em></span>
               <input
                 inputMode="numeric"
-                value={form.amount ? form.amount.toLocaleString('ko-KR') : ''}
+                value={formatNumberInput(form.amount)}
                 onChange={(event) => setForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))}
               />
             </label>

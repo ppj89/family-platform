@@ -260,9 +260,17 @@
   font-weight: var(--fp-weight-strong);
 }
 
+.fp-required-mark {
+  margin-left: 2px;
+  color: #f04452;
+  font-style: normal;
+  font-weight: 900;
+}
+
 .fp-field input,
 .fp-field select,
-.fp-field textarea {
+.fp-field textarea,
+.fp-field .custom-select-trigger {
   width: 100%;
   min-width: 0;
   border: 1px solid #cfd9e6;
@@ -274,7 +282,8 @@
 }
 
 .fp-field input,
-.fp-field select {
+.fp-field select,
+.fp-field .custom-select-trigger {
   height: 48px;
   padding: 0 14px;
 }
@@ -293,6 +302,82 @@
 
 .fp-form-grid .span-2 {
   grid-column: span 2;
+}
+
+.fp-custom-select-field {
+  position: relative;
+  min-width: 0;
+}
+
+.fp-custom-select-field.open {
+  z-index: 40;
+}
+
+.fp-custom-select {
+  position: relative;
+}
+
+.fp-custom-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.fp-custom-select-trigger span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-custom-select-trigger svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: #6b7684;
+}
+
+.fp-custom-select-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 50;
+  display: grid;
+  width: 100%;
+  min-width: 100%;
+  overflow: hidden;
+  border: 1px solid #e1e7ef;
+  border-radius: 14px;
+  padding: 6px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+}
+
+.fp-custom-select-list[hidden] {
+  display: none !important;
+}
+
+.fp-custom-select-list button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 12px;
+  background: transparent;
+  color: #191f28;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.fp-custom-select-list button:hover,
+.fp-custom-select-list button.selected {
+  background: #eef6ff;
+  color: #1264d8;
 }
 
 .fp-row-actions {
@@ -327,6 +412,22 @@
   color: #1264d8;
   font-size: var(--fp-font-body);
   font-weight: var(--fp-weight-strong);
+}
+
+.fp-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 30000;
+  max-width: min(420px, calc(100vw - 40px));
+  border-radius: 14px;
+  padding: 13px 16px;
+  background: #191f28;
+  color: #fff;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.26);
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-strong);
+  line-height: 1.45;
 }
 
 .fp-empty-text {
