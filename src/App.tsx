@@ -146,7 +146,13 @@ function LegacyNotice({ label }: { label: string }) {
 
 export default function App() {
   const [activeMenu, setActiveMenu] = useState('홈')
-  const pageEyebrow = activeMenu === '홈' ? '오늘의 가족 기록' : activeMenu === '가계부' || activeMenu === '여행' ? '' : '가족 공유 운영'
+  const pageEyebrow = activeMenu === '홈'
+    ? '오늘의 가족 기록'
+    : activeMenu === '관리자'
+      ? '권한과 설정 관리'
+      : activeMenu === '가계부' || activeMenu === '여행'
+        ? ''
+        : '가족 공유 운영'
 
   if (!hasAuthToken()) {
     return <LoginPage />
