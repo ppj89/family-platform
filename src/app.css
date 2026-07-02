@@ -408,7 +408,7 @@
 .fp-confirm-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 100;
+  z-index: 30000;
   display: grid;
   place-items: center;
   padding: 20px;
