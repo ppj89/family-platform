@@ -81,6 +81,8 @@ export default function TravelPage() {
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
   const [records, setRecords] = useState<TravelRecord[]>([])
   const [tripForm, setTripForm] = useState<TripPayload>(() => emptyTrip())
+  const [tripQueryInput, setTripQueryInput] = useState('')
+  const [tripQuery, setTripQuery] = useState('')
   const [recordForm, setRecordForm] = useState<TravelRecordPayload>(() => emptyRecord())
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null)
   const [editingRecord, setEditingRecord] = useState<TravelRecord | null>(null)
@@ -93,7 +95,15 @@ export default function TravelPage() {
   const [placeSearching, setPlaceSearching] = useState(false)
   const tripNameInputRef = useRef<HTMLInputElement>(null)
 
-  const tripList = useMemo(() => sortedTrips(trips), [trips])
+  const sortedTripList = useMemo(() => sortedTrips(trips), [trips])
+  const tripList = useMemo(() => {
+    const query = tripQuery.trim().toLocaleLowerCase()
+    if (!query) return sortedTripList
+    return sortedTripList.filter((trip) => {
+      const range = `${trip.startDate} ${trip.endDate}`
+      return trip.title.toLocaleLowerCase().includes(query) || range.includes(query)
+    })
+  }, [sortedTripList, tripQuery])
   const recordList = useMemo(() => sortedRecords(records), [records])
   const totalAmount = useMemo(() => recordList.reduce((sum, item) => sum + (item.amount || 0), 0), [recordList])
 
@@ -183,6 +193,11 @@ export default function TravelPage() {
       return
     }
     setConfirmKind('trip-save')
+  }
+
+  function requestTripSearch(event: FormEvent) {
+    event.preventDefault()
+    setTripQuery(tripQueryInput.trim())
   }
 
   async function confirmTripSave() {
@@ -456,22 +471,51 @@ export default function TravelPage() {
       <header className="fp-travel-list-header">
         <div>
           <h2>여행</h2>
-          <p>{tripList.length}개</p>
         </div>
       </header>
       {message ? <p className="fp-message">{message}</p> : null}
+      <form className="fp-trip-query-form" onSubmit={requestTripSearch}>
+        <strong>여행 조회</strong>
+        <input
+          aria-label="여행 조회"
+          placeholder="여행명 또는 날짜"
+          value={tripQueryInput}
+          onChange={(event) => setTripQueryInput(event.target.value)}
+        />
+        <button className="fp-button fp-button-muted fp-trip-query-submit" type="submit">조회</button>
+        {tripQuery ? (
+          <button
+            className="fp-button fp-button-muted fp-trip-query-reset"
+            type="button"
+            onClick={() => {
+              setTripQuery('')
+              setTripQueryInput('')
+            }}
+          >
+            초기화
+          </button>
+        ) : null}
+      </form>
       <form className="fp-trip-form" onSubmit={requestTripSave}>
         <label className="fp-field trip-title-field">
-          <span>여행명 <em className="fp-required-mark">*</em></span>
-          <input ref={tripNameInputRef} value={tripForm.title} onChange={(event) => setTripForm((value) => ({ ...value, title: event.target.value }))} />
+          <input
+            ref={tripNameInputRef}
+            aria-label="여행명"
+            value={tripForm.title}
+            onChange={(event) => setTripForm((value) => ({ ...value, title: event.target.value }))}
+          />
         </label>
         <DatePickerField
+          className="travel-start-date"
           label="시작일"
+          showCalendarIcon
           value={tripForm.startDate}
           onChange={(value) => setTripForm((current) => ({ ...current, startDate: value }))}
         />
         <DatePickerField
+          className="travel-end-date"
           label="종료일"
+          showCalendarIcon
           value={tripForm.endDate}
           onChange={(value) => setTripForm((current) => ({ ...current, endDate: value }))}
         />
@@ -501,7 +545,7 @@ export default function TravelPage() {
               </button>
             </div>
           </article>
-        )) : <p className="fp-empty-text">등록된 여행이 없습니다.</p>}
+        )) : <p className="fp-empty-text">{tripQuery ? '조회된 여행이 없습니다.' : '등록된 여행이 없습니다.'}</p>}
       </div>
       {confirmKind === 'trip-save' || confirmKind === 'trip-delete' ? (
         <ConfirmDialog
