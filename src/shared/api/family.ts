@@ -9,18 +9,19 @@ const currentFamilyKey = 'family-platform-current-family-id'
 
 export async function getReadableFamilyId() {
   const cached = Number(window.localStorage.getItem(currentFamilyKey) || '')
-  if (Number.isFinite(cached) && cached > 0) return cached
 
   try {
     const families = await apiRequest<FamilyGroup[]>('/families')
-    const first = families[0]
-    if (!first) {
+    if (!families.length) {
       window.localStorage.removeItem(currentFamilyKey)
       return 0
     }
-    window.localStorage.setItem(currentFamilyKey, String(first.id))
-    return first.id
+
+    const selected = families.find((family) => family.id === cached) || families[0]
+    window.localStorage.setItem(currentFamilyKey, String(selected.id))
+    return selected.id
   } catch {
+    if (Number.isFinite(cached) && cached > 0) return cached
     return 0
   }
 }

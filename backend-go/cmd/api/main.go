@@ -2189,8 +2189,7 @@ func (a *app) listLedgerEntries(w http.ResponseWriter, r *http.Request, user aut
 		where transaction_date between $2 and $3 and deleted_at is null
 		  and (
 		    created_by_user_id = $4
-		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
-		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
+		    or ($1 > 0 and family_id = $1)
 		  )
 		order by transaction_date desc, created_at desc
 	`, familyID, start, end, user.ID)
@@ -2220,8 +2219,7 @@ func (a *app) ledgerSummary(w http.ResponseWriter, r *http.Request, user authUse
 		where transaction_date between $2 and $3 and deleted_at is null
 		  and (
 		    created_by_user_id = $4
-		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
-		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
+		    or ($1 > 0 and family_id = $1)
 		  )
 	`, familyID, start, end, user.ID).Scan(&expense, &income)
 	if err != nil {
@@ -2314,8 +2312,7 @@ func (a *app) listSchedules(w http.ResponseWriter, r *http.Request, user authUse
 		where schedule_date between $2 and $3 and deleted_at is null
 		  and (
 		    created_by_user_id = $4
-		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
-		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
+		    or ($1 > 0 and family_id = $1)
 		  )
 		order by schedule_date asc, schedule_time asc nulls last, created_at desc
 	`, familyID, start, end, user.ID)
@@ -2635,8 +2632,7 @@ func (a *app) listTrips(w http.ResponseWriter, r *http.Request, user authUser) {
 		where deleted_at is null
 		  and (
 		    created_by_user_id = $2
-		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
-		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
+		    or ($1 > 0 and family_id = $1)
 		  )
 		order by created_at desc
 	`, familyID, user.ID)
@@ -2838,8 +2834,7 @@ func (a *app) listRestaurants(w http.ResponseWriter, r *http.Request, user authU
 		where deleted_at is null
 		  and (
 		    created_by_user_id = $2
-		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
-		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
+		    or ($1 > 0 and family_id = $1)
 		  )
 		order by visit_date desc, created_at desc
 	`, familyID, user.ID)
@@ -2945,8 +2940,7 @@ func (a *app) listBabies(w http.ResponseWriter, r *http.Request, user authUser) 
 		where deleted_at is null
 		  and (
 		    created_by_user_id = $2
-		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
-		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
+		    or ($1 > 0 and family_id = $1)
 		  )
 		order by created_at desc
 	`, familyID, user.ID)
@@ -3141,8 +3135,7 @@ func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser)
 		where diary_date between $2 and $3 and deleted_at is null
 		  and (
 		    created_by_user_id = $4
-		    or ($1 > 0 and created_by_user_id in (select user_id from family_members where family_id = $1))
-		    or ($1 > 0 and created_by_user_id is null and family_id = $1)
+		    or ($1 > 0 and family_id = $1)
 		  )
 		order by diary_date desc, created_at desc
 	`, familyID, start, end, user.ID)
