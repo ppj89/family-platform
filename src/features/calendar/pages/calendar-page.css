@@ -1667,9 +1667,11 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-calendar-popup {
+  display: flex;
+  flex-direction: column;
   width: min(560px, calc(100vw - 40px));
   max-height: min(680px, calc(100vh - 40px));
-  overflow: auto;
+  overflow: hidden;
   padding: 18px;
   border-radius: 20px;
   background: #fff;
@@ -1706,7 +1708,18 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 .fp-month-popup-list {
   display: grid;
   gap: 12px;
+  min-height: 0;
   margin-top: 14px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+}
+
+.fp-calendar-popup > .fp-schedule-list {
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
 }
 
 .fp-month-popup-day-group {
