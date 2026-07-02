@@ -1,7 +1,7 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
 import { getStoredUser } from '../../../shared/api/auth'
-import { ConfirmDialog } from '../../../shared/components/ConfirmDialog'
+import { ConfirmDialog, ToastMessage } from '../../../shared/components'
 import {
   createCommunityComment,
   createCommunityPost,
@@ -15,10 +15,24 @@ import {
 import type { CommunityBoardType, CommunityComment, CommunityPost, CommunityPostPayload } from '../types'
 import './community-page.css'
 
+type ConfirmState = {
+  title: string
+  body: string
+  confirmLabel: string
+  danger?: boolean
+  onConfirm: () => void
+}
+
 const boardLabels: Record<CommunityBoardType, string> = {
   notice: '공지사항',
   free: '자유게시판',
   inquiry: '문의사항',
+}
+
+const boardDescriptions: Record<CommunityBoardType, string> = {
+  notice: '가족 플랫폼 공지와 운영 안내를 확인합니다.',
+  free: '가족과 자유롭게 이야기를 나누는 게시판입니다.',
+  inquiry: '관리자에게 필요한 내용을 문의합니다.',
 }
 
 const initialForm = { title: '', body: '' }
@@ -36,7 +50,9 @@ function canWriteBoard(board: CommunityBoardType, platformAdmin: boolean) {
 export default function CommunityPage() {
   const user = useMemo(() => getStoredUser(), [])
   const platformAdmin = Boolean(user?.platformAdmin)
-  const [activeBoard, setActiveBoard] = useState<CommunityBoardType>('free')
+  const formRef = useRef<HTMLFormElement>(null)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const [activeBoard, setActiveBoard] = useState<CommunityBoardType>('notice')
   const [posts, setPosts] = useState<CommunityPost[]>([])
   const [selectedPost, setSelectedPost] = useState<CommunityPost | null>(null)
   const [comments, setComments] = useState<CommunityComment[]>([])
@@ -45,20 +61,20 @@ export default function CommunityPage() {
   const [commentText, setCommentText] = useState('')
   const [editingComment, setEditingComment] = useState<CommunityComment | null>(null)
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
-  const [confirm, setConfirm] = useState<{ title: string; body: string; danger?: boolean; onConfirm: () => void } | null>(null)
+  const [toastMessage, setToastMessage] = useState('')
+  const [confirm, setConfirm] = useState<ConfirmState | null>(null)
 
   const writable = canWriteBoard(activeBoard, platformAdmin)
+  const boardTitle = boardLabels[activeBoard]
 
   async function loadPosts(board = activeBoard) {
     setLoading(true)
-    setMessage('')
     try {
       const items = await listCommunityPosts(board)
       setPosts(items)
     } catch (error) {
       setPosts([])
-      setMessage(apiActionMessage(error, '게시글을 불러오지 못했습니다.'))
+      setToastMessage(apiActionMessage(error, '게시글을 불러오지 못했습니다.'))
     } finally {
       setLoading(false)
     }
@@ -66,7 +82,6 @@ export default function CommunityPage() {
 
   async function openPost(post: CommunityPost) {
     setLoading(true)
-    setMessage('')
     try {
       const detail = await getCommunityPost(post.id)
       setSelectedPost(detail.post)
@@ -75,7 +90,7 @@ export default function CommunityPage() {
       setCommentText('')
       setEditingComment(null)
     } catch (error) {
-      setMessage(apiActionMessage(error, '게시글 상세를 불러오지 못했습니다.'))
+      setToastMessage(apiActionMessage(error, '게시글 상세를 불러오지 못했습니다.'))
     } finally {
       setLoading(false)
     }
@@ -87,8 +102,13 @@ export default function CommunityPage() {
     setEditingPost(null)
     setEditingComment(null)
     setForm(initialForm)
-    loadPosts(activeBoard)
+    void loadPosts(activeBoard)
   }, [activeBoard])
+
+  function focusComposer() {
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    window.setTimeout(() => titleInputRef.current?.focus(), 250)
+  }
 
   function resetForm() {
     setForm(initialForm)
@@ -97,11 +117,11 @@ export default function CommunityPage() {
 
   async function savePost() {
     if (!form.title.trim()) {
-      setMessage('제목을 입력해주세요.')
+      setToastMessage('제목을 입력해주세요.')
+      titleInputRef.current?.focus()
       return
     }
     setLoading(true)
-    setMessage('')
     const payload: CommunityPostPayload = {
       boardType: activeBoard,
       familyId: null,
@@ -110,13 +130,14 @@ export default function CommunityPage() {
       mediaUrls: editingPost?.mediaUrls || [],
     }
     try {
+      const isEditing = Boolean(editingPost)
       const saved = editingPost ? await updateCommunityPost(editingPost.id, payload) : await createCommunityPost(payload)
       resetForm()
       await loadPosts(activeBoard)
       if (selectedPost?.id === saved.id) await openPost(saved)
-      setMessage(editingPost ? '게시글을 수정했습니다.' : '게시글을 등록했습니다.')
+      setToastMessage(isEditing ? '게시글을 수정했습니다.' : '게시글을 등록했습니다.')
     } catch (error) {
-      setMessage(apiActionMessage(error, '게시글을 저장하지 못했습니다.'))
+      setToastMessage(apiActionMessage(error, '게시글을 저장하지 못했습니다.'))
     } finally {
       setLoading(false)
     }
@@ -124,12 +145,14 @@ export default function CommunityPage() {
 
   function requestSavePost(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const isEditing = Boolean(editingPost)
     setConfirm({
-      title: editingPost ? '게시글 수정' : '게시글 등록',
-      body: editingPost ? '게시글을 수정할까요?' : '게시글을 등록할까요?',
+      title: isEditing ? '수정' : '저장',
+      body: isEditing ? '게시글을 수정하시겠습니까?' : '게시글을 등록하시겠습니까?',
+      confirmLabel: isEditing ? '수정' : '저장',
       onConfirm: () => {
         setConfirm(null)
-        savePost()
+        void savePost()
       },
     })
   }
@@ -137,17 +160,18 @@ export default function CommunityPage() {
   function startEditPost(post: CommunityPost) {
     setEditingPost(post)
     setForm({ title: post.title, body: post.body || '' })
+    focusComposer()
   }
 
   function requestDeletePost(post: CommunityPost) {
     setConfirm({
-      title: '게시글 삭제',
-      body: '게시글과 댓글을 삭제할까요?',
+      title: '삭제',
+      body: '게시글을 삭제하시겠습니까?',
+      confirmLabel: '삭제',
       danger: true,
       onConfirm: async () => {
         setConfirm(null)
         setLoading(true)
-        setMessage('')
         try {
           await deleteCommunityPost(post.id)
           if (selectedPost?.id === post.id) {
@@ -155,9 +179,9 @@ export default function CommunityPage() {
             setComments([])
           }
           await loadPosts(activeBoard)
-          setMessage('게시글을 삭제했습니다.')
+          setToastMessage('게시글을 삭제했습니다.')
         } catch (error) {
-          setMessage(apiActionMessage(error, '게시글을 삭제하지 못했습니다.'))
+          setToastMessage(apiActionMessage(error, '게시글을 삭제하지 못했습니다.'))
         } finally {
           setLoading(false)
         }
@@ -168,12 +192,12 @@ export default function CommunityPage() {
   async function saveComment() {
     const body = commentText.trim()
     if (!selectedPost || !body) {
-      setMessage('댓글 내용을 입력해주세요.')
+      setToastMessage('댓글 내용을 입력해주세요.')
       return
     }
     setLoading(true)
-    setMessage('')
     try {
+      const isEditing = Boolean(editingComment)
       if (editingComment) {
         await updateCommunityComment(editingComment.id, body)
         setEditingComment(null)
@@ -182,9 +206,9 @@ export default function CommunityPage() {
       }
       setCommentText('')
       await openPost(selectedPost)
-      setMessage(editingComment ? '댓글을 수정했습니다.' : '댓글을 등록했습니다.')
+      setToastMessage(isEditing ? '댓글을 수정했습니다.' : '댓글을 등록했습니다.')
     } catch (error) {
-      setMessage(apiActionMessage(error, '댓글을 저장하지 못했습니다.'))
+      setToastMessage(apiActionMessage(error, '댓글을 저장하지 못했습니다.'))
     } finally {
       setLoading(false)
     }
@@ -192,12 +216,14 @@ export default function CommunityPage() {
 
   function requestSaveComment(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+    const isEditing = Boolean(editingComment)
     setConfirm({
-      title: editingComment ? '댓글 수정' : '댓글 등록',
-      body: editingComment ? '댓글을 수정할까요?' : '댓글을 등록할까요?',
+      title: isEditing ? '수정' : '저장',
+      body: isEditing ? '댓글을 수정하시겠습니까?' : '댓글을 등록하시겠습니까?',
+      confirmLabel: isEditing ? '수정' : '저장',
       onConfirm: () => {
         setConfirm(null)
-        saveComment()
+        void saveComment()
       },
     })
   }
@@ -205,19 +231,19 @@ export default function CommunityPage() {
   function requestDeleteComment(comment: CommunityComment) {
     if (!selectedPost) return
     setConfirm({
-      title: '댓글 삭제',
-      body: '댓글을 삭제할까요?',
+      title: '삭제',
+      body: '댓글을 삭제하시겠습니까?',
+      confirmLabel: '삭제',
       danger: true,
       onConfirm: async () => {
         setConfirm(null)
         setLoading(true)
-        setMessage('')
         try {
           await deleteCommunityComment(comment.id)
           await openPost(selectedPost)
-          setMessage('댓글을 삭제했습니다.')
+          setToastMessage('댓글을 삭제했습니다.')
         } catch (error) {
-          setMessage(apiActionMessage(error, '댓글을 삭제하지 못했습니다.'))
+          setToastMessage(apiActionMessage(error, '댓글을 삭제하지 못했습니다.'))
         } finally {
           setLoading(false)
         }
@@ -228,17 +254,17 @@ export default function CommunityPage() {
   return (
     <section className="fp-community">
       {loading ? <div className="fp-loading-blocker">처리 중</div> : null}
+      <ToastMessage message={toastMessage} onClose={() => setToastMessage('')} />
+
       <header className="fp-community-header fp-card">
-        <div>
-          <h2>커뮤니티</h2>
-          <p>공지, 자유글, 문의를 게시판별로 관리합니다.</p>
-        </div>
         <div className="fp-community-tabs" role="tablist" aria-label="커뮤니티 게시판">
           {(Object.keys(boardLabels) as CommunityBoardType[]).map((board) => (
             <button
               className={activeBoard === board ? 'active' : ''}
               key={board}
               type="button"
+              role="tab"
+              aria-selected={activeBoard === board}
               onClick={() => setActiveBoard(board)}
             >
               {boardLabels[board]}
@@ -247,45 +273,65 @@ export default function CommunityPage() {
         </div>
       </header>
 
-      {message ? <p className="fp-message">{message}</p> : null}
-
       <div className="fp-community-layout">
         <section className="fp-card fp-community-list">
           <header>
-            <h3>{boardLabels[activeBoard]}</h3>
-            <span>{posts.length}건</span>
-          </header>
-          {posts.length ? posts.map((post) => (
-            <article className={selectedPost?.id === post.id ? 'active' : ''} key={post.id}>
-              <button type="button" onClick={() => openPost(post)}>
-                <strong>{post.title}</strong>
-                <span>{post.authorName} · {formatInstant(post.createdAt)} · 조회 {post.viewCount}</span>
-                <p>{post.body || '내용 없음'}</p>
+            <div>
+              <h3>{boardTitle}</h3>
+              <p>{boardDescriptions[activeBoard]}</p>
+            </div>
+            <div className="fp-community-list-actions">
+              <span>{posts.length}건</span>
+              <button className="fp-button fp-button-primary" type="button" onClick={focusComposer} disabled={!writable}>
+                글쓰기
               </button>
-              <div className="fp-row-actions">
-                <button type="button" onClick={() => startEditPost(post)}>수정</button>
-                <button className="danger" type="button" onClick={() => requestDeletePost(post)}>삭제</button>
-              </div>
-            </article>
-          )) : <p className="fp-empty-text">등록된 게시글이 없습니다.</p>}
+            </div>
+          </header>
+
+          <div className="fp-community-posts">
+            {posts.length ? posts.map((post) => (
+              <article className={selectedPost?.id === post.id ? 'active' : ''} key={post.id}>
+                <button type="button" onClick={() => openPost(post)}>
+                  <strong>{post.title}</strong>
+                  <span>{post.authorName} · {formatInstant(post.createdAt)} · 조회 {post.viewCount}</span>
+                  <p>{post.body || '내용 없음'}</p>
+                </button>
+                <div className="fp-row-actions">
+                  <button type="button" onClick={() => startEditPost(post)}>수정</button>
+                  <button className="danger" type="button" onClick={() => requestDeletePost(post)}>삭제</button>
+                </div>
+              </article>
+            )) : <p className="fp-empty-text">등록된 게시글이 없습니다.</p>}
+          </div>
         </section>
 
         <aside className="fp-community-side">
-          <form className="fp-card fp-community-form" onSubmit={requestSavePost}>
+          <form className="fp-card fp-community-form" ref={formRef} onSubmit={requestSavePost}>
             <header>
               <h3>{editingPost ? '게시글 수정' : '새 글 작성'}</h3>
               {editingPost ? <button className="fp-button fp-button-muted" type="button" onClick={resetForm}>취소</button> : null}
             </header>
-            {!writable ? <p className="fp-empty-text">이 게시판은 관리자만 작성할 수 있습니다.</p> : null}
+            {!writable ? <p className="fp-community-lock">이 게시판은 관리자만 작성할 수 있습니다.</p> : null}
             <label className="fp-field">
-              제목 *
-              <input value={form.title} onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))} disabled={!writable} />
+              <span>제목 <em className="fp-required-mark">*</em></span>
+              <input
+                ref={titleInputRef}
+                value={form.title}
+                onChange={(event) => setForm((prev) => ({ ...prev, title: event.target.value }))}
+                disabled={!writable}
+              />
             </label>
             <label className="fp-field">
-              내용
-              <textarea value={form.body} onChange={(event) => setForm((prev) => ({ ...prev, body: event.target.value }))} disabled={!writable} />
+              <span>내용</span>
+              <textarea
+                value={form.body}
+                onChange={(event) => setForm((prev) => ({ ...prev, body: event.target.value }))}
+                disabled={!writable}
+              />
             </label>
-            <button className="fp-button fp-button-primary" type="submit" disabled={!writable}>{editingPost ? '저장' : '등록'}</button>
+            <button className="fp-button fp-button-primary" type="submit" disabled={!writable}>
+              {editingPost ? '저장' : '등록'}
+            </button>
           </form>
 
           <section className="fp-card fp-community-detail">
@@ -298,7 +344,7 @@ export default function CommunityPage() {
                     <button className="danger" type="button" onClick={() => requestDeletePost(selectedPost)}>삭제</button>
                   </div>
                 </header>
-                <article>
+                <article className="fp-community-detail-article">
                   <h3>{selectedPost.title}</h3>
                   <span>{selectedPost.authorName} · {formatInstant(selectedPost.createdAt)} · 조회 {selectedPost.viewCount}</span>
                   <p>{selectedPost.body || '내용 없음'}</p>
@@ -323,7 +369,7 @@ export default function CommunityPage() {
                   )) : <p className="fp-empty-text">댓글이 없습니다.</p>}
                   <form className="fp-community-comment-form" onSubmit={requestSaveComment}>
                     <label className="fp-field">
-                      댓글
+                      <span>댓글</span>
                       <input value={commentText} onChange={(event) => setCommentText(event.target.value)} />
                     </label>
                     <div className="fp-row-actions">
@@ -345,6 +391,7 @@ export default function CommunityPage() {
         <ConfirmDialog
           title={confirm.title}
           body={confirm.body}
+          confirmLabel={confirm.confirmLabel}
           danger={confirm.danger}
           onCancel={() => setConfirm(null)}
           onConfirm={confirm.onConfirm}
