@@ -12,7 +12,7 @@ import {
   todayKey,
   weekRange,
 } from '../../../shared/utils/date'
-import { createSchedule, deleteSchedule, listSchedules, updateSchedule } from '../api/schedules'
+import { createSchedule, createScheduleException, deleteSchedule, listSchedules, updateSchedule } from '../api/schedules'
 import type { ScheduleItem, SchedulePayload } from '../types'
 import { expandScheduleInstances, isRepeatRule, type CalendarScheduleInstance } from '../utils/repeat'
 import './calendar-page.css'
@@ -276,6 +276,7 @@ export default function CalendarPage() {
   const [form, setForm] = useState<SchedulePayload>(() => emptyPayload(today))
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingSource, setEditingSource] = useState<ScheduleItem | null>(null)
+  const [editingOccurrenceDate, setEditingOccurrenceDate] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
   const [dayDialog, setDayDialog] = useState<{ date: string; items: CalendarScheduleInstance[] } | null>(null)
   const [monthDialog, setMonthDialog] = useState<{ label: string; items: CalendarScheduleInstance[] } | null>(null)
@@ -427,6 +428,7 @@ export default function CalendarPage() {
   function startCreate(dateKey = selectedDate, options?: { focus?: boolean }) {
     setEditingId(null)
     setEditingSource(null)
+    setEditingOccurrenceDate(null)
     setForm(emptyPayload(dateKey))
     if (options?.focus) focusScheduleTitleInput()
   }
@@ -435,6 +437,7 @@ export default function CalendarPage() {
     const source = items.find((candidate) => candidate.id === item.id) || item
     setEditingId(source.id)
     setEditingSource(source)
+    setEditingOccurrenceDate(item.occurrenceDate)
     setSelectedDate(item.occurrenceDate)
     setForm({
       title: source.title,
@@ -490,6 +493,30 @@ export default function CalendarPage() {
     }
   }
 
+  async function saveSingleOccurrence() {
+    if (!editingId || !editingSource) {
+      await saveSchedule()
+      return
+    }
+    setLoading(true)
+    setMessage('')
+    const hiddenDate = editingOccurrenceDate || form.scheduleDate
+    const savedDate = form.scheduleDate
+    try {
+      const payload = { ...form, scheduleTime: form.scheduleTime || null, repeatRule: 'none' }
+      await createSchedule(payload)
+      await createScheduleException(editingSource.id, hiddenDate)
+      await reloadSchedules()
+      startCreate(savedDate)
+      setSelectedDate(savedDate)
+      setMessage('일정을 수정했습니다.')
+    } catch (error) {
+      setMessage(apiActionMessage(error, '일정을 수정하지 못했습니다.'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function remove(item: CalendarScheduleInstance) {
     setLoading(true)
     setMessage('')
@@ -505,6 +532,38 @@ export default function CalendarPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  async function removeSingleOccurrence(item: CalendarScheduleInstance) {
+    setLoading(true)
+    setMessage('')
+    try {
+      await createScheduleException(item.id, item.occurrenceDate)
+      await reloadSchedules()
+      setDayDialog(null)
+      setMonthDialog(null)
+      setScheduleDetail(null)
+      setMessage('일정을 삭제했습니다.')
+    } catch (error) {
+      setMessage(apiActionMessage(error, '일정을 삭제하지 못했습니다.'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function cancelConfirmAction(current: ConfirmState) {
+    if (current.kind === 'repeat-save') {
+      setConfirm(null)
+      void saveSingleOccurrence()
+      return
+    }
+    if (current.kind === 'repeat-delete') {
+      const item = current.item
+      setConfirm(null)
+      void removeSingleOccurrence(item)
+      return
+    }
+    setConfirm(null)
   }
 
   function confirmAction() {
@@ -1060,7 +1119,7 @@ export default function CalendarPage() {
           title={confirm.title}
           body={confirm.body}
           confirmLabel={confirm.kind === 'delete' || confirm.kind === 'repeat-delete' ? '삭제' : confirm.kind === 'repeat-save' ? '수정' : confirm.title}
-          onCancel={() => setConfirm(null)}
+          onCancel={() => cancelConfirmAction(confirm)}
           onConfirm={confirmAction}
         />
       ) : null}

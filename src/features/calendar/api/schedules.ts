@@ -33,6 +33,13 @@ export function deleteSchedule(id: number) {
   })
 }
 
+export function createScheduleException(id: number, occurrenceDate: string) {
+  return apiRequest<null>(`/schedules/${encodeURIComponent(String(id))}/exceptions`, {
+    method: 'POST',
+    body: { occurrenceDate },
+  })
+}
+
 export function createScheduleReminders(date: string) {
   return apiRequest<{ created: number }>(`/notifications/schedule-reminders?date=${encodeURIComponent(date)}`, {
     method: 'POST',

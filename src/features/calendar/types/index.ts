@@ -8,6 +8,7 @@ export interface ScheduleItem {
   category?: string | null
   memberName?: string | null
   repeatRule?: string | null
+  exceptionDates?: string[]
   memo?: string | null
   createdAt: string
 }

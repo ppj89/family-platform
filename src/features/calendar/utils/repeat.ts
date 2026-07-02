@@ -20,6 +20,7 @@ function addDays(dateKey: string, amount: number) {
 
 function isSameOccurrenceDay(item: ScheduleItem, dateKey: string) {
   if (dateKey < item.scheduleDate) return false
+  if (item.exceptionDates?.includes(dateKey)) return false
   const source = parseDateKey(item.scheduleDate)
   const target = parseDateKey(dateKey)
 
