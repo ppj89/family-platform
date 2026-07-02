@@ -42,13 +42,21 @@ function uniqueOptions(options: CommonCodeOption[]) {
   return nextOptions
 }
 
+function queryValue(value: string) {
+  return encodeURIComponent(value)
+}
+
+function pathId(id: number) {
+  return encodeURIComponent(String(id))
+}
+
 export function listCommonCodeGroups(menuKey?: string) {
-  const query = menuKey ? `?menuKey=${encodeURIComponent(menuKey)}` : ''
+  const query = menuKey ? `?menuKey=${queryValue(menuKey)}` : ''
   return apiRequest<CommonCodeGroup[]>(`/common-code-groups${query}`)
 }
 
 export function listCommonCodes(groupId: number) {
-  return apiRequest<CommonCode[]>(`/common-code-groups/${groupId}/codes`)
+  return apiRequest<CommonCode[]>(`/common-code-groups/${pathId(groupId)}/codes`)
 }
 
 export async function listCommonCodeGroupsWithCodes() {
