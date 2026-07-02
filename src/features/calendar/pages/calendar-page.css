@@ -1560,6 +1560,17 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   margin-bottom: 2px !important;
 }
 
+.fp-calendar .schedule-form-card header .fp-button-muted {
+  min-width: 52px !important;
+  width: auto !important;
+  min-height: 36px !important;
+  height: 36px !important;
+  padding: 0 12px !important;
+  border-radius: 12px !important;
+  font-size: 13px !important;
+  line-height: 1 !important;
+}
+
 .fp-calendar .schedule-form-card label,
 .fp-calendar .schedule-form-card .date-picker-field {
   display: grid !important;
