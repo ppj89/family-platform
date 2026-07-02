@@ -1,20 +1,25 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
-import { ConfirmDialog } from '../../../shared/components'
-import { formatKoreanDate, monthInputValue, monthRange, todayKey } from '../../../shared/utils/date'
+import { ConfirmDialog, DatePickerField } from '../../../shared/components'
+import { monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
 import { createLedgerEntry, deleteLedgerEntry, getLedgerSummary, listLedgerEntries, updateLedgerEntry } from '../api/ledger'
 import type { LedgerEntry, LedgerPayload, LedgerSummary } from '../types'
 import './ledger-page.css'
 
+type LedgerQueryMode = 'month' | 'period'
+type ConfirmState = 'save' | 'delete' | null
+
 const categories = ['식비', '교통', '생활', '의료', '교육', '여행', '기타']
 const paymentMethods = ['카드', '현금', '계좌이체', '간편결제', '기타']
+const memberOptions = ['아빠', '엄마', '가족']
+const weekdays = ['일', '월', '화', '수', '목', '금', '토']
 
 const emptyPayload = (): LedgerPayload => ({
   title: '',
   entryType: 'expense',
   category: '식비',
   paymentMethod: '카드',
-  memberName: '',
+  memberName: '아빠',
   amount: 0,
   transactionDate: todayKey(),
   memo: '',
@@ -26,6 +31,10 @@ function money(value: number) {
   return `${Math.round(value || 0).toLocaleString('ko-KR')}원`
 }
 
+function signedMoney(item: LedgerEntry) {
+  return `${item.entryType === 'income' ? '+' : '-'}${money(item.amount)}`
+}
+
 function normalizeAmount(value: string) {
   return Number(value.replace(/[^\d.-]/g, '')) || 0
 }
@@ -34,19 +43,64 @@ function sortEntries(items: LedgerEntry[]) {
   return [...items].sort((a, b) => `${b.transactionDate} ${b.createdAt}`.localeCompare(`${a.transactionDate} ${a.createdAt}`))
 }
 
+function formatDisplayDate(value: string) {
+  const date = parseDateKey(value)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} (${weekdays[date.getDay()]})`
+}
+
+function formatMonthLabel(value: string) {
+  const [year, month] = value.split('-')
+  return `${year}년 ${month}월`
+}
+
+function groupEntriesByDate(items: LedgerEntry[]) {
+  return sortEntries(items).reduce<Array<{ date: string; items: LedgerEntry[] }>>((groups, item) => {
+    const found = groups.find((group) => group.date === item.transactionDate)
+    if (found) found.items.push(item)
+    else groups.push({ date: item.transactionDate, items: [item] })
+    return groups
+  }, [])
+}
+
+function parseSmsText(text: string) {
+  const amountMatch = text.match(/([0-9][0-9,]*)\s*원?/)
+  const amount = amountMatch ? normalizeAmount(amountMatch[1]) : 0
+  const normalized = text
+    .replace(/\[[^\]]+]/g, ' ')
+    .replace(/승인|이용|사용|일시불|체크|카드|원/g, ' ')
+    .replace(/[\d,:\-./]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const title = normalized.split(' ').find((part) => part.length >= 2) || ''
+  const isIncome = /입금|급여|환급|수입/.test(text)
+  return { amount, title, entryType: isIncome ? 'income' : 'expense' as LedgerPayload['entryType'] }
+}
+
 export default function LedgerPage() {
-  const [monthDate, setMonthDate] = useState(() => new Date())
+  const today = todayKey()
+  const currentMonth = today.slice(0, 7)
+  const titleInputRef = useRef<HTMLInputElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
+  const [queryMode, setQueryMode] = useState<LedgerQueryMode>('month')
+  const [monthValue, setMonthValue] = useState(currentMonth)
+  const [periodStart, setPeriodStart] = useState(`${currentMonth}-01`)
+  const [periodEnd, setPeriodEnd] = useState(today)
+  const [smsText, setSmsText] = useState('')
   const [entries, setEntries] = useState<LedgerEntry[]>([])
   const [summary, setSummary] = useState<LedgerSummary>(emptySummary)
   const [form, setForm] = useState<LedgerPayload>(() => emptyPayload())
   const [editingId, setEditingId] = useState<number | null>(null)
+  const [selectedEntry, setSelectedEntry] = useState<LedgerEntry | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
-  const [confirmAction, setConfirmAction] = useState<'save' | 'delete' | null>(null)
+  const [confirmAction, setConfirmAction] = useState<ConfirmState>(null)
   const [pendingDelete, setPendingDelete] = useState<LedgerEntry | null>(null)
 
-  const range = useMemo(() => monthRange(monthDate), [monthDate])
-  const sortedEntries = useMemo(() => sortEntries(entries), [entries])
+  const range = useMemo(() => {
+    if (queryMode === 'period') return { startDate: periodStart, endDate: periodEnd }
+    return monthRange(parseDateKey(`${monthValue}-01`))
+  }, [monthValue, periodEnd, periodStart, queryMode])
+  const groupedEntries = useMemo(() => groupEntriesByDate(entries), [entries])
 
   async function reloadLedger() {
     setLoading(true)
@@ -69,18 +123,27 @@ export default function LedgerPage() {
     void reloadLedger()
   }, [range.startDate, range.endDate])
 
+  function focusForm() {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      titleInputRef.current?.focus({ preventScroll: true })
+    }, 0)
+  }
+
   function startEdit(item: LedgerEntry) {
     setEditingId(item.id)
+    setSelectedEntry(null)
     setForm({
       title: item.title,
       entryType: item.entryType,
       category: item.category || '기타',
       paymentMethod: item.paymentMethod || '기타',
-      memberName: item.memberName || '',
+      memberName: item.memberName || '아빠',
       amount: item.amount,
       transactionDate: item.transactionDate,
       memo: item.memo || '',
     })
+    focusForm()
   }
 
   function resetForm() {
@@ -109,7 +172,14 @@ export default function LedgerPage() {
     setLoading(true)
     setMessage('')
     try {
-      const payload = { ...form, title: form.title.trim(), memberName: form.memberName?.trim() || null, memo: form.memo?.trim() || null }
+      const payload = {
+        ...form,
+        title: form.title.trim(),
+        category: form.category || null,
+        paymentMethod: form.paymentMethod || null,
+        memberName: form.memberName?.trim() || null,
+        memo: form.memo?.trim() || null,
+      }
       if (editingId) await updateLedgerEntry(editingId, payload)
       else await createLedgerEntry(payload)
       resetForm()
@@ -130,6 +200,7 @@ export default function LedgerPage() {
     try {
       await deleteLedgerEntry(pendingDelete.id)
       if (editingId === pendingDelete.id) resetForm()
+      if (selectedEntry?.id === pendingDelete.id) setSelectedEntry(null)
       await reloadLedger()
       setMessage('가계부 내역을 삭제했습니다.')
     } catch (error) {
@@ -141,126 +212,204 @@ export default function LedgerPage() {
     }
   }
 
+  function requestDelete(item: LedgerEntry) {
+    setPendingDelete(item)
+    setConfirmAction('delete')
+  }
+
+  function autofillFromSms() {
+    const parsed = parseSmsText(smsText)
+    setForm((current) => ({
+      ...current,
+      title: parsed.title || current.title,
+      amount: parsed.amount || current.amount,
+      entryType: parsed.entryType,
+      paymentMethod: current.paymentMethod || '카드',
+    }))
+    setMessage(parsed.title || parsed.amount ? '문자 내용을 기준으로 입력값을 채웠습니다.' : '추출할 금액이나 가맹점 후보를 찾지 못했습니다.')
+    focusForm()
+  }
+
   return (
-    <section className="fp-card fp-ledger">
-      {loading ? <div className="fp-loading-blocker">처리 중</div> : null}
-      <header className="fp-ledger-header">
-        <div>
-          <h2>가계부</h2>
-          <p>{range.startDate} ~ {range.endDate}</p>
-        </div>
-        <label className="fp-field fp-month-field">
-          조회 월
-          <input
-            type="month"
-            value={monthInputValue(monthDate)}
-            onChange={(event) => setMonthDate(new Date(`${event.target.value}-01T00:00:00`))}
-          />
-        </label>
-      </header>
+    <>
+      <section className="fp-ledger content-grid">
+        {loading ? <div className="fp-loading-blocker">처리 중</div> : null}
 
-      <div className="fp-ledger-summary" aria-label="가계부 요약">
-        <article>
-          <span>지출</span>
-          <strong className="expense">{money(summary.expense)}</strong>
-        </article>
-        <article>
-          <span>수입</span>
-          <strong className="income">{money(summary.income)}</strong>
-        </article>
-        <article>
-          <span>합계</span>
-          <strong className={summary.total < 0 ? 'expense' : 'income'}>{money(summary.total)}</strong>
-        </article>
-      </div>
-
-      {message ? <p className="fp-message">{message}</p> : null}
-
-      <div className="fp-ledger-layout">
-        <section className="fp-ledger-list" aria-label="가계부 목록">
-          {sortedEntries.length ? sortedEntries.map((item) => (
-            <article className="fp-ledger-row" key={item.id}>
-              <button type="button" className="fp-ledger-row-main" onClick={() => startEdit(item)}>
-                <strong>{item.title}</strong>
-                <span>{formatKoreanDate(item.transactionDate)} · {item.category || '-'} · {item.paymentMethod || '-'}</span>
-              </button>
-              <b className={item.entryType}>{item.entryType === 'expense' ? '-' : '+'}{money(item.amount)}</b>
-              <div className="fp-row-actions">
-                <button type="button" onClick={() => startEdit(item)}>수정</button>
-                <button
-                  type="button"
-                  className="danger"
-                  onClick={() => {
-                    setPendingDelete(item)
-                    setConfirmAction('delete')
-                  }}
-                >
-                  삭제
-                </button>
-              </div>
-            </article>
-          )) : <p className="fp-empty-text">해당 월의 가계부 내역이 없습니다.</p>}
-        </section>
-
-        <form className="fp-ledger-form" onSubmit={requestSave}>
-          <header>
-            <h3>{editingId ? '가계부 수정' : '가계부 추가'}</h3>
-            {editingId ? <button className="fp-button fp-button-muted" type="button" onClick={resetForm}>신규 입력</button> : null}
+        <article className="panel wide fp-ledger-panel">
+          <header className="panel-header fp-ledger-section-header">
+            <h2>가계부 조회</h2>
           </header>
-          <div className="fp-form-grid ledger-form-grid">
-            <label className="fp-field span-2">
-              내용 *
-              <input value={form.title} onChange={(event) => setForm((value) => ({ ...value, title: event.target.value }))} />
+
+          <section className="filter-panel fp-ledger-filter">
+            <div className="fp-ledger-query-row">
+              <div className="fp-ledger-query-tabs" role="tablist" aria-label="가계부 조회 방식">
+                <button className={queryMode === 'month' ? 'active' : ''} type="button" onClick={() => setQueryMode('month')}>월별</button>
+                <button className={queryMode === 'period' ? 'active' : ''} type="button" onClick={() => setQueryMode('period')}>기간별</button>
+              </div>
+              {queryMode === 'month' ? (
+                <DatePickerField
+                  className="fp-ledger-month-picker"
+                  displayValue={formatMonthLabel(monthValue)}
+                  label="조회 월"
+                  mode="month"
+                  value={monthValue}
+                  onChange={setMonthValue}
+                />
+              ) : (
+                <div className="fp-ledger-period-fields">
+                  <DatePickerField label="시작일" value={periodStart} onChange={setPeriodStart} />
+                  <DatePickerField label="종료일" value={periodEnd} onChange={setPeriodEnd} />
+                </div>
+              )}
+            </div>
+          </section>
+
+          <div className="ledger-summary" aria-label="가계부 요약">
+            <article className="metric">
+              <span>총 지출</span>
+              <strong className="expense">{money(summary.expense)}</strong>
+            </article>
+            <article className="metric">
+              <span>총 수입</span>
+              <strong className="income">{money(summary.income)}</strong>
+            </article>
+            <article className="metric">
+              <span>합계</span>
+              <strong className={summary.total < 0 ? 'expense' : 'income'}>{money(summary.total)}</strong>
+            </article>
+          </div>
+
+          <section className="parser-box fp-ledger-parser-guide">
+            <span aria-hidden="true">▣</span>
+            <div>
+              <strong>카드 문자나 앱 알림 내용을 붙여넣으면 금액과 가맹점 후보를 추출합니다.</strong>
+              <p>웹에서는 붙여넣기 자동 분석부터 시작하고, 모바일 단계에서 Android 알림 접근 연동을 추가합니다.</p>
+            </div>
+          </section>
+
+          <div className="sms-parser fp-ledger-sms-parser">
+            <textarea
+              aria-label="카드 문자 또는 앱 알림 내용"
+              value={smsText}
+              onChange={(event) => setSmsText(event.target.value)}
+            />
+            <button type="button" onClick={autofillFromSms}>자동 채우기</button>
+          </div>
+          <p className="form-message">문자 내용을 붙여넣거나 직접 입력해서 가계부에 추가할 수 있습니다.</p>
+
+          {message ? <p className="fp-message">{message}</p> : null}
+
+          <section className="daily-ledger api-ledger-list-host" aria-label="가계부 내역">
+            {groupedEntries.length ? groupedEntries.map((group) => (
+              <section className="api-ledger-day" key={group.date}>
+                <header>
+                  <strong>{formatDisplayDate(group.date)}</strong>
+                </header>
+                {group.items.map((item) => (
+                  <article className="ledger-row api-ledger-row" key={item.id}>
+                    <button type="button" className="ledger-row-main" onClick={() => setSelectedEntry(item)}>
+                      <strong>{item.title}</strong>
+                      <span>{item.category || '-'} · {item.memberName || '-'} · {item.paymentMethod || '-'}</span>
+                    </button>
+                    <b className={item.entryType}>{signedMoney(item)}</b>
+                    <div className="ledger-row-actions">
+                      <button type="button" onClick={() => startEdit(item)}>수정</button>
+                      <button type="button" className="danger-button" onClick={() => requestDelete(item)}>삭제</button>
+                    </div>
+                  </article>
+                ))}
+              </section>
+            )) : <p className="fp-empty-text">해당 기간의 가계부 내역이 없습니다.</p>}
+          </section>
+        </article>
+
+        <form className="panel entry-panel fp-ledger-entry-panel ledger-form" ref={formRef} onSubmit={requestSave}>
+          <header className="panel-header">
+            <h2>{editingId ? '가계부 수정' : '가계부 입력'}</h2>
+            {editingId ? <button className="fp-button fp-button-muted" type="button" onClick={resetForm}>취소</button> : null}
+          </header>
+
+          <div className="ledger-form-grid">
+            <label className="span-2">
+              <span>내용 <em className="fp-required-mark">*</em></span>
+              <input ref={titleInputRef} value={form.title} onChange={(event) => setForm((value) => ({ ...value, title: event.target.value }))} />
             </label>
-            <label className="fp-field">
-              구분 *
-              <select value={form.entryType} onChange={(event) => setForm((value) => ({ ...value, entryType: event.target.value as LedgerPayload['entryType'] }))}>
-                <option value="expense">지출</option>
-                <option value="income">수입</option>
-              </select>
-            </label>
-            <label className="fp-field">
-              금액 *
+            <label>
+              <span>금액 <em className="fp-required-mark">*</em></span>
               <input
                 inputMode="numeric"
                 value={form.amount ? form.amount.toLocaleString('ko-KR') : ''}
                 onChange={(event) => setForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))}
               />
             </label>
-            <label className="fp-field">
-              거래일 *
-              <input type="date" value={form.transactionDate} onChange={(event) => setForm((value) => ({ ...value, transactionDate: event.target.value }))} />
+            <DatePickerField
+              className="fp-ledger-form-date"
+              label="날짜"
+              required
+              value={form.transactionDate}
+              onChange={(value) => setForm((current) => ({ ...current, transactionDate: value }))}
+            />
+            <label>
+              <span>구분</span>
+              <select value={form.entryType} onChange={(event) => setForm((value) => ({ ...value, entryType: event.target.value as LedgerPayload['entryType'] }))}>
+                <option value="expense">지출</option>
+                <option value="income">수입</option>
+              </select>
             </label>
-            <label className="fp-field">
-              카테고리
+            <label>
+              <span>카테고리</span>
               <select value={form.category || ''} onChange={(event) => setForm((value) => ({ ...value, category: event.target.value || null }))}>
                 {categories.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
             </label>
-            <label className="fp-field">
-              결제수단
+            <label>
+              <span>결제수단</span>
               <select value={form.paymentMethod || ''} onChange={(event) => setForm((value) => ({ ...value, paymentMethod: event.target.value || null }))}>
                 {paymentMethods.map((item) => <option key={item} value={item}>{item}</option>)}
               </select>
             </label>
-            <label className="fp-field">
-              사용자
-              <input value={form.memberName || ''} onChange={(event) => setForm((value) => ({ ...value, memberName: event.target.value }))} />
+            <label>
+              <span>사용자</span>
+              <select value={form.memberName || ''} onChange={(event) => setForm((value) => ({ ...value, memberName: event.target.value || null }))}>
+                {memberOptions.map((item) => <option key={item} value={item}>{item}</option>)}
+              </select>
             </label>
-            <label className="fp-field span-2">
-              메모
+            <label className="span-2">
+              <span>메모</span>
               <textarea value={form.memo || ''} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} />
             </label>
           </div>
-          <button className="fp-button fp-button-primary" type="submit">{editingId ? '저장' : '추가'}</button>
+          <button className="fp-button fp-button-primary submit-action" type="submit">{editingId ? '저장' : '추가'}</button>
         </form>
-      </div>
+      </section>
+
+      {selectedEntry ? (
+        <div className="patch-ledger-detail-backdrop" role="presentation" onClick={() => setSelectedEntry(null)}>
+          <section className="patch-ledger-detail-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <button type="button" className="dialog-close" aria-label="닫기" onClick={() => setSelectedEntry(null)}>×</button>
+            <span className="ledger-detail-chip">{selectedEntry.entryType === 'income' ? '수입' : '지출'}</span>
+            <h2>{selectedEntry.title || '내역 없음'}</h2>
+            <strong className={`ledger-detail-amount ${selectedEntry.entryType}`}>{signedMoney(selectedEntry)}</strong>
+            <dl>
+              <div><dt>거래일</dt><dd>{selectedEntry.transactionDate.replace(/-/g, '.')}</dd></div>
+              <div><dt>카테고리</dt><dd>{selectedEntry.category || '-'}</dd></div>
+              <div><dt>결제수단</dt><dd>{selectedEntry.paymentMethod || '-'}</dd></div>
+              <div><dt>사용자</dt><dd>{selectedEntry.memberName || '-'}</dd></div>
+            </dl>
+            <p>{selectedEntry.memo || '메모가 없습니다.'}</p>
+            <div className="ledger-detail-actions">
+              <button type="button" className="edit-button" onClick={() => startEdit(selectedEntry)}>수정</button>
+              <button type="button" className="danger-button" onClick={() => requestDelete(selectedEntry)}>삭제</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
 
       {confirmAction === 'save' ? (
         <ConfirmDialog
-          title={editingId ? '가계부 수정' : '가계부 추가'}
-          body={editingId ? '가계부 내역을 수정할까요?' : '가계부 내역을 추가할까요?'}
-          confirmLabel={editingId ? '저장' : '추가'}
+          title={editingId ? '수정' : '저장'}
+          body={editingId ? '가계부 내역을 수정하시겠습니까?' : '가계부 내역을 저장하시겠습니까?'}
+          confirmLabel={editingId ? '수정' : '저장'}
           onCancel={() => setConfirmAction(null)}
           onConfirm={confirmSave}
         />
@@ -268,8 +417,8 @@ export default function LedgerPage() {
       {confirmAction === 'delete' && pendingDelete ? (
         <ConfirmDialog
           danger
-          title="가계부 삭제"
-          body={`"${pendingDelete.title}" 내역을 삭제할까요?`}
+          title="삭제"
+          body="가계부 내역을 삭제하시겠습니까?"
           confirmLabel="삭제"
           onCancel={() => {
             setPendingDelete(null)
@@ -278,6 +427,6 @@ export default function LedgerPage() {
           onConfirm={confirmDelete}
         />
       ) : null}
-    </section>
+    </>
   )
 }
