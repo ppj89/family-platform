@@ -299,6 +299,18 @@ export default function CalendarPage() {
     [selectedYearMonthKey, visibleItems],
   )
   const agendaItems = view === 'year' ? yearAgendaItems : view === 'month' ? visibleItems : selectedItems
+  const monthAgendaGroups = useMemo(() => {
+    const groups = new Map<string, CalendarScheduleInstance[]>()
+    visibleItems.forEach((item) => {
+      const groupItems = groups.get(item.occurrenceDate)
+      if (groupItems) groupItems.push(item)
+      else groups.set(item.occurrenceDate, [item])
+    })
+    return Array.from(groups.entries()).map(([dateKey, groupItems]) => ({
+      dateKey,
+      items: groupItems,
+    }))
+  }, [visibleItems])
   const agendaTitle = view === 'year' ? `${selectedYearMonthLabel} 일정표` : view === 'month' ? '월간 일정표' : view === 'week' ? '주간 일정표' : '일간 일정표'
   const cells = useMemo(() => monthCells(monthDate), [monthDate])
   const weekDateKeys = useMemo(() => weekDays(weekDate), [weekDate])
@@ -717,6 +729,42 @@ export default function CalendarPage() {
     )
   }
 
+  function renderMonthAgendaGroup(group: { dateKey: string; items: CalendarScheduleInstance[] }) {
+    const firstItem = group.items[0]
+    if (!firstItem) return null
+    const hiddenCount = group.items.length - 1
+    return (
+      <article
+        className="fp-month-agenda-row"
+        key={group.dateKey}
+        role="button"
+        tabIndex={0}
+        onClick={() => setDayDialog({ date: group.dateKey, items: group.items })}
+        onKeyDown={(event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return
+          event.preventDefault()
+          setDayDialog({ date: group.dateKey, items: group.items })
+        }}
+      >
+        <ScheduleDateBadge value={group.dateKey} />
+        <div className="fp-month-agenda-main">
+          <strong>{firstItem.title}</strong>
+          <p>
+            {scheduleTime(firstItem)}
+            {' \u00B7 '}
+            {firstItem.category || '일정'}
+            {firstItem.memberName ? ` \u00B7 ${firstItem.memberName}` : ''}
+          </p>
+          {isRepeatRule(firstItem.repeatRule) ? <em>{repeatLabel(firstItem.repeatRule)}</em> : null}
+        </div>
+        <div className="fp-month-agenda-count">
+          <span>{group.items.length}건</span>
+          {hiddenCount > 0 ? <small>+{hiddenCount}</small> : null}
+        </div>
+      </article>
+    )
+  }
+
   return (
     <>
       <section className="fp-calendar content-grid">
@@ -966,10 +1014,17 @@ export default function CalendarPage() {
             <div className="fp-schedule-panel-header">
               <div>
                 <h3>{agendaTitle}</h3>
+                {view === 'month' ? <p>{monthAgendaGroups.length}일 · {agendaItems.length}건</p> : null}
               </div>
             </div>
             <div className="fp-schedule-list">
-              {agendaItems.length ? agendaItems.map((item) => renderScheduleRow(item)) : <p className="fp-empty-text">등록된 일정이 없습니다.</p>}
+              {view === 'month'
+                ? monthAgendaGroups.length
+                  ? monthAgendaGroups.map((group) => renderMonthAgendaGroup(group))
+                  : <p className="fp-empty-text">등록된 일정이 없습니다.</p>
+                : agendaItems.length
+                  ? agendaItems.map((item) => renderScheduleRow(item))
+                  : <p className="fp-empty-text">등록된 일정이 없습니다.</p>}
             </div>
           </section>
         </article>

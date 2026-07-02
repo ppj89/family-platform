@@ -1245,6 +1245,121 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   box-shadow: inset 0 0 0 1px #e5e8eb;
 }
 
+.fp-month-agenda-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 14px;
+  align-items: center;
+  min-width: 0;
+  min-height: 58px;
+  border: 0;
+  border-radius: 16px;
+  padding: 10px 14px;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+  cursor: pointer;
+}
+
+.fp-month-agenda-row:hover {
+  background: #f8fbff;
+  box-shadow: inset 0 0 0 1px #cfe4ff;
+}
+
+.fp-month-agenda-row:focus-visible {
+  outline: 3px solid rgba(49, 130, 246, 0.2);
+  outline-offset: 3px;
+}
+
+.fp-month-agenda-main {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.fp-month-agenda-main strong,
+.fp-month-agenda-main p,
+.fp-month-agenda-main em {
+  min-width: 0;
+  overflow: hidden;
+  margin: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-month-agenda-main strong {
+  color: #191f28;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.fp-month-agenda-main p {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.25;
+}
+
+.fp-month-agenda-main em {
+  color: #1264d8;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 500;
+  line-height: 1.25;
+}
+
+.fp-month-agenda-count {
+  display: flex;
+  min-width: 58px;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.fp-month-agenda-count span,
+.fp-month-agenda-count small {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.fp-month-agenda-count span {
+  min-height: 28px;
+  padding: 0 10px;
+  background: #edf4ff;
+  color: #1b64da;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fp-month-agenda-count small {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 7px;
+  background: #3182f6;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+@media (max-width: 640px) {
+  .fp-month-agenda-row {
+    grid-template-columns: auto minmax(0, 1fr);
+    row-gap: 8px;
+    min-height: 74px;
+    padding: 12px;
+  }
+
+  .fp-month-agenda-count {
+    grid-column: 2;
+    min-width: 0;
+    justify-content: flex-start;
+  }
+}
+
 .fp-schedule-date-pill {
   display: inline-flex;
   min-width: 76px;
