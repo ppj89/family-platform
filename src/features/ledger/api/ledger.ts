@@ -4,17 +4,17 @@ import type { LedgerEntry, LedgerPayload, LedgerSummary } from '../types'
 
 async function familyQuery() {
   const familyId = await getReadableFamilyId()
-  return `familyId=${encodeURIComponent(familyId)}`
+  return `familyId=${encodeURIComponent(String(familyId))}`
 }
 
 export async function listLedgerEntries(startDate: string, endDate: string) {
   const query = await familyQuery()
-  return apiRequest<LedgerEntry[]>(`/ledger-entries?${query}&startDate=${startDate}&endDate=${endDate}`)
+  return apiRequest<LedgerEntry[]>(`/ledger-entries?${query}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`)
 }
 
 export async function getLedgerSummary(startDate: string, endDate: string) {
   const query = await familyQuery()
-  return apiRequest<LedgerSummary>(`/ledger-entries/summary?${query}&startDate=${startDate}&endDate=${endDate}`)
+  return apiRequest<LedgerSummary>(`/ledger-entries/summary?${query}&startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`)
 }
 
 export async function createLedgerEntry(payload: LedgerPayload) {
@@ -23,9 +23,9 @@ export async function createLedgerEntry(payload: LedgerPayload) {
 }
 
 export function updateLedgerEntry(id: number, payload: LedgerPayload) {
-  return apiRequest<LedgerEntry>(`/ledger-entries/${id}`, { method: 'PUT', body: payload })
+  return apiRequest<LedgerEntry>(`/ledger-entries/${encodeURIComponent(String(id))}`, { method: 'PUT', body: payload })
 }
 
 export function deleteLedgerEntry(id: number) {
-  return apiRequest<null>(`/ledger-entries/${id}`, { method: 'DELETE' })
+  return apiRequest<null>(`/ledger-entries/${encodeURIComponent(String(id))}`, { method: 'DELETE' })
 }
