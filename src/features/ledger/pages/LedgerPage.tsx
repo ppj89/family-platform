@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField } from '../../../shared/components'
-import { FAMILY_MEMBER_OPTIONS, LEDGER_CATEGORIES, LEDGER_ENTRY_TYPE_OPTIONS, LEDGER_PAYMENT_METHODS } from '../../../shared/constants/commonCodes'
+import { COMMON_CODE_GROUPS, FAMILY_MEMBER_OPTIONS, LEDGER_CATEGORIES, LEDGER_ENTRY_TYPE_OPTIONS, LEDGER_PAYMENT_METHODS } from '../../../shared/constants/commonCodes'
+import { useCommonCodeOptions } from '../../../shared/hooks'
 import { monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
 import { formatNumberInput, normalizeAmount } from '../../../shared/utils/number'
 import { createLedgerEntry, deleteLedgerEntry, getLedgerSummary, listLedgerEntries, updateLedgerEntry } from '../api/ledger'
@@ -154,6 +155,9 @@ export default function LedgerPage() {
   const [message, setMessage] = useState('')
   const [confirmAction, setConfirmAction] = useState<ConfirmState>(null)
   const [pendingDelete, setPendingDelete] = useState<LedgerEntry | null>(null)
+  const ledgerCategoryOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.ledgerCategories, LEDGER_CATEGORIES)
+  const ledgerPaymentMethodOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.ledgerPaymentMethods, LEDGER_PAYMENT_METHODS)
+  const familyMemberOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.familyMembers, FAMILY_MEMBER_OPTIONS)
 
   const range = useMemo(() => {
     if (queryMode === 'period') return { startDate: periodStart, endDate: periodEnd }
@@ -195,9 +199,9 @@ export default function LedgerPage() {
     setForm({
       title: item.title,
       entryType: item.entryType,
-      category: item.category || '기타',
-      paymentMethod: item.paymentMethod || '기타',
-      memberName: item.memberName || '아빠',
+      category: item.category || ledgerCategoryOptions[0] || '기타',
+      paymentMethod: item.paymentMethod || ledgerPaymentMethodOptions[0] || '기타',
+      memberName: item.memberName || familyMemberOptions[0] || '아빠',
       amount: item.amount,
       transactionDate: item.transactionDate,
       memo: item.memo || '',
@@ -283,7 +287,7 @@ export default function LedgerPage() {
       title: parsed.title || current.title,
       amount: parsed.amount || current.amount,
       entryType: parsed.entryType,
-      paymentMethod: current.paymentMethod || '카드',
+      paymentMethod: current.paymentMethod || ledgerPaymentMethodOptions[0] || '카드',
     }))
     setMessage(parsed.title || parsed.amount ? '문자 내용을 기준으로 입력값을 채웠습니다.' : '추출할 금액이나 가맹점 후보를 찾지 못했습니다.')
     focusForm()
@@ -417,19 +421,19 @@ export default function LedgerPage() {
             />
             <LedgerCustomSelect
               label="카테고리"
-              options={LEDGER_CATEGORIES.map((item) => ({ label: item, value: item }))}
+              options={ledgerCategoryOptions.map((item) => ({ label: item, value: item }))}
               value={form.category || ''}
               onChange={(value) => setForm((current) => ({ ...current, category: value || null }))}
             />
             <LedgerCustomSelect
               label="결제수단"
-              options={LEDGER_PAYMENT_METHODS.map((item) => ({ label: item, value: item }))}
+              options={ledgerPaymentMethodOptions.map((item) => ({ label: item, value: item }))}
               value={form.paymentMethod || ''}
               onChange={(value) => setForm((current) => ({ ...current, paymentMethod: value || null }))}
             />
             <LedgerCustomSelect
               label="사용자"
-              options={FAMILY_MEMBER_OPTIONS.map((item) => ({ label: item, value: item }))}
+              options={familyMemberOptions.map((item) => ({ label: item, value: item }))}
               value={form.memberName || ''}
               onChange={(value) => setForm((current) => ({ ...current, memberName: value || null }))}
             />

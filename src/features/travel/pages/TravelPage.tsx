@@ -1,7 +1,8 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, CustomSelect, DatePickerField, ToastMessage } from '../../../shared/components'
-import { TRAVEL_COST_CATEGORIES } from '../../../shared/constants/commonCodes'
+import { COMMON_CODE_GROUPS, TRAVEL_COST_CATEGORIES } from '../../../shared/constants/commonCodes'
+import { useCommonCodeOptions } from '../../../shared/hooks'
 import { currentTimeText, todayKey } from '../../../shared/utils/date'
 import { formatNumberInput, normalizeAmount } from '../../../shared/utils/number'
 import {
@@ -91,6 +92,7 @@ export default function TravelPage() {
   const [placeCandidates, setPlaceCandidates] = useState<PlaceSearchResult[]>([])
   const [placeSearching, setPlaceSearching] = useState(false)
   const tripNameInputRef = useRef<HTMLInputElement>(null)
+  const travelCostCategoryOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.travelCostCategories, TRAVEL_COST_CATEGORIES)
 
   const sortedTripList = useMemo(() => sortedTrips(trips), [trips])
   const tripList = useMemo(() => {
@@ -253,7 +255,7 @@ export default function TravelPage() {
     setRecordForm({
       sortOrder: record.sortOrder || nextOrder(records),
       title: record.title,
-      category: record.category || TRAVEL_COST_CATEGORIES[0],
+      category: record.category || travelCostCategoryOptions[0] || TRAVEL_COST_CATEGORIES[0],
       amount: record.amount || 0,
       note: record.note || '',
       location: record.location || '',
@@ -293,7 +295,7 @@ export default function TravelPage() {
       const payload = {
         ...recordForm,
         title: recordForm.title.trim(),
-        category: recordForm.category || TRAVEL_COST_CATEGORIES[0],
+        category: recordForm.category || travelCostCategoryOptions[0] || TRAVEL_COST_CATEGORIES[0],
         note: recordForm.note?.trim() || null,
         location: recordForm.location.trim(),
         recordTime: recordForm.recordTime?.slice(0, 5) || currentTimeText(),
@@ -394,8 +396,8 @@ export default function TravelPage() {
               </label>
               <CustomSelect
                 label="비용 구분"
-                options={TRAVEL_COST_CATEGORIES.map((category) => ({ label: category, value: category }))}
-                value={recordForm.category || TRAVEL_COST_CATEGORIES[0]}
+                options={travelCostCategoryOptions.map((category) => ({ label: category, value: category }))}
+                value={recordForm.category || travelCostCategoryOptions[0] || TRAVEL_COST_CATEGORIES[0]}
                 onChange={(value) => setRecordForm((current) => ({ ...current, category: value }))}
               />
               <label className="fp-field span-2">

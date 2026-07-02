@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
+import { listCommonCodeGroupsWithCodes, type CommonCodeGroupWithCodes } from '../../../shared/api/commonCodes'
 import { ConfirmDialog, ToastMessage } from '../../../shared/components'
 import { LEDGER_CATEGORIES, LEDGER_PAYMENT_METHODS, TRAVEL_COST_CATEGORIES } from '../../../shared/constants/commonCodes'
 import type { FamilyGroup } from '../../family/types'
@@ -24,6 +25,12 @@ type ConfirmState = {
   onConfirm: () => void
 }
 
+type AdminCodeGroup = {
+  title: string
+  description: string
+  values: readonly string[]
+}
+
 const adminTabs: Array<{ key: AdminTab; label: string }> = [
   { key: 'menus', label: '메뉴관리' },
   { key: 'codes', label: '공통코드' },
@@ -45,6 +52,13 @@ const initialMenus: AdminMenuItem[] = [
 
 const roleOptions = ['총괄관리자', '가족관리자', '가족구성원']
 
+const fallbackCodeGroups: AdminCodeGroup[] = [
+  { title: '가계부 카테고리', description: '수입/지출 입력 카테고리', values: LEDGER_CATEGORIES },
+  { title: '결제수단', description: '가계부 결제수단', values: LEDGER_PAYMENT_METHODS },
+  { title: '여행 비용 구분', description: '여행 기록 비용 분류', values: TRAVEL_COST_CATEGORIES },
+  { title: '가족 사용자', description: '기본 사용자 선택값', values: ['아빠', '엄마', '가족'] },
+]
+
 function providerLabel(provider?: string) {
   if (provider === 'naver') return '네이버'
   if (provider === 'kakao') return '카카오'
@@ -62,6 +76,20 @@ function moveItem(items: AdminMenuItem[], index: number, direction: -1 | 1) {
   return next
 }
 
+function codeGroupsFromApi(items: CommonCodeGroupWithCodes[]): AdminCodeGroup[] {
+  return items
+    .filter((group) => group.active)
+    .map((group) => ({
+      title: group.name,
+      description: `${group.menuKey} / ${group.code}`,
+      values: group.codes
+        .filter((code) => code.active)
+        .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+        .map((code) => code.name),
+    }))
+    .filter((group) => group.values.length > 0)
+}
+
 export default function AdminPage() {
   const [profile, setProfile] = useState<CurrentUserProfile | null>(null)
   const [families, setFamilies] = useState<FamilyGroup[]>([])
@@ -72,19 +100,22 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [toastMessage, setToastMessage] = useState('')
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
+  const [codeGroups, setCodeGroups] = useState<AdminCodeGroup[]>(fallbackCodeGroups)
 
   useEffect(() => {
     let alive = true
     async function load() {
       setLoading(true)
       try {
-        const [nextProfile, nextFamilies] = await Promise.all([
+        const [nextProfile, nextFamilies, nextCodeGroups] = await Promise.all([
           getCurrentUserProfile(),
           listAdminVisibleFamilies(),
+          listCommonCodeGroupsWithCodes().then(codeGroupsFromApi).catch(() => []),
         ])
         if (!alive) return
         setProfile(nextProfile)
         setFamilies(nextFamilies)
+        setCodeGroups(nextCodeGroups.length ? nextCodeGroups : fallbackCodeGroups)
       } catch (error) {
         if (!alive) return
         setToastMessage(apiActionMessage(error, '관리자 정보를 불러오지 못했습니다.'))
@@ -97,13 +128,6 @@ export default function AdminPage() {
       alive = false
     }
   }, [])
-
-  const codeGroups = useMemo(() => [
-    { title: '가계부 카테고리', description: '수입/지출 입력 카테고리', values: LEDGER_CATEGORIES },
-    { title: '결제수단', description: '가계부 결제수단', values: LEDGER_PAYMENT_METHODS },
-    { title: '여행 비용 구분', description: '여행 기록 비용 분류', values: TRAVEL_COST_CATEGORIES },
-    { title: '가족 사용자', description: '기본 사용자 선택값', values: ['아빠', '엄마', '가족'] },
-  ], [])
 
   const visibleMenuCount = menus.filter((menu) => menu.visible).length
   const isPlatformAdmin = Boolean(profile?.platformAdmin)

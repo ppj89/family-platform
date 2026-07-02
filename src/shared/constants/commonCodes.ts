@@ -10,3 +10,12 @@ export const LEDGER_ENTRY_TYPE_OPTIONS = [
 export const LEDGER_CATEGORIES = ['식비', '교통', '생활', '의료', '교육', '여행', '기타'] as const
 export const LEDGER_PAYMENT_METHODS = ['카드', '현금', '계좌이체', '간편결제', '기타'] as const
 export const FAMILY_MEMBER_OPTIONS = ['아빠', '엄마', '가족'] as const
+
+export const COMMON_CODE_GROUPS = {
+  ledgerCategories: { menuKey: 'ledger', code: 'category' },
+  ledgerPaymentMethods: { menuKey: 'ledger', code: 'paymentMethod' },
+  travelCostCategories: { menuKey: 'travel', code: 'costCategory' },
+  familyMembers: { menuKey: 'family', code: 'memberName' },
+} as const
+
+export type CommonCodeGroupKey = typeof COMMON_CODE_GROUPS[keyof typeof COMMON_CODE_GROUPS]
