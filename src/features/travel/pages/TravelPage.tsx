@@ -1,6 +1,6 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
-import { ConfirmDialog } from '../../../shared/components'
+import { ConfirmDialog, DatePickerField } from '../../../shared/components'
 import { TRAVEL_COST_CATEGORIES } from '../../../shared/constants/commonCodes'
 import { currentTimeText, todayKey } from '../../../shared/utils/date'
 import {
@@ -91,6 +91,7 @@ export default function TravelPage() {
   const [message, setMessage] = useState('')
   const [placeCandidates, setPlaceCandidates] = useState<PlaceSearchResult[]>([])
   const [placeSearching, setPlaceSearching] = useState(false)
+  const tripNameInputRef = useRef<HTMLInputElement>(null)
 
   const tripList = useMemo(() => sortedTrips(trips), [trips])
   const recordList = useMemo(() => sortedRecords(records), [records])
@@ -167,6 +168,7 @@ export default function TravelPage() {
       endDate: trip.endDate,
       description: trip.description || '',
     })
+    window.setTimeout(() => tripNameInputRef.current?.focus(), 0)
   }
 
   function resetTripForm() {
@@ -389,10 +391,12 @@ export default function TravelPage() {
                 제목 *
                 <input value={recordForm.title} onChange={(event) => setRecordForm((value) => ({ ...value, title: event.target.value }))} />
               </label>
-              <label className="fp-field">
-                날짜 *
-                <input type="date" value={recordForm.recordDate} onChange={(event) => setRecordForm((value) => ({ ...value, recordDate: event.target.value }))} />
-              </label>
+              <DatePickerField
+                label="날짜"
+                required
+                value={recordForm.recordDate}
+                onChange={(value) => setRecordForm((current) => ({ ...current, recordDate: value }))}
+              />
               <label className="fp-field">
                 시간 *
                 <input inputMode="numeric" maxLength={5} value={recordForm.recordTime || ''} onChange={(event) => setRecordForm((value) => ({ ...value, recordTime: sanitizeTime(event.target.value) }))} />
@@ -447,7 +451,7 @@ export default function TravelPage() {
   }
 
   return (
-    <section className="fp-card fp-travel">
+    <section className="fp-card fp-travel fp-travel-list-panel">
       {loading ? <div className="fp-loading-blocker">처리 중</div> : null}
       <header className="fp-travel-list-header">
         <div>
@@ -458,26 +462,30 @@ export default function TravelPage() {
       {message ? <p className="fp-message">{message}</p> : null}
       <form className="fp-trip-form" onSubmit={requestTripSave}>
         <label className="fp-field trip-title-field">
-          여행명 *
-          <input value={tripForm.title} onChange={(event) => setTripForm((value) => ({ ...value, title: event.target.value }))} />
+          <span>여행명 <em className="fp-required-mark">*</em></span>
+          <input ref={tripNameInputRef} value={tripForm.title} onChange={(event) => setTripForm((value) => ({ ...value, title: event.target.value }))} />
         </label>
-        <label className="fp-field">
-          시작일
-          <input type="date" value={tripForm.startDate} onChange={(event) => setTripForm((value) => ({ ...value, startDate: event.target.value }))} />
-        </label>
-        <label className="fp-field">
-          종료일
-          <input type="date" value={tripForm.endDate} onChange={(event) => setTripForm((value) => ({ ...value, endDate: event.target.value }))} />
-        </label>
-        <button className="fp-button fp-button-primary" type="submit">{editingTrip ? '저장' : '여행 추가'}</button>
-        {editingTrip ? <button className="fp-button fp-button-muted" type="button" onClick={resetTripForm}>취소</button> : null}
+        <DatePickerField
+          label="시작일"
+          value={tripForm.startDate}
+          onChange={(value) => setTripForm((current) => ({ ...current, startDate: value }))}
+        />
+        <DatePickerField
+          label="종료일"
+          value={tripForm.endDate}
+          onChange={(value) => setTripForm((current) => ({ ...current, endDate: value }))}
+        />
+        <button className="fp-button fp-button-primary submit-action" type="submit">{editingTrip ? '저장' : '여행 추가'}</button>
+        {editingTrip ? <button className="fp-button fp-button-muted cancel-action" type="button" onClick={resetTripForm}>취소</button> : null}
       </form>
       <div className="fp-trip-list">
         {tripList.length ? tripList.map((trip) => (
           <article className="fp-trip-row" key={trip.id}>
             <button className="fp-trip-row-main" type="button" onClick={() => setSelectedTrip(trip)}>
-              <strong>{trip.title}</strong>
-              <span>{trip.startDate}{trip.endDate !== trip.startDate ? ` ~ ${trip.endDate}` : ''}</span>
+              <div>
+                <strong>{trip.title}</strong>
+                <span>{trip.startDate}{trip.endDate !== trip.startDate ? ` ~ ${trip.endDate}` : ''}</span>
+              </div>
             </button>
             <div className="fp-row-actions">
               <button type="button" onClick={() => startTripEdit(trip)}>수정</button>
