@@ -125,10 +125,12 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   gap: 10px;
   width: 100%;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .fp-calendar-month-nav {
+  position: relative;
+  z-index: 30;
   display: grid;
   grid-template-columns: var(--calendar-nav-control-size) minmax(140px, 1fr) var(--calendar-nav-control-size);
   gap: 7px;
@@ -136,7 +138,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   width: 100%;
   max-width: 320px;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .fp-calendar-month-nav .fp-button,
@@ -257,6 +259,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 
 .fp-calendar .fp-calendar-month-nav.calendar-nav > .fp-date-picker-field.calendar-title-button {
   display: block;
+  overflow: visible;
   padding: 0 !important;
   border-radius: 0 !important;
   background: transparent !important;
