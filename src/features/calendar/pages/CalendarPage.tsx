@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage, isAuthError } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField } from '../../../shared/components'
+import { CALENDAR_CATEGORIES, COMMON_CODE_GROUPS, FAMILY_MEMBER_OPTIONS } from '../../../shared/constants/commonCodes'
+import { useCommonCodeOptions } from '../../../shared/hooks/useCommonCodeOptions'
 import {
   addDays,
   addMonths,
@@ -46,8 +48,6 @@ const emptyPayload = (date: string): SchedulePayload => ({
   memo: '',
 })
 
-const categoryOptions = ['일정', '가족행사', '기념일', '병원', '학교', '여행', '기타']
-const memberOptions = ['아빠', '엄마', '가족']
 const holidayNames: Record<string, string> = {
   '2026-01-01': '신정',
   '2026-02-16': '설연휴',
@@ -262,6 +262,8 @@ function CalendarCustomSelect({
 }
 
 export default function CalendarPage() {
+  const categoryOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.calendarCategories, CALENDAR_CATEGORIES)
+  const memberOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.familyMembers, FAMILY_MEMBER_OPTIONS)
   const today = todayKey()
   const formRef = useRef<HTMLFormElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)

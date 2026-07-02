@@ -1,6 +1,8 @@
 import { Dispatch, FormEvent, RefObject, SetStateAction, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField } from '../../../shared/components'
+import { BABY_GENDER_OPTIONS, BABY_RECORD_TYPES, COMMON_CODE_GROUPS } from '../../../shared/constants/commonCodes'
+import { useCommonCodeOptions, useCommonCodeSelectOptions } from '../../../shared/hooks/useCommonCodeOptions'
 import { currentTimeText, todayKey } from '../../../shared/utils/date'
 import { createBaby, createBabyRecord, deleteBaby, deleteBabyRecord, listBabies, listBabyRecords, updateBaby, updateBabyRecord } from '../api/baby'
 import type { BabyPayload, BabyProfile, BabyRecord, BabyRecordPayload } from '../types'
@@ -14,14 +16,6 @@ interface GrowthFormState {
   weightKg: number | null
 }
 
-const recordTypes = ['수유', '대변', '소변', '수면', '성장', '병원', '메모']
-const genderOptions = [
-  { label: '선택', value: '' },
-  { label: '남', value: '남' },
-  { label: '여', value: '여' },
-]
-const recordTypeOptions = recordTypes.map((type) => ({ label: type, value: type }))
-
 const emptyBaby = (): BabyPayload => ({
   name: '',
   gender: null,
@@ -33,7 +27,7 @@ const emptyBaby = (): BabyPayload => ({
 })
 
 const emptyRecord = (): BabyRecordPayload => ({
-  recordType: '수유',
+  recordType: BABY_RECORD_TYPES[0],
   recordDate: todayKey(),
   recordTime: currentTimeText(),
   amountMl: null,
@@ -138,6 +132,9 @@ function resolveSavedRecord(response: BabyRecord, babyId: number, payload: BabyR
 }
 
 export default function BabyPage() {
+  const recordTypes = useCommonCodeOptions(COMMON_CODE_GROUPS.babyRecordTypes, BABY_RECORD_TYPES)
+  const recordTypeOptions = useMemo(() => recordTypes.map((type) => ({ label: type, value: type })), [recordTypes])
+  const genderOptions = useCommonCodeSelectOptions(COMMON_CODE_GROUPS.babyGenders, BABY_GENDER_OPTIONS)
   const [babies, setBabies] = useState<BabyProfile[]>([])
   const [selectedBaby, setSelectedBaby] = useState<BabyProfile | null>(null)
   const [records, setRecords] = useState<BabyRecord[]>([])
@@ -167,7 +164,7 @@ export default function BabyPage() {
     const monthKey = todayKey().slice(0, 7)
     const monthRecords = records.filter((record) => record.recordDate.startsWith(monthKey))
     return recordTypes.map((type) => ({ type, count: monthRecords.filter((record) => record.recordType === type).length }))
-  }, [records])
+  }, [records, recordTypes])
 
   async function reloadBabies() {
     setLoading(true)
@@ -480,7 +477,7 @@ export default function BabyPage() {
               </article>
             )) : <p className="fp-empty-text api-empty-row">등록된 아이가 없습니다.</p>}
           </section>
-          <BabyForm formRef={babyFormRef} form={babyForm} editing={Boolean(editingBaby)} onSubmit={requestBabySave} onReset={resetBabyForm} setForm={setBabyForm} />
+          <BabyForm formRef={babyFormRef} form={babyForm} editing={Boolean(editingBaby)} genderOptions={genderOptions} onSubmit={requestBabySave} onReset={resetBabyForm} setForm={setBabyForm} />
         </div>
       ) : (
         <section className="baby-detail baby-api-detail">
@@ -565,7 +562,7 @@ export default function BabyPage() {
               </section>
             </div>
             <aside className="baby-api-detail-side">
-              <RecordForm formRef={recordFormRef} form={recordForm} editing={Boolean(editingRecord)} setForm={setRecordForm} onSubmit={requestRecordSave} onReset={() => { setEditingRecord(null); setRecordForm(emptyRecord()) }} />
+              <RecordForm formRef={recordFormRef} form={recordForm} editing={Boolean(editingRecord)} recordTypeOptions={recordTypeOptions} setForm={setRecordForm} onSubmit={requestRecordSave} onReset={() => { setEditingRecord(null); setRecordForm(emptyRecord()) }} />
             </aside>
           </div>
         </section>
@@ -719,10 +716,11 @@ function GrowthChart({ records }: { records: BabyRecord[] }) {
   )
 }
 
-function BabyForm({ formRef, form, editing, setForm, onSubmit, onReset }: {
+function BabyForm({ formRef, form, editing, genderOptions, setForm, onSubmit, onReset }: {
   formRef: RefObject<HTMLFormElement | null>
   form: BabyPayload
   editing: boolean
+  genderOptions: readonly { label: string; value: string }[]
   setForm: Dispatch<SetStateAction<BabyPayload>>
   onSubmit: (event: FormEvent) => void
   onReset: () => void
@@ -801,10 +799,11 @@ function GrowthForm({ formRef, form, editing, setForm, onSubmit, onReset }: {
   )
 }
 
-function RecordForm({ formRef, form, editing, setForm, onSubmit, onReset }: {
+function RecordForm({ formRef, form, editing, recordTypeOptions, setForm, onSubmit, onReset }: {
   formRef: RefObject<HTMLFormElement | null>
   form: BabyRecordPayload
   editing: boolean
+  recordTypeOptions: readonly { label: string; value: string }[]
   setForm: Dispatch<SetStateAction<BabyRecordPayload>>
   onSubmit: (event: FormEvent) => void
   onReset: () => void
@@ -866,7 +865,7 @@ function BabyCustomSelect({ label, required = false, value, options, onChange }:
   label: string
   required?: boolean
   value: string
-  options: { label: string; value: string }[]
+  options: readonly { label: string; value: string }[]
   onChange: (value: string) => void
 }) {
   const [open, setOpen] = useState(false)

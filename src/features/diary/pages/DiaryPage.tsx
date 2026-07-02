@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, CustomSelect, DatePickerField, ToastMessage } from '../../../shared/components'
+import { COMMON_CODE_GROUPS, DIARY_MOODS, DIARY_WEATHER_OPTIONS, SELECT_PLACEHOLDER_OPTION } from '../../../shared/constants/commonCodes'
+import { useCommonCodeSelectOptions } from '../../../shared/hooks/useCommonCodeOptions'
 import { monthInputValue, monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
 import { createDiary, deleteDiary, listDiaries, updateDiary } from '../api/diary'
 import type { DiaryItem, DiaryPayload } from '../types'
@@ -8,12 +10,8 @@ import './diary-page.css'
 
 type ConfirmKind = 'save' | 'delete'
 
-const moods = ['좋음', '보통', '힘듦', '기록']
-const weatherOptions = ['맑음', '흐림', '비', '눈', '바람']
-
-const selectPlaceholder = [{ label: '선택', value: '' }]
-const moodSelectOptions = [...selectPlaceholder, ...moods.map((mood) => ({ label: mood, value: mood }))]
-const weatherSelectOptions = [...selectPlaceholder, ...weatherOptions.map((weather) => ({ label: weather, value: weather }))]
+const fallbackMoodOptions = [SELECT_PLACEHOLDER_OPTION, ...DIARY_MOODS.map((mood) => ({ label: mood, value: mood }))]
+const fallbackWeatherOptions = [SELECT_PLACEHOLDER_OPTION, ...DIARY_WEATHER_OPTIONS.map((weather) => ({ label: weather, value: weather }))]
 
 const emptyPayload = (): DiaryPayload => ({
   title: '',
@@ -51,6 +49,8 @@ function koreanMonth(value: string) {
 }
 
 export default function DiaryPage() {
+  const moodSelectOptions = useCommonCodeSelectOptions(COMMON_CODE_GROUPS.diaryMoods, fallbackMoodOptions)
+  const weatherSelectOptions = useCommonCodeSelectOptions(COMMON_CODE_GROUPS.diaryWeather, fallbackWeatherOptions)
   const [monthDate, setMonthDate] = useState(() => new Date())
   const [items, setItems] = useState<DiaryItem[]>([])
   const [form, setForm] = useState<DiaryPayload>(() => emptyPayload())

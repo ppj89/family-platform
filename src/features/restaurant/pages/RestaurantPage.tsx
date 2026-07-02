@@ -1,6 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, CustomSelect, DatePickerField, ToastMessage } from '../../../shared/components'
+import { COMMON_CODE_GROUPS, RESTAURANT_PRICE_OPTIONS, RESTAURANT_RATING_OPTIONS, RESTAURANT_SCOPE_OPTIONS } from '../../../shared/constants/commonCodes'
+import { useCommonCodeSelectOptions } from '../../../shared/hooks/useCommonCodeOptions'
 import { todayKey } from '../../../shared/utils/date'
 import TravelMap from '../../travel/components/TravelMap'
 import { createRestaurant, deleteRestaurant, listRestaurants, searchPlaces, updateRestaurant } from '../api/restaurant'
@@ -8,28 +10,6 @@ import type { PlaceSearchResult, RestaurantItem, RestaurantPayload } from '../ty
 import './restaurant-page.css'
 
 type ConfirmKind = 'save' | 'delete'
-
-const priceOptions = [
-  { label: '선택', value: '' },
-  { label: '1만원 이하', value: '10000' },
-  { label: '1~3만원', value: '30000' },
-  { label: '3~5만원', value: '50000' },
-  { label: '5만원 이상', value: '70000' },
-]
-
-const ratingOptions = [
-  { label: '선택', value: '' },
-  { label: '1점', value: '1' },
-  { label: '2점', value: '2' },
-  { label: '3점', value: '3' },
-  { label: '4점', value: '4' },
-  { label: '5점', value: '5' },
-]
-
-const scopeOptions = [
-  { label: '전체 가족', value: '전체 가족' },
-  { label: '개인', value: '개인' },
-]
 
 const emptyPayload = (): RestaurantPayload => ({
   name: '',
@@ -41,7 +21,7 @@ const emptyPayload = (): RestaurantPayload => ({
   address: '',
   latitude: null,
   longitude: null,
-  scope: scopeOptions[0].value,
+  scope: RESTAURANT_SCOPE_OPTIONS[0].value,
   memo: '',
   mediaUrls: [],
 })
@@ -67,6 +47,9 @@ function sortRestaurants(items: RestaurantItem[]) {
 }
 
 export default function RestaurantPage() {
+  const priceOptions = useCommonCodeSelectOptions(COMMON_CODE_GROUPS.restaurantPrices, RESTAURANT_PRICE_OPTIONS)
+  const ratingOptions = useCommonCodeSelectOptions(COMMON_CODE_GROUPS.restaurantRatings, RESTAURANT_RATING_OPTIONS)
+  const scopeOptions = useCommonCodeSelectOptions(COMMON_CODE_GROUPS.restaurantScopes, RESTAURANT_SCOPE_OPTIONS)
   const [items, setItems] = useState<RestaurantItem[]>([])
   const [form, setForm] = useState<RestaurantPayload>(() => emptyPayload())
   const [editing, setEditing] = useState<RestaurantItem | null>(null)
