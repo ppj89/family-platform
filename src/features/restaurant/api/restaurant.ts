@@ -4,7 +4,11 @@ import type { PlaceSearchResult, RestaurantItem, RestaurantPayload } from '../ty
 
 async function familyQuery() {
   const familyId = await getReadableFamilyId()
-  return `familyId=${encodeURIComponent(familyId)}`
+  return `familyId=${encodeURIComponent(String(familyId))}`
+}
+
+function pathId(id: number) {
+  return encodeURIComponent(String(id))
 }
 
 export async function listRestaurants() {
@@ -18,14 +22,14 @@ export async function createRestaurant(payload: RestaurantPayload) {
 }
 
 export function updateRestaurant(id: number, payload: RestaurantPayload) {
-  return apiRequest<RestaurantItem>(`/restaurants/${id}`, { method: 'PUT', body: payload })
+  return apiRequest<RestaurantItem>(`/restaurants/${pathId(id)}`, { method: 'PUT', body: payload })
 }
 
 export function deleteRestaurant(id: number) {
-  return apiRequest<null>(`/restaurants/${id}`, { method: 'DELETE' })
+  return apiRequest<null>(`/restaurants/${pathId(id)}`, { method: 'DELETE' })
 }
 
 export async function searchPlaces(query: string, limit = 6) {
   if (query.trim().length < 2) return []
-  return apiRequest<PlaceSearchResult[]>(`/places/search?q=${encodeURIComponent(query.trim())}&limit=${limit}`)
+  return apiRequest<PlaceSearchResult[]>(`/places/search?q=${encodeURIComponent(query.trim())}&limit=${encodeURIComponent(String(limit))}`)
 }
