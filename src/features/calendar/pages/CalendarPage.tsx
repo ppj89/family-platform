@@ -990,22 +990,9 @@ export default function CalendarPage() {
               {Array.from(new Set(monthDialog.items.map((item) => item.occurrenceDate))).map((dateKey) => {
                 const dayItems = monthDialog.items.filter((item) => item.occurrenceDate === dateKey)
                 return (
-                  <button
-                    className="fp-month-popup-day"
-                    key={dateKey}
-                    type="button"
-                    onClick={() => {
-                      setMonthDialog(null)
-                      selectYearDay(dateKey, dayItems)
-                    }}
-                  >
-                    <ScheduleDateBadge value={dateKey} />
-                    <span>
-                      <strong>{dayItems[0]?.title || '일정'}</strong>
-                      <small>{dayItems.length}건</small>
-                    </span>
-                    <em>{dayItems.slice(0, 2).map((item) => item.title).join(' · ')}{dayItems.length > 2 ? ` +${dayItems.length - 2}` : ''}</em>
-                  </button>
+                  <section className="fp-month-popup-day-group" key={dateKey}>
+                    {dayItems.map((item) => renderScheduleRow(item, { compact: false }))}
+                  </section>
                 )
               })}
               {monthDialog.items.length ? null : <p className="fp-empty-text">등록된 일정이 없습니다.</p>}

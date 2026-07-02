@@ -1677,75 +1677,27 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-year-month-popup {
-  width: min(620px, calc(100vw - 40px));
+  width: min(640px, calc(100vw - 40px));
 }
 
 .fp-month-popup-list {
   display: grid;
-  gap: 10px;
+  gap: 12px;
   margin-top: 14px;
 }
 
-.fp-month-popup-day {
+.fp-month-popup-day-group {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.2fr);
   gap: 12px;
-  align-items: center;
-  min-height: 66px;
-  border: 0;
-  border-radius: 16px;
-  padding: 10px 12px;
-  background: #fff;
-  color: #191f28;
-  text-align: left;
-  box-shadow: inset 0 0 0 1px #e5e8eb;
-  cursor: pointer;
 }
 
-.fp-month-popup-day:hover {
-  background: #f8fbff;
-  box-shadow: inset 0 0 0 1px #bfdcff;
-}
-
-.fp-month-popup-day > span {
-  display: grid;
-  min-width: 0;
-  gap: 4px;
-}
-
-.fp-month-popup-day strong {
-  overflow: hidden;
-  color: #191f28;
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 1.25;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fp-month-popup-day small,
-.fp-month-popup-day em {
-  overflow: hidden;
-  color: #6b7684;
-  font-size: 12px;
-  font-style: normal;
-  font-weight: 400;
-  line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.fp-month-popup-day em {
-  color: #1b64da;
+.fp-year-month-popup .fp-schedule-row {
+  width: 100%;
 }
 
 @media (max-width: 640px) {
-  .fp-month-popup-day {
-    grid-template-columns: auto minmax(0, 1fr);
-  }
-
-  .fp-month-popup-day em {
-    grid-column: 1 / -1;
+  .fp-year-month-popup {
+    width: min(560px, calc(100vw - 40px));
   }
 }
 
