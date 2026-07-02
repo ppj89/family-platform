@@ -575,6 +575,53 @@
   background: #2f80ed;
 }
 
+.fp-account-dialog {
+  width: min(460px, 100%);
+}
+
+.fp-account-info-loading {
+  margin: 16px 0 0;
+  color: #1264d8;
+  font-size: var(--fp-font-body);
+  font-weight: var(--fp-weight-body);
+}
+
+.fp-account-info-list {
+  display: grid;
+  gap: 10px;
+  margin: 18px 0 0;
+}
+
+.fp-account-info-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  min-height: 46px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: #f7f8fa;
+}
+
+.fp-account-info-list dt,
+.fp-account-info-list dd {
+  margin: 0;
+  font-size: var(--fp-font-control);
+  line-height: 1.35;
+}
+
+.fp-account-info-list dt {
+  color: #6b7684;
+  font-weight: var(--fp-weight-label);
+}
+
+.fp-account-info-list dd {
+  color: #191f28;
+  font-weight: var(--fp-weight-title);
+  text-align: right;
+  word-break: break-all;
+}
+
 @media (max-width: 980px) {
   .fp-shell {
     grid-template-columns: 1fr;

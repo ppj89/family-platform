@@ -16,6 +16,7 @@ export interface AuthSessionResponse {
   loginEmail?: string
   nickname?: string
   loginProvider?: string
+  provider?: string
   platformAdmin?: boolean
 }
 
@@ -47,7 +48,7 @@ export function normalizeAuthUser(response: AuthSessionResponse): StoredUser {
     email: response.email || user.email || '',
     loginEmail: response.loginEmail || user.loginEmail || '',
     nickname: response.nickname || user.nickname || '',
-    loginProvider: response.loginProvider || user.loginProvider || '',
+    loginProvider: response.loginProvider || response.provider || user.loginProvider || '',
     platformAdmin: Boolean(response.platformAdmin || user.platformAdmin),
   }
 }

@@ -11,7 +11,9 @@ import CommunityPage from './features/community/pages/CommunityPage'
 import AdminPage from './features/admin/pages/AdminPage'
 import { LoginPage } from './features/auth/pages/LoginPage'
 import { NotificationBell } from './shared/components/NotificationBell'
-import { hasAuthToken } from './shared/api/auth'
+import { ConfirmDialog, ToastMessage } from './shared/components'
+import { clearAuthSession, getStoredUser, hasAuthToken, normalizeAuthUser, storeAuthSession, type AuthSessionResponse, type StoredUser } from './shared/api/auth'
+import { apiActionMessage, apiRequest } from './shared/api/client'
 import './app.css'
 
 type MenuItem = {
@@ -144,8 +146,62 @@ function LegacyNotice({ label }: { label: string }) {
   )
 }
 
+function providerLabel(provider?: string) {
+  const key = (provider || '').toLowerCase()
+  if (key === 'naver') return '네이버'
+  if (key === 'kakao') return '카카오'
+  if (key === 'google') return '구글'
+  if (key === 'admin') return '관리자 ID'
+  return '이메일'
+}
+
+function AccountInfoDialog({
+  loading,
+  user,
+  onClose,
+}: {
+  loading: boolean
+  user: StoredUser | null
+  onClose: () => void
+}) {
+  return (
+    <div className="fp-confirm-backdrop" role="presentation">
+      <section className="fp-confirm-dialog fp-account-dialog" role="dialog" aria-modal="true" aria-labelledby="fp-account-title">
+        <header>
+          <h2 id="fp-account-title">내정보</h2>
+          <button type="button" aria-label="닫기" onClick={onClose}>x</button>
+        </header>
+        {loading ? <p className="fp-account-info-loading">내정보를 불러오는 중입니다.</p> : null}
+        <dl className="fp-account-info-list">
+          <div>
+            <dt>로그인 방식</dt>
+            <dd>{providerLabel(user?.loginProvider)}</dd>
+          </div>
+          <div>
+            <dt>이메일/아이디</dt>
+            <dd>{user?.email || user?.loginEmail || '-'}</dd>
+          </div>
+          <div>
+            <dt>닉네임</dt>
+            <dd>{user?.nickname || '-'}</dd>
+          </div>
+          <div>
+            <dt>권한</dt>
+            <dd>{user?.platformAdmin ? '플랫폼 관리자' : '가족구성원'}</dd>
+          </div>
+        </dl>
+      </section>
+    </div>
+  )
+}
+
 export default function App() {
   const [activeMenu, setActiveMenu] = useState('홈')
+  const [accountInfo, setAccountInfo] = useState<StoredUser | null>(getStoredUser())
+  const [isAccountOpen, setIsAccountOpen] = useState(false)
+  const [isAccountLoading, setIsAccountLoading] = useState(false)
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
   const pageEyebrow = activeMenu === '홈'
     ? '오늘의 가족 기록'
     : activeMenu === '관리자'
@@ -156,6 +212,34 @@ export default function App() {
 
   if (!hasAuthToken()) {
     return <LoginPage />
+  }
+
+  async function openAccountInfo() {
+    setIsAccountOpen(true)
+    setIsAccountLoading(true)
+    try {
+      const response = await apiRequest<AuthSessionResponse>('/auth/me')
+      const user = normalizeAuthUser(response)
+      setAccountInfo(user)
+      storeAuthSession(response, Boolean(window.localStorage.getItem('family-platform-access-token')))
+    } catch (error) {
+      setToastMessage(apiActionMessage(error, '내정보를 불러오지 못했습니다.'))
+    } finally {
+      setIsAccountLoading(false)
+    }
+  }
+
+  async function logout() {
+    setIsLogoutConfirmOpen(false)
+    try {
+      await apiRequest<null>('/auth/logout', { method: 'POST' })
+    } catch {
+      // 서버 세션이 이미 만료된 경우에도 클라이언트 세션은 정리합니다.
+    } finally {
+      clearAuthSession()
+      window.localStorage.removeItem('family-platform-react-migration')
+      window.location.href = '/'
+    }
   }
 
   return (
@@ -195,16 +279,11 @@ export default function App() {
               </svg>
             </button>
             <NotificationBell />
-            <button className="fp-topbar-button" type="button">내 정보</button>
+            <button className="fp-topbar-button" type="button" onClick={openAccountInfo}>내정보</button>
             <button
               className="fp-topbar-button"
               type="button"
-              onClick={() => {
-                window.localStorage.removeItem('family-platform-access-token')
-                window.sessionStorage.removeItem('family-platform-access-token')
-                window.localStorage.removeItem('family-platform-react-migration')
-                window.location.href = '/'
-              }}
+              onClick={() => setIsLogoutConfirmOpen(true)}
             >
               로그아웃
             </button>
@@ -222,6 +301,23 @@ export default function App() {
         {activeMenu === '관리자' ? <AdminPage /> : null}
         {activeMenu !== '홈' && activeMenu !== '캘린더' && activeMenu !== '가계부' && activeMenu !== '여행' && activeMenu !== '육아' && activeMenu !== '일기' && activeMenu !== '가족그룹' && activeMenu !== '맛집' && activeMenu !== '커뮤니티' && activeMenu !== '관리자' ? <LegacyNotice label={activeMenu} /> : null}
       </main>
+      {isAccountOpen ? (
+        <AccountInfoDialog
+          loading={isAccountLoading}
+          user={accountInfo}
+          onClose={() => setIsAccountOpen(false)}
+        />
+      ) : null}
+      {isLogoutConfirmOpen ? (
+        <ConfirmDialog
+          title="로그아웃"
+          body="로그아웃하시겠습니까?"
+          confirmLabel="로그아웃"
+          onConfirm={logout}
+          onCancel={() => setIsLogoutConfirmOpen(false)}
+        />
+      ) : null}
+      <ToastMessage message={toastMessage} onClose={() => setToastMessage('')} />
     </div>
   )
 }
