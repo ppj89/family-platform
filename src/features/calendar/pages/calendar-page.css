@@ -1695,9 +1695,95 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   width: 100%;
 }
 
+.fp-year-month-popup .fp-schedule-row.schedule-row.api-schedule-row {
+  grid-template-columns: 82px minmax(0, 1fr) auto;
+  column-gap: 18px;
+  row-gap: 6px;
+  min-height: 0;
+  padding: 12px 14px;
+}
+
+.fp-year-month-popup .fp-schedule-row .schedule-date-badge {
+  min-width: 74px;
+  width: 74px;
+  height: 38px;
+}
+
+.fp-year-month-popup .fp-schedule-row .fp-schedule-row-content {
+  gap: 3px;
+}
+
+.fp-year-month-popup .fp-schedule-row .fp-schedule-row-content > * {
+  overflow: hidden;
+  min-width: 0;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-year-month-popup .fp-schedule-row .fp-row-actions {
+  gap: 8px;
+}
+
 @media (max-width: 640px) {
   .fp-year-month-popup {
     width: min(560px, calc(100vw - 40px));
+  }
+}
+
+@media (min-width: 761px) and (max-height: 820px) {
+  .fp-calendar-popup-backdrop {
+    padding-top: 44px;
+    padding-bottom: 44px;
+  }
+
+  .fp-year-month-popup {
+    max-height: min(560px, calc(100dvh - 88px));
+    padding: 14px;
+  }
+
+  .fp-year-month-popup .fp-month-popup-list {
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .fp-year-month-popup .fp-month-popup-day-group {
+    gap: 10px;
+  }
+
+  .fp-year-month-popup .fp-schedule-row.schedule-row.api-schedule-row {
+    grid-template-columns: 78px minmax(0, 1fr) auto;
+    column-gap: 14px;
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
+
+  .fp-year-month-popup .fp-schedule-row .schedule-date-badge,
+  .fp-year-month-popup .fp-schedule-date-pill {
+    min-width: 70px;
+    width: 70px;
+    height: 36px;
+  }
+
+  .fp-year-month-popup .fp-schedule-row p,
+  .fp-year-month-popup .fp-schedule-row small,
+  .fp-year-month-popup .fp-schedule-row em {
+    margin-top: 2px;
+    font-size: 12px;
+    line-height: 1.2;
+  }
+
+  .fp-year-month-popup .fp-schedule-row > div > strong {
+    font-size: 14px;
+    line-height: 1.2;
+  }
+
+  .fp-year-month-popup .fp-row-actions button {
+    min-width: 50px;
+    min-height: 32px;
+    height: 32px;
+    border-radius: 11px;
+    font-size: 12px;
   }
 }
 
