@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
-import { ConfirmDialog } from '../../../shared/components'
+import { ConfirmDialog, CustomSelect, DatePickerField, ToastMessage } from '../../../shared/components'
 import { monthInputValue, monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
 import { createDiary, deleteDiary, listDiaries, updateDiary } from '../api/diary'
 import type { DiaryItem, DiaryPayload } from '../types'
@@ -10,6 +10,10 @@ type ConfirmKind = 'save' | 'delete'
 
 const moods = ['좋음', '보통', '힘듦', '기록']
 const weatherOptions = ['맑음', '흐림', '비', '눈', '바람']
+
+const selectPlaceholder = [{ label: '선택', value: '' }]
+const moodSelectOptions = [...selectPlaceholder, ...moods.map((mood) => ({ label: mood, value: mood }))]
+const weatherSelectOptions = [...selectPlaceholder, ...weatherOptions.map((weather) => ({ label: weather, value: weather }))]
 
 const emptyPayload = (): DiaryPayload => ({
   title: '',
@@ -33,12 +37,17 @@ function tempText(item: DiaryItem) {
   const min = item.minTemperature
   const max = item.maxTemperature
   if (min == null && max == null) return ''
-  if (min != null && max != null) return `${min} / ${max}도`
+  if (min != null && max != null) return `최저 ${min}도 · 최고 ${max}도`
   return min != null ? `최저 ${min}도` : `최고 ${max}도`
 }
 
 function sortDiaries(items: DiaryItem[]) {
   return [...items].sort((a, b) => `${b.diaryDate} ${b.createdAt}`.localeCompare(`${a.diaryDate} ${a.createdAt}`))
+}
+
+function koreanMonth(value: string) {
+  const [year, month] = value.split('-')
+  return `${year}년 ${month}월`
 }
 
 export default function DiaryPage() {
@@ -49,18 +58,18 @@ export default function DiaryPage() {
   const [pendingDelete, setPendingDelete] = useState<DiaryItem | null>(null)
   const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null)
   const [loading, setLoading] = useState(false)
-  const [message, setMessage] = useState('')
+  const [toastMessage, setToastMessage] = useState('')
 
   const range = useMemo(() => monthRange(monthDate), [monthDate])
   const diaryList = useMemo(() => sortDiaries(items), [items])
+  const selectedMonth = monthInputValue(monthDate)
 
   async function reload() {
     setLoading(true)
-    setMessage('')
     try {
       setItems(await listDiaries(range.startDate, range.endDate))
     } catch (error) {
-      setMessage(apiActionMessage(error, '일기 목록을 불러오지 못했습니다.'))
+      setToastMessage(apiActionMessage(error, '일기 목록을 불러오지 못했습니다.'))
     } finally {
       setLoading(false)
     }
@@ -92,11 +101,11 @@ export default function DiaryPage() {
   function requestSave(event: FormEvent) {
     event.preventDefault()
     if (!form.title.trim()) {
-      setMessage('제목을 입력해주세요.')
+      setToastMessage('제목을 입력해주세요.')
       return
     }
     if (!form.diaryDate) {
-      setMessage('날짜를 선택해주세요.')
+      setToastMessage('날짜를 선택해주세요.')
       return
     }
     setConfirmKind('save')
@@ -104,7 +113,6 @@ export default function DiaryPage() {
 
   async function confirmSave() {
     setLoading(true)
-    setMessage('')
     try {
       const payload: DiaryPayload = {
         ...form,
@@ -119,9 +127,9 @@ export default function DiaryPage() {
       else await createDiary(payload)
       await reload()
       resetForm()
-      setMessage(editing ? '일기를 수정했습니다.' : '일기를 저장했습니다.')
+      setToastMessage(editing ? '일기를 수정했습니다.' : '일기를 저장했습니다.')
     } catch (error) {
-      setMessage(apiActionMessage(error, editing ? '일기 수정에 실패했습니다.' : '일기 저장에 실패했습니다.'))
+      setToastMessage(apiActionMessage(error, editing ? '일기 수정에 실패했습니다.' : '일기 저장에 실패했습니다.'))
     } finally {
       setConfirmKind(null)
       setLoading(false)
@@ -131,14 +139,13 @@ export default function DiaryPage() {
   async function confirmDelete() {
     if (!pendingDelete) return
     setLoading(true)
-    setMessage('')
     try {
       await deleteDiary(pendingDelete.id)
       await reload()
       if (editing?.id === pendingDelete.id) resetForm()
-      setMessage('일기를 삭제했습니다.')
+      setToastMessage('일기를 삭제했습니다.')
     } catch (error) {
-      setMessage(apiActionMessage(error, '일기 삭제에 실패했습니다.'))
+      setToastMessage(apiActionMessage(error, '일기 삭제에 실패했습니다.'))
     } finally {
       setConfirmKind(null)
       setPendingDelete(null)
@@ -155,22 +162,21 @@ export default function DiaryPage() {
           <p>{diaryList.length}건</p>
         </div>
         <div className="fp-diary-actions">
-          <label className="fp-field fp-month-field">
-            조회 월
-            <input
-              type="month"
-              value={monthInputValue(monthDate)}
-              onChange={(event) => setMonthDate(parseDateKey(`${event.target.value}-01`))}
-            />
-          </label>
-          <button className="fp-button fp-button-primary" type="button" onClick={reload}>조회</button>
+          <DatePickerField
+            className="fp-diary-month-picker"
+            displayValue={koreanMonth(selectedMonth)}
+            label="조회 월"
+            mode="month"
+            showCalendarIcon
+            value={selectedMonth}
+            onChange={(value) => setMonthDate(parseDateKey(`${value}-01`))}
+          />
+          <button className="fp-button fp-button-primary fp-diary-search-button" type="button" onClick={reload}>조회</button>
         </div>
       </header>
 
-      {message ? <p className="fp-message">{message}</p> : null}
-
       <div className="fp-diary-layout">
-        <section className="fp-diary-list">
+        <section className="fp-diary-list" aria-label="일기 목록">
           {diaryList.length ? diaryList.map((item) => (
             <article className="fp-diary-row" key={item.id}>
               <div>
@@ -199,53 +205,55 @@ export default function DiaryPage() {
         <form className="fp-diary-form fp-card" onSubmit={requestSave}>
           <header>
             <h3>{editing ? '일기 수정' : '일기 추가'}</h3>
-            {editing ? <button className="fp-button fp-button-muted" type="button" onClick={resetForm}>취소</button> : null}
+            {editing ? <button className="fp-button fp-button-muted fp-diary-cancel-button" type="button" onClick={resetForm}>취소</button> : null}
           </header>
           <div className="fp-form-grid">
             <label className="fp-field span-2">
-              제목 *
+              <span>제목 <em className="fp-required-mark">*</em></span>
               <input value={form.title} onChange={(event) => setForm((value) => ({ ...value, title: event.target.value }))} />
             </label>
+            <DatePickerField
+              className="fp-diary-date-picker"
+              label="날짜"
+              required
+              showCalendarIcon
+              value={form.diaryDate}
+              onChange={(value) => setForm((current) => ({ ...current, diaryDate: value }))}
+            />
+            <CustomSelect
+              label="날씨"
+              options={weatherSelectOptions}
+              value={form.weather || ''}
+              onChange={(value) => setForm((current) => ({ ...current, weather: value || null }))}
+            />
+            <CustomSelect
+              label="기분"
+              options={moodSelectOptions}
+              value={form.mood || ''}
+              onChange={(value) => setForm((current) => ({ ...current, mood: value || null }))}
+            />
             <label className="fp-field">
-              날짜 *
-              <input type="date" value={form.diaryDate} onChange={(event) => setForm((value) => ({ ...value, diaryDate: event.target.value }))} />
-            </label>
-            <label className="fp-field">
-              날씨
-              <select value={form.weather || ''} onChange={(event) => setForm((value) => ({ ...value, weather: event.target.value || null }))}>
-                <option value="">선택</option>
-                {weatherOptions.map((weather) => <option key={weather} value={weather}>{weather}</option>)}
-              </select>
-            </label>
-            <label className="fp-field">
-              기분
-              <select value={form.mood || ''} onChange={(event) => setForm((value) => ({ ...value, mood: event.target.value || null }))}>
-                <option value="">선택</option>
-                {moods.map((mood) => <option key={mood} value={mood}>{mood}</option>)}
-              </select>
-            </label>
-            <label className="fp-field">
-              최저기온
+              <span>최저기온</span>
               <input inputMode="numeric" value={form.minTemperature ?? ''} onChange={(event) => setForm((value) => ({ ...value, minTemperature: numberOrNull(event.target.value) }))} />
             </label>
             <label className="fp-field">
-              최고기온
+              <span>최고기온</span>
               <input inputMode="numeric" value={form.maxTemperature ?? ''} onChange={(event) => setForm((value) => ({ ...value, maxTemperature: numberOrNull(event.target.value) }))} />
             </label>
             <label className="fp-field span-2">
-              내용
+              <span>내용</span>
               <textarea value={form.body} onChange={(event) => setForm((value) => ({ ...value, body: event.target.value }))} />
             </label>
           </div>
-          <button className="fp-button fp-button-primary" type="submit">{editing ? '수정' : '저장'}</button>
+          <button className="fp-button fp-button-primary fp-diary-submit-button" type="submit">{editing ? '수정' : '저장'}</button>
         </form>
       </div>
 
       {confirmKind ? (
         <ConfirmDialog
-          title={confirmKind === 'delete' ? '일기를 삭제할까요?' : editing ? '일기를 수정할까요?' : '일기를 저장할까요?'}
-          body={confirmKind === 'delete' ? '선택한 일기를 삭제합니다.' : '입력한 내용을 일기에 반영합니다.'}
-          confirmLabel={confirmKind === 'delete' ? '삭제' : '저장'}
+          title={confirmKind === 'delete' ? '삭제' : editing ? '수정' : '저장'}
+          body={confirmKind === 'delete' ? '일기를 삭제하시겠습니까?' : editing ? '일기를 수정하시겠습니까?' : '일기를 저장하시겠습니까?'}
+          confirmLabel={confirmKind === 'delete' ? '삭제' : editing ? '수정' : '저장'}
           danger={confirmKind === 'delete'}
           onCancel={() => {
             setConfirmKind(null)
@@ -254,6 +262,7 @@ export default function DiaryPage() {
           onConfirm={confirmKind === 'delete' ? confirmDelete : confirmSave}
         />
       ) : null}
+      <ToastMessage message={toastMessage} onClose={() => setToastMessage('')} />
     </section>
   )
 }
