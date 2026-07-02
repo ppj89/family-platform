@@ -75,7 +75,7 @@
   margin-bottom: 8px;
 }
 
-.fp-date-picker-popover header strong {
+.fp-date-picker-title-button {
   display: inline-flex;
   min-width: 0;
   height: 38px;
@@ -84,12 +84,18 @@
   justify-content: center;
   border: 1px solid #dfe5ec;
   border-radius: 12px;
+  padding: 0 10px;
+  background: #fff;
   color: #191f28;
+  cursor: pointer;
+}
+
+.fp-date-picker-title-button strong {
   font-size: 16px;
   font-weight: 700;
 }
 
-.fp-date-picker-popover header button,
+.fp-date-picker-popover header > button:not(.fp-date-picker-title-button),
 .fp-date-picker-days button,
 .fp-date-picker-months button,
 .fp-date-picker-years button,
@@ -102,7 +108,7 @@
   cursor: pointer;
 }
 
-.fp-date-picker-popover header button {
+.fp-date-picker-popover header > button:not(.fp-date-picker-title-button) {
   width: 38px;
   height: 38px;
   border: 1px solid #dfe5ec;
