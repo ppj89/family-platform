@@ -417,10 +417,18 @@ export default function CalendarPage() {
     if (dayItems.length > 0) setDayDialog({ date: dateKey, items: dayItems })
   }
 
-  function startCreate(dateKey = selectedDate) {
+  function focusScheduleTitleInput() {
+    window.setTimeout(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      titleInputRef.current?.focus({ preventScroll: true })
+    }, 0)
+  }
+
+  function startCreate(dateKey = selectedDate, options?: { focus?: boolean }) {
     setEditingId(null)
     setEditingSource(null)
     setForm(emptyPayload(dateKey))
+    if (options?.focus) focusScheduleTitleInput()
   }
 
   function startEdit(item: CalendarScheduleInstance) {
@@ -741,22 +749,31 @@ export default function CalendarPage() {
                 </section>
               ) : view === 'year' ? (
                 <>
-                  <div className="year-mode-tabs" role="tablist" aria-label="연간 표시 방식">
+                  <div className="year-mode-actions">
+                    <div className="year-mode-tabs" role="tablist" aria-label="연간 표시 방식">
+                      <button
+                        aria-selected={yearMode === 'calendar'}
+                        className={yearMode === 'calendar' ? 'active' : ''}
+                        type="button"
+                        onClick={() => setYearMode('calendar')}
+                      >
+                        캘린더형
+                      </button>
+                      <button
+                        aria-selected={yearMode === 'list'}
+                        className={yearMode === 'list' ? 'active' : ''}
+                        type="button"
+                        onClick={() => setYearMode('list')}
+                      >
+                        목록형
+                      </button>
+                    </div>
                     <button
-                      aria-selected={yearMode === 'calendar'}
-                      className={yearMode === 'calendar' ? 'active' : ''}
+                      className="year-mobile-add-button"
                       type="button"
-                      onClick={() => setYearMode('calendar')}
+                      onClick={() => startCreate(selectedDate, { focus: true })}
                     >
-                      캘린더형
-                    </button>
-                    <button
-                      aria-selected={yearMode === 'list'}
-                      className={yearMode === 'list' ? 'active' : ''}
-                      type="button"
-                      onClick={() => setYearMode('list')}
-                    >
-                      목록형
+                      일정등록
                     </button>
                   </div>
                   <section className={`fp-year-board year-schedule-grid year-mode-${yearMode}`}>
