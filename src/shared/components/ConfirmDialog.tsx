@@ -25,7 +25,7 @@ export function ConfirmDialog({
           <button type="button" aria-label="닫기" onClick={onCancel}>x</button>
         </header>
         <p>{body}</p>
-        <div className="fp-confirm-actions">
+        <div className={`fp-confirm-actions${danger ? ' danger' : ''}`}>
           <button className="fp-button fp-button-muted" type="button" onClick={onCancel}>{cancelLabel}</button>
           <button className={`fp-button ${danger ? 'fp-button-danger' : 'fp-button-primary'}`} type="button" onClick={onConfirm}>{confirmLabel}</button>
         </div>

@@ -466,8 +466,8 @@ export default function CalendarPage() {
     }
     setConfirm({
       kind: 'save',
-      title: editingId ? '일정을 저장할까요?' : '일정을 추가할까요?',
-      body: editingId ? '수정한 일정 내용을 저장합니다.' : '입력한 일정 내용을 저장합니다.',
+      title: editingId ? '수정' : '저장',
+      body: editingId ? '일정을 수정하시겠습니까?' : '일정을 저장하시겠습니까?',
     })
   }
 
@@ -514,8 +514,8 @@ export default function CalendarPage() {
       if (editingId && hasRepeat) {
         setConfirm({
           kind: 'repeat-save',
-          title: '반복일정이 있습니다',
-          body: '같이 수정하시겠습니까?',
+          title: '수정',
+          body: '반복 일정을 같이 수정하시겠습니까?',
         })
         return
       }
@@ -533,8 +533,8 @@ export default function CalendarPage() {
         setConfirm({
           kind: 'repeat-delete',
           item: confirm.item,
-          title: '반복일정이 있습니다',
-          body: '같이 삭제하시겠습니까?',
+          title: '삭제',
+          body: '반복 일정을 같이 삭제하시겠습니까?',
           danger: true,
         })
         return
@@ -643,8 +643,8 @@ export default function CalendarPage() {
               setConfirm({
                 kind: 'delete',
                 item,
-                title: '일정을 삭제할까요?',
-                body: `${item.title} 일정을 삭제합니다.`,
+                title: '삭제',
+                body: '일정을 삭제하시겠습니까?',
                 danger: true,
               })
             }}
@@ -1042,8 +1042,8 @@ export default function CalendarPage() {
                 onClick={() => setConfirm({
                   kind: 'delete',
                   item: scheduleDetail,
-                  title: '일정을 삭제할까요?',
-                  body: `${scheduleDetail.title} 일정을 삭제합니다.`,
+                  title: '삭제',
+                  body: '일정을 삭제하시겠습니까?',
                   danger: true,
                 })}
               >
@@ -1059,7 +1059,7 @@ export default function CalendarPage() {
           danger={'danger' in confirm ? confirm.danger : false}
           title={confirm.title}
           body={confirm.body}
-          confirmLabel={confirm.kind === 'delete' || confirm.kind === 'repeat-delete' ? '삭제' : '확인'}
+          confirmLabel={confirm.kind === 'delete' || confirm.kind === 'repeat-delete' ? '삭제' : confirm.kind === 'repeat-save' ? '수정' : confirm.title}
           onCancel={() => setConfirm(null)}
           onConfirm={confirmAction}
         />

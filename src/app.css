@@ -455,6 +455,25 @@
   font-weight: var(--fp-weight-body);
 }
 
+.fp-confirm-actions .fp-button {
+  flex: 1 1 0;
+  min-width: 0;
+  height: 56px;
+  border-radius: 14px;
+  padding: 0 14px;
+  font-size: var(--fp-font-control);
+}
+
+.fp-confirm-actions.danger .fp-button-muted {
+  color: #e5485d;
+  background: #fff1f3;
+}
+
+.fp-confirm-actions.danger .fp-button-danger {
+  color: #fff;
+  background: #2f80ed;
+}
+
 @media (max-width: 980px) {
   .fp-shell {
     grid-template-columns: 1fr;
