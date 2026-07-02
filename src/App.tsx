@@ -146,7 +146,7 @@ function LegacyNotice({ label }: { label: string }) {
 
 export default function App() {
   const [activeMenu, setActiveMenu] = useState('홈')
-  const pageEyebrow = activeMenu === '홈' ? '오늘의 가족 기록' : activeMenu === '가계부' ? '수입, 지출, 카드 내역' : '가족 공유 운영'
+  const pageEyebrow = activeMenu === '홈' ? '오늘의 가족 기록' : activeMenu === '가계부' ? '' : '가족 공유 운영'
 
   if (!hasAuthToken()) {
     return <LoginPage />
@@ -179,7 +179,7 @@ export default function App() {
       <main className="fp-main">
         <header className="fp-topbar">
           <div>
-            <span className="fp-eyebrow">{pageEyebrow}</span>
+            {pageEyebrow ? <span className="fp-eyebrow">{pageEyebrow}</span> : null}
             <h1>{activeMenu}</h1>
           </div>
           <div className="fp-topbar-actions">

@@ -1,7 +1,7 @@
 .fp-ledger.content-grid {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr) 410px;
   gap: 16px;
   align-items: start;
   width: 100%;
@@ -28,7 +28,7 @@
   display: grid;
   gap: 14px;
   width: 100%;
-  max-width: 300px;
+  max-width: 410px;
   min-width: 0;
   padding: 20px;
 }
@@ -169,6 +169,18 @@
   font-size: 23px;
   font-weight: 900;
   line-height: 1.1;
+}
+
+.ledger-summary .metric.coral strong {
+  color: #f04452;
+}
+
+.ledger-summary .metric.green strong {
+  color: #00a889;
+}
+
+.ledger-summary .metric.blue strong {
+  color: #3182f6;
 }
 
 .expense {
@@ -438,7 +450,8 @@
 .ledger-form input,
 .ledger-form select,
 .ledger-form textarea,
-.ledger-form .date-picker-trigger {
+.ledger-form .date-picker-trigger,
+.ledger-form .custom-select-trigger {
   width: 100%;
   min-width: 0;
   border: 0;
@@ -454,10 +467,89 @@
 
 .ledger-form input,
 .ledger-form select,
-.ledger-form .date-picker-trigger {
+.ledger-form .date-picker-trigger,
+.ledger-form .custom-select-trigger {
   height: 42px;
   min-height: 42px;
   padding: 0 12px;
+}
+
+.ledger-form .custom-select,
+.ledger-form .date-picker-field {
+  width: 100%;
+}
+
+.ledger-form .custom-select {
+  position: relative;
+}
+
+.ledger-form .custom-select.open {
+  z-index: 30;
+}
+
+.ledger-form .custom-select-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ledger-form .custom-select-trigger span {
+  overflow: hidden;
+  color: #191f28;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ledger-form .custom-select-trigger svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  color: #6b7684;
+}
+
+.ledger-form .custom-select-list {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 40;
+  display: grid;
+  width: 100%;
+  min-width: 100%;
+  overflow: hidden;
+  border: 1px solid #e1e7ef;
+  border-radius: 14px;
+  padding: 6px;
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+}
+
+.ledger-form .custom-select-list[hidden] {
+  display: none !important;
+}
+
+.ledger-form .custom-select-list button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 12px;
+  background: transparent;
+  color: #191f28;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  text-align: left;
+}
+
+.ledger-form .custom-select-list button:hover,
+.ledger-form .custom-select-list button.selected {
+  background: #eef6ff;
+  color: #1264d8;
 }
 
 .ledger-form select {
@@ -487,7 +579,9 @@
 .ledger-form input:focus,
 .ledger-form select:focus,
 .ledger-form textarea:focus,
-.ledger-form .date-picker-trigger:focus-visible {
+.ledger-form .date-picker-trigger:focus-visible,
+.ledger-form .custom-select-trigger.open,
+.ledger-form .custom-select-trigger:focus-visible {
   box-shadow: inset 0 0 0 2px #3182f6;
 }
 

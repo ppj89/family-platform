@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField } from '../../../shared/components'
+import { FAMILY_MEMBER_OPTIONS, LEDGER_CATEGORIES, LEDGER_ENTRY_TYPE_OPTIONS, LEDGER_PAYMENT_METHODS } from '../../../shared/constants/commonCodes'
 import { monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
 import { createLedgerEntry, deleteLedgerEntry, getLedgerSummary, listLedgerEntries, updateLedgerEntry } from '../api/ledger'
 import type { LedgerEntry, LedgerPayload, LedgerSummary } from '../types'
@@ -8,10 +9,8 @@ import './ledger-page.css'
 
 type LedgerQueryMode = 'month' | 'period'
 type ConfirmState = 'save' | 'delete' | null
+type LedgerSelectOption = { label: string; value: string }
 
-const categories = ['식비', '교통', '생활', '의료', '교육', '여행', '기타']
-const paymentMethods = ['카드', '현금', '계좌이체', '간편결제', '기타']
-const memberOptions = ['아빠', '엄마', '가족']
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
 
 const emptyPayload = (): LedgerPayload => ({
@@ -50,7 +49,7 @@ function formatDisplayDate(value: string) {
 
 function formatMonthLabel(value: string) {
   const [year, month] = value.split('-')
-  return `${year}년 ${month}월`
+  return `${year}년 ${Number(month)}월`
 }
 
 function groupEntriesByDate(items: LedgerEntry[]) {
@@ -74,6 +73,69 @@ function parseSmsText(text: string) {
   const title = normalized.split(' ').find((part) => part.length >= 2) || ''
   const isIncome = /입금|급여|환급|수입/.test(text)
   return { amount, title, entryType: isIncome ? 'income' : 'expense' as LedgerPayload['entryType'] }
+}
+
+function LedgerCustomSelect({
+  label,
+  options,
+  value,
+  onChange,
+}: {
+  label: string
+  options: LedgerSelectOption[]
+  value: string
+  onChange: (value: string) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLLabelElement>(null)
+  const selected = options.find((option) => option.value === value) ?? options[0]
+
+  useEffect(() => {
+    if (!open) return
+    function closeOnOutside(event: MouseEvent | FocusEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', closeOnOutside)
+    document.addEventListener('focusin', closeOnOutside)
+    document.addEventListener('keydown', closeOnEscape)
+    return () => {
+      document.removeEventListener('mousedown', closeOnOutside)
+      document.removeEventListener('focusin', closeOnOutside)
+      document.removeEventListener('keydown', closeOnEscape)
+    }
+  }, [open])
+
+  return (
+    <label className={`fp-field ledger-custom-select custom-select-field ${open ? 'open' : ''}`} ref={rootRef}>
+      <span>{label}</span>
+      <div className={`custom-select${open ? ' open' : ''}`}>
+        <button className={`custom-select-trigger${open ? ' open' : ''}`} type="button" onClick={() => setOpen((current) => !current)}>
+          <span>{selected?.label || '선택'}</span>
+          <svg aria-hidden="true" viewBox="0 0 24 24">
+            <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
+          </svg>
+        </button>
+        <div className="custom-select-list" hidden={!open}>
+          {options.map((option) => (
+            <button
+              className={option.value === selected?.value ? 'selected' : ''}
+              key={option.value}
+              type="button"
+              onClick={() => {
+                onChange(option.value)
+                setOpen(false)
+              }}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </label>
+  )
 }
 
 export default function LedgerPage() {
@@ -252,6 +314,7 @@ export default function LedgerPage() {
                   displayValue={formatMonthLabel(monthValue)}
                   label="조회 월"
                   mode="month"
+                  showCalendarIcon
                   value={monthValue}
                   onChange={setMonthValue}
                 />
@@ -265,17 +328,17 @@ export default function LedgerPage() {
           </section>
 
           <div className="ledger-summary" aria-label="가계부 요약">
-            <article className="metric">
+            <article className="metric coral">
               <span>총 지출</span>
-              <strong className="expense">{money(summary.expense)}</strong>
+              <strong>{money(summary.expense)}</strong>
             </article>
-            <article className="metric">
+            <article className="metric green">
               <span>총 수입</span>
-              <strong className="income">{money(summary.income)}</strong>
+              <strong>{money(summary.income)}</strong>
             </article>
-            <article className="metric">
+            <article className={`metric ${summary.total < 0 ? 'coral' : 'blue'}`}>
               <span>합계</span>
-              <strong className={summary.total < 0 ? 'expense' : 'income'}>{money(summary.total)}</strong>
+              <strong>{money(summary.total)}</strong>
             </article>
           </div>
 
@@ -349,31 +412,30 @@ export default function LedgerPage() {
               value={form.transactionDate}
               onChange={(value) => setForm((current) => ({ ...current, transactionDate: value }))}
             />
-            <label>
-              <span>구분</span>
-              <select value={form.entryType} onChange={(event) => setForm((value) => ({ ...value, entryType: event.target.value as LedgerPayload['entryType'] }))}>
-                <option value="expense">지출</option>
-                <option value="income">수입</option>
-              </select>
-            </label>
-            <label>
-              <span>카테고리</span>
-              <select value={form.category || ''} onChange={(event) => setForm((value) => ({ ...value, category: event.target.value || null }))}>
-                {categories.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
-            </label>
-            <label>
-              <span>결제수단</span>
-              <select value={form.paymentMethod || ''} onChange={(event) => setForm((value) => ({ ...value, paymentMethod: event.target.value || null }))}>
-                {paymentMethods.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
-            </label>
-            <label>
-              <span>사용자</span>
-              <select value={form.memberName || ''} onChange={(event) => setForm((value) => ({ ...value, memberName: event.target.value || null }))}>
-                {memberOptions.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
-            </label>
+            <LedgerCustomSelect
+              label="구분"
+              options={[...LEDGER_ENTRY_TYPE_OPTIONS]}
+              value={form.entryType}
+              onChange={(value) => setForm((current) => ({ ...current, entryType: value as LedgerPayload['entryType'] }))}
+            />
+            <LedgerCustomSelect
+              label="카테고리"
+              options={LEDGER_CATEGORIES.map((item) => ({ label: item, value: item }))}
+              value={form.category || ''}
+              onChange={(value) => setForm((current) => ({ ...current, category: value || null }))}
+            />
+            <LedgerCustomSelect
+              label="결제수단"
+              options={LEDGER_PAYMENT_METHODS.map((item) => ({ label: item, value: item }))}
+              value={form.paymentMethod || ''}
+              onChange={(value) => setForm((current) => ({ ...current, paymentMethod: value || null }))}
+            />
+            <LedgerCustomSelect
+              label="사용자"
+              options={FAMILY_MEMBER_OPTIONS.map((item) => ({ label: item, value: item }))}
+              value={form.memberName || ''}
+              onChange={(value) => setForm((current) => ({ ...current, memberName: value || null }))}
+            />
             <label className="span-2">
               <span>메모</span>
               <textarea value={form.memo || ''} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} />

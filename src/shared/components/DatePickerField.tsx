@@ -11,6 +11,7 @@ interface DatePickerFieldProps {
   label?: string
   mode?: DatePickerMode
   required?: boolean
+  showCalendarIcon?: boolean
   value: string
   onChange: (value: string) => void
 }
@@ -79,7 +80,7 @@ function initialViewDate(value: string, mode: DatePickerMode) {
   return parseDateKey(value || todayKey())
 }
 
-export function DatePickerField({ className = '', displayValue, label, mode = 'date', required = false, value, onChange }: DatePickerFieldProps) {
+export function DatePickerField({ className = '', displayValue, label, mode = 'date', required = false, showCalendarIcon = false, value, onChange }: DatePickerFieldProps) {
   const [open, setOpen] = useState(false)
   const [level, setLevel] = useState<PickerLevel>(mode)
   const [viewDate, setViewDate] = useState(() => initialViewDate(value, mode))
@@ -178,9 +179,7 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
       {label ? <span>{label}{required ? <em className="fp-required-mark">*</em> : null}</span> : null}
       <button className="fp-date-picker-trigger date-picker-trigger" type="button" onClick={toggleOpen}>
         <strong>{displayValue || (mode === 'year' ? displayYear(value) : mode === 'month' ? displayMonth(value) : displayDate(value))}</strong>
-        {mode === 'month' || mode === 'year' ? (
-          <span aria-hidden="true" className="fp-date-picker-caret">▾</span>
-        ) : (
+        {showCalendarIcon || (mode !== 'month' && mode !== 'year') ? (
           <span aria-hidden="true" className="fp-date-picker-calendar-icon">
             <svg viewBox="0 0 24 24" focusable="false">
               <path d="M8 2v4" />
@@ -195,6 +194,8 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
               <path d="M16 18h.01" />
             </svg>
           </span>
+        ) : (
+          <span aria-hidden="true" className="fp-date-picker-caret">▾</span>
         )}
       </button>
       {open ? (
