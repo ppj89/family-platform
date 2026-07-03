@@ -3,7 +3,7 @@ import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, CustomSelect, DatePickerField, ToastMessage } from '../../../shared/components'
 import { COMMON_CODE_GROUPS, TRAVEL_COST_CATEGORIES } from '../../../shared/constants/commonCodes'
 import { useCommonCodeOptions } from '../../../shared/hooks'
-import { currentTimeText, todayKey } from '../../../shared/utils/date'
+import { currentTimeText, monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
 import { formatNumberInput, normalizeAmount } from '../../../shared/utils/number'
 import {
   createTravelRecord,
@@ -21,6 +21,7 @@ import type { PlaceSearchResult, TravelRecord, TravelRecordPayload, Trip, TripPa
 import './travel-page.css'
 
 type ConfirmKind = 'trip-save' | 'trip-delete' | 'record-save' | 'record-delete'
+type TravelQueryMode = 'month' | 'period'
 
 const emptyTrip = (): TripPayload => ({
   title: '',
@@ -74,13 +75,26 @@ function recordCostLine(record: TravelRecord) {
   return [record.category || '기타', money(record.amount), record.location].filter(Boolean).join(' · ')
 }
 
+function formatMonthLabel(value: string) {
+  const [year, month] = value.split('-')
+  return `${year}년 ${Number(month)}월`
+}
+
+function overlapsRange(itemStart: string, itemEnd: string, rangeStart: string, rangeEnd: string) {
+  const start = itemStart || itemEnd
+  const end = itemEnd || itemStart
+  return start <= rangeEnd && end >= rangeStart
+}
+
 export default function TravelPage() {
   const [trips, setTrips] = useState<Trip[]>([])
   const [selectedTrip, setSelectedTrip] = useState<Trip | null>(null)
   const [records, setRecords] = useState<TravelRecord[]>([])
   const [tripForm, setTripForm] = useState<TripPayload>(() => emptyTrip())
-  const [tripQueryInput, setTripQueryInput] = useState('')
-  const [tripQuery, setTripQuery] = useState('')
+  const [tripQueryMode, setTripQueryMode] = useState<TravelQueryMode>('month')
+  const [tripMonthValue, setTripMonthValue] = useState(todayKey().slice(0, 7))
+  const [tripPeriodStart, setTripPeriodStart] = useState(`${todayKey().slice(0, 7)}-01`)
+  const [tripPeriodEnd, setTripPeriodEnd] = useState(todayKey())
   const [recordForm, setRecordForm] = useState<TravelRecordPayload>(() => emptyRecord())
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null)
   const [editingRecord, setEditingRecord] = useState<TravelRecord | null>(null)
@@ -95,14 +109,17 @@ export default function TravelPage() {
   const travelCostCategoryOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.travelCostCategories, TRAVEL_COST_CATEGORIES)
 
   const sortedTripList = useMemo(() => sortedTrips(trips), [trips])
+  const tripQueryRange = useMemo(() => {
+    if (tripQueryMode === 'period') {
+      return tripPeriodStart <= tripPeriodEnd
+        ? { startDate: tripPeriodStart, endDate: tripPeriodEnd }
+        : { startDate: tripPeriodEnd, endDate: tripPeriodStart }
+    }
+    return monthRange(parseDateKey(`${tripMonthValue}-01`))
+  }, [tripMonthValue, tripPeriodEnd, tripPeriodStart, tripQueryMode])
   const tripList = useMemo(() => {
-    const query = tripQuery.trim().toLocaleLowerCase()
-    if (!query) return sortedTripList
-    return sortedTripList.filter((trip) => {
-      const range = `${trip.startDate} ${trip.endDate}`
-      return trip.title.toLocaleLowerCase().includes(query) || range.includes(query)
-    })
-  }, [sortedTripList, tripQuery])
+    return sortedTripList.filter((trip) => overlapsRange(trip.startDate, trip.endDate, tripQueryRange.startDate, tripQueryRange.endDate))
+  }, [sortedTripList, tripQueryRange])
   const recordList = useMemo(() => sortedRecords(records), [records])
   const totalAmount = useMemo(() => recordList.reduce((sum, item) => sum + (item.amount || 0), 0), [recordList])
 
@@ -192,11 +209,6 @@ export default function TravelPage() {
       return
     }
     setConfirmKind('trip-save')
-  }
-
-  function requestTripSearch(event: FormEvent) {
-    event.preventDefault()
-    setTripQuery(tripQueryInput.trim())
   }
 
   async function confirmTripSave() {
@@ -473,28 +485,30 @@ export default function TravelPage() {
         </div>
         <p>{tripList.length}개</p>
       </header>
-      <form className="fp-trip-query-form" onSubmit={requestTripSearch}>
-        <strong>여행 조회</strong>
-        <input
-          aria-label="여행 조회"
-          placeholder="여행명 또는 날짜"
-          value={tripQueryInput}
-          onChange={(event) => setTripQueryInput(event.target.value)}
-        />
-        <button className="fp-button fp-button-muted fp-trip-query-submit" type="submit">조회</button>
-        {tripQuery ? (
-          <button
-            className="fp-button fp-button-muted fp-trip-query-reset"
-            type="button"
-            onClick={() => {
-              setTripQuery('')
-              setTripQueryInput('')
-            }}
-          >
-            초기화
-          </button>
-        ) : null}
-      </form>
+      <section className="fp-trip-query-form fp-travel-filter">
+        <div className={`fp-travel-query-row ${tripQueryMode === 'period' ? 'period-mode' : 'month-mode'}`}>
+          <div className="fp-travel-query-tabs" role="tablist" aria-label="여행 조회 방식">
+            <button className={tripQueryMode === 'month' ? 'active' : ''} type="button" onClick={() => setTripQueryMode('month')}>월별</button>
+            <button className={tripQueryMode === 'period' ? 'active' : ''} type="button" onClick={() => setTripQueryMode('period')}>기간별</button>
+          </div>
+          {tripQueryMode === 'month' ? (
+            <DatePickerField
+              className="fp-travel-month-picker"
+              displayValue={formatMonthLabel(tripMonthValue)}
+              label="조회 월"
+              mode="month"
+              showCalendarIcon
+              value={tripMonthValue}
+              onChange={setTripMonthValue}
+            />
+          ) : (
+            <div className="fp-travel-period-fields">
+              <DatePickerField label="시작일" value={tripPeriodStart} onChange={setTripPeriodStart} />
+              <DatePickerField label="종료일" value={tripPeriodEnd} onChange={setTripPeriodEnd} />
+            </div>
+          )}
+        </div>
+      </section>
       <form className="fp-trip-form" onSubmit={requestTripSave}>
         <label className="fp-field trip-title-field">
           <input
@@ -544,7 +558,7 @@ export default function TravelPage() {
               </button>
             </div>
           </article>
-        )) : <p className="fp-empty-text">{tripQuery ? '조회된 여행이 없습니다.' : '등록된 여행이 없습니다.'}</p>}
+        )) : <p className="fp-empty-text">해당 기간의 여행이 없습니다.</p>}
       </div>
       {confirmKind === 'trip-save' || confirmKind === 'trip-delete' ? (
         <ConfirmDialog

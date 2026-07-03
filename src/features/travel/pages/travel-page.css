@@ -51,51 +51,105 @@
 
 .fp-trip-query-form {
   display: grid;
-  grid-template-columns: auto minmax(180px, 1fr) auto auto;
-  align-items: center;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 2px;
   border-radius: 14px;
-  padding: 10px 12px;
+  padding: 16px;
   background: #f7f8fa;
 }
 
-.fp-trip-query-form strong {
-  color: #4e5968;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
+.fp-travel-query-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
 }
 
-.fp-trip-query-form input {
-  width: 100%;
-  min-width: 0;
-  height: 40px;
-  border: 0;
+.fp-travel-query-row.period-mode {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+}
+
+.fp-travel-query-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(72px, 1fr));
+  gap: 4px;
+  min-height: 40px;
+  padding: 4px;
   border-radius: 14px;
-  padding: 0 13px;
-  background: #fff;
-  color: #191f28;
-  box-shadow: inset 0 0 0 1px #dfe5ec;
+  background: #edf0f3;
+}
+
+.fp-travel-query-tabs button {
+  height: 32px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #4e5968;
+  cursor: pointer;
   font: inherit;
   font-size: 13px;
-  font-weight: 500;
-  outline: none;
+  font-weight: 700;
 }
 
-.fp-trip-query-form input:focus {
-  box-shadow: inset 0 0 0 2px #3182f6;
+.fp-travel-query-tabs button.active {
+  background: #fff;
+  color: #1b64da;
+  box-shadow: 0 8px 20px rgba(25, 31, 40, 0.08);
 }
 
-.fp-trip-query-form button {
+.fp-travel-month-picker {
+  width: 160px;
+}
+
+.fp-travel-period-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 10px;
+  min-width: 0;
+  max-width: 320px;
+}
+
+.fp-travel-filter .fp-date-picker-field {
+  width: 160px;
+}
+
+.fp-travel-filter .fp-travel-period-fields .fp-date-picker-field {
+  width: 100%;
+}
+
+.fp-travel-filter .fp-date-picker-trigger {
   height: 40px;
   min-height: 40px;
-  border-radius: 14px;
-  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  padding: 0 12px;
+  background: #fff;
+  color: #191f28;
+  box-shadow: inset 0 0 0 1px #cfd6df;
+}
+
+.fp-travel-filter .fp-date-picker-trigger strong {
+  color: #191f28;
   font-size: 13px;
-  font-weight: 700;
-  line-height: 1;
-  white-space: nowrap;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.fp-travel-filter .fp-date-picker-calendar-icon,
+.fp-travel-filter .fp-date-picker-caret {
+  color: #3182f6;
+}
+
+.fp-trip-query-form .fp-date-picker-popover {
+  left: 0;
+  right: auto;
+}
+
+.fp-trip-query-form .fp-travel-period-fields .date-picker-field:last-child .fp-date-picker-popover {
+  right: 0;
+  left: auto;
 }
 
 .fp-trip-form {
@@ -659,12 +713,9 @@
     grid-template-columns: 1fr;
   }
 
-  .fp-trip-query-form {
-    grid-template-columns: 1fr auto auto;
-  }
-
-  .fp-trip-query-form strong {
-    grid-column: 1 / -1;
+  .fp-travel-query-row.period-mode {
+    display: flex;
+    flex-wrap: wrap;
   }
 
   .fp-trip-form {
@@ -695,14 +746,22 @@
     grid-template-columns: 1fr;
   }
 
-  .fp-trip-query-form {
-    grid-template-columns: 1fr 1fr;
+  .fp-travel-query-tabs,
+  .fp-travel-month-picker,
+  .fp-travel-period-fields,
+  .fp-travel-filter .fp-date-picker-field {
+    width: 100%;
+    max-width: none;
   }
 
-  .fp-trip-query-form input,
-  .fp-trip-query-form strong,
-  .fp-trip-query-form button {
-    grid-column: 1 / -1;
+  .fp-travel-query-row,
+  .fp-travel-query-row.period-mode {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .fp-travel-period-fields {
+    grid-template-columns: 1fr;
   }
 
   .fp-trip-form .trip-title-field,
