@@ -67,6 +67,17 @@
   box-shadow: 0 20px 46px rgba(15, 23, 42, 0.18);
 }
 
+.fp-right-rail .fp-date-picker-popover,
+.fp-ledger-entry-panel .fp-date-picker-popover,
+.fp-travel-record-form .fp-date-picker-popover,
+.fp-baby-form .fp-date-picker-popover,
+.baby-api-detail-side .fp-date-picker-popover,
+.fp-diary-form .fp-date-picker-popover,
+.fp-restaurant-form .fp-date-picker-popover {
+  right: 0;
+  left: auto;
+}
+
 .fp-date-picker-popover header {
   display: flex;
   align-items: center;
