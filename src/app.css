@@ -16,6 +16,10 @@
   color: #191f28;
 }
 
+.fp-shell.sidebar-collapsed {
+  grid-template-columns: 84px minmax(0, 1fr);
+}
+
 .fp-sidebar {
   position: sticky;
   top: 0;
@@ -26,6 +30,8 @@
   border-right: 1px solid #e2e6ea;
   padding: 22px 18px;
   background: #f7f8fa;
+  overflow-x: hidden;
+  transition: padding 0.18s ease;
 }
 
 .fp-brand {
@@ -68,6 +74,31 @@
   font-weight: 900;
 }
 
+.fp-sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #4e5968;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fp-sidebar-toggle-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.fp-sidebar-toggle-text {
+  line-height: 1;
+}
+
 .fp-nav {
   display: grid;
   gap: 4px;
@@ -85,7 +116,7 @@
   background: transparent;
   color: #4e5968;
   font: inherit;
-  font-weight: 700;
+  font-weight: 800;
   text-align: left;
   cursor: pointer;
 }
@@ -117,6 +148,7 @@
   display: block;
   min-width: 0;
   line-height: 1.1;
+  font-weight: 800;
 }
 
 .fp-nav button.active .fp-nav-icon,
@@ -136,6 +168,43 @@
 
 .fp-community-letter {
   line-height: 1;
+}
+
+.fp-shell.sidebar-collapsed .fp-sidebar {
+  align-items: center;
+  padding: 22px 12px;
+}
+
+.fp-shell.sidebar-collapsed .fp-brand {
+  justify-content: center;
+  gap: 0;
+  width: 100%;
+  padding: 0 0 8px;
+}
+
+.fp-shell.sidebar-collapsed .fp-brand > div,
+.fp-shell.sidebar-collapsed .fp-sidebar-toggle-text,
+.fp-shell.sidebar-collapsed .fp-nav-label {
+  display: none;
+}
+
+.fp-shell.sidebar-collapsed .fp-sidebar-toggle {
+  width: 42px;
+  min-height: 34px;
+}
+
+.fp-shell.sidebar-collapsed .fp-nav {
+  width: 100%;
+}
+
+.fp-shell.sidebar-collapsed .fp-nav button {
+  justify-content: center;
+  min-height: 46px;
+  padding: 0;
+}
+
+.fp-shell.sidebar-collapsed .fp-nav-icon {
+  flex: 0 0 auto;
 }
 
 .fp-main {
@@ -627,10 +696,34 @@
     grid-template-columns: 1fr;
   }
 
+  .fp-shell.sidebar-collapsed {
+    grid-template-columns: 1fr;
+  }
+
   .fp-sidebar {
     position: static;
     height: auto;
     padding: 14px;
+  }
+
+  .fp-shell.sidebar-collapsed .fp-sidebar {
+    align-items: stretch;
+    padding: 14px;
+  }
+
+  .fp-shell.sidebar-collapsed .fp-brand {
+    justify-content: flex-start;
+    gap: 12px;
+    padding-bottom: 2px;
+  }
+
+  .fp-shell.sidebar-collapsed .fp-brand > div,
+  .fp-shell.sidebar-collapsed .fp-nav-label {
+    display: block;
+  }
+
+  .fp-sidebar-toggle {
+    display: none;
   }
 
   .fp-brand {

@@ -197,6 +197,9 @@ function AccountInfoDialog({
 
 export default function App() {
   const [activeMenu, setActiveMenu] = useState('홈')
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
+    () => window.localStorage.getItem('family-platform-sidebar-collapsed') === 'true',
+  )
   const [accountInfo, setAccountInfo] = useState<StoredUser | null>(getStoredUser())
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const [isAccountLoading, setIsAccountLoading] = useState(false)
@@ -242,8 +245,16 @@ export default function App() {
     }
   }
 
+  function toggleSidebar() {
+    setIsSidebarCollapsed((previous) => {
+      const next = !previous
+      window.localStorage.setItem('family-platform-sidebar-collapsed', String(next))
+      return next
+    })
+  }
+
   return (
-    <div className="fp-shell">
+    <div className={['fp-shell', isSidebarCollapsed ? 'sidebar-collapsed' : ''].filter(Boolean).join(' ')}>
       <aside className="fp-sidebar">
         <div className="fp-brand">
           <span>FP</span>
@@ -252,12 +263,26 @@ export default function App() {
             <small>가족 운영 워크스페이스</small>
           </div>
         </div>
+        <button
+          className="fp-sidebar-toggle"
+          type="button"
+          aria-expanded={!isSidebarCollapsed}
+          aria-label={isSidebarCollapsed ? '메뉴 열기' : '메뉴 닫기'}
+          title={isSidebarCollapsed ? '메뉴 열기' : '메뉴 닫기'}
+          onClick={toggleSidebar}
+        >
+          <span className="fp-sidebar-toggle-icon" aria-hidden="true">
+            {isSidebarCollapsed ? '›' : '‹'}
+          </span>
+          <span className="fp-sidebar-toggle-text">{isSidebarCollapsed ? '메뉴 열기' : '메뉴 닫기'}</span>
+        </button>
         <nav className="fp-nav" aria-label="주 메뉴">
           {menuItems.map((item) => (
             <button
               className={item.label === activeMenu ? 'active' : ''}
               key={item.label}
               type="button"
+              title={item.label}
               onClick={() => setActiveMenu(item.label)}
             >
               <span className={['fp-nav-icon', item.iconClass].filter(Boolean).join(' ')}>{item.icon}</span>
