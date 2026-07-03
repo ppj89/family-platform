@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, CustomSelect, DatePickerField, ToastMessage } from '../../../shared/components'
 import { COMMON_CODE_GROUPS, DIARY_MOODS, DIARY_WEATHER_OPTIONS, SELECT_PLACEHOLDER_OPTION } from '../../../shared/constants/commonCodes'
@@ -57,8 +57,10 @@ export default function DiaryPage() {
   const [editing, setEditing] = useState<DiaryItem | null>(null)
   const [pendingDelete, setPendingDelete] = useState<DiaryItem | null>(null)
   const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null)
+  const [showDiaryFormDialog, setShowDiaryFormDialog] = useState(false)
   const [loading, setLoading] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const formRef = useRef<HTMLFormElement | null>(null)
 
   const range = useMemo(() => monthRange(monthDate), [monthDate])
   const diaryList = useMemo(() => sortDiaries(items), [items])
@@ -82,6 +84,14 @@ export default function DiaryPage() {
   function resetForm() {
     setEditing(null)
     setForm(emptyPayload())
+    setShowDiaryFormDialog(false)
+  }
+
+  function startCreate() {
+    setEditing(null)
+    setForm(emptyPayload())
+    setShowDiaryFormDialog(true)
+    window.setTimeout(() => formRef.current?.querySelector('input')?.focus(), 0)
   }
 
   function startEdit(item: DiaryItem) {
@@ -96,6 +106,8 @@ export default function DiaryPage() {
       maxTemperature: item.maxTemperature ?? null,
       mediaUrls: item.mediaUrls || [],
     })
+    setShowDiaryFormDialog(true)
+    window.setTimeout(() => formRef.current?.querySelector('input')?.focus(), 0)
   }
 
   function requestSave(event: FormEvent) {
@@ -161,6 +173,10 @@ export default function DiaryPage() {
           <h2>일기</h2>
           <p>{diaryList.length}건</p>
         </div>
+        <button className="fp-button fp-button-primary fp-diary-add-button" type="button" onClick={startCreate}>일기 추가</button>
+      </header>
+
+      <div className="fp-diary-toolbar">
         <div className="fp-diary-actions">
           <DatePickerField
             className="fp-diary-month-picker"
@@ -173,7 +189,7 @@ export default function DiaryPage() {
           />
           <button className="fp-button fp-button-primary fp-diary-search-button" type="button" onClick={reload}>조회</button>
         </div>
-      </header>
+      </div>
 
       <div className="fp-diary-layout">
         <section className="fp-diary-list" aria-label="일기 목록">
@@ -201,11 +217,20 @@ export default function DiaryPage() {
             </article>
           )) : <p className="fp-empty-text">해당 월의 일기가 없습니다.</p>}
         </section>
+      </div>
 
-        <form className="fp-diary-form fp-card" onSubmit={requestSave}>
+      {showDiaryFormDialog ? (
+        <div
+          className="fp-diary-form-backdrop"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) resetForm()
+          }}
+        >
+          <form className="fp-diary-form fp-diary-form-dialog fp-card" ref={formRef} onSubmit={requestSave}>
           <header>
             <h3>{editing ? '일기 수정' : '일기 추가'}</h3>
-            {editing ? <button className="fp-button fp-button-muted fp-diary-cancel-button" type="button" onClick={resetForm}>취소</button> : null}
+            <button className="fp-button fp-button-muted fp-diary-cancel-button" type="button" onClick={resetForm}>취소</button>
           </header>
           <div className="fp-form-grid">
             <label className="fp-field span-2">
@@ -246,8 +271,9 @@ export default function DiaryPage() {
             </label>
           </div>
           <button className="fp-button fp-button-primary fp-diary-submit-button" type="submit">{editing ? '수정' : '저장'}</button>
-        </form>
-      </div>
+          </form>
+        </div>
+      ) : null}
 
       {confirmKind ? (
         <ConfirmDialog

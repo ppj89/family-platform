@@ -39,6 +39,16 @@
   gap: 10px;
 }
 
+.fp-diary-toolbar {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 18px;
+  border-radius: 12px;
+  padding: 12px;
+  background: #f6f8fb;
+  box-shadow: inset 0 0 0 1px #dfe5ec;
+}
+
 .fp-diary .fp-diary-actions .fp-diary-month-picker {
   width: 164px;
 }
@@ -58,12 +68,19 @@
   font-weight: 800;
 }
 
+.fp-diary .fp-diary-add-button {
+  height: 40px;
+  border-radius: 12px;
+  padding: 0 16px;
+  font-size: 14px;
+  font-weight: 800;
+}
+
 .fp-diary-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 18px;
-  margin-top: 20px;
+  margin-top: 14px;
 }
 
 .fp-diary-list {
@@ -152,6 +169,23 @@
   border-radius: 14px;
   background: #fff;
   box-shadow: inset 0 0 0 1px #dfe5ec;
+}
+
+.fp-diary-form-backdrop {
+  position: fixed;
+  z-index: 100020;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.fp-diary-form-dialog {
+  width: min(420px, calc(100vw - 36px));
+  max-height: min(86vh, 760px);
+  overflow: auto;
+  box-shadow: 0 22px 60px rgba(15, 23, 42, 0.22), inset 0 0 0 1px #dfe5ec;
 }
 
 .fp-diary-form header {
@@ -346,6 +380,11 @@
   box-shadow: inset 0 0 0 1px #454d58;
 }
 
+.theme-dark .fp-diary-toolbar {
+  background: #2f3540;
+  box-shadow: inset 0 0 0 1px #454d58;
+}
+
 .theme-dark .fp-diary-list .fp-empty-text,
 .theme-dark .fp-diary-row,
 .theme-dark .fp-diary-form input,
@@ -369,20 +408,13 @@
 
 @media (min-width: 1121px) and (max-width: 1368px) {
   .fp-diary-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
     max-width: 980px;
-    gap: 16px;
-  }
-
-  .fp-diary-form {
-    max-width: 300px;
-    padding: 18px;
   }
 }
 
 @media (max-width: 1100px) {
   .fp-diary-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -406,13 +438,16 @@
   }
 
   .fp-diary-header {
-    display: grid;
-    grid-template-columns: 1fr;
+    align-items: center;
   }
 
   .fp-diary-actions {
     grid-template-columns: minmax(0, 1fr) 56px;
     width: 100%;
+  }
+
+  .fp-diary-toolbar {
+    display: block;
   }
 
   .fp-diary .fp-diary-actions .fp-diary-month-picker {
