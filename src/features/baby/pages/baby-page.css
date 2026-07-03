@@ -30,9 +30,9 @@
 
 .fp-baby-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
-  gap: 18px;
+  gap: 12px;
 }
 
 .baby-list-grid {
@@ -756,6 +756,16 @@
   box-shadow: 0 22px 60px rgba(15, 23, 42, .22);
 }
 
+.baby-form-dialog {
+  width: min(520px, calc(100vw - 36px));
+  padding: 0;
+}
+
+.baby-form-dialog .baby-form {
+  background: #ffffff;
+  box-shadow: none;
+}
+
 .baby-profile-edit-dialog header {
   display: flex;
   align-items: flex-start;
@@ -861,14 +871,18 @@
 }
 
 @media (min-width: 1121px) and (max-width: 1368px) {
-  .fp-baby-layout,
+  .fp-baby-layout {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 980px;
+    gap: 16px;
+  }
+
   .baby-api-detail-layout {
     grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
     max-width: 980px;
     gap: 16px;
   }
 
-  .fp-baby-form,
   .baby-api-detail-side {
     max-width: 300px;
     padding: 18px;
@@ -885,7 +899,7 @@
 
 @media (max-width: 980px) {
   .fp-baby-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 310px);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .baby-api-detail-layout {

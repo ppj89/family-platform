@@ -149,6 +149,7 @@ export default function BabyPage() {
   const [pendingGrowthDelete, setPendingGrowthDelete] = useState<BabyRecord | null>(null)
   const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null)
   const [showGrowthHistory, setShowGrowthHistory] = useState(false)
+  const [showBabyFormDialog, setShowBabyFormDialog] = useState(false)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const babyFormRef = useRef<HTMLFormElement>(null)
@@ -220,12 +221,21 @@ export default function BabyPage() {
       latestHeightCm: baby.latestHeightCm || null,
       latestWeightKg: baby.latestWeightKg || null,
     })
+    setShowBabyFormDialog(true)
+    scrollAndFocus(babyFormRef)
+  }
+
+  function startBabyCreate() {
+    setEditingBaby(null)
+    setBabyForm(emptyBaby())
+    setShowBabyFormDialog(true)
     scrollAndFocus(babyFormRef)
   }
 
   function resetBabyForm() {
     setEditingBaby(null)
     setBabyForm(emptyBaby())
+    setShowBabyFormDialog(false)
   }
 
   function requestBabySave(event: FormEvent) {
@@ -445,7 +455,11 @@ export default function BabyPage() {
           <h2>육아 기록</h2>
           <p>수유, 배변, 성장, 병원 기록</p>
         </div>
-        {selectedBaby ? <button className="fp-button fp-button-muted back-button" type="button" onClick={() => setSelectedBaby(null)}>목록</button> : null}
+        {selectedBaby ? (
+          <button className="fp-button fp-button-muted back-button" type="button" onClick={() => setSelectedBaby(null)}>목록</button>
+        ) : (
+          <button className="fp-button fp-button-primary baby-add-button" type="button" onClick={startBabyCreate}>아이 추가</button>
+        )}
       </header>
       {message ? <p className="fp-message">{message}</p> : null}
 
@@ -477,7 +491,6 @@ export default function BabyPage() {
               </article>
             )) : <p className="fp-empty-text api-empty-row">등록된 아이가 없습니다.</p>}
           </section>
-          <BabyForm formRef={babyFormRef} form={babyForm} editing={Boolean(editingBaby)} genderOptions={genderOptions} onSubmit={requestBabySave} onReset={resetBabyForm} setForm={setBabyForm} />
         </div>
       ) : (
         <section className="baby-detail baby-api-detail">
@@ -567,6 +580,24 @@ export default function BabyPage() {
           </div>
         </section>
       )}
+
+      {showBabyFormDialog ? (
+        <div className="baby-profile-edit-backdrop baby-form-dialog-backdrop" role="presentation" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) resetBabyForm()
+        }}>
+          <section className="baby-profile-edit-dialog baby-form-dialog" role="dialog" aria-modal="true" aria-label={editingBaby ? '아이 정보 수정' : '아이 추가'}>
+            <BabyForm
+              formRef={babyFormRef}
+              form={babyForm}
+              editing={Boolean(editingBaby)}
+              genderOptions={genderOptions}
+              onSubmit={requestBabySave}
+              onReset={resetBabyForm}
+              setForm={setBabyForm}
+            />
+          </section>
+        </div>
+      ) : null}
 
       {showGrowthHistory ? (
         <div className="baby-profile-edit-backdrop baby-growth-history-backdrop" role="presentation" onMouseDown={(event) => {
@@ -729,7 +760,7 @@ function BabyForm({ formRef, form, editing, genderOptions, setForm, onSubmit, on
     <form className="fp-baby-form baby-form" ref={formRef} onSubmit={onSubmit}>
       <header>
         <h3>{editing ? '아이 정보 수정' : '아이 추가'}</h3>
-        {editing ? <button className="fp-button fp-button-muted" type="button" onClick={onReset}>취소</button> : null}
+        <button className="fp-button fp-button-muted" type="button" onClick={onReset}>취소</button>
       </header>
       <div className="fp-form-grid baby-profile-form">
         <label className="fp-field form-field">
