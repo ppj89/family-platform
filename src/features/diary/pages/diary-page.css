@@ -367,6 +367,19 @@
   color: #f3f5f7;
 }
 
+@media (min-width: 1121px) and (max-width: 1368px) {
+  .fp-diary-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
+    max-width: 980px;
+    gap: 16px;
+  }
+
+  .fp-diary-form {
+    max-width: 300px;
+    padding: 18px;
+  }
+}
+
 @media (max-width: 1100px) {
   .fp-diary-layout {
     grid-template-columns: minmax(0, 1fr) minmax(300px, 360px);

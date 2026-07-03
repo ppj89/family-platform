@@ -415,6 +415,20 @@
   color: #ff3b57;
 }
 
+@media (min-width: 1181px) and (max-width: 1368px) {
+  .fp-community-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
+    max-width: 980px;
+    gap: 16px;
+  }
+
+  .fp-community-form,
+  .fp-community-detail {
+    max-width: 300px;
+    padding: 18px;
+  }
+}
+
 @media (max-width: 1180px) {
   .fp-community-layout {
     grid-template-columns: 1fr;

@@ -860,9 +860,26 @@
   box-shadow: inset 0 0 0 1px #454d58;
 }
 
+@media (min-width: 1121px) and (max-width: 1368px) {
+  .fp-baby-layout,
+  .baby-api-detail-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
+    max-width: 980px;
+    gap: 16px;
+  }
+
+  .fp-baby-form,
+  .baby-api-detail-side {
+    max-width: 300px;
+    padding: 18px;
+  }
+}
+
 @media (max-width: 1180px) {
   .baby-api-detail-layout {
-    grid-template-columns: minmax(300px, 1fr) minmax(280px, 330px);
+    grid-template-columns: minmax(300px, 1fr) minmax(270px, 300px);
+    max-width: 980px;
+    gap: 16px;
   }
 }
 

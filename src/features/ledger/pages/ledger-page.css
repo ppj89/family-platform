@@ -711,6 +711,23 @@
   gap: 10px;
 }
 
+@media (min-width: 1121px) and (max-width: 1368px) {
+  .fp-ledger.content-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
+    max-width: 980px;
+    gap: 16px;
+  }
+
+  .fp-ledger-entry-panel {
+    max-width: 300px;
+    padding: 18px;
+  }
+
+  .ledger-form-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 @media (min-width: 621px) and (max-width: 1120px) {
   .fp-ledger.content-grid {
     grid-template-columns: minmax(0, 1fr);

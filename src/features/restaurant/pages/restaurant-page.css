@@ -458,9 +458,24 @@
   font-weight: 900;
 }
 
+@media (min-width: 1121px) and (max-width: 1368px) {
+  .fp-restaurant-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
+    max-width: 980px;
+    gap: 16px;
+  }
+
+  .fp-restaurant-form {
+    max-width: 300px;
+    padding: 18px;
+  }
+}
+
 @media (max-width: 1180px) {
   .fp-restaurant-layout {
-    grid-template-columns: minmax(0, 1fr) 340px;
+    grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
+    max-width: 980px;
+    gap: 16px;
   }
 }
 

@@ -269,6 +269,18 @@
   text-align: center;
 }
 
+@media (min-width: 1121px) and (max-width: 1368px) {
+  .fp-family-layout {
+    grid-template-columns: minmax(0, 1fr) minmax(280px, 320px);
+    max-width: 980px;
+    gap: 16px;
+  }
+
+  .fp-family-panel {
+    padding: 18px;
+  }
+}
+
 @media (max-width: 1100px) {
   .fp-family-layout {
     grid-template-columns: minmax(0, 1fr) minmax(320px, 380px);
