@@ -66,6 +66,12 @@
   gap: 10px;
 }
 
+.fp-ledger-query-row.period-mode {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+}
+
 .fp-ledger-query-tabs {
   display: grid;
   grid-template-columns: repeat(2, minmax(72px, 1fr));
@@ -102,7 +108,8 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(140px, 1fr));
   gap: 10px;
-  min-width: min(100%, 330px);
+  min-width: 0;
+  max-width: 320px;
 }
 
 .fp-ledger .date-picker-field,
@@ -726,6 +733,15 @@
   .ledger-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .fp-ledger-query-row.period-mode {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .fp-ledger-period-fields {
+    max-width: 312px;
+    gap: 8px;
+  }
 }
 
 @media (min-width: 621px) and (max-width: 1120px) {
@@ -765,6 +781,11 @@
 
   .fp-ledger-query-row {
     align-items: stretch;
+  }
+
+  .fp-ledger-query-row.period-mode {
+    display: flex;
+    flex-wrap: wrap;
   }
 
   .fp-ledger-query-tabs,

@@ -304,7 +304,7 @@ export default function LedgerPage() {
           </header>
 
           <section className="filter-panel fp-ledger-filter">
-            <div className="fp-ledger-query-row">
+            <div className={`fp-ledger-query-row ${queryMode === 'period' ? 'period-mode' : 'month-mode'}`}>
               <div className="fp-ledger-query-tabs" role="tablist" aria-label="가계부 조회 방식">
                 <button className={queryMode === 'month' ? 'active' : ''} type="button" onClick={() => setQueryMode('month')}>월별</button>
                 <button className={queryMode === 'period' ? 'active' : ''} type="button" onClick={() => setQueryMode('period')}>기간별</button>

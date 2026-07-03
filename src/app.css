@@ -879,6 +879,12 @@
   letter-spacing: 0;
 }
 
+.fp-shell .date-picker-trigger .fp-date-picker-calendar-icon,
+.fp-shell .date-picker-trigger .fp-date-picker-calendar-icon svg,
+.fp-shell .date-picker-trigger .fp-date-picker-caret {
+  color: #3182f6 !important;
+}
+
 .fp-shell .fp-field input:focus,
 .fp-shell .fp-field textarea:focus,
 .fp-shell .fp-field select:focus,
