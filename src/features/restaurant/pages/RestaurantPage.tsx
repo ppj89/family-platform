@@ -223,11 +223,22 @@ export default function RestaurantPage() {
           <div className="fp-restaurant-list">
             {restaurantList.length ? restaurantList.map((item) => (
               <article className="fp-restaurant-row" key={item.id}>
+                <div className="fp-restaurant-empty-photo" aria-hidden="true">
+                  <span>맛집</span>
+                </div>
                 <div className="fp-restaurant-row-main">
-                  <strong>{item.name}</strong>
-                  <time>{formatDate(item.visitDate)}</time>
-                  <p>{[item.menu, item.location || item.address].filter(Boolean).join(' · ') || '상세 정보 없음'}</p>
-                  <small>{[formatMoney(item.price), item.rating ? `${item.rating}점` : '', item.scope].filter(Boolean).join(' · ')}</small>
+                  <div className="fp-restaurant-row-top">
+                    <strong>{item.name || '상호명'}</strong>
+                    {item.rating ? <span>★ {item.rating}</span> : null}
+                  </div>
+                  <p>{item.menu || item.location || item.address || '대표 메뉴를 입력해주세요.'}</p>
+                  <div className="fp-restaurant-meta">
+                    {[formatDate(item.visitDate), formatMoney(item.price), item.scope].filter(Boolean).map((text, index) => (
+                      <span key={`${text}-${index}`}>{text}</span>
+                    ))}
+                  </div>
+                  {item.memo || item.address ? <em>{item.memo || item.address}</em> : null}
+                  {item.location || item.address ? <small>{item.location || item.address}</small> : null}
                 </div>
                 <div className="fp-row-actions">
                   <button type="button" onClick={() => startEdit(item)}>수정</button>

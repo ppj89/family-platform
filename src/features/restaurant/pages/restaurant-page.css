@@ -4,9 +4,9 @@
 
 .fp-restaurant-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 368px;
+  grid-template-columns: minmax(0, 1fr) 360px;
   align-items: start;
-  gap: 20px;
+  gap: 16px;
 }
 
 .fp-restaurant-main,
@@ -19,13 +19,13 @@
 
 .fp-restaurant-main {
   min-height: calc(100vh - 180px);
-  padding: 18px;
+  padding: 20px;
 }
 
 .fp-restaurant-form {
   display: grid;
-  gap: 16px;
-  padding: 18px;
+  gap: 14px;
+  padding: 20px;
 }
 
 .fp-restaurant-card-header,
@@ -119,75 +119,130 @@
 }
 
 .fp-restaurant-list > .fp-empty-text {
+  display: grid;
+  min-height: 58px;
   margin: 2px 0 0;
+  align-items: center;
+  border: 1px solid #dfe6ef;
+  border-radius: 8px;
   color: #4e5968;
   font-size: 15px;
   font-weight: 500;
+  text-align: center;
 }
 
 .fp-restaurant-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: 78px minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
-  min-height: 74px;
-  padding: 13px 16px;
+  min-height: 112px;
+  padding: 14px;
   border-radius: 8px;
   background: #f6f8fb;
 }
 
+.fp-restaurant-empty-photo {
+  display: grid;
+  width: 78px;
+  height: 62px;
+  place-items: center;
+  border-radius: 8px;
+  background: #e9eef4;
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .fp-restaurant-row-main {
   display: grid;
-  gap: 5px;
+  gap: 6px;
   min-width: 0;
 }
 
-.fp-restaurant-row strong,
-.fp-restaurant-row time,
+.fp-restaurant-row-top,
 .fp-restaurant-row p,
+.fp-restaurant-row em,
 .fp-restaurant-row small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.fp-restaurant-row strong {
-  color: #0f172a;
-  font-size: 16px;
-  font-weight: 900;
-  line-height: 1.25;
+.fp-restaurant-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
-.fp-restaurant-row time,
+.fp-restaurant-row-top strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #0f172a;
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-restaurant-row-top span {
+  color: #1b64da;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
 .fp-restaurant-row p,
+.fp-restaurant-row em,
 .fp-restaurant-row small {
   color: #526070;
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   line-height: 1.3;
 }
 
 .fp-restaurant-row p,
+.fp-restaurant-row em,
 .fp-restaurant-row small {
   margin: 0;
 }
 
+.fp-restaurant-row em {
+  font-style: normal;
+}
+
+.fp-restaurant-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+.fp-restaurant-meta span {
+  color: #526070;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
 .fp-restaurant-form .fp-button-muted {
   min-width: auto;
-  height: 40px;
-  padding: 0 16px;
+  height: 34px;
+  padding: 0 13px;
   border: 0;
   border-radius: 12px;
   background: #eff6ff;
   color: #0064ff;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 800;
 }
 
 .fp-restaurant-form .fp-form-grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 13px 12px;
+  gap: 12px 10px;
 }
 
 .fp-restaurant-form .span-2 {
@@ -196,18 +251,18 @@
 
 .fp-restaurant-form .fp-field {
   display: grid;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
   color: #4e5968;
-  font-size: 13px;
-  font-weight: 800;
-  line-height: 1.2;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .fp-restaurant-form .fp-field > span {
-  color: #4e5968;
-  font-size: 13px;
-  font-weight: 800;
+  color: #4e5968 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
 }
 
 .fp-restaurant-form .fp-required-mark {
@@ -223,12 +278,12 @@
 .fp-restaurant-form .fp-date-picker-trigger {
   width: 100%;
   min-width: 0;
-  border: 1px solid #cfd9e6;
-  border-radius: 13px;
-  background: #fff;
-  color: #0f172a;
-  font-size: 15px;
-  font-weight: 700;
+  border: 1px solid #dfe5ec !important;
+  border-radius: 14px !important;
+  background: #fff !important;
+  color: #191f28 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
   letter-spacing: 0;
   box-shadow: none;
 }
@@ -236,13 +291,15 @@
 .fp-restaurant-form input,
 .fp-restaurant-form .fp-custom-select-trigger,
 .fp-restaurant-form .fp-date-picker-trigger {
-  height: 48px;
-  padding: 0 14px;
+  height: 42px;
+  min-height: 42px;
+  padding: 0 12px;
 }
 
 .fp-restaurant-form textarea {
-  min-height: 122px;
-  padding: 14px;
+  min-height: 104px;
+  padding: 12px;
+  line-height: 1.5;
   resize: vertical;
 }
 
@@ -266,9 +323,9 @@
 .fp-restaurant-form .fp-date-picker-trigger strong,
 .fp-restaurant-form .fp-custom-select-trigger span {
   overflow: hidden;
-  color: #0f172a;
-  font-size: 15px;
-  font-weight: 700;
+  color: #191f28 !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -326,13 +383,13 @@
 }
 
 .fp-restaurant-form .fp-custom-select-list button {
-  min-height: 44px;
+  min-height: 40px;
   padding: 0 14px;
   border: 0;
   background: #fff;
   color: #0f172a;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 13px;
+  font-weight: 600;
   text-align: left;
 }
 
@@ -460,21 +517,21 @@
 
 @media (min-width: 1121px) and (max-width: 1368px) {
   .fp-restaurant-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
-    max-width: 980px;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 320px);
+    max-width: 100%;
     gap: 16px;
   }
 
   .fp-restaurant-form {
-    max-width: 300px;
+    max-width: 320px;
     padding: 18px;
   }
 }
 
 @media (max-width: 1180px) {
   .fp-restaurant-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
-    max-width: 980px;
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 320px);
+    max-width: 100%;
     gap: 16px;
   }
 }
@@ -500,15 +557,22 @@
   }
 
   .fp-restaurant-form .fp-form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .fp-restaurant-form .span-2 {
-    grid-column: auto;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 
   .fp-restaurant-row {
-    grid-template-columns: 1fr;
+    grid-template-columns: 58px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .fp-restaurant-empty-photo {
+    width: 58px;
+    height: 54px;
+  }
+
+  .fp-restaurant-row .fp-row-actions {
+    grid-column: 1 / -1;
+    justify-self: stretch;
   }
 
   .fp-restaurant-summary {
