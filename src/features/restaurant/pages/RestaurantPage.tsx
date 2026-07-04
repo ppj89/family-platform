@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, CustomSelect, DatePickerField, ToastMessage } from '../../../shared/components'
-import { COMMON_CODE_GROUPS, RESTAURANT_PRICE_OPTIONS, RESTAURANT_RATING_OPTIONS, RESTAURANT_SCOPE_OPTIONS } from '../../../shared/constants/commonCodes'
+import { COMMON_CODE_GROUPS, RESTAURANT_SCOPE_OPTIONS } from '../../../shared/constants/commonCodes'
 import { useCommonCodeSelectOptions } from '../../../shared/hooks/useCommonCodeOptions'
 import { todayKey } from '../../../shared/utils/date'
 import TravelMap from '../../travel/components/TravelMap'
@@ -47,8 +47,6 @@ function sortRestaurants(items: RestaurantItem[]) {
 }
 
 export default function RestaurantPage() {
-  const priceOptions = useCommonCodeSelectOptions(COMMON_CODE_GROUPS.restaurantPrices, RESTAURANT_PRICE_OPTIONS)
-  const ratingOptions = useCommonCodeSelectOptions(COMMON_CODE_GROUPS.restaurantRatings, RESTAURANT_RATING_OPTIONS)
   const scopeOptions = useCommonCodeSelectOptions(COMMON_CODE_GROUPS.restaurantScopes, RESTAURANT_SCOPE_OPTIONS)
   const [items, setItems] = useState<RestaurantItem[]>([])
   const [form, setForm] = useState<RestaurantPayload>(() => emptyPayload())
@@ -274,19 +272,23 @@ export default function RestaurantPage() {
               <input value={form.menu || ''} onChange={(event) => setForm((value) => ({ ...value, menu: event.target.value }))} />
             </label>
 
-            <CustomSelect
-              label="가격"
-              options={priceOptions}
-              value={form.price == null ? '' : String(form.price)}
-              onChange={(value) => setForm((current) => ({ ...current, price: numberOrNull(value) }))}
-            />
+            <label className="fp-field">
+              <span>가격</span>
+              <input
+                inputMode="numeric"
+                value={form.price == null ? '' : Math.round(form.price).toLocaleString('ko-KR')}
+                onChange={(event) => setForm((current) => ({ ...current, price: numberOrNull(event.target.value) }))}
+              />
+            </label>
 
-            <CustomSelect
-              label="별점"
-              options={ratingOptions}
-              value={form.rating == null ? '' : String(form.rating)}
-              onChange={(value) => setForm((current) => ({ ...current, rating: numberOrNull(value) }))}
-            />
+            <label className="fp-field">
+              <span>별점</span>
+              <input
+                inputMode="decimal"
+                value={form.rating == null ? '' : String(form.rating)}
+                onChange={(event) => setForm((current) => ({ ...current, rating: numberOrNull(event.target.value) }))}
+              />
+            </label>
 
             <DatePickerField
               className="fp-restaurant-date span-2"
@@ -338,7 +340,10 @@ export default function RestaurantPage() {
             </label>
           </div>
 
-          <button className="fp-button fp-button-primary" type="submit">{editing ? '저장' : '추가'}</button>
+          <div className="fp-restaurant-form-actions">
+            <button className="fp-button fp-button-danger" type="button" onClick={resetForm}>초기화</button>
+            <button className="fp-button fp-button-primary" type="submit">{editing ? '저장' : '추가'}</button>
+          </div>
         </form>
       </div>
 
