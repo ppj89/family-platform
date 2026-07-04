@@ -68,7 +68,7 @@ docker compose -p "$PROJECT_NAME" -f docker-compose.prod.yml --env-file "$ENV_FI
 
 for _ in $(seq 1 60); do
   if curl -fsS "$WEB_BASE_URL/health" >/dev/null 2>&1 && curl -fsS "$WEB_BASE_URL/api/health" >/dev/null 2>&1; then
-    API_BASE_URL="$WEB_BASE_URL/api" PYTHON_BIN="$PYTHON_BIN" sh scripts/test-go-api.sh
+    API_BASE_URL="$WEB_BASE_URL/api" PYTHON_BIN="$PYTHON_BIN" DB_CONTAINER_NAME="${PROJECT_NAME}-db" sh scripts/test-go-api.sh
     echo "Production stack smoke test passed at $WEB_BASE_URL"
     exit 0
   fi

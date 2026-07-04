@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"bytes"
@@ -928,12 +928,16 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
 	}
+	var sessionExpiresAt sql.NullTime
+	if sessionID != "" {
+		sessionExpiresAt = sql.NullTime{Time: a.sessionExpiresAt(), Valid: true}
+	}
 	var userID int64
 	err = tx.QueryRow(r.Context(), `
-		insert into app_users (created_at, email, nickname, platform_admin, password_hash, active_session_id, failed_login_attempts, email_verification_required, email_verified_at)
-		values (now(), $1, $2, $3, $4, $5, 0, $6, case when $6 then null else now() end)
+		insert into app_users (created_at, email, nickname, platform_admin, password_hash, active_session_id, active_session_expires_at, failed_login_attempts, email_verification_required, email_verified_at)
+		values (now(), $1, $2, $3, $4, $5, $6, 0, $7, case when $7 then null else now() end)
 		returning id
-	`, email, nickname, userCount == 0, string(passwordHash), sessionID, requiresEmailVerification).Scan(&userID)
+	`, email, nickname, userCount == 0, string(passwordHash), sessionID, sessionExpiresAt, requiresEmailVerification).Scan(&userID)
 	if err != nil {
 		writeError(w, http.StatusConflict, "email is already registered")
 		return
@@ -982,18 +986,19 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 	var nickname, passwordHash, accountEmail, accountLoginID string
 	var platformAdmin bool
 	var activeSessionID sql.NullString
+	var activeSessionExpiresAt sql.NullTime
 	var lockedUntil sql.NullTime
 	var emailVerifiedAt sql.NullTime
 	var emailVerificationRequired bool
 	var failedAttempts int
 	err := a.db.QueryRow(r.Context(), `
-		select id, coalesce(email, ''), coalesce(login_id, ''), nickname, platform_admin, coalesce(password_hash, ''), active_session_id, locked_until, coalesce(failed_login_attempts, 0), email_verified_at, coalesce(email_verification_required, false)
+		select id, coalesce(email, ''), coalesce(login_id, ''), nickname, platform_admin, coalesce(password_hash, ''), active_session_id, active_session_expires_at, locked_until, coalesce(failed_login_attempts, 0), email_verified_at, coalesce(email_verification_required, false)
 		from app_users
 		where lower(email) = lower($1)
 		   or (platform_admin = true and lower(login_id) = lower($2))
 		order by case when lower(email) = lower($1) then 0 else 1 end
 		limit 1
-	`, email, loginID).Scan(&userID, &accountEmail, &accountLoginID, &nickname, &platformAdmin, &passwordHash, &activeSessionID, &lockedUntil, &failedAttempts, &emailVerifiedAt, &emailVerificationRequired)
+	`, email, loginID).Scan(&userID, &accountEmail, &accountLoginID, &nickname, &platformAdmin, &passwordHash, &activeSessionID, &activeSessionExpiresAt, &lockedUntil, &failedAttempts, &emailVerifiedAt, &emailVerificationRequired)
 	loginName := firstNonEmpty(accountEmail, accountLoginID, identifier)
 	if err != nil {
 		a.recordLoginHistory(r.Context(), nil, identifier, "password", "LOGIN", "FAIL", "invalid identifier")
@@ -1025,17 +1030,21 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusForbidden, "email verification required")
 		return
 	}
-	if activeSessionID.Valid && activeSessionID.String != "" && !req.ForceLogin {
+	if activeSessionID.Valid && activeSessionID.String != "" && activeSessionExpiresAt.Valid && activeSessionExpiresAt.Time.After(time.Now()) && !req.ForceLogin {
 		a.recordLoginHistory(r.Context(), &userID, loginName, "password", "LOGIN", "ACTIVE_SESSION", "active session exists")
 		writeError(w, http.StatusConflict, "active session exists")
 		return
 	}
 	sessionID := newSessionID()
+	sessionExpiresAt := a.sessionExpiresAt()
 	_, err = a.db.Exec(r.Context(), `
 		update app_users
-		set active_session_id = $1, failed_login_attempts = 0, locked_until = null
-		where id = $2
-	`, sessionID, userID)
+		set active_session_id = $1,
+		    active_session_expires_at = $2,
+		    failed_login_attempts = 0,
+		    locked_until = null
+		where id = $3
+	`, sessionID, sessionExpiresAt, userID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "login failed")
 		return
@@ -1053,7 +1062,7 @@ func (a *app) login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) logout(w http.ResponseWriter, r *http.Request, user authUser) {
-	_, _ = a.db.Exec(r.Context(), "update app_users set active_session_id = null where id = $1 and active_session_id = $2", user.ID, user.SessionID)
+	_, _ = a.db.Exec(r.Context(), "update app_users set active_session_id = null, active_session_expires_at = null where id = $1 and active_session_id = $2", user.ID, user.SessionID)
 	a.recordLoginHistory(r.Context(), &user.ID, user.Email, "password", "LOGOUT", "SUCCESS", "")
 	w.WriteHeader(http.StatusNoContent)
 }
@@ -1487,6 +1496,7 @@ func (a *app) resetPassword(w http.ResponseWriter, r *http.Request) {
 		update app_users
 		set password_hash = $1,
 		    active_session_id = null,
+		    active_session_expires_at = null,
 		    failed_login_attempts = 0,
 		    locked_until = null,
 		    email_verified_at = coalesce(email_verified_at, now()),
@@ -2282,15 +2292,15 @@ func (a *app) deleteLedgerEntry(w http.ResponseWriter, r *http.Request, user aut
 }
 
 type scheduleItem struct {
-	ID            int64   `json:"id"`
-	FamilyID      int64   `json:"familyId"`
-	Title         string  `json:"title"`
-	CalendarBasis string  `json:"calendarBasis"`
-	ScheduleDate  string  `json:"scheduleDate"`
-	ScheduleTime  *string `json:"scheduleTime,omitempty"`
-	Category      *string `json:"category,omitempty"`
-	MemberName    *string `json:"memberName,omitempty"`
-	RepeatRule    *string `json:"repeatRule,omitempty"`
+	ID             int64    `json:"id"`
+	FamilyID       int64    `json:"familyId"`
+	Title          string   `json:"title"`
+	CalendarBasis  string   `json:"calendarBasis"`
+	ScheduleDate   string   `json:"scheduleDate"`
+	ScheduleTime   *string  `json:"scheduleTime,omitempty"`
+	Category       *string  `json:"category,omitempty"`
+	MemberName     *string  `json:"memberName,omitempty"`
+	RepeatRule     *string  `json:"repeatRule,omitempty"`
 	ExceptionDates []string `json:"exceptionDates,omitempty"`
 	Memo           *string  `json:"memo,omitempty"`
 	CreatedAt      string   `json:"createdAt"`
@@ -3706,8 +3716,16 @@ func (a *app) requireAuth(next func(http.ResponseWriter, *http.Request, authUser
 
 func (a *app) isActiveSession(ctx context.Context, user authUser) bool {
 	var activeSessionID sql.NullString
-	err := a.db.QueryRow(ctx, "select active_session_id from app_users where id = $1", user.ID).Scan(&activeSessionID)
-	return err == nil && activeSessionID.Valid && activeSessionID.String == user.SessionID
+	var activeSessionExpiresAt sql.NullTime
+	err := a.db.QueryRow(ctx, "select active_session_id, active_session_expires_at from app_users where id = $1", user.ID).Scan(&activeSessionID, &activeSessionExpiresAt)
+	if err != nil || !activeSessionID.Valid || activeSessionID.String != user.SessionID {
+		return false
+	}
+	if !activeSessionExpiresAt.Valid || !activeSessionExpiresAt.Time.After(time.Now()) {
+		_, _ = a.db.Exec(ctx, "update app_users set active_session_id = null, active_session_expires_at = null where id = $1 and active_session_id = $2", user.ID, user.SessionID)
+		return false
+	}
+	return true
 }
 
 func (a *app) oauthRedirectURL(provider string) string {
@@ -3825,18 +3843,19 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 	var currentEmail, currentNickname string
 	var platformAdmin bool
 	var activeSessionID sql.NullString
+	var activeSessionExpiresAt sql.NullTime
 	err = tx.QueryRow(ctx, `
-		select u.id, u.email, u.nickname, u.platform_admin, u.active_session_id
+		select u.id, u.email, u.nickname, u.platform_admin, u.active_session_id, u.active_session_expires_at
 		from oauth_identities oi
 		join app_users u on u.id = oi.user_id
 		where oi.provider = $1 and oi.provider_user_id = $2
-	`, provider, profile.ProviderUserID).Scan(&userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID)
+	`, provider, profile.ProviderUserID).Scan(&userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID, &activeSessionExpiresAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		err = tx.QueryRow(ctx, `
-			select id, email, nickname, platform_admin, active_session_id
+			select id, email, nickname, platform_admin, active_session_id, active_session_expires_at
 			from app_users
 			where provider = $1 and provider_user_id = $2
-		`, provider, profile.ProviderUserID).Scan(&userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID)
+		`, provider, profile.ProviderUserID).Scan(&userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID, &activeSessionExpiresAt)
 		if err == nil {
 			if err := a.linkOAuthIdentity(ctx, tx, provider, profile, userID); err != nil {
 				return authResponse{}, err
@@ -3847,7 +3866,7 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 		if email == "" {
 			return authResponse{}, errOAuthEmailRequired
 		}
-		created, err := a.findOrCreateOAuthUser(ctx, tx, provider, profile.ProviderUserID, email, nickname, &userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID)
+		created, err := a.findOrCreateOAuthUser(ctx, tx, provider, profile.ProviderUserID, email, nickname, &userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID, &activeSessionExpiresAt)
 		if err != nil {
 			return authResponse{}, err
 		}
@@ -3858,7 +3877,7 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 		return authResponse{}, err
 	}
 	if email != "" && !strings.EqualFold(currentEmail, email) {
-		if err := a.reconcileOAuthEmail(ctx, tx, provider, profile.ProviderUserID, email, nickname, &userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID); err != nil {
+		if err := a.reconcileOAuthEmail(ctx, tx, provider, profile.ProviderUserID, email, nickname, &userID, &currentEmail, &currentNickname, &platformAdmin, &activeSessionID, &activeSessionExpiresAt); err != nil {
 			return authResponse{}, err
 		}
 	}
@@ -3866,19 +3885,21 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 		return authResponse{}, err
 	}
 
-	if activeSessionID.Valid && activeSessionID.String != "" && !forceLogin {
+	if activeSessionID.Valid && activeSessionID.String != "" && activeSessionExpiresAt.Valid && activeSessionExpiresAt.Time.After(time.Now()) && !forceLogin {
 		return authResponse{}, errActiveSessionExists
 	}
 	sessionID := newSessionID()
+	sessionExpiresAt := a.sessionExpiresAt()
 	_, err = tx.Exec(ctx, `
 		update app_users
 		set active_session_id = $1,
+		    active_session_expires_at = $5,
 		    failed_login_attempts = 0,
 		    locked_until = null,
 		    provider = $3,
 		    provider_user_id = $4
 		where id = $2
-	`, sessionID, userID, provider, profile.ProviderUserID)
+	`, sessionID, userID, provider, profile.ProviderUserID, sessionExpiresAt)
 	if err != nil {
 		return authResponse{}, err
 	}
@@ -3898,7 +3919,7 @@ func (a *app) loginOAuthUser(ctx context.Context, provider string, profile oauth
 	}, nil
 }
 
-func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, providerUserID, email, nickname string, userID *int64, currentEmail *string, currentNickname *string, platformAdmin *bool, activeSessionID *sql.NullString) (bool, error) {
+func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, providerUserID, email, nickname string, userID *int64, currentEmail *string, currentNickname *string, platformAdmin *bool, activeSessionID *sql.NullString, activeSessionExpiresAt *sql.NullTime) (bool, error) {
 	if email != "" {
 		err := tx.QueryRow(ctx, `
 			update app_users
@@ -3907,8 +3928,8 @@ func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, pr
 			    email_verified_at = coalesce(email_verified_at, now()),
 			    email_verification_required = false
 			where email = $3
-			returning id, email, nickname, platform_admin, active_session_id
-		`, provider, providerUserID, email).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
+			returning id, email, nickname, platform_admin, active_session_id, active_session_expires_at
+		`, provider, providerUserID, email).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID, activeSessionExpiresAt)
 		if err == nil {
 			if err := a.linkOAuthIdentity(ctx, tx, provider, oauthProfile{ProviderUserID: providerUserID, Email: email, Nickname: nickname}, *userID); err != nil {
 				return false, err
@@ -3925,10 +3946,10 @@ func (a *app) findOrCreateOAuthUser(ctx context.Context, tx pgx.Tx, provider, pr
 		return false, err
 	}
 	err := tx.QueryRow(ctx, `
-		insert into app_users (created_at, email, nickname, platform_admin, provider, provider_user_id, active_session_id, failed_login_attempts, email_verified_at, email_verification_required)
-		values (now(), $1, $2, $3, $4, $5, '', 0, now(), false)
-		returning id, email, nickname, platform_admin, active_session_id
-	`, email, nickname, userCount == 0, provider, providerUserID).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
+		insert into app_users (created_at, email, nickname, platform_admin, provider, provider_user_id, active_session_id, active_session_expires_at, failed_login_attempts, email_verified_at, email_verification_required)
+		values (now(), $1, $2, $3, $4, $5, '', null, 0, now(), false)
+		returning id, email, nickname, platform_admin, active_session_id, active_session_expires_at
+	`, email, nickname, userCount == 0, provider, providerUserID).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID, activeSessionExpiresAt)
 	if err != nil {
 		return false, err
 	}
@@ -3952,7 +3973,7 @@ func oauthDisplayNickname(provider, nickname, email string) string {
 	return nickname
 }
 
-func (a *app) reconcileOAuthEmail(ctx context.Context, tx pgx.Tx, provider, providerUserID, email, nickname string, userID *int64, currentEmail *string, currentNickname *string, platformAdmin *bool, activeSessionID *sql.NullString) error {
+func (a *app) reconcileOAuthEmail(ctx context.Context, tx pgx.Tx, provider, providerUserID, email, nickname string, userID *int64, currentEmail *string, currentNickname *string, platformAdmin *bool, activeSessionID *sql.NullString, activeSessionExpiresAt *sql.NullTime) error {
 	err := tx.QueryRow(ctx, `
 		update app_users
 		set provider = $1,
@@ -3960,8 +3981,8 @@ func (a *app) reconcileOAuthEmail(ctx context.Context, tx pgx.Tx, provider, prov
 		    email_verified_at = coalesce(email_verified_at, now()),
 		    email_verification_required = false
 		where email = $3
-		returning id, email, nickname, platform_admin, active_session_id
-	`, provider, providerUserID, email).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
+		returning id, email, nickname, platform_admin, active_session_id, active_session_expires_at
+	`, provider, providerUserID, email).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID, activeSessionExpiresAt)
 	if err == nil {
 		return a.linkOAuthIdentity(ctx, tx, provider, oauthProfile{ProviderUserID: providerUserID, Email: email, Nickname: nickname}, *userID)
 	}
@@ -3980,8 +4001,8 @@ func (a *app) reconcileOAuthEmail(ctx context.Context, tx pgx.Tx, provider, prov
 		    email_verified_at = coalesce(email_verified_at, now()),
 		    email_verification_required = false
 		where id = $3
-		returning id, email, nickname, platform_admin, active_session_id
-	`, email, nickname, *userID, provider, providerUserID).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID)
+		returning id, email, nickname, platform_admin, active_session_id, active_session_expires_at
+	`, email, nickname, *userID, provider, providerUserID).Scan(userID, currentEmail, currentNickname, platformAdmin, activeSessionID, activeSessionExpiresAt)
 }
 
 func (a *app) linkOAuthIdentity(ctx context.Context, tx pgx.Tx, provider string, profile oauthProfile, userID int64) error {
@@ -3998,10 +4019,14 @@ func (a *app) linkOAuthIdentity(ctx context.Context, tx pgx.Tx, provider string,
 }
 
 func (a *app) issueToken(user authUser) string {
-	expiresAt := time.Now().Add(time.Duration(a.cfg.tokenValiditySeconds) * time.Second).Unix()
+	expiresAt := a.sessionExpiresAt().Unix()
 	payload := fmt.Sprintf("%d\n%s\n%t\n%d\n%s", user.ID, user.Email, user.PlatformAdmin, expiresAt, user.SessionID)
 	encodedPayload := base64.RawURLEncoding.EncodeToString([]byte(payload))
 	return encodedPayload + "." + a.sign(encodedPayload)
+}
+
+func (a *app) sessionExpiresAt() time.Time {
+	return time.Now().Add(time.Duration(a.cfg.tokenValiditySeconds) * time.Second)
 }
 
 func (a *app) verifyToken(token string) (authUser, bool) {
@@ -4078,6 +4103,7 @@ create table if not exists app_users (
   provider_user_id varchar(255),
   password_hash varchar(255),
   active_session_id varchar(255),
+  active_session_expires_at timestamp with time zone,
   locked_until timestamp with time zone,
   failed_login_attempts integer default 0,
   email_verified_at timestamp with time zone,
@@ -4086,6 +4112,7 @@ create table if not exists app_users (
 alter table if exists app_users add column if not exists provider varchar(255);
 alter table if exists app_users add column if not exists provider_user_id varchar(255);
 alter table if exists app_users add column if not exists login_id varchar(64);
+alter table if exists app_users add column if not exists active_session_expires_at timestamp with time zone;
 alter table if exists app_users add column if not exists email_verified_at timestamp with time zone;
 alter table if exists app_users add column if not exists email_verification_required boolean not null default false;
 create unique index if not exists idx_app_users_email_lower on app_users (lower(email)) where email is not null;

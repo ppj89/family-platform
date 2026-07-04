@@ -102,6 +102,16 @@ registered_token="$TOKEN"
 
 api GET /auth/me >/dev/null
 api_expect_status 409 POST /auth/login "$(printf '{"email":"%s","password":"%s"}' "$email" "$password")"
+if [ -n "${DB_CONTAINER_NAME:-}" ]; then
+  POSTGRES_USER="${POSTGRES_USER:-family_app}"
+  POSTGRES_DB="${POSTGRES_DB:-family_platform}"
+  docker exec "$DB_CONTAINER_NAME" psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -v ON_ERROR_STOP=1 -c "update app_users set active_session_expires_at = null where id = $user_id" >/dev/null
+  stale_login_response="$(api POST /auth/login "$(printf '{"email":"%s","password":"%s"}' "$email" "$password")")"
+  TOKEN="$(printf '%s' "$stale_login_response" | json_value accessToken)"
+  registered_token="$TOKEN"
+  api GET /auth/me >/dev/null
+  api_expect_status 409 POST /auth/login "$(printf '{"email":"%s","password":"%s"}' "$email" "$password")"
+fi
 forced_response="$(api POST /auth/login "$(printf '{"email":"%s","password":"%s","forceLogin":true}' "$email" "$password")")"
 TOKEN="$(printf '%s' "$forced_response" | json_value accessToken)"
 forced_token="$TOKEN"
