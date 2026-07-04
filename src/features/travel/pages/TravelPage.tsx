@@ -96,6 +96,7 @@ export default function TravelPage() {
   const [tripPeriodStart, setTripPeriodStart] = useState(`${todayKey().slice(0, 7)}-01`)
   const [tripPeriodEnd, setTripPeriodEnd] = useState(todayKey())
   const [recordForm, setRecordForm] = useState<TravelRecordPayload>(() => emptyRecord())
+  const [isTripFormOpen, setIsTripFormOpen] = useState(false)
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null)
   const [editingRecord, setEditingRecord] = useState<TravelRecord | null>(null)
   const [pendingTripDelete, setPendingTripDelete] = useState<Trip | null>(null)
@@ -163,6 +164,11 @@ export default function TravelPage() {
   }, [selectedTrip?.id])
 
   useEffect(() => {
+    if (!isTripFormOpen) return
+    window.setTimeout(() => tripNameInputRef.current?.focus(), 0)
+  }, [isTripFormOpen])
+
+  useEffect(() => {
     const query = recordForm.location.trim()
     if (query.length < 2) {
       setPlaceCandidates([])
@@ -194,12 +200,22 @@ export default function TravelPage() {
       endDate: trip.endDate,
       description: trip.description || '',
     })
-    window.setTimeout(() => tripNameInputRef.current?.focus(), 0)
+    setIsTripFormOpen(true)
   }
 
   function resetTripForm() {
     setEditingTrip(null)
     setTripForm(emptyTrip())
+  }
+
+  function openTripCreate() {
+    resetTripForm()
+    setIsTripFormOpen(true)
+  }
+
+  function closeTripForm() {
+    resetTripForm()
+    setIsTripFormOpen(false)
   }
 
   function requestTripSave(event: FormEvent) {
@@ -212,6 +228,7 @@ export default function TravelPage() {
   }
 
   async function confirmTripSave() {
+    const isUpdate = Boolean(editingTrip)
     setLoading(true)
     setToastMessage('')
     try {
@@ -223,10 +240,11 @@ export default function TravelPage() {
       if (editingTrip) await updateTrip(editingTrip.id, payload)
       else await createTrip(payload)
       resetTripForm()
+      setIsTripFormOpen(false)
       await reloadTrips()
-      setToastMessage(editingTrip ? '여행을 수정했습니다.' : '여행을 추가했습니다.')
+      setToastMessage(isUpdate ? '여행을 수정했습니다.' : '여행을 추가했습니다.')
     } catch (error) {
-      setToastMessage(apiActionMessage(error, editingTrip ? '여행 수정에 실패했습니다.' : '여행 추가에 실패했습니다.'))
+      setToastMessage(apiActionMessage(error, isUpdate ? '여행 수정에 실패했습니다.' : '여행 추가에 실패했습니다.'))
     } finally {
       setConfirmKind(null)
       setLoading(false)
@@ -241,6 +259,7 @@ export default function TravelPage() {
       await deleteTrip(pendingTripDelete.id)
       if (selectedTrip?.id === pendingTripDelete.id) setSelectedTrip(null)
       if (editingTrip?.id === pendingTripDelete.id) resetTripForm()
+      if (editingTrip?.id === pendingTripDelete.id) setIsTripFormOpen(false)
       await reloadTrips()
       setToastMessage('여행을 삭제했습니다.')
     } catch (error) {
@@ -483,7 +502,10 @@ export default function TravelPage() {
         <div>
           <h2>여행</h2>
         </div>
-        <p>{tripList.length}개</p>
+        <div className="fp-travel-list-actions">
+          <p>{tripList.length}개</p>
+          <button className="fp-button fp-button-primary" type="button" onClick={openTripCreate}>여행 추가</button>
+        </div>
       </header>
       <section className="fp-trip-query-form fp-travel-filter">
         <div className={`fp-travel-query-row ${tripQueryMode === 'period' ? 'period-mode' : 'month-mode'}`}>
@@ -509,32 +531,6 @@ export default function TravelPage() {
           )}
         </div>
       </section>
-      <form className="fp-trip-form" onSubmit={requestTripSave}>
-        <label className="fp-field trip-title-field">
-          <input
-            ref={tripNameInputRef}
-            aria-label="여행명"
-            value={tripForm.title}
-            onChange={(event) => setTripForm((value) => ({ ...value, title: event.target.value }))}
-          />
-        </label>
-        <DatePickerField
-          className="travel-start-date"
-          label="시작일"
-          showCalendarIcon
-          value={tripForm.startDate}
-          onChange={(value) => setTripForm((current) => ({ ...current, startDate: value }))}
-        />
-        <DatePickerField
-          className="travel-end-date"
-          label="종료일"
-          showCalendarIcon
-          value={tripForm.endDate}
-          onChange={(value) => setTripForm((current) => ({ ...current, endDate: value }))}
-        />
-        <button className="fp-button fp-button-primary submit-action" type="submit">{editingTrip ? '저장' : '여행 추가'}</button>
-        {editingTrip ? <button className="fp-button fp-button-muted cancel-action" type="button" onClick={resetTripForm}>취소</button> : null}
-      </form>
       <div className="fp-trip-list">
         {tripList.length ? tripList.map((trip) => (
           <article className="fp-trip-row" key={trip.id}>
@@ -560,6 +556,49 @@ export default function TravelPage() {
           </article>
         )) : <p className="fp-empty-text">해당 기간의 여행이 없습니다.</p>}
       </div>
+      {isTripFormOpen ? (
+        <div className="fp-trip-form-backdrop" role="presentation" onClick={closeTripForm}>
+          <section
+            className="fp-trip-form-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fp-trip-form-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <h2 id="fp-trip-form-title">{editingTrip ? '여행 수정' : '여행 추가'}</h2>
+              <button type="button" aria-label="닫기" onClick={closeTripForm}>x</button>
+            </header>
+            <form className="fp-trip-form" onSubmit={requestTripSave}>
+              <label className="fp-field trip-title-field">
+                <span>여행명 <em className="fp-required-mark">*</em></span>
+                <input
+                  ref={tripNameInputRef}
+                  aria-label="여행명"
+                  value={tripForm.title}
+                  onChange={(event) => setTripForm((value) => ({ ...value, title: event.target.value }))}
+                />
+              </label>
+              <DatePickerField
+                className="travel-start-date"
+                label="시작일"
+                showCalendarIcon
+                value={tripForm.startDate}
+                onChange={(value) => setTripForm((current) => ({ ...current, startDate: value }))}
+              />
+              <DatePickerField
+                className="travel-end-date"
+                label="종료일"
+                showCalendarIcon
+                value={tripForm.endDate}
+                onChange={(value) => setTripForm((current) => ({ ...current, endDate: value }))}
+              />
+              <button className="fp-button fp-button-primary submit-action" type="submit">{editingTrip ? '저장' : '여행 추가'}</button>
+              <button className="fp-button fp-button-muted cancel-action" type="button" onClick={closeTripForm}>취소</button>
+            </form>
+          </section>
+        </div>
+      ) : null}
       {confirmKind === 'trip-save' || confirmKind === 'trip-delete' ? (
         <ConfirmDialog
           title={confirmKind === 'trip-delete' ? '여행 삭제' : '여행 저장'}
