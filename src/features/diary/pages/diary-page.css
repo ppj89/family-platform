@@ -32,40 +32,115 @@
   line-height: 1.4;
 }
 
-.fp-diary-actions {
+.fp-diary-query-form {
   display: grid;
-  grid-template-columns: 164px 56px;
+  gap: 10px;
+  margin-top: 18px;
+  margin-bottom: 2px;
+  border-radius: 14px;
+  padding: 16px;
+  background: #f7f8fa;
+  box-shadow: inset 0 0 0 1px #dfe5ec;
+}
+
+.fp-diary-query-row {
+  display: flex;
+  flex-wrap: wrap;
   align-items: end;
   gap: 10px;
 }
 
-.fp-diary-toolbar {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 18px;
+.fp-diary-query-row.period-mode {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+}
+
+.fp-diary-query-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(72px, 1fr));
+  gap: 4px;
+  min-height: 40px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #edf0f3;
+}
+
+.fp-diary-query-tabs button {
+  height: 32px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: #4e5968;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.fp-diary-query-tabs button.active {
+  background: #fff;
+  color: #1b64da;
+  box-shadow: 0 8px 20px rgba(25, 31, 40, 0.08);
+}
+
+.fp-diary-day-picker {
+  width: 160px;
+}
+
+.fp-diary-period-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 10px;
+  min-width: 0;
+  max-width: 320px;
+}
+
+.fp-diary-filter .fp-date-picker-field,
+.fp-diary-filter .date-picker-field {
+  width: 160px;
+}
+
+.fp-diary-filter .fp-diary-period-fields .fp-date-picker-field,
+.fp-diary-filter .fp-diary-period-fields .date-picker-field {
+  width: 100%;
+}
+
+.fp-diary-filter .fp-date-picker-trigger,
+.fp-diary-filter .date-picker-trigger {
+  height: 40px;
+  min-height: 40px;
+  border: 0;
   border-radius: 12px;
-  padding: 12px;
-  background: #f6f8fb;
-  box-shadow: inset 0 0 0 1px #dfe5ec;
+  padding: 0 12px;
+  background: #fff;
+  color: #191f28;
+  box-shadow: inset 0 0 0 1px #cfd6df;
 }
 
-.fp-diary .fp-diary-actions .fp-diary-month-picker {
-  width: 164px;
+.fp-diary-filter .fp-date-picker-trigger strong,
+.fp-diary-filter .date-picker-trigger strong {
+  color: #191f28;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
-.fp-diary .fp-diary-month-picker .fp-date-picker-popover {
+.fp-diary-filter .fp-date-picker-calendar-icon,
+.fp-diary-filter .fp-date-picker-caret {
+  color: #3182f6;
+}
+
+.fp-diary-query-form .fp-date-picker-popover {
+  right: auto;
+  left: 0;
+}
+
+.fp-diary-query-form .fp-diary-period-fields .date-picker-field:last-child .fp-date-picker-popover,
+.fp-diary-query-form .fp-diary-period-fields .fp-date-picker-field:last-child .fp-date-picker-popover {
   right: 0;
   left: auto;
-}
-
-.fp-diary .fp-diary-search-button {
-  width: 56px;
-  min-width: 0;
-  height: 48px;
-  border-radius: 12px;
-  padding: 0;
-  font-size: 14px;
-  font-weight: 800;
 }
 
 .fp-diary .fp-diary-add-button {
@@ -211,8 +286,7 @@
 }
 
 .fp-diary-form .fp-field,
-.fp-diary-form .date-picker-field,
-.fp-diary-actions .date-picker-field {
+.fp-diary-form .date-picker-field {
   display: grid;
   gap: 8px;
   min-width: 0;
@@ -223,8 +297,7 @@
 }
 
 .fp-diary-form .fp-field > span,
-.fp-diary-form .date-picker-field > span,
-.fp-diary-actions .date-picker-field > span {
+.fp-diary-form .date-picker-field > span {
   color: #4e5968;
   font-size: 13px;
   font-weight: 700;
@@ -241,8 +314,7 @@
 .fp-diary-form input,
 .fp-diary-form textarea,
 .fp-diary-form .date-picker-trigger,
-.fp-diary-form .custom-select-trigger,
-.fp-diary-actions .date-picker-trigger {
+.fp-diary-form .custom-select-trigger {
   width: 100%;
   border: 0;
   border-radius: 14px;
@@ -257,8 +329,7 @@
 
 .fp-diary-form input,
 .fp-diary-form .date-picker-trigger,
-.fp-diary-form .custom-select-trigger,
-.fp-diary-actions .date-picker-trigger {
+.fp-diary-form .custom-select-trigger {
   height: 48px;
   padding: 0 14px;
 }
@@ -273,13 +344,11 @@
 .fp-diary-form textarea:focus,
 .fp-diary-form .date-picker-trigger:focus-visible,
 .fp-diary-form .custom-select-trigger:focus-visible,
-.fp-diary-form .custom-select-trigger.open,
-.fp-diary-actions .date-picker-trigger:focus-visible {
+.fp-diary-form .custom-select-trigger.open {
   box-shadow: inset 0 0 0 2px #3182f6;
 }
 
 .fp-diary-form .date-picker-trigger strong,
-.fp-diary-actions .date-picker-trigger strong,
 .fp-diary-form .custom-select-trigger span {
   color: #111827;
   font-size: 14px;
@@ -358,8 +427,7 @@
   left: auto;
 }
 
-.fp-diary-form .fp-date-picker-calendar-icon,
-.fp-diary-actions .fp-date-picker-calendar-icon {
+.fp-diary-form .fp-date-picker-calendar-icon {
   color: #2f80ed;
 }
 
@@ -380,7 +448,7 @@
   box-shadow: inset 0 0 0 1px #454d58;
 }
 
-.theme-dark .fp-diary-toolbar {
+.theme-dark .fp-diary-query-form {
   background: #2f3540;
   box-shadow: inset 0 0 0 1px #454d58;
 }
@@ -391,7 +459,8 @@
 .theme-dark .fp-diary-form textarea,
 .theme-dark .fp-diary-form .date-picker-trigger,
 .theme-dark .fp-diary-form .custom-select-trigger,
-.theme-dark .fp-diary-actions .date-picker-trigger {
+.theme-dark .fp-diary-filter .date-picker-trigger,
+.theme-dark .fp-diary-filter .fp-date-picker-trigger {
   background: #3b424c;
   color: #f3f5f7;
   box-shadow: inset 0 0 0 1px #525b66;
@@ -401,7 +470,8 @@
 .theme-dark .fp-diary-form h3,
 .theme-dark .fp-diary-row strong,
 .theme-dark .fp-diary-form .date-picker-trigger strong,
-.theme-dark .fp-diary-actions .date-picker-trigger strong,
+.theme-dark .fp-diary-filter .date-picker-trigger strong,
+.theme-dark .fp-diary-filter .fp-date-picker-trigger strong,
 .theme-dark .fp-diary-form .custom-select-trigger span {
   color: #f3f5f7;
 }
@@ -441,17 +511,24 @@
     align-items: center;
   }
 
-  .fp-diary-actions {
-    grid-template-columns: minmax(0, 1fr) 56px;
+  .fp-diary-query-row,
+  .fp-diary-query-row.period-mode {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
     width: 100%;
   }
 
-  .fp-diary-toolbar {
-    display: block;
+  .fp-diary-query-tabs,
+  .fp-diary-day-picker,
+  .fp-diary-period-fields,
+  .fp-diary-filter .fp-date-picker-field,
+  .fp-diary-filter .date-picker-field {
+    width: 100%;
+    max-width: none;
   }
 
-  .fp-diary .fp-diary-actions .fp-diary-month-picker {
-    width: 100%;
+  .fp-diary-period-fields {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .fp-diary-layout {

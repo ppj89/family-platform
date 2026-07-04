@@ -3,12 +3,13 @@ import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, CustomSelect, DatePickerField, ToastMessage } from '../../../shared/components'
 import { COMMON_CODE_GROUPS, DIARY_MOODS, DIARY_WEATHER_OPTIONS, SELECT_PLACEHOLDER_OPTION } from '../../../shared/constants/commonCodes'
 import { useCommonCodeSelectOptions } from '../../../shared/hooks/useCommonCodeOptions'
-import { monthInputValue, monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
+import { todayKey } from '../../../shared/utils/date'
 import { createDiary, deleteDiary, listDiaries, updateDiary } from '../api/diary'
 import type { DiaryItem, DiaryPayload } from '../types'
 import './diary-page.css'
 
 type ConfirmKind = 'save' | 'delete'
+type DiaryQueryMode = 'day' | 'period'
 
 const fallbackMoodOptions = [SELECT_PLACEHOLDER_OPTION, ...DIARY_MOODS.map((mood) => ({ label: mood, value: mood }))]
 const fallbackWeatherOptions = [SELECT_PLACEHOLDER_OPTION, ...DIARY_WEATHER_OPTIONS.map((weather) => ({ label: weather, value: weather }))]
@@ -43,15 +44,14 @@ function sortDiaries(items: DiaryItem[]) {
   return [...items].sort((a, b) => `${b.diaryDate} ${b.createdAt}`.localeCompare(`${a.diaryDate} ${a.createdAt}`))
 }
 
-function koreanMonth(value: string) {
-  const [year, month] = value.split('-')
-  return `${year}년 ${month}월`
-}
-
 export default function DiaryPage() {
   const moodSelectOptions = useCommonCodeSelectOptions(COMMON_CODE_GROUPS.diaryMoods, fallbackMoodOptions)
   const weatherSelectOptions = useCommonCodeSelectOptions(COMMON_CODE_GROUPS.diaryWeather, fallbackWeatherOptions)
-  const [monthDate, setMonthDate] = useState(() => new Date())
+  const currentDate = todayKey()
+  const [queryMode, setQueryMode] = useState<DiaryQueryMode>('day')
+  const [queryDay, setQueryDay] = useState(currentDate)
+  const [periodStart, setPeriodStart] = useState(`${currentDate.slice(0, 7)}-01`)
+  const [periodEnd, setPeriodEnd] = useState(currentDate)
   const [items, setItems] = useState<DiaryItem[]>([])
   const [form, setForm] = useState<DiaryPayload>(() => emptyPayload())
   const [editing, setEditing] = useState<DiaryItem | null>(null)
@@ -62,9 +62,15 @@ export default function DiaryPage() {
   const [toastMessage, setToastMessage] = useState('')
   const formRef = useRef<HTMLFormElement | null>(null)
 
-  const range = useMemo(() => monthRange(monthDate), [monthDate])
+  const range = useMemo(() => {
+    if (queryMode === 'period') {
+      return periodStart <= periodEnd
+        ? { startDate: periodStart, endDate: periodEnd }
+        : { startDate: periodEnd, endDate: periodStart }
+    }
+    return { startDate: queryDay, endDate: queryDay }
+  }, [periodEnd, periodStart, queryDay, queryMode])
   const diaryList = useMemo(() => sortDiaries(items), [items])
-  const selectedMonth = monthInputValue(monthDate)
 
   async function reload() {
     setLoading(true)
@@ -176,20 +182,28 @@ export default function DiaryPage() {
         <button className="fp-button fp-button-primary fp-diary-add-button" type="button" onClick={startCreate}>일기 추가</button>
       </header>
 
-      <div className="fp-diary-toolbar">
-        <div className="fp-diary-actions">
-          <DatePickerField
-            className="fp-diary-month-picker"
-            displayValue={koreanMonth(selectedMonth)}
-            label="조회 월"
-            mode="month"
-            showCalendarIcon
-            value={selectedMonth}
-            onChange={(value) => setMonthDate(parseDateKey(`${value}-01`))}
-          />
-          <button className="fp-button fp-button-primary fp-diary-search-button" type="button" onClick={reload}>조회</button>
+      <section className="fp-diary-query-form fp-diary-filter">
+        <div className={`fp-diary-query-row ${queryMode === 'period' ? 'period-mode' : 'day-mode'}`}>
+          <div className="fp-diary-query-tabs" role="tablist" aria-label="일기 조회 방식">
+            <button className={queryMode === 'day' ? 'active' : ''} type="button" onClick={() => setQueryMode('day')}>일별</button>
+            <button className={queryMode === 'period' ? 'active' : ''} type="button" onClick={() => setQueryMode('period')}>기간별</button>
+          </div>
+          {queryMode === 'day' ? (
+            <DatePickerField
+              className="fp-diary-day-picker"
+              label="조회 일"
+              showCalendarIcon
+              value={queryDay}
+              onChange={setQueryDay}
+            />
+          ) : (
+            <div className="fp-diary-period-fields">
+              <DatePickerField label="시작일" showCalendarIcon value={periodStart} onChange={setPeriodStart} />
+              <DatePickerField label="종료일" showCalendarIcon value={periodEnd} onChange={setPeriodEnd} />
+            </div>
+          )}
         </div>
-      </div>
+      </section>
 
       <div className="fp-diary-layout">
         <section className="fp-diary-list" aria-label="일기 목록">
@@ -215,7 +229,7 @@ export default function DiaryPage() {
                 </button>
               </div>
             </article>
-          )) : <p className="fp-empty-text">해당 월의 일기가 없습니다.</p>}
+          )) : <p className="fp-empty-text">{queryMode === 'day' ? '해당 날짜의 일기가 없습니다.' : '해당 기간의 일기가 없습니다.'}</p>}
         </section>
       </div>
 
