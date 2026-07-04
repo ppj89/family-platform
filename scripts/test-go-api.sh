@@ -2,6 +2,7 @@
 set -eu
 
 API_BASE_URL="${API_BASE_URL:-http://127.0.0.1:8080/api}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 tmp_dir="$(mktemp -d)"
 cleanup() {
@@ -12,10 +13,24 @@ trap cleanup EXIT
 TOKEN=""
 
 json_value() {
-  python3 -c 'import json,sys; data=json.load(sys.stdin); cur=data
+  "$PYTHON_BIN" -c 'import json,sys; data=json.load(sys.stdin); cur=data
 for part in sys.argv[1].split("."):
     cur=cur[int(part)] if isinstance(cur, list) else cur[part]
 print("" if cur is None else cur)' "$1"
+}
+
+json_length() {
+  "$PYTHON_BIN" -c 'import json,sys; print(len(json.load(sys.stdin)))'
+}
+
+json_assert_number() {
+  expected="$1"
+  path="$2"
+  "$PYTHON_BIN" -c 'import json,sys; expected=float(sys.argv[1]); cur=json.load(sys.stdin)
+for part in sys.argv[2].split("."):
+    cur=cur[int(part)] if isinstance(cur, list) else cur[part]
+actual=float(cur)
+sys.exit(0 if actual == expected else 1)' "$expected" "$path"
 }
 
 api() {
@@ -65,6 +80,7 @@ api_expect_status() {
 }
 
 email="api-test-$(date +%s)-$$@test.local"
+nickname="apitest$$"
 password="Testpass123!"
 
 health="$(api GET /health)"
@@ -78,7 +94,7 @@ api_expect_status 503 GET /auth/oauth/naver/start
 api_expect_status 503 GET /auth/oauth/kakao/start
 api_expect_status 404 GET /auth/oauth/unknown/start
 
-register_body="$(printf '{"email":"%s","nickname":"api-test","password":"%s"}' "$email" "$password")"
+register_body="$(printf '{"email":"%s","nickname":"%s","password":"%s"}' "$email" "$nickname" "$password")"
 register_response="$(api POST /auth/register "$register_body")"
 TOKEN="$(printf '%s' "$register_response" | json_value accessToken)"
 user_id="$(printf '%s' "$register_response" | json_value userId)"
@@ -94,7 +110,12 @@ api_expect_status 401 GET /auth/me
 TOKEN="$forced_token"
 
 families="$(api GET /families)"
-family_id="$(printf '%s' "$families" | json_value 0.id)"
+if [ "$(printf '%s' "$families" | json_length)" -eq 0 ]; then
+  family="$(api POST /families '{"name":"Integration family"}')"
+  family_id="$(printf '%s' "$family" | json_value id)"
+else
+  family_id="$(printf '%s' "$families" | json_value 0.id)"
+fi
 api GET "/families/$family_id/members" >/dev/null
 
 group="$(api POST "/common-code-groups?familyId=$family_id" '{"menuKey":"ledger","code":"integration","name":"Integration","active":true}')"
@@ -108,12 +129,23 @@ api PUT "/common-code-groups/$group_id/codes/$code_id" '{"code":"food","name":"F
 ledger="$(api POST "/ledger-entries?familyId=$family_id" '{"title":"Integration expense","entryType":"expense","category":"Food","paymentMethod":"Card","memberName":"Dad","amount":12000,"transactionDate":"2026-06-08","memo":"test"}')"
 ledger_id="$(printf '%s' "$ledger" | json_value id)"
 api GET "/ledger-entries?familyId=$family_id&startDate=2026-06-01&endDate=2026-06-30" >/dev/null
-api GET "/ledger-entries/summary?familyId=$family_id&startDate=2026-06-01&endDate=2026-06-30" >/dev/null
+ledger_summary="$(api GET "/ledger-entries/summary?familyId=$family_id&startDate=2026-06-01&endDate=2026-06-30")"
+printf '%s' "$ledger_summary" | json_assert_number 12000 expense
+owned_ledger="$(api GET "/ledger-entries?familyId=0&startDate=2026-06-01&endDate=2026-06-30")"
+[ "$(printf '%s' "$owned_ledger" | json_length)" -ge 1 ]
+[ "$(printf '%s' "$owned_ledger" | json_value 0.id)" = "$ledger_id" ]
+owned_ledger_summary="$(api GET "/ledger-entries/summary?familyId=0&startDate=2026-06-01&endDate=2026-06-30")"
+printf '%s' "$owned_ledger_summary" | json_assert_number 12000 expense
 api PUT "/ledger-entries/$ledger_id" '{"title":"Integration income","entryType":"income","category":"Salary","paymentMethod":"Bank","memberName":"Mom","amount":35000,"transactionDate":"2026-06-09","memo":"updated"}' >/dev/null
+owned_ledger_summary="$(api GET "/ledger-entries/summary?familyId=0&startDate=2026-06-01&endDate=2026-06-30")"
+printf '%s' "$owned_ledger_summary" | json_assert_number 35000 income
 
 schedule="$(api POST "/schedules?familyId=$family_id" '{"title":"Integration schedule","calendarBasis":"solar","scheduleDate":"2026-06-08","scheduleTime":"09:00","category":"Schedule","memberName":"Family","repeatRule":"none","memo":"reminder"}')"
 schedule_id="$(printf '%s' "$schedule" | json_value id)"
 api GET "/schedules?familyId=$family_id&startDate=2026-06-01&endDate=2026-06-30" >/dev/null
+owned_schedules="$(api GET "/schedules?familyId=0&startDate=2026-06-01&endDate=2026-06-30")"
+[ "$(printf '%s' "$owned_schedules" | json_length)" -ge 1 ]
+[ "$(printf '%s' "$owned_schedules" | json_value 0.id)" = "$schedule_id" ]
 api POST "/notifications/schedule-reminders?date=2026-06-08" >/dev/null
 notification_list="$(api GET "/notifications?unreadOnly=true")"
 notification_id="$(printf '%s' "$notification_list" | json_value 0.id)"
@@ -142,15 +174,17 @@ api GET "/diaries?familyId=$family_id&startDate=2026-06-01&endDate=2026-06-30" >
 api PUT "/diaries/$diary_id" '{"title":"Integration diary updated","body":"body updated","diaryDate":"2026-06-09","weather":"cloudy","mood":"normal","minTemperature":17,"maxTemperature":24,"mediaUrls":[]}' >/dev/null
 
 png="$tmp_dir/test.png"
-python3 - <<'PY' > "$png"
+"$PYTHON_BIN" - <<'PY' > "$png"
 import base64, sys
 sys.stdout.buffer.write(base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="))
 PY
-media_response="$(curl -sS -H "Authorization: Bearer $TOKEN" -F "file=@$png;type=image/png" "$API_BASE_URL/media?familyId=$family_id")"
+png_upload_path="$(cygpath -m "$png" 2>/dev/null || printf '%s' "$png")"
+media_response="$(curl -sS -H "Authorization: Bearer $TOKEN" -F "file=@$png_upload_path;type=image/png" "$API_BASE_URL/media?familyId=$family_id")"
 printf '%s' "$media_response" | json_value url >/dev/null
 txt="$tmp_dir/test.txt"
 printf 'not image' > "$txt"
-bad_media_code="$(curl -sS -o "$tmp_dir/bad-media.json" -w "%{http_code}" -H "Authorization: Bearer $TOKEN" -F "file=@$txt;type=text/plain" "$API_BASE_URL/media?familyId=$family_id")"
+txt_upload_path="$(cygpath -m "$txt" 2>/dev/null || printf '%s' "$txt")"
+bad_media_code="$(curl -sS -o "$tmp_dir/bad-media.json" -w "%{http_code}" -H "Authorization: Bearer $TOKEN" -F "file=@$txt_upload_path;type=text/plain" "$API_BASE_URL/media?familyId=$family_id")"
 [ "$bad_media_code" = "415" ]
 
 post="$(api POST /community/posts '{"boardType":"free","title":"Integration post","body":"body","mediaUrls":[]}' )"

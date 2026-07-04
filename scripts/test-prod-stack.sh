@@ -6,10 +6,11 @@ WEB_PORT="${WEB_PORT:-18080}"
 WEB_BASE_URL="${WEB_BASE_URL:-http://127.0.0.1:${WEB_PORT}}"
 ENV_FILE="${ENV_FILE:-}"
 KEEP_STACK="${KEEP_STACK:-false}"
+PYTHON_BIN="${PYTHON_BIN:-python3}"
 
 created_env=""
 
-for required_bin in curl docker openssl python3; do
+for required_bin in curl docker openssl "$PYTHON_BIN"; do
   if ! command -v "$required_bin" >/dev/null 2>&1; then
     echo "$required_bin is required for the production stack smoke test." >&2
     exit 1
@@ -67,7 +68,7 @@ docker compose -p "$PROJECT_NAME" -f docker-compose.prod.yml --env-file "$ENV_FI
 
 for _ in $(seq 1 60); do
   if curl -fsS "$WEB_BASE_URL/health" >/dev/null 2>&1 && curl -fsS "$WEB_BASE_URL/api/health" >/dev/null 2>&1; then
-    API_BASE_URL="$WEB_BASE_URL/api" sh scripts/test-go-api.sh
+    API_BASE_URL="$WEB_BASE_URL/api" PYTHON_BIN="$PYTHON_BIN" sh scripts/test-go-api.sh
     echo "Production stack smoke test passed at $WEB_BASE_URL"
     exit 0
   fi
