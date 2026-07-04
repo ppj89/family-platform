@@ -1,5 +1,5 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
-import { apiActionMessage } from '../../../shared/api/client'
+import { apiActionMessage, isAuthError } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField } from '../../../shared/components'
 import { COMMON_CODE_GROUPS, FAMILY_MEMBER_OPTIONS, LEDGER_CATEGORIES, LEDGER_ENTRY_TYPE_OPTIONS, LEDGER_PAYMENT_METHODS } from '../../../shared/constants/commonCodes'
 import { useCommonCodeOptions } from '../../../shared/hooks'
@@ -145,7 +145,9 @@ export default function LedgerPage() {
   const [monthValue, setMonthValue] = useState(currentMonth)
   const [periodStart, setPeriodStart] = useState(`${currentMonth}-01`)
   const [periodEnd, setPeriodEnd] = useState(today)
+  const [isSmsParserOpen, setIsSmsParserOpen] = useState(false)
   const [smsText, setSmsText] = useState('')
+  const [smsMessage, setSmsMessage] = useState('')
   const [entries, setEntries] = useState<LedgerEntry[]>([])
   const [summary, setSummary] = useState<LedgerSummary>(emptySummary)
   const [form, setForm] = useState<LedgerPayload>(() => emptyPayload())
@@ -176,6 +178,11 @@ export default function LedgerPage() {
       setSummary(nextSummary)
       setEntries(sortEntries(nextEntries))
     } catch (error) {
+      if (isAuthError(error)) {
+        setSummary(emptySummary)
+        setEntries([])
+        return
+      }
       setMessage(apiActionMessage(error, '가계부 내역을 불러오지 못했습니다.'))
     } finally {
       setLoading(false)
@@ -289,8 +296,19 @@ export default function LedgerPage() {
       entryType: parsed.entryType,
       paymentMethod: current.paymentMethod || ledgerPaymentMethodOptions[0] || '카드',
     }))
-    setMessage(parsed.title || parsed.amount ? '문자 내용을 기준으로 입력값을 채웠습니다.' : '추출할 금액이나 가맹점 후보를 찾지 못했습니다.')
+    if (!parsed.title && !parsed.amount) {
+      setSmsMessage('추출할 금액이나 가맹점 후보를 찾지 못했습니다.')
+      return
+    }
+    setSmsMessage('')
+    setMessage('문자 내용을 기준으로 입력값을 채웠습니다.')
+    setIsSmsParserOpen(false)
     focusForm()
+  }
+
+  function openSmsParser() {
+    setSmsMessage('')
+    setIsSmsParserOpen(true)
   }
 
   return (
@@ -351,15 +369,10 @@ export default function LedgerPage() {
             </div>
           </section>
 
-          <div className="sms-parser fp-ledger-sms-parser">
-            <textarea
-              aria-label="카드 문자 또는 앱 알림 내용"
-              value={smsText}
-              onChange={(event) => setSmsText(event.target.value)}
-            />
-            <button type="button" onClick={autofillFromSms}>자동 채우기</button>
+          <div className="fp-ledger-auto-action">
+            <button type="button" onClick={openSmsParser}>자동 입력</button>
+            <p>문자 내용을 붙여넣거나 직접 입력해서 가계부에 추가할 수 있습니다.</p>
           </div>
-          <p className="form-message">문자 내용을 붙여넣거나 직접 입력해서 가계부에 추가할 수 있습니다.</p>
 
           {message ? <p className="fp-message">{message}</p> : null}
 
@@ -489,6 +502,36 @@ export default function LedgerPage() {
           }}
           onConfirm={confirmDelete}
         />
+      ) : null}
+      {isSmsParserOpen ? (
+        <div className="fp-ledger-autofill-backdrop" role="presentation" onClick={() => setIsSmsParserOpen(false)}>
+          <section
+            className="fp-ledger-autofill-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fp-ledger-autofill-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <h2 id="fp-ledger-autofill-title">자동 입력</h2>
+              <button type="button" aria-label="닫기" onClick={() => setIsSmsParserOpen(false)}>x</button>
+            </header>
+            <p className="fp-ledger-autofill-help">카드 문자나 앱 알림 내용을 붙여넣으면 금액과 가맹점 후보를 추출합니다.</p>
+            <textarea
+              aria-label="카드 문자 또는 앱 알림 내용"
+              value={smsText}
+              onChange={(event) => {
+                setSmsText(event.target.value)
+                setSmsMessage('')
+              }}
+            />
+            {smsMessage ? <p className="fp-ledger-autofill-message">{smsMessage}</p> : null}
+            <div className="fp-ledger-autofill-actions">
+              <button className="fp-button fp-button-muted" type="button" onClick={() => setIsSmsParserOpen(false)}>취소</button>
+              <button className="fp-button fp-button-primary" type="button" onClick={autofillFromSms}>자동 채우기</button>
+            </div>
+          </section>
+        </div>
       ) : null}
     </>
   )

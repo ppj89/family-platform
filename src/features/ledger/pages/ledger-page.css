@@ -231,30 +231,15 @@
   line-height: 1.55;
 }
 
-.fp-ledger-sms-parser {
+.fp-ledger-auto-action {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 110px;
-  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
   margin: 0 0 2px;
 }
 
-.fp-ledger-sms-parser textarea {
-  min-height: 92px;
-  border: 0;
-  border-radius: 12px;
-  padding: 12px;
-  background: #fff;
-  color: #191f28;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.5;
-  outline: none;
-  resize: vertical;
-  box-shadow: inset 0 0 0 1px #cfd6df;
-}
-
-.fp-ledger-sms-parser button,
+.fp-ledger-auto-action button,
 .fp-ledger-entry-panel .submit-action {
   border: 0;
   border-radius: 14px;
@@ -266,12 +251,13 @@
   font-weight: 700;
 }
 
-.fp-ledger-sms-parser button {
-  min-height: 92px;
-  padding: 0 12px;
+.fp-ledger-auto-action button {
+  min-width: 128px;
+  min-height: 48px;
+  padding: 0 18px;
 }
 
-.fp-ledger .form-message {
+.fp-ledger-auto-action p {
   margin: 0;
   border-radius: 12px;
   padding: 12px 14px;
@@ -280,6 +266,100 @@
   font-size: 12px;
   font-weight: 700;
   line-height: 1.4;
+}
+
+.fp-ledger-autofill-backdrop {
+  position: fixed;
+  z-index: 1200;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(25 31 40 / 46%);
+}
+
+.fp-ledger-autofill-dialog {
+  display: grid;
+  gap: 16px;
+  width: min(560px, 100%);
+  max-height: min(720px, calc(100vh - 48px));
+  overflow: auto;
+  border-radius: 22px;
+  padding: 24px;
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgb(25 31 40 / 24%);
+}
+
+.fp-ledger-autofill-dialog header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.fp-ledger-autofill-dialog h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 24px;
+  font-weight: var(--fp-weight-title);
+}
+
+.fp-ledger-autofill-dialog header button {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  background: #f5f7fb;
+  color: #111827;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fp-ledger-autofill-help,
+.fp-ledger-autofill-message {
+  margin: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #eef6ff;
+  color: #1264d8;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.fp-ledger-autofill-dialog textarea {
+  min-height: 170px;
+  border: 1px solid #d6dde8;
+  border-radius: 14px;
+  padding: 14px;
+  background: #ffffff;
+  color: #191f28;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.5;
+  outline: none;
+  resize: vertical;
+}
+
+.fp-ledger-autofill-dialog textarea:focus {
+  border-color: #3182f6;
+  box-shadow: 0 0 0 3px rgb(49 130 246 / 12%);
+}
+
+.fp-ledger-autofill-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.fp-ledger-autofill-actions .fp-button {
+  min-height: 48px;
+  border-radius: 14px;
 }
 
 .fp-ledger .fp-message {
@@ -821,12 +901,31 @@
     white-space: nowrap;
   }
 
-  .fp-ledger-sms-parser {
+  .fp-ledger-auto-action {
     grid-template-columns: 1fr;
   }
 
-  .fp-ledger-sms-parser button {
+  .fp-ledger-auto-action button {
     min-height: 46px;
+  }
+
+  .fp-ledger-autofill-backdrop {
+    align-items: end;
+    padding: 16px;
+  }
+
+  .fp-ledger-autofill-dialog {
+    max-height: calc(100vh - 32px);
+    border-radius: 22px;
+    padding: 22px 18px;
+  }
+
+  .fp-ledger-autofill-dialog h2 {
+    font-size: 22px;
+  }
+
+  .fp-ledger-autofill-actions {
+    grid-template-columns: 1fr;
   }
 
   .ledger-row {
