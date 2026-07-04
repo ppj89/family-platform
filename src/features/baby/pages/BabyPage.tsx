@@ -760,7 +760,7 @@ function BabyForm({ formRef, form, editing, genderOptions, setForm, onSubmit, on
     <form className="fp-baby-form baby-form" ref={formRef} onSubmit={onSubmit}>
       <header>
         <h3>{editing ? '아이 정보 수정' : '아이 추가'}</h3>
-        <button className="fp-button fp-button-muted" type="button" onClick={onReset}>취소</button>
+        <button className="modal-close" type="button" onClick={onReset} aria-label="닫기">x</button>
       </header>
       <div className="fp-form-grid baby-profile-form">
         <label className="fp-field form-field">
