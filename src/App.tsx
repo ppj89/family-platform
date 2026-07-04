@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { type ReactNode, useEffect, useState } from 'react'
 import HomePage from './features/home/pages/HomePage'
 import CalendarPage from './features/calendar/pages/CalendarPage'
 import LedgerPage from './features/ledger/pages/LedgerPage'
@@ -197,6 +197,7 @@ function AccountInfoDialog({
 
 export default function App() {
   const [activeMenu, setActiveMenu] = useState('홈')
+  const [, setAuthRevision] = useState(0)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(
     () => window.localStorage.getItem('family-platform-sidebar-collapsed') === 'true',
   )
@@ -212,6 +213,16 @@ export default function App() {
       : activeMenu === '가계부' || activeMenu === '여행'
         ? ''
         : '가족 공유 운영'
+
+  useEffect(() => {
+    function handleAuthInvalid() {
+      setToastMessage('')
+      setAuthRevision((value) => value + 1)
+    }
+
+    window.addEventListener('family-platform-auth-invalid', handleAuthInvalid)
+    return () => window.removeEventListener('family-platform-auth-invalid', handleAuthInvalid)
+  }, [])
 
   if (!hasAuthToken()) {
     return <LoginPage />

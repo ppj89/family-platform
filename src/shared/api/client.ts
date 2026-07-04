@@ -1,4 +1,4 @@
-import { getStoredAuthToken } from './auth'
+import { clearAuthSession, getStoredAuthToken } from './auth'
 
 export interface ApiError extends Error {
   status?: number
@@ -35,6 +35,10 @@ export async function apiRequest<T>(path: string, options: { method?: ApiMethod;
 
   if (!response.ok) {
     const message = await response.text()
+    if (response.status === 401) {
+      clearAuthSession()
+      window.dispatchEvent(new CustomEvent('family-platform-auth-invalid'))
+    }
     const error = new Error(message || `API ${response.status}`) as ApiError
     error.status = response.status
     throw error
