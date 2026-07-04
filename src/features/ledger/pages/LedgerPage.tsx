@@ -361,17 +361,8 @@ export default function LedgerPage() {
             </article>
           </div>
 
-          <section className="parser-box fp-ledger-parser-guide">
-            <span aria-hidden="true">▣</span>
-            <div>
-              <strong>카드 문자나 앱 알림 내용을 붙여넣으면 금액과 가맹점 후보를 추출합니다.</strong>
-              <p>웹에서는 붙여넣기 자동 분석부터 시작하고, 모바일 단계에서 Android 알림 접근 연동을 추가합니다.</p>
-            </div>
-          </section>
-
           <div className="fp-ledger-auto-action">
-            <button type="button" onClick={openSmsParser}>자동 입력</button>
-            <p>문자 내용을 붙여넣거나 직접 입력해서 가계부에 추가할 수 있습니다.</p>
+            <button type="button" onClick={openSmsParser}>카드 붙여넣기</button>
           </div>
 
           {message ? <p className="fp-message">{message}</p> : null}
@@ -513,7 +504,7 @@ export default function LedgerPage() {
             onClick={(event) => event.stopPropagation()}
           >
             <header>
-              <h2 id="fp-ledger-autofill-title">자동 입력</h2>
+              <h2 id="fp-ledger-autofill-title">카드 붙여넣기</h2>
               <button type="button" aria-label="닫기" onClick={() => setIsSmsParserOpen(false)}>x</button>
             </header>
             <p className="fp-ledger-autofill-help">카드 문자나 앱 알림 내용을 붙여넣으면 금액과 가맹점 후보를 추출합니다.</p>
@@ -524,11 +515,12 @@ export default function LedgerPage() {
                 setSmsText(event.target.value)
                 setSmsMessage('')
               }}
+              autoFocus
             />
             {smsMessage ? <p className="fp-ledger-autofill-message">{smsMessage}</p> : null}
             <div className="fp-ledger-autofill-actions">
               <button className="fp-button fp-button-muted" type="button" onClick={() => setIsSmsParserOpen(false)}>취소</button>
-              <button className="fp-button fp-button-primary" type="button" onClick={autofillFromSms}>자동 채우기</button>
+              <button className="fp-button fp-button-primary" type="button" onClick={autofillFromSms}>자동 입력</button>
             </div>
           </section>
         </div>

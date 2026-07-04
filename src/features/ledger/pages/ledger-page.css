@@ -198,44 +198,7 @@
   color: #00a889;
 }
 
-.fp-ledger-parser-guide {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: 10px;
-  border-radius: 14px;
-  padding: 14px 16px;
-  background: #eaf4ff;
-  color: #1b64da;
-}
-
-.fp-ledger-parser-guide > span {
-  margin-top: 1px;
-  font-size: 18px;
-  line-height: 1;
-}
-
-.fp-ledger-parser-guide strong {
-  display: block;
-  color: #111827;
-  font-size: 15px;
-  font-weight: 850;
-  line-height: 1.42;
-}
-
-.fp-ledger-parser-guide p {
-  margin: 6px 0 0;
-  color: #4e5968;
-  font-size: 13px;
-  font-weight: 400;
-  line-height: 1.55;
-}
-
 .fp-ledger-auto-action {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
   margin: 0 0 2px;
 }
 
@@ -252,20 +215,10 @@
 }
 
 .fp-ledger-auto-action button {
-  min-width: 128px;
-  min-height: 48px;
+  width: 100%;
+  min-height: 52px;
   padding: 0 18px;
-}
-
-.fp-ledger-auto-action p {
-  margin: 0;
-  border-radius: 12px;
-  padding: 12px 14px;
-  background: #f2f4f6;
-  color: #526070;
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.4;
+  font-size: 15px;
 }
 
 .fp-ledger-autofill-backdrop {
