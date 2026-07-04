@@ -217,7 +217,6 @@ export default function RestaurantPage() {
               <span>방문한 곳</span>
               <strong>가족과 함께 기록한 맛집</strong>
             </div>
-            <em>{restaurantList.length}곳</em>
           </div>
 
           <div className="fp-restaurant-list">

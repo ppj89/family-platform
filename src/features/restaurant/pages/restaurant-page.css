@@ -96,22 +96,6 @@
   white-space: nowrap;
 }
 
-.fp-restaurant-summary em {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 62px;
-  height: 44px;
-  padding: 0 14px;
-  border-radius: 18px;
-  background: #fff1cf;
-  color: #b26b00;
-  font-size: 22px;
-  font-style: normal;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
 .fp-restaurant-list {
   display: grid;
   gap: 10px;
