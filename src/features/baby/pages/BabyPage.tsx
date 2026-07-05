@@ -692,10 +692,10 @@ function GrowthChart({ records }: { records: BabyRecord[] }) {
 
   const width = 720
   const height = 280
-  const left = 58
+  const left = 72
   const right = 26
-  const top = 28
-  const bottom = 48
+  const top = 34
+  const bottom = 58
   const chartWidth = width - left - right
   const chartHeight = height - top - bottom
   const maxIndex = Math.max(selectedPoints.length - 1, 1)
@@ -728,7 +728,7 @@ function GrowthChart({ records }: { records: BabyRecord[] }) {
         {labels.map((item) => (
           <g key={item.y}>
             <line className="grid-line" x1={left} x2={width - right} y1={item.y.toFixed(1)} y2={item.y.toFixed(1)} />
-            <text className="axis-label" x={left - 8} y={(item.y + 4).toFixed(1)}>{item.value.toFixed(1)}</text>
+            <text className="axis-label" x={left - 10} y={(item.y + 7).toFixed(1)}>{item.value.toFixed(1)}</text>
           </g>
         ))}
         <line className="axis-line" x1={left} x2={width - right} y1={height - bottom} y2={height - bottom} />
@@ -739,9 +739,9 @@ function GrowthChart({ records }: { records: BabyRecord[] }) {
         })}
         {xLabels.map((point) => {
           const x = left + chartWidth * (point.index / maxIndex)
-          return <text className="x-label" key={`${point.label}-${point.index}`} x={x.toFixed(1)} y={height - 10}>{point.label}</text>
+          return <text className="x-label" key={`${point.label}-${point.index}`} x={x.toFixed(1)} y={height - 14}>{point.label}</text>
         })}
-        <text className="unit-label" x={left} y="14">{unit}</text>
+        <text className="unit-label" x={left} y="22">{unit}</text>
       </svg>
     </div>
   )
