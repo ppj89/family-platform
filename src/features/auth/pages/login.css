@@ -846,6 +846,25 @@
   box-shadow: inset 0 0 0 1px rgba(107, 118, 132, 0.36);
 }
 
+.auth-card input:not([type="checkbox"]):not([type="radio"]),
+.auth-card textarea,
+.auth-recovery-dialog input:not([type="checkbox"]):not([type="radio"]),
+.auth-recovery-dialog textarea {
+  font-weight: 400 !important;
+}
+
+.auth-card input::placeholder,
+.auth-card textarea::placeholder,
+.auth-recovery-dialog input::placeholder,
+.auth-recovery-dialog textarea::placeholder {
+  font-weight: 400 !important;
+}
+
+.auth-card input:-webkit-autofill,
+.auth-recovery-dialog input:-webkit-autofill {
+  font-weight: 400 !important;
+}
+
 @media (max-width: 980px) {
   .auth-layout {
     grid-template-columns: 1fr;
