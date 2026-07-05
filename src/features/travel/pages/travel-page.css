@@ -461,6 +461,10 @@
   font-weight: 900;
 }
 
+.fp-travel-summary article:nth-child(2) strong {
+  color: #191f28;
+}
+
 .fp-travel-map {
   position: relative;
   min-height: 260px;
