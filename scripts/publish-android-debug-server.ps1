@@ -29,11 +29,7 @@ if ($LASTEXITCODE -ne 0) {
   throw "APK upload failed with exit code $LASTEXITCODE"
 }
 
-$remoteCommand = @"
-set -euo pipefail
-docker run --rm -v family_platform_prod_downloads:/downloads -v /tmp:/hosttmp alpine:3.22 sh -lc 'cp /hosttmp/$RemoteApkName /downloads/$RemoteApkName && chmod 0644 /downloads/$RemoteApkName && ls -lh /downloads/$RemoteApkName'
-rm -f $remoteTempPath
-"@
+$remoteCommand = "set -eu; docker run --rm -v family_platform_prod_downloads:/downloads -v /tmp:/hosttmp alpine:3.22 sh -lc 'cp /hosttmp/$RemoteApkName /downloads/$RemoteApkName && chmod 0644 /downloads/$RemoteApkName && ls -lh /downloads/$RemoteApkName'; rm -f $remoteTempPath"
 
 & ssh -i $SshKeyPath -o BatchMode=yes "${SshUser}@${ServerHost}" $remoteCommand
 if ($LASTEXITCODE -ne 0) {

@@ -13,6 +13,22 @@ if (Test-Path $portableNode) {
   $env:PATH = "$portableNode;$env:PATH"
 }
 
+$jdkHome = Join-Path $repoRoot ".tools\jdk-21\jdk-21.0.11+10"
+$androidSdk = Join-Path $repoRoot ".tools\android-sdk"
+
+if (!(Test-Path $jdkHome)) {
+  throw "Android build JDK not found: $jdkHome"
+}
+
+if (!(Test-Path $androidSdk)) {
+  throw "Android SDK not found: $androidSdk"
+}
+
+$env:JAVA_HOME = $jdkHome
+$env:ANDROID_HOME = $androidSdk
+$env:ANDROID_SDK_ROOT = $androidSdk
+$env:PATH = "$jdkHome\bin;$androidSdk\platform-tools;$env:PATH"
+
 function Invoke-Checked {
   param(
     [string]$Command,
