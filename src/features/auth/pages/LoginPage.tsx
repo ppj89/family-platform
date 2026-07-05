@@ -73,6 +73,7 @@ function isDuplicateSession(error: unknown) {
 
 function getErrorMessage(error: unknown) {
   const status = typeof error === 'object' && error && 'status' in error ? Number((error as ApiError).status) : 0
+  const message = error instanceof Error ? String(error.message || '') : ''
   if (status) {
     if (status === 401) {
       return '이메일 또는 비밀번호를 확인해주세요.'
@@ -80,9 +81,9 @@ function getErrorMessage(error: unknown) {
     if (status === 409) {
       return '이미 로그인된 세션이 있습니다.'
     }
-    return error instanceof Error ? error.message || '요청을 처리하지 못했습니다.' : '요청을 처리하지 못했습니다.'
+    return message || '요청을 처리하지 못했습니다.'
   }
-  return '요청을 처리하지 못했습니다.'
+  return message || '요청을 처리하지 못했습니다.'
 }
 
 function isValidNicknameValue(value: string) {
@@ -388,6 +389,18 @@ export function LoginPage() {
                 password: registerForm.password,
               },
       })
+
+      if (mode === 'register' && response.emailVerificationRequired) {
+        showToast('인증 메일을 보냈습니다. 메일에서 인증을 완료한 뒤 로그인해주세요.')
+        setMode('login')
+        setLoginForm((current) => ({ ...current, email: registerForm.email.trim(), password: '' }))
+        setRegisterForm(createRegisterFormState())
+        setRequiredConsent(false)
+        setNicknameCheckState('idle')
+        setNicknameCheckMessage('')
+        setNicknameCheckedValue('')
+        return
+      }
 
       if (mode === 'login') {
         if (rememberEmail) {

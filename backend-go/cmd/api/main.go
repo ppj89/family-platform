@@ -1303,13 +1303,13 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 func (a *app) verifyEmail(w http.ResponseWriter, r *http.Request) {
 	token := strings.TrimSpace(r.URL.Query().Get("token"))
 	if token == "" {
-		writeEmailVerificationHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, false, "?? ??? ????.")
+		writeEmailVerificationHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, false, "인증 링크가 올바르지 않습니다.")
 		return
 	}
 	tokenHash := verificationTokenHash(token)
 	tx, err := a.db.Begin(r.Context())
 	if err != nil {
-		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "?????? ??? ??????.")
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "인증 처리 중 문제가 발생했습니다.")
 		return
 	}
 	defer tx.Rollback(r.Context())
@@ -1325,7 +1325,7 @@ func (a *app) verifyEmail(w http.ResponseWriter, r *http.Request) {
 	`, tokenHash).Scan(&tokenID, &userID, &email)
 	if err != nil {
 		a.recordLoginHistory(r.Context(), nil, "", "password", "EMAIL_VERIFY", "FAIL", "invalid or expired token")
-		writeEmailVerificationHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, false, "?? ??? ?????? ???? ????.")
+		writeEmailVerificationHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, false, "인증 링크가 만료되었거나 이미 사용되었습니다.")
 		return
 	}
 	if _, err := tx.Exec(r.Context(), `
@@ -1333,19 +1333,19 @@ func (a *app) verifyEmail(w http.ResponseWriter, r *http.Request) {
 		set email_verified_at = now(), email_verification_required = false
 		where id = $1
 	`, userID); err != nil {
-		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "??? ?? ??? ??????.")
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "이메일 인증을 완료하지 못했습니다.")
 		return
 	}
 	if _, err := tx.Exec(r.Context(), "update email_verification_tokens set used_at = now() where id = $1", tokenID); err != nil {
-		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "??? ?? ??? ??????.")
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "이메일 인증을 완료하지 못했습니다.")
 		return
 	}
 	if err := tx.Commit(r.Context()); err != nil {
-		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "??? ?? ??? ??????.")
+		writeEmailVerificationHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, false, "이메일 인증을 완료하지 못했습니다.")
 		return
 	}
 	a.recordLoginHistory(r.Context(), &userID, email, "password", "EMAIL_VERIFY", "SUCCESS", "")
-	writeEmailVerificationHTML(w, http.StatusOK, a.cfg.publicBaseURL, true, "??? ??? ???????. ?? ???? ? ????.")
+	writeEmailVerificationHTML(w, http.StatusOK, a.cfg.publicBaseURL, true, "이메일 인증이 완료되었습니다. 이제 로그인할 수 있습니다.")
 }
 
 func (a *app) resendVerificationEmail(w http.ResponseWriter, r *http.Request) {
@@ -1658,7 +1658,7 @@ func (a *app) createFamily(w http.ResponseWriter, r *http.Request, user authUser
 			writeError(w, http.StatusInternalServerError, "database read failed")
 			return
 		}
-		name = nickname + " ??"
+		name = nickname + " 가족"
 	}
 
 	var memberCount int
@@ -2173,7 +2173,7 @@ func (a *app) acceptFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 	_, _ = tx.Exec(r.Context(), `
 		insert into app_notifications (user_id, family_id, type, title, body, target_date, created_at)
 		values ($1, $2, 'FAMILY_INVITE_ACCEPTED', $3, $4, current_date, now())
-	`, inviterUserID, familyID, acceptedName+" ?? ??? ???????.", acceptedName+" ?? ???? ??? ??????.")
+	`, inviterUserID, familyID, acceptedName+" 님이 초대를 수락했습니다.", acceptedName+" 님이 가족그룹에 참여했습니다.")
 	if err := tx.Commit(r.Context()); err != nil {
 		writeError(w, http.StatusInternalServerError, "database commit failed")
 		return
@@ -3677,7 +3677,7 @@ func (a *app) createScheduleReminders(w http.ResponseWriter, r *http.Request, us
 	created := 0
 	for _, familyID := range familyIDs {
 		schedules, err := a.db.Query(r.Context(), `
-			select id, title, coalesce(schedule_time::text, ''), coalesce(category, '??')
+			select id, title, coalesce(schedule_time::text, ''), coalesce(category, '일정')
 			from family_schedules where family_id = $1 and schedule_date = $2 and deleted_at is null
 		`, familyID, targetDate)
 		if err != nil {
@@ -3700,13 +3700,13 @@ func (a *app) createScheduleReminders(w http.ResponseWriter, r *http.Request, us
 				}
 				bodyTime := scheduleTime
 				if bodyTime == "" {
-					bodyTime = "?? ??"
+					bodyTime = "시간 미정"
 				}
 				tag, err := a.db.Exec(r.Context(), `
 					insert into app_notifications (user_id, family_id, schedule_id, type, title, body, target_date, created_at)
-					values ($1,$2,$3,'SCHEDULE_REMINDER','??? ??? ????.', $4, $5, now())
+					values ($1,$2,$3,'SCHEDULE_REMINDER','오늘 일정이 있습니다.', $4, $5, now())
 					on conflict (user_id, schedule_id, type, target_date) do nothing
-				`, userID, familyID, scheduleID, bodyTime+" "+title+" ? "+category, targetDate)
+				`, userID, familyID, scheduleID, bodyTime+" · "+title+" · "+category, targetDate)
 				if err == nil {
 					created += int(tag.RowsAffected())
 				}
@@ -4736,20 +4736,30 @@ func (a *app) sendVerificationEmail(email, nickname, verifyURL string) error {
 		return fmt.Errorf("mail delivery is not configured")
 	}
 	from := a.mailFromEmail()
-	subject := "Family Platform ??? ??"
+	subject := "Family Platform 이메일 인증"
 	displayName := strings.TrimSpace(nickname)
 	if displayName == "" {
-		displayName = "??"
+		displayName = "회원"
 	}
-	body := fmt.Sprintf("%s?, ?? ??? ?? ??? ??? ??????.\n\n%s\n\n? ??? 24?? ?? ??? ? ????.", displayName, verifyURL)
+	body := strings.Join([]string{
+		fmt.Sprintf("%s님, Family Platform 회원가입을 완료하려면 이메일 인증이 필요합니다.", displayName),
+		"",
+		"아래 링크를 눌러 이메일 인증을 완료한 뒤 로그인하세요.",
+		"",
+		verifyURL,
+		"",
+		"이 링크는 24시간 동안 유효합니다.",
+		"본인이 요청하지 않았다면 이 메일을 무시하세요.",
+	}, "\n")
 	message := strings.Join([]string{
 		"From: " + from,
 		"To: " + email,
 		"Subject: " + mimeHeader(subject),
 		"MIME-Version: 1.0",
 		"Content-Type: text/plain; charset=UTF-8",
+		"Content-Transfer-Encoding: base64",
 		"",
-		body,
+		base64.StdEncoding.EncodeToString([]byte(body)),
 	}, "\r\n")
 	return a.sendMail(from, []string{email}, subject, body, []byte(message))
 }
@@ -4970,9 +4980,9 @@ func htmlEscape(value string) string {
 
 func writeEmailVerificationHTML(w http.ResponseWriter, status int, publicBaseURL string, success bool, message string) {
 	redirectURL := strings.TrimRight(publicBaseURL, "/") + "/"
-	title := "??? ??"
+	title := "인증 실패"
 	if success {
-		title = "?? ??"
+		title = "인증 완료"
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
@@ -4994,7 +5004,7 @@ func writeEmailVerificationHTML(w http.ResponseWriter, status int, publicBaseURL
   <main>
     <h1>%s</h1>
     <p>%s</p>
-    <a href="%s">??? ???? ??</a>
+    <a href="%s">로그인 화면으로 이동</a>
   </main>
 </body>
 </html>`, title, title, message, redirectURL)

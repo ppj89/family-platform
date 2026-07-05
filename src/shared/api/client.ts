@@ -9,6 +9,35 @@ export type ApiMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
 const apiTimeoutMs = 15000
 
+function normalizeApiErrorMessage(raw: string, status: number) {
+  const text = raw.trim()
+  let message = text
+
+  if (text.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(text) as { message?: string; error?: string }
+      message = parsed.message || parsed.error || text
+    } catch {
+      message = text
+    }
+  }
+
+  const normalized = message.toLowerCase()
+  if (normalized.includes('email verification required')) return '이메일 인증이 필요합니다. 메일에서 인증을 완료한 뒤 로그인해주세요.'
+  if (normalized.includes('verification email accepted')) return '인증 메일을 보냈습니다. 메일에서 인증을 완료한 뒤 로그인해주세요.'
+  if (normalized.includes('nickname is already registered')) return '이미 사용 중인 닉네임입니다.'
+  if (normalized.includes('email is already registered') || normalized.includes('already registered')) return '이미 가입된 이메일입니다.'
+  if (normalized.includes('active session') || normalized.includes('duplicate session')) return '이미 로그인된 세션이 있습니다.'
+  if (normalized.includes('invalid session')) return '로그인이 필요합니다.'
+  if (normalized.includes('invalid credentials')) return '이메일 또는 비밀번호를 확인해주세요.'
+  if (normalized.includes('rate limit')) return '요청이 많습니다. 잠시 후 다시 시도해주세요.'
+  if (normalized.includes('required') || normalized.includes('invalid') || status === 400) return '입력값을 확인해주세요.'
+  if (status === 403) return '권한이 없어 처리할 수 없습니다.'
+  if (status === 404) return '대상 데이터를 찾을 수 없습니다.'
+  if (status >= 500 || normalized.includes('database')) return '시스템 문제로 처리하지 못했습니다. 잠시 후 다시 시도해주세요.'
+  return message || `API ${status}`
+}
+
 export async function apiRequest<T>(path: string, options: { method?: ApiMethod; body?: unknown } = {}): Promise<T> {
   const token = getStoredAuthToken()
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
@@ -34,7 +63,7 @@ export async function apiRequest<T>(path: string, options: { method?: ApiMethod;
   }
 
   if (!response.ok) {
-    const message = await response.text()
+    const message = normalizeApiErrorMessage(await response.text(), response.status)
     if (response.status === 401) {
       clearAuthSession()
       window.dispatchEvent(new CustomEvent('family-platform-auth-invalid'))
@@ -73,7 +102,7 @@ export async function apiFormRequest<T>(path: string, formData: FormData, option
   }
 
   if (!response.ok) {
-    const message = await response.text()
+    const message = normalizeApiErrorMessage(await response.text(), response.status)
     if (response.status === 401) {
       clearAuthSession()
       window.dispatchEvent(new CustomEvent('family-platform-auth-invalid'))

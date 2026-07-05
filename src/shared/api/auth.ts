@@ -18,6 +18,8 @@ export interface AuthSessionResponse {
   loginProvider?: string
   provider?: string
   platformAdmin?: boolean
+  emailVerificationRequired?: boolean
+  message?: string
 }
 
 const tokenKey = 'family-platform-access-token'

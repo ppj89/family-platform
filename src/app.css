@@ -485,8 +485,8 @@
 
 .fp-toast {
   position: fixed;
-  right: 24px;
-  bottom: 24px;
+  left: 50%;
+  top: 50%;
   z-index: 30000;
   max-width: min(420px, calc(100vw - 40px));
   border-radius: 14px;
@@ -497,6 +497,8 @@
   font-size: var(--fp-font-body);
   font-weight: var(--fp-weight-strong);
   line-height: 1.45;
+  text-align: center;
+  transform: translate(-50%, -50%);
 }
 
 .fp-empty-text {
