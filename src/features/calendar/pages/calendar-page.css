@@ -81,9 +81,20 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   place-items: center;
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.72);
-  color: #1264d8;
-  font-size: var(--fp-font-control);
-  font-weight: var(--fp-weight-title);
+  color: transparent;
+  font-size: 0;
+}
+
+.fp-loading-blocker::before {
+  content: "";
+  width: min(240px, 62%);
+  height: 8px;
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, #2f80ed 0 34%, transparent 34% 100%) 0 0 / 220% 100% no-repeat,
+    #eaf2ff;
+  box-shadow: 0 10px 24px rgba(47, 128, 237, 0.18);
+  animation: fp-loading-bar 1s linear infinite;
 }
 
 .fp-calendar-header,
