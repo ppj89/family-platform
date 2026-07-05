@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage, isAuthError } from '../../../shared/api/client'
-import { ConfirmDialog, DatePickerField } from '../../../shared/components'
+import { ConfirmDialog, DatePickerField, ToastMessage } from '../../../shared/components'
 import { CALENDAR_CATEGORIES, COMMON_CODE_GROUPS, FAMILY_MEMBER_OPTIONS } from '../../../shared/constants/commonCodes'
 import { useCommonCodeOptions } from '../../../shared/hooks/useCommonCodeOptions'
 import {
@@ -795,7 +795,7 @@ export default function CalendarPage() {
               </div>
             </header>
 
-            {message ? <p className="fp-message">{message}</p> : null}
+            <ToastMessage message={message} onClose={() => setMessage('')} />
 
             <div className="fp-calendar-layout">
               {view === 'month' ? (

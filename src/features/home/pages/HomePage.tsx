@@ -6,6 +6,7 @@ import type { Trip } from '../../travel/types'
 import { listBabies, listBabyRecords } from '../../baby/api/baby'
 import { listFamilies, listFamilyMembers } from '../../family/api/familyGroup'
 import { isAuthError } from '../../../shared/api/client'
+import { ToastMessage } from '../../../shared/components'
 import { monthRange } from '../../../shared/utils/date'
 import './home-page.css'
 
@@ -162,7 +163,7 @@ export default function HomePage() {
         </article>
       </div>
 
-      {message ? <p className="fp-message">{message}</p> : null}
+      <ToastMessage message={message} onClose={() => setMessage('')} />
 
       <div className="fp-home-grid">
         <section className="fp-card fp-home-panel">

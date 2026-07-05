@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage, isAuthError } from '../../../shared/api/client'
-import { ConfirmDialog, DatePickerField } from '../../../shared/components'
+import { ConfirmDialog, DatePickerField, ToastMessage } from '../../../shared/components'
 import { COMMON_CODE_GROUPS, FAMILY_MEMBER_OPTIONS, LEDGER_CATEGORIES, LEDGER_ENTRY_TYPE_OPTIONS, LEDGER_PAYMENT_METHODS } from '../../../shared/constants/commonCodes'
 import { useCommonCodeOptions } from '../../../shared/hooks'
 import { monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
@@ -365,7 +365,7 @@ export default function LedgerPage() {
             <button type="button" onClick={openSmsParser}>카드 붙여넣기</button>
           </div>
 
-          {message ? <p className="fp-message">{message}</p> : null}
+          <ToastMessage message={message} onClose={() => setMessage('')} />
 
           <section className="daily-ledger api-ledger-list-host" aria-label="가계부 내역">
             {groupedEntries.length ? groupedEntries.map((group) => (

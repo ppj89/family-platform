@@ -1,6 +1,6 @@
 import { Dispatch, FormEvent, RefObject, SetStateAction, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
-import { ConfirmDialog, DatePickerField } from '../../../shared/components'
+import { ConfirmDialog, DatePickerField, ToastMessage } from '../../../shared/components'
 import { BABY_GENDER_OPTIONS, BABY_RECORD_TYPES, COMMON_CODE_GROUPS } from '../../../shared/constants/commonCodes'
 import { useCommonCodeOptions, useCommonCodeSelectOptions } from '../../../shared/hooks/useCommonCodeOptions'
 import { currentTimeText, todayKey } from '../../../shared/utils/date'
@@ -499,7 +499,7 @@ export default function BabyPage() {
           <button className="fp-button fp-button-primary baby-add-button" type="button" onClick={startBabyCreate}>아이 추가</button>
         )}
       </header>
-      {message ? <p className="fp-message">{message}</p> : null}
+      <ToastMessage message={message} onClose={() => setMessage('')} />
 
       {!selectedBaby ? (
         <div className="fp-baby-layout">
