@@ -437,8 +437,7 @@ export function LoginPage() {
 
   return (
     <main className={`auth-shell theme-${theme}`}>
-      <section className="auth-layout auth-layout-form-only">
-        {/*
+      <section className="auth-layout">
         <div className="auth-visual" data-auth-landing-ready="true">
           <div className="brand auth-brand">
             <div className="brand-mark">FP</div>
@@ -449,13 +448,16 @@ export function LoginPage() {
           </div>
           <section className="auth-copy">
             <span className="auth-kicker">가족을 위한 하나의 공간</span>
+            {/*
             <h1>
               가족 기록을
               <br />
               한곳에서 편하게
             </h1>
+            */}
             <p>일정, 가계부, 여행, 육아, 일기를 가족끼리 공유하고 권한에 맞게 관리합니다.</p>
           </section>
+          {/*
           <div className="auth-preview">
             <div>
               <strong>공유 캘린더</strong>
@@ -470,8 +472,8 @@ export function LoginPage() {
               <span>수유, 배변, 키, 몸무게 변화를 기록</span>
             </div>
           </div>
+          */}
         </div>
-        */}
 
         <form className="auth-card" data-auth-mode={mode} onSubmit={handleSubmit}>
           <button className="auth-theme-button" type="button" aria-label={theme === 'dark' ? '라이트모드' : '다크모드'} onClick={toggleTheme}>
