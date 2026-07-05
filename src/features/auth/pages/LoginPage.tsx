@@ -440,7 +440,8 @@ export function LoginPage() {
 
   return (
     <main className={`auth-shell theme-${theme}`}>
-      <section className="auth-layout">
+      <section className="auth-layout auth-layout-form-only">
+        {/*
         <div className="auth-visual" data-auth-landing-ready="true">
           <div className="brand auth-brand">
             <div className="brand-mark">FP</div>
@@ -473,6 +474,7 @@ export function LoginPage() {
             </div>
           </div>
         </div>
+        */}
 
         <form className="auth-card" data-auth-mode={mode} onSubmit={handleSubmit}>
           <button className="auth-theme-button" type="button" aria-label={theme === 'dark' ? '라이트모드' : '다크모드'} onClick={toggleTheme}>

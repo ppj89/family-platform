@@ -50,6 +50,13 @@
   padding: 40px 0;
 }
 
+.auth-layout-form-only {
+  grid-template-columns: minmax(320px, 420px);
+  justify-content: center;
+  width: min(520px, calc(100% - 64px));
+  gap: 0;
+}
+
 .auth-visual {
   display: grid;
   align-content: center;
@@ -881,6 +888,12 @@
     width: calc(100% - 40px);
     gap: 20px;
     padding: 34px 0;
+  }
+
+  .auth-layout-form-only {
+    min-height: auto;
+    align-content: start;
+    padding-top: 18px;
   }
 
   .auth-brand {
