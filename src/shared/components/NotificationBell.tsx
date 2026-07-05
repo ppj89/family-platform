@@ -1,13 +1,6 @@
 import { useEffect, useState } from 'react'
 import { apiRequest } from '../api/client'
-
-interface NotificationItem {
-  id: number
-  type: string
-  title: string
-  body: string
-  targetDate?: string
-}
+import { listUnreadNotifications, markNotificationRead, type NotificationItem } from '../api/notifications'
 
 interface InvitationItem {
   id: number
@@ -23,7 +16,7 @@ export function NotificationBell() {
   useEffect(() => {
     let alive = true
     Promise.allSettled([
-      apiRequest<NotificationItem[]>('/notifications?unreadOnly=true'),
+      listUnreadNotifications(),
       apiRequest<InvitationItem[]>('/family-invitations'),
     ]).then((results) => {
       if (!alive) return
@@ -45,6 +38,16 @@ export function NotificationBell() {
     }
   }, [])
 
+  async function handleNotificationClick(item: NotificationItem) {
+    if (item.id < 0) return
+    setItems((current) => current.filter((next) => next.id !== item.id))
+    try {
+      await markNotificationRead(item.id)
+    } catch {
+      void 0
+    }
+  }
+
   return (
     <div className="fp-notification-wrap">
       <button className="fp-notification-button" type="button" aria-label="알림" onClick={() => setOpen((value) => !value)}>
@@ -59,7 +62,7 @@ export function NotificationBell() {
           </header>
           {items.length ? (
             items.map((item) => (
-              <button className="fp-notification-item" key={`${item.type}-${item.id}`} type="button">
+              <button className="fp-notification-item" key={`${item.type}-${item.id}`} type="button" onClick={() => handleNotificationClick(item)}>
                 <span>{item.title}</span>
                 <strong>{item.body}</strong>
                 {item.targetDate ? <small>{item.targetDate}</small> : null}

@@ -5,7 +5,7 @@ import { listTrips, listTravelRecords } from '../../travel/api/travel'
 import type { Trip } from '../../travel/types'
 import { listBabies, listBabyRecords } from '../../baby/api/baby'
 import { listFamilies, listFamilyMembers } from '../../family/api/familyGroup'
-import { isAuthError } from '../../../shared/api/client'
+import { apiActionMessage, isAuthError } from '../../../shared/api/client'
 import { ToastMessage } from '../../../shared/components'
 import { monthRange } from '../../../shared/utils/date'
 import './home-page.css'
@@ -106,7 +106,7 @@ export default function HomePage() {
       } catch (error) {
         if (!alive || requestSeq.current !== requestId) return
         if (isAuthError(error)) return
-        setMessage(error instanceof Error ? error.message : '홈 데이터를 불러오지 못했습니다.')
+        setMessage(apiActionMessage(error, '홈 데이터를 불러오지 못했습니다.'))
       } finally {
         if (alive && requestSeq.current === requestId) {
           window.clearTimeout(loadingTimer)

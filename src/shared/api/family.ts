@@ -1,4 +1,4 @@
-import { apiRequest } from './client'
+import { apiRequest, isAuthError } from './client'
 
 export interface FamilyGroup {
   id: number
@@ -20,7 +20,11 @@ export async function getReadableFamilyId() {
     const selected = families.find((family) => family.id === cached) || families[0]
     window.localStorage.setItem(currentFamilyKey, String(selected.id))
     return selected.id
-  } catch {
+  } catch (error) {
+    if (isAuthError(error)) {
+      window.localStorage.removeItem(currentFamilyKey)
+      return 0
+    }
     if (Number.isFinite(cached) && cached > 0) return cached
     return 0
   }

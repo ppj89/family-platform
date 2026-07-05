@@ -1,4 +1,5 @@
 import { apiRequest } from './client'
+import { getReadableFamilyId } from './family'
 import type { CommonCodeGroupKey, CommonCodeOption } from '../constants/commonCodes'
 
 export interface CommonCodeGroup {
@@ -25,6 +26,20 @@ export interface CommonCodeGroupWithCodes extends CommonCodeGroup {
   codes: CommonCode[]
 }
 
+export interface CommonCodeGroupPayload {
+  menuKey: string
+  code: string
+  name: string
+  active: boolean
+}
+
+export interface CommonCodePayload {
+  code: string
+  name: string
+  sortOrder: number
+  active: boolean
+}
+
 function uniqueValues(values: string[]) {
   return Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)))
 }
@@ -42,21 +57,53 @@ function uniqueOptions(options: CommonCodeOption[]) {
   return nextOptions
 }
 
-function queryValue(value: string) {
-  return encodeURIComponent(value)
-}
-
 function pathId(id: number) {
   return encodeURIComponent(String(id))
 }
 
-export function listCommonCodeGroups(menuKey?: string) {
-  const query = menuKey ? `?menuKey=${queryValue(menuKey)}` : ''
+async function familyScopedQuery(params: Record<string, string | number | undefined> = {}) {
+  const familyId = await getReadableFamilyId()
+  const query = new URLSearchParams()
+  if (familyId > 0) query.set('familyId', String(familyId))
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') query.set(key, String(value))
+  })
+  const text = query.toString()
+  return text ? `?${text}` : ''
+}
+
+export async function listCommonCodeGroups(menuKey?: string) {
+  const query = await familyScopedQuery(menuKey ? { menuKey } : {})
   return apiRequest<CommonCodeGroup[]>(`/common-code-groups${query}`)
 }
 
 export function listCommonCodes(groupId: number) {
   return apiRequest<CommonCode[]>(`/common-code-groups/${pathId(groupId)}/codes`)
+}
+
+export async function createCommonCodeGroup(payload: CommonCodeGroupPayload) {
+  const query = await familyScopedQuery()
+  return apiRequest<CommonCodeGroup>(`/common-code-groups${query}`, { method: 'POST', body: payload })
+}
+
+export function updateCommonCodeGroup(groupId: number, payload: CommonCodeGroupPayload) {
+  return apiRequest<CommonCodeGroup>(`/common-code-groups/${pathId(groupId)}`, { method: 'PUT', body: payload })
+}
+
+export function deleteCommonCodeGroup(groupId: number) {
+  return apiRequest<null>(`/common-code-groups/${pathId(groupId)}`, { method: 'DELETE' })
+}
+
+export function createCommonCode(groupId: number, payload: CommonCodePayload) {
+  return apiRequest<CommonCode>(`/common-code-groups/${pathId(groupId)}/codes`, { method: 'POST', body: payload })
+}
+
+export function updateCommonCode(groupId: number, codeId: number, payload: CommonCodePayload) {
+  return apiRequest<CommonCode>(`/common-code-groups/${pathId(groupId)}/codes/${pathId(codeId)}`, { method: 'PUT', body: payload })
+}
+
+export function deleteCommonCode(groupId: number, codeId: number) {
+  return apiRequest<null>(`/common-code-groups/${pathId(groupId)}/codes/${pathId(codeId)}`, { method: 'DELETE' })
 }
 
 export async function listCommonCodeGroupsWithCodes() {
