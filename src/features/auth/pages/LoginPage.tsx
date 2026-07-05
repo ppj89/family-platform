@@ -501,12 +501,15 @@ export function LoginPage() {
             </button>
           </div>
           <div className="auth-heading">
+            {/*
             <strong>{mode === 'login' ? '로그인' : '회원가입'}</strong>
             <p>
               {mode === 'login'
                 ? '가입한 이메일 또는 관리자 아이디로 접속합니다.'
                 : '가족 운영 워크스페이스 계정을 만듭니다. 회원가입 후 이메일 인증을 완료해야 로그인할 수 있습니다.'}
             </p>
+            */}
+            {mode === 'register' ? <p className="auth-verification-notice">회원가입 신청 후 이메일 인증이 필요합니다.</p> : null}
           </div>
 
           {mode === 'login' ? (

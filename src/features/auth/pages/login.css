@@ -247,6 +247,11 @@
   line-height: 1.45;
 }
 
+.auth-heading .auth-verification-notice {
+  color: #1b64da;
+  font-weight: var(--auth-weight-body);
+}
+
 .auth-card label {
   display: grid;
   gap: 8px;
