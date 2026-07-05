@@ -186,7 +186,7 @@ export default function BabyPage() {
       setRecords(await listBabyRecords(baby.id))
       setEditingRecord(null)
       setEditingGrowthRecord(null)
-      setRecordForm((value) => (value.memo || value.amountMl || value.heightCm || value.weightKg ? value : emptyRecord()))
+      setRecordForm((value) => (value.memo || value.amountMl ? value : emptyRecord()))
       setGrowthForm((value) => (value.heightCm || value.weightKg ? value : emptyGrowth()))
     } catch (error) {
       setMessage(apiActionMessage(error, '육아 기록을 불러오지 못했습니다.'))
@@ -291,8 +291,8 @@ export default function BabyPage() {
       recordDate: record.recordDate,
       recordTime: record.recordTime?.slice(0, 5) || currentTimeText(),
       amountMl: record.amountMl || null,
-      heightCm: record.heightCm || null,
-      weightKg: record.weightKg || null,
+      heightCm: null,
+      weightKg: null,
       memo: record.memo || '',
       mediaUrls: record.mediaUrls || [],
     })
@@ -391,6 +391,8 @@ export default function BabyPage() {
     try {
       const payload = {
         ...recordForm,
+        heightCm: null,
+        weightKg: null,
         memo: recordForm.memo?.trim() || null,
         recordTime: recordForm.recordTime?.slice(0, 5) || currentTimeText(),
       }
@@ -401,10 +403,6 @@ export default function BabyPage() {
         editingRecord,
       )
       setRecords((current) => upsertRecord(current, saved))
-      if (saved.heightCm || saved.weightKg) {
-        setSelectedBaby((current) => (current ? applyLatestGrowth(current, saved) : current))
-        setBabies((current) => current.map((baby) => (baby.id === selectedBaby.id ? applyLatestGrowth(baby, saved) : baby)))
-      }
       setRecordForm(emptyRecord())
       setEditingRecord(null)
       setMessage(wasEditing ? '육아 기록을 수정했습니다.' : '육아 기록을 추가했습니다.')
@@ -870,14 +868,6 @@ function RecordForm({ formRef, form, editing, recordTypeOptions, setForm, onSubm
         <label className="form-field">
           <span className="form-label">수유량(ml)</span>
           <input className="form-control" inputMode="numeric" value={form.amountMl || ''} onChange={(event) => setForm((value) => ({ ...value, amountMl: numberOrNull(event.target.value) }))} />
-        </label>
-        <label className="form-field">
-          <span className="form-label">키(cm)</span>
-          <input className="form-control" inputMode="decimal" value={form.heightCm || ''} onChange={(event) => setForm((value) => ({ ...value, heightCm: numberOrNull(event.target.value) }))} />
-        </label>
-        <label className="form-field">
-          <span className="form-label">몸무게(kg)</span>
-          <input className="form-control" inputMode="decimal" value={form.weightKg || ''} onChange={(event) => setForm((value) => ({ ...value, weightKg: numberOrNull(event.target.value) }))} />
         </label>
         <label className="form-field baby-api-memo">
           <span className="form-label">메모</span>
