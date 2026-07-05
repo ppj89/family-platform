@@ -397,22 +397,6 @@ func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
 	seen := map[string]bool{}
 	results := make([]placeSearchResult, 0, limit)
 	for _, candidateQuery := range placeSearchQueries(query) {
-		kakaoResults, err := a.searchKakaoPlaces(r.Context(), candidateQuery, limit-len(results))
-		if err != nil {
-			a.log.Warn("kakao place search failed", "query", candidateQuery, "error", err)
-			if isPlaceProviderAuthError(err) {
-				break
-			}
-		}
-		results = appendUniquePlaces(results, kakaoResults, seen, limit)
-		if len(results) >= limit {
-			break
-		}
-	}
-	for _, candidateQuery := range placeSearchQueries(query) {
-		if len(results) >= limit {
-			break
-		}
 		naverResults, err := a.searchNaverPlaces(r.Context(), candidateQuery, limit-len(results))
 		if err != nil {
 			a.log.Warn("naver place search failed", "query", candidateQuery, "error", err)
@@ -421,6 +405,22 @@ func (a *app) searchPlaces(w http.ResponseWriter, r *http.Request, _ authUser) {
 			}
 		}
 		results = appendUniquePlaces(results, naverResults, seen, limit)
+		if len(results) >= limit {
+			break
+		}
+	}
+	for _, candidateQuery := range placeSearchQueries(query) {
+		if len(results) >= limit {
+			break
+		}
+		kakaoResults, err := a.searchKakaoPlaces(r.Context(), candidateQuery, limit-len(results))
+		if err != nil {
+			a.log.Warn("kakao place search failed", "query", candidateQuery, "error", err)
+			if isPlaceProviderAuthError(err) {
+				break
+			}
+		}
+		results = appendUniquePlaces(results, kakaoResults, seen, limit)
 		if len(results) >= limit {
 			break
 		}
