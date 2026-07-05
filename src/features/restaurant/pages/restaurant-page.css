@@ -387,6 +387,10 @@
   position: relative;
 }
 
+.fp-restaurant .fp-place-field:focus-within {
+  z-index: 1200;
+}
+
 .fp-restaurant .fp-place-status {
   color: #6b7684;
   font-size: 12px;
@@ -395,7 +399,7 @@
 
 .fp-restaurant .fp-place-candidates {
   position: absolute;
-  z-index: 90;
+  z-index: 1300;
   top: calc(100% + 6px);
   right: 0;
   left: 0;

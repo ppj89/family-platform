@@ -716,6 +716,10 @@
   position: relative;
 }
 
+.fp-place-field:focus-within {
+  z-index: 1200;
+}
+
 .fp-place-status {
   margin-top: 6px;
   color: #6b7684;
@@ -725,7 +729,7 @@
 
 .fp-place-candidates {
   position: absolute;
-  z-index: 20;
+  z-index: 1300;
   top: calc(100% + 6px);
   left: 0;
   right: 0;
