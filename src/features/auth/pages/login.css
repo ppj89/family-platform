@@ -267,7 +267,7 @@
   color: #191f28;
   font: inherit;
   font-size: var(--auth-font-body);
-  font-weight: var(--auth-weight-body);
+  font-weight: 400;
   box-shadow: inset 0 0 0 1px #e5e8eb;
   outline: none;
 }
@@ -449,18 +449,6 @@
   padding: 0 !important;
   opacity: 0 !important;
   pointer-events: none !important;
-}
-
-.auth-message {
-  min-height: 46px;
-  display: grid;
-  align-items: center;
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: #edf6ff;
-  color: #1b64da;
-  font-size: var(--auth-font-body);
-  font-weight: var(--auth-weight-strong);
 }
 
 .auth-submit {
@@ -842,7 +830,6 @@
   color: #8dbbff;
 }
 
-.auth-shell.theme-dark .auth-message,
 .auth-shell.theme-dark .auth-recovery-result {
   background: rgba(49, 130, 246, 0.18);
   color: #8dbbff;

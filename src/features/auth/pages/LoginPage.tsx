@@ -3,6 +3,7 @@ import { apiRequest } from '../../../shared/api/client'
 import type { ApiError } from '../../../shared/api/client'
 import { clearAuthSession, storeAuthSession } from '../../../shared/api/auth'
 import type { AuthSessionResponse } from '../../../shared/api/auth'
+import { ToastMessage } from '../../../shared/components/ToastMessage'
 import { LoginFields, RegisterFields } from '../components/AuthModeFields'
 import {
   createFindEmailFormState,
@@ -124,9 +125,13 @@ export function LoginPage() {
   const [autoLogin, setAutoLogin] = useState(window.localStorage.getItem(autoLoginKey) === 'true')
   const [requiredConsent, setRequiredConsent] = useState(false)
   const [busy, setBusy] = useState(false)
-  const [message, setMessage] = useState('')
+  const [toastMessage, setToastMessage] = useState('')
   const [providers, setProviders] = useState<Record<string, SsoProviderInfo>>({})
   const [sessionConfirmOpen, setSessionConfirmOpen] = useState(false)
+
+  function showToast(nextMessage: string) {
+    setToastMessage(nextMessage)
+  }
 
   useEffect(() => {
     let mounted = true
@@ -158,7 +163,6 @@ export function LoginPage() {
 
   function resetMode(nextMode: AuthMode) {
     setMode(nextMode)
-    setMessage('')
     setRecoveryMode(null)
     setRequiredConsent(false)
     setNicknameCheckState('idle')
@@ -172,7 +176,6 @@ export function LoginPage() {
 
   function openRecovery(nextMode: RecoveryMode) {
     setRecoveryMode(nextMode)
-    setMessage('')
     setRecoveryResult('')
   }
 
@@ -338,38 +341,36 @@ export function LoginPage() {
     if (busy) {
       return
     }
-    setMessage('')
-
     const activeEmail = mode === 'login' ? loginForm.email : registerForm.email
     const activePassword = mode === 'login' ? loginForm.password : registerForm.password
 
     if (!activeEmail.trim()) {
-      setMessage('이메일을 입력해주세요.')
+      showToast('이메일을 입력해주세요.')
       return
     }
     if (!activePassword) {
-      setMessage('비밀번호를 입력해주세요.')
+      showToast('비밀번호를 입력해주세요.')
       return
     }
     if (mode === 'register') {
       if (!registerForm.nickname.trim()) {
-        setMessage('닉네임을 입력해주세요.')
+        showToast('닉네임을 입력해주세요.')
         return
       }
       if (!isValidNicknameValue(registerForm.nickname)) {
-        setMessage('닉네임은 한글, 영문, 숫자 12자 이내로 입력해주세요.')
+        showToast('닉네임은 한글, 영문, 숫자 12자 이내로 입력해주세요.')
         return
       }
       if (nicknameCheckState !== 'available' || nicknameCheckedValue !== registerForm.nickname.trim()) {
-        setMessage('닉네임 중복확인을 해주세요.')
+        showToast('닉네임 중복확인을 해주세요.')
         return
       }
       if (registerForm.password !== registerForm.passwordConfirm) {
-        setMessage('비밀번호가 일치하지 않습니다.')
+        showToast('비밀번호가 일치하지 않습니다.')
         return
       }
       if (!requiredConsent) {
-        setMessage('필수 약관에 동의해주세요.')
+        showToast('필수 약관에 동의해주세요.')
         return
       }
     }
@@ -385,9 +386,6 @@ export function LoginPage() {
                 email: registerForm.email.trim(),
                 nickname: registerForm.nickname.trim(),
                 password: registerForm.password,
-                passwordConfirm: registerForm.passwordConfirm,
-                requiredConsent,
-                forceLogin,
               },
       })
 
@@ -405,9 +403,8 @@ export function LoginPage() {
     } catch (error) {
       if (mode === 'login' && !forceLogin && isDuplicateSession(error)) {
         setSessionConfirmOpen(true)
-        setMessage('')
       } else {
-        setMessage(getErrorMessage(error))
+        showToast(getErrorMessage(error))
       }
     } finally {
       setBusy(false)
@@ -422,7 +419,7 @@ export function LoginPage() {
   function startSso(provider: SsoProvider) {
     const providerInfo = providers[provider]
     if (providerInfo && providerInfo.configured === false) {
-      setMessage(`${providerLabels[provider]} 설정이 필요합니다.`)
+      showToast(`${providerLabels[provider]} 설정이 필요합니다.`)
       return
     }
     window.location.href = resolveStartUrl(provider, providerInfo)
@@ -514,8 +511,6 @@ export function LoginPage() {
               setRequiredConsent={setRequiredConsent}
             />
           )}
-
-          {message ? <div className="auth-message">{message}</div> : null}
 
           <button className="auth-submit" type="submit" disabled={busy}>
             {busy ? '처리 중' : mode === 'login' ? '로그인' : '회원가입'}
@@ -643,6 +638,8 @@ export function LoginPage() {
           </section>
         </div>
       ) : null}
+
+      <ToastMessage message={toastMessage} onClose={() => setToastMessage('')} />
     </main>
   )
 }
