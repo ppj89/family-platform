@@ -35,6 +35,8 @@ import (
 const (
 	maxFailedLoginAttempts = 5
 	lockDuration           = 5 * time.Minute
+	maxJSONBodyBytes       = 1 << 20
+	maxPasswordBytes       = 128
 )
 
 type config struct {
@@ -92,11 +94,18 @@ func (p oauthProviderConfig) isConfigured(publicBaseURL string) bool {
 }
 
 type app struct {
-	cfg        config
-	db         *pgxpool.Pool
-	log        *slog.Logger
-	mediaStore mediaStore
-	placeCache placeSearchCache
+	cfg          config
+	db           *pgxpool.Pool
+	log          *slog.Logger
+	mediaStore   mediaStore
+	placeCache   placeSearchCache
+	rateLimitMu  sync.Mutex
+	rateLimiters map[string]rateLimitBucket
+}
+
+type rateLimitBucket struct {
+	count   int
+	resetAt time.Time
 }
 
 type authUser struct {
@@ -851,6 +860,10 @@ func isValidNickname(nickname string) bool {
 }
 
 func (a *app) checkNickname(w http.ResponseWriter, r *http.Request) {
+	if !a.allowRequest("auth:nickname:"+clientIP(r), 20, time.Minute) {
+		writeError(w, http.StatusTooManyRequests, "too many requests")
+		return
+	}
 	var req struct {
 		Nickname string `json:"nickname"`
 	}
@@ -878,6 +891,10 @@ func (a *app) checkNickname(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) register(w http.ResponseWriter, r *http.Request) {
+	if !a.allowRequest("auth:register:"+clientIP(r), 5, 10*time.Minute) {
+		writeError(w, http.StatusTooManyRequests, "too many requests")
+		return
+	}
 	var req struct {
 		Email    string `json:"email"`
 		Nickname string `json:"nickname"`
@@ -888,8 +905,8 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 	}
 	email := normalizeEmail(req.Email)
 	nickname := strings.TrimSpace(req.Nickname)
-	if email == "" || nickname == "" || len(req.Password) < 8 {
-		writeError(w, http.StatusBadRequest, "email, nickname and password length >= 8 are required")
+	if email == "" || nickname == "" || !validPasswordLength(req.Password) {
+		writeError(w, http.StatusBadRequest, "email, nickname and password length 8-128 bytes are required")
 		return
 	}
 	if !isValidNickname(nickname) {
@@ -971,6 +988,10 @@ func (a *app) register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) login(w http.ResponseWriter, r *http.Request) {
+	if !a.allowRequest("auth:login:"+clientIP(r), 20, 5*time.Minute) {
+		writeError(w, http.StatusTooManyRequests, "too many requests")
+		return
+	}
 	var req struct {
 		Email      string `json:"email"`
 		Password   string `json:"password"`
@@ -1106,8 +1127,8 @@ func (a *app) changePassword(w http.ResponseWriter, r *http.Request, user authUs
 	if !readJSON(w, r, &req) {
 		return
 	}
-	if len(req.NewPassword) < 8 {
-		writeError(w, http.StatusBadRequest, "new password length >= 8 is required")
+	if !validPasswordLength(req.NewPassword) {
+		writeError(w, http.StatusBadRequest, "new password length 8-128 bytes is required")
 		return
 	}
 	var currentHash string
@@ -1328,6 +1349,10 @@ func (a *app) verifyEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) resendVerificationEmail(w http.ResponseWriter, r *http.Request) {
+	if !a.allowRequest("auth:verify-resend:"+clientIP(r), 5, 10*time.Minute) {
+		writeError(w, http.StatusTooManyRequests, "too many requests")
+		return
+	}
 	var req struct {
 		Email string `json:"email"`
 	}
@@ -1366,6 +1391,10 @@ func (a *app) resendVerificationEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) findEmail(w http.ResponseWriter, r *http.Request) {
+	if !a.allowRequest("auth:find-email:"+clientIP(r), 10, 10*time.Minute) {
+		writeError(w, http.StatusTooManyRequests, "too many requests")
+		return
+	}
 	var req struct {
 		Nickname string `json:"nickname"`
 	}
@@ -1418,6 +1447,10 @@ func (a *app) findEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) requestPasswordReset(w http.ResponseWriter, r *http.Request) {
+	if !a.allowRequest("auth:password-request:"+clientIP(r), 5, 10*time.Minute) {
+		writeError(w, http.StatusTooManyRequests, "too many requests")
+		return
+	}
 	var req struct {
 		Email string `json:"email"`
 	}
@@ -1454,6 +1487,10 @@ func (a *app) requestPasswordReset(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) resetPassword(w http.ResponseWriter, r *http.Request) {
+	if !a.allowRequest("auth:password-reset:"+clientIP(r), 10, 10*time.Minute) {
+		writeError(w, http.StatusTooManyRequests, "too many requests")
+		return
+	}
 	var req struct {
 		Token    string `json:"token"`
 		Password string `json:"password"`
@@ -1462,8 +1499,8 @@ func (a *app) resetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	token := strings.TrimSpace(req.Token)
-	if token == "" || len(req.Password) < 8 {
-		writeError(w, http.StatusBadRequest, "token and password length >= 8 are required")
+	if token == "" || !validPasswordLength(req.Password) {
+		writeError(w, http.StatusBadRequest, "token and password length 8-128 bytes are required")
 		return
 	}
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -1519,6 +1556,10 @@ func (a *app) resetPassword(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *app) createAccountRecoveryInquiry(w http.ResponseWriter, r *http.Request) {
+	if !a.allowRequest("auth:recovery-inquiry:"+clientIP(r), 5, 10*time.Minute) {
+		writeError(w, http.StatusTooManyRequests, "too many requests")
+		return
+	}
 	var req struct {
 		Email        string `json:"email"`
 		Nickname     string `json:"nickname"`
@@ -4086,6 +4127,8 @@ func (a *app) securityHeaders(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		w.Header().Set("Permissions-Policy", "camera=(), microphone=(), geolocation=(self)")
+		w.Header().Set("Cross-Origin-Opener-Policy", "same-origin-allow-popups")
 		next.ServeHTTP(w, r)
 	})
 }
@@ -4518,9 +4561,19 @@ create index if not exists idx_app_notifications_user_created on app_notificatio
 
 func readJSON(w http.ResponseWriter, r *http.Request, out any) bool {
 	defer r.Body.Close()
+	r.Body = http.MaxBytesReader(w, r.Body, maxJSONBodyBytes)
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()
 	if err := decoder.Decode(out); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			writeError(w, http.StatusRequestEntityTooLarge, "request body too large")
+			return false
+		}
+		writeError(w, http.StatusBadRequest, "invalid json body")
+		return false
+	}
+	if err := decoder.Decode(&struct{}{}); err != io.EOF {
 		writeError(w, http.StatusBadRequest, "invalid json body")
 		return false
 	}
@@ -4597,11 +4650,11 @@ func (a *app) reserveMailAttempt(ctx context.Context, identifier, ipAddress, pur
 func clientIP(r *http.Request) string {
 	if forwarded := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); forwarded != "" {
 		parts := strings.Split(forwarded, ",")
-		if ip := strings.TrimSpace(parts[0]); ip != "" {
+		if ip := strings.TrimSpace(parts[0]); net.ParseIP(ip) != nil {
 			return ip
 		}
 	}
-	if realIP := strings.TrimSpace(r.Header.Get("X-Real-IP")); realIP != "" {
+	if realIP := strings.TrimSpace(r.Header.Get("X-Real-IP")); net.ParseIP(realIP) != nil {
 		return realIP
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -4609,6 +4662,40 @@ func clientIP(r *http.Request) string {
 		return host
 	}
 	return strings.TrimSpace(r.RemoteAddr)
+}
+
+func validPasswordLength(password string) bool {
+	return len(password) >= 8 && len(password) <= maxPasswordBytes
+}
+
+func (a *app) allowRequest(key string, limit int, window time.Duration) bool {
+	if limit <= 0 || window <= 0 {
+		return true
+	}
+	now := time.Now()
+	a.rateLimitMu.Lock()
+	defer a.rateLimitMu.Unlock()
+	if a.rateLimiters == nil {
+		a.rateLimiters = make(map[string]rateLimitBucket)
+	}
+	if len(a.rateLimiters) > 10000 {
+		for bucketKey, bucket := range a.rateLimiters {
+			if now.After(bucket.resetAt) {
+				delete(a.rateLimiters, bucketKey)
+			}
+		}
+	}
+	bucket := a.rateLimiters[key]
+	if bucket.resetAt.IsZero() || now.After(bucket.resetAt) {
+		a.rateLimiters[key] = rateLimitBucket{count: 1, resetAt: now.Add(window)}
+		return true
+	}
+	if bucket.count >= limit {
+		return false
+	}
+	bucket.count++
+	a.rateLimiters[key] = bucket
+	return true
 }
 
 func verificationTokenHash(token string) string {
