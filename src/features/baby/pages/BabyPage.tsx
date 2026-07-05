@@ -9,6 +9,8 @@ import type { BabyPayload, BabyProfile, BabyRecord, BabyRecordPayload } from '..
 import './baby-page.css'
 
 type ConfirmKind = 'baby-save' | 'baby-delete' | 'record-save' | 'record-delete' | 'growth-save' | 'growth-delete'
+type BabyDetailTab = 'growth' | 'records'
+type BabyRecordQueryMode = 'month' | 'period'
 
 interface GrowthFormState {
   recordDate: string
@@ -56,6 +58,25 @@ function sanitizeTime(value: string) {
 
 function formatDate(value: string) {
   return value ? value.replace(/-/g, '.') : ''
+}
+
+function monthKey(value: string) {
+  return value.slice(0, 7)
+}
+
+function firstDayOfMonth(value: string) {
+  return `${monthKey(value)}-01`
+}
+
+function lastDayOfMonth(value: string) {
+  const [year, month] = monthKey(value).split('-').map(Number)
+  const day = new Date(year, month, 0).getDate()
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function formatMonthLabel(value: string) {
+  const [year, month] = monthKey(value).split('-')
+  return `${year}년 ${String(Number(month)).padStart(2, '0')}월`
 }
 
 function growthText(baby: BabyProfile) {
@@ -148,6 +169,11 @@ export default function BabyPage() {
   const [pendingRecordDelete, setPendingRecordDelete] = useState<BabyRecord | null>(null)
   const [pendingGrowthDelete, setPendingGrowthDelete] = useState<BabyRecord | null>(null)
   const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null)
+  const [detailTab, setDetailTab] = useState<BabyDetailTab>('growth')
+  const [recordQueryMode, setRecordQueryMode] = useState<BabyRecordQueryMode>('month')
+  const [recordMonth, setRecordMonth] = useState(() => monthKey(todayKey()))
+  const [recordPeriodStart, setRecordPeriodStart] = useState(() => firstDayOfMonth(todayKey()))
+  const [recordPeriodEnd, setRecordPeriodEnd] = useState(() => lastDayOfMonth(todayKey()))
   const [showGrowthHistory, setShowGrowthHistory] = useState(false)
   const [showBabyFormDialog, setShowBabyFormDialog] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -160,12 +186,23 @@ export default function BabyPage() {
   const sortedRecords = useMemo(() => [...records].sort((a, b) => `${b.recordDate} ${b.createdAt}`.localeCompare(`${a.recordDate} ${a.createdAt}`)), [records])
   const growthRecords = useMemo(() => sortedRecords.filter((record) => record.heightCm || record.weightKg), [sortedRecords])
   const normalRecords = useMemo(() => sortedRecords.filter((record) => record.recordType !== '성장'), [sortedRecords])
-  const monthLabel = `${Number(todayKey().slice(5, 7))}월`
+  const recordQueryRange = useMemo(() => {
+    if (recordQueryMode === 'month') {
+      return { start: firstDayOfMonth(recordMonth), end: lastDayOfMonth(recordMonth) }
+    }
+    const start = recordPeriodStart <= recordPeriodEnd ? recordPeriodStart : recordPeriodEnd
+    const end = recordPeriodStart <= recordPeriodEnd ? recordPeriodEnd : recordPeriodStart
+    return { start, end }
+  }, [recordMonth, recordPeriodEnd, recordPeriodStart, recordQueryMode])
+  const filteredNormalRecords = useMemo(() => (
+    normalRecords.filter((record) => record.recordDate >= recordQueryRange.start && record.recordDate <= recordQueryRange.end)
+  ), [normalRecords, recordQueryRange])
+  const recordQueryLabel = recordQueryMode === 'month'
+    ? formatMonthLabel(recordMonth)
+    : `${formatDate(recordQueryRange.start)} ~ ${formatDate(recordQueryRange.end)}`
   const patternCounts = useMemo(() => {
-    const monthKey = todayKey().slice(0, 7)
-    const monthRecords = records.filter((record) => record.recordDate.startsWith(monthKey))
-    return recordTypes.map((type) => ({ type, count: monthRecords.filter((record) => record.recordType === type).length }))
-  }, [records, recordTypes])
+    return recordTypes.map((type) => ({ type, count: filteredNormalRecords.filter((record) => record.recordType === type).length }))
+  }, [filteredNormalRecords, recordTypes])
 
   async function reloadBabies() {
     setLoading(true)
@@ -207,6 +244,7 @@ export default function BabyPage() {
   function openDetail(baby: BabyProfile) {
     setSelectedBaby(baby)
     setEditingBaby(null)
+    setDetailTab('growth')
     window.setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }), 0)
   }
 
@@ -285,6 +323,7 @@ export default function BabyPage() {
   }
 
   function startRecordEdit(record: BabyRecord) {
+    setDetailTab('records')
     setEditingRecord(record)
     setRecordForm({
       recordType: record.recordType,
@@ -300,6 +339,7 @@ export default function BabyPage() {
   }
 
   function startGrowthEdit(record: BabyRecord) {
+    setDetailTab('growth')
     setEditingGrowthRecord(record)
     setGrowthForm({
       recordDate: record.recordDate,
@@ -492,7 +532,7 @@ export default function BabyPage() {
         </div>
       ) : (
         <section className="baby-detail baby-api-detail">
-          <div className="baby-api-detail-layout fp-baby-detail-layout">
+          <div className={`baby-api-detail-layout fp-baby-detail-layout ${detailTab === 'growth' ? 'growth-mode' : 'records-mode'}`}>
             <div className="baby-api-detail-main fp-baby-detail-main">
               <article className="baby-profile-band fp-baby-profile">
                 <span className="baby-avatar large">아이</span>
@@ -503,78 +543,119 @@ export default function BabyPage() {
                   <small>{growthText(selectedBaby)}</small>
                 </div>
               </article>
-              <section className="baby-growth-api-panel">
-                <header>
-                  <h3>성장 기록</h3>
-                  <button className="secondary-action baby-growth-history-button" type="button" onClick={() => setShowGrowthHistory(true)}>과거성장기록</button>
-                </header>
-                <GrowthForm
-                  formRef={growthFormRef}
-                  form={growthForm}
-                  editing={Boolean(editingGrowthRecord)}
-                  setForm={setGrowthForm}
-                  onSubmit={requestGrowthSave}
-                  onReset={() => {
-                    setEditingGrowthRecord(null)
-                    setGrowthForm(emptyGrowth())
-                  }}
-                />
-                <GrowthChart records={growthRecords} />
-                <div className="baby-growth-api-history">
-                  {growthRecords.length ? growthRecords.slice(0, 4).map((record, index) => (
-                    <article className="baby-growth-history-row" key={record.id}>
-                      <strong>{index + 1}. {formatDate(record.recordDate)}</strong>
-                      <span>{[record.heightCm ? `${record.heightCm}cm` : '', record.weightKg ? `${record.weightKg}kg` : ''].filter(Boolean).join(' · ')}</span>
-                    </article>
-                  )) : <p className="fp-empty-text api-empty-row">성장 기록이 없습니다.</p>}
-                </div>
-              </section>
-              <section className="baby-pattern-api-panel">
-                <header>
-                  <h3>생활 패턴</h3>
-                  <span>{monthLabel}</span>
-                </header>
-                <div className="baby-pattern-api-summary">
-                  <div className="pattern-grid">
-                    {patternCounts.map((item) => (
-                      <article key={item.type}>
-                        <strong>{item.type}</strong>
-                        <span>{item.count}건</span>
+              <div className="baby-detail-tabs" role="tablist" aria-label="육아 기록 분류">
+                <button type="button" className={detailTab === 'growth' ? 'active' : ''} aria-pressed={detailTab === 'growth'} onClick={() => setDetailTab('growth')}>성장기록</button>
+                <button type="button" className={detailTab === 'records' ? 'active' : ''} aria-pressed={detailTab === 'records'} onClick={() => setDetailTab('records')}>기록</button>
+              </div>
+              {detailTab === 'growth' ? (
+                <section className="baby-detail-tab-panel baby-growth-tab-panel" role="tabpanel" aria-label="성장기록">
+                  <section className="baby-growth-api-panel">
+                    <header>
+                      <h3>성장 기록</h3>
+                      <button className="secondary-action baby-growth-history-button" type="button" onClick={() => setShowGrowthHistory(true)}>과거성장기록</button>
+                    </header>
+                    <GrowthForm
+                      formRef={growthFormRef}
+                      form={growthForm}
+                      editing={Boolean(editingGrowthRecord)}
+                      setForm={setGrowthForm}
+                      onSubmit={requestGrowthSave}
+                      onReset={() => {
+                        setEditingGrowthRecord(null)
+                        setGrowthForm(emptyGrowth())
+                      }}
+                    />
+                    <GrowthChart records={growthRecords} />
+                    <div className="baby-growth-api-history">
+                      {growthRecords.length ? growthRecords.slice(0, 4).map((record, index) => (
+                        <article className="baby-growth-history-row" key={record.id}>
+                          <strong>{index + 1}. {formatDate(record.recordDate)}</strong>
+                          <span>{[record.heightCm ? `${record.heightCm}cm` : '', record.weightKg ? `${record.weightKg}kg` : ''].filter(Boolean).join(' · ')}</span>
+                        </article>
+                      )) : <p className="fp-empty-text api-empty-row">성장 기록이 없습니다.</p>}
+                    </div>
+                  </section>
+                </section>
+              ) : (
+                <section className="baby-detail-tab-panel baby-record-tab-panel" role="tabpanel" aria-label="기록">
+                  <section className="baby-record-query-panel">
+                    <header>
+                      <h3>기록 조회</h3>
+                      <span>{recordQueryLabel}</span>
+                    </header>
+                    <div className={`baby-record-query-row ${recordQueryMode === 'period' ? 'period-mode' : 'month-mode'}`}>
+                      <div className="baby-record-query-tabs" role="tablist" aria-label="기록 조회 방식">
+                        <button className={recordQueryMode === 'month' ? 'active' : ''} type="button" onClick={() => setRecordQueryMode('month')}>월별</button>
+                        <button className={recordQueryMode === 'period' ? 'active' : ''} type="button" onClick={() => setRecordQueryMode('period')}>기간별</button>
+                      </div>
+                      {recordQueryMode === 'month' ? (
+                        <DatePickerField
+                          className="baby-record-month-picker"
+                          displayValue={formatMonthLabel(recordMonth)}
+                          label="조회 월"
+                          mode="month"
+                          showCalendarIcon
+                          value={recordMonth}
+                          onChange={setRecordMonth}
+                        />
+                      ) : (
+                        <div className="baby-record-period-fields">
+                          <DatePickerField label="시작일" showCalendarIcon value={recordPeriodStart} onChange={setRecordPeriodStart} />
+                          <DatePickerField label="종료일" showCalendarIcon value={recordPeriodEnd} onChange={setRecordPeriodEnd} />
+                        </div>
+                      )}
+                    </div>
+                  </section>
+                  <section className="baby-pattern-api-panel">
+                    <header>
+                      <h3>생활 패턴</h3>
+                      <span>{recordQueryLabel}</span>
+                    </header>
+                    <div className="baby-pattern-api-summary">
+                      <div className="pattern-grid">
+                        {patternCounts.map((item) => (
+                          <article key={item.type}>
+                            <strong>{item.type}</strong>
+                            <span>{item.count}건</span>
+                          </article>
+                        ))}
+                      </div>
+                    </div>
+                  </section>
+                  <section className="baby-record-list">
+                    <h3>기록</h3>
+                    {filteredNormalRecords.length ? filteredNormalRecords.map((record) => (
+                      <article className="baby-record-row api-baby-record-row" key={record.id}>
+                        <b>{record.recordType}</b>
+                        <div>
+                          <strong>{record.recordType}</strong>
+                          <span>{[formatDate(record.recordDate), record.recordTime?.slice(0, 5), recordMetrics(record)].filter(Boolean).join(' · ')}</span>
+                          {record.memo ? <p>{record.memo}</p> : null}
+                        </div>
+                        <div className="record-row-actions">
+                          <button className="edit-button" type="button" onClick={() => startRecordEdit(record)}>수정</button>
+                          <button
+                            type="button"
+                            className="danger-button"
+                            onClick={() => {
+                              setPendingRecordDelete(record)
+                              setConfirmKind('record-delete')
+                            }}
+                          >
+                            삭제
+                          </button>
+                        </div>
                       </article>
-                    ))}
-                  </div>
-                </div>
-              </section>
-              <section className="baby-record-list">
-                <h3>기록</h3>
-                {normalRecords.length ? normalRecords.map((record) => (
-                  <article className="baby-record-row api-baby-record-row" key={record.id}>
-                    <b>{record.recordType}</b>
-                    <div>
-                      <strong>{record.recordType}</strong>
-                      <span>{[formatDate(record.recordDate), record.recordTime?.slice(0, 5), recordMetrics(record)].filter(Boolean).join(' · ')}</span>
-                      {record.memo ? <p>{record.memo}</p> : null}
-                    </div>
-                    <div className="record-row-actions">
-                      <button className="edit-button" type="button" onClick={() => startRecordEdit(record)}>수정</button>
-                      <button
-                        type="button"
-                        className="danger-button"
-                        onClick={() => {
-                          setPendingRecordDelete(record)
-                          setConfirmKind('record-delete')
-                        }}
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  </article>
-                )) : <p className="fp-empty-text api-empty-row">등록된 육아 기록이 없습니다.</p>}
-              </section>
+                    )) : <p className="fp-empty-text api-empty-row">해당 기간의 육아 기록이 없습니다.</p>}
+                  </section>
+                </section>
+              )}
             </div>
-            <aside className="baby-api-detail-side">
-              <RecordForm formRef={recordFormRef} form={recordForm} editing={Boolean(editingRecord)} recordTypeOptions={recordTypeOptions} setForm={setRecordForm} onSubmit={requestRecordSave} onReset={() => { setEditingRecord(null); setRecordForm(emptyRecord()) }} />
-            </aside>
+            {detailTab === 'records' ? (
+              <aside className="baby-api-detail-side">
+                <RecordForm formRef={recordFormRef} form={recordForm} editing={Boolean(editingRecord)} recordTypeOptions={recordTypeOptions} setForm={setRecordForm} onSubmit={requestRecordSave} onReset={() => { setEditingRecord(null); setRecordForm(emptyRecord()) }} />
+              </aside>
+            ) : null}
           </div>
         </section>
       )}

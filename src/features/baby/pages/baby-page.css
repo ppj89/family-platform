@@ -342,6 +342,10 @@
   box-sizing: border-box;
 }
 
+.baby-api-detail-layout.growth-mode {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .baby-api-detail-main,
 .baby-api-detail-side {
   display: grid;
@@ -390,8 +394,46 @@
   font-weight: 900;
 }
 
+.baby-detail-tabs,
+.baby-record-query-tabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  border-radius: 16px;
+  padding: 4px;
+  background: #edf0f3;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+}
+
+.baby-detail-tabs button,
+.baby-record-query-tabs button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #4e5968;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.baby-detail-tabs button.active,
+.baby-record-query-tabs button.active {
+  background: #ffffff;
+  color: #1b64da;
+  box-shadow: 0 10px 22px rgba(25, 31, 40, 0.08);
+}
+
+.baby-detail-tab-panel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
 .baby-growth-api-panel,
-.baby-pattern-api-panel {
+.baby-pattern-api-panel,
+.baby-record-query-panel {
   display: grid;
   gap: 12px;
   border-radius: 8px;
@@ -400,7 +442,8 @@
 }
 
 .baby-growth-api-panel > header,
-.baby-pattern-api-panel > header {
+.baby-pattern-api-panel > header,
+.baby-record-query-panel > header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -409,6 +452,7 @@
 
 .baby-growth-api-panel h3,
 .baby-pattern-api-panel h3,
+.baby-record-query-panel h3,
 .baby-record-list h3 {
   margin: 0;
   color: #191f28;
@@ -416,13 +460,39 @@
   font-weight: 900;
 }
 
-.baby-pattern-api-panel header span {
+.baby-pattern-api-panel header span,
+.baby-record-query-panel header span {
   border-radius: 999px;
   padding: 7px 10px;
   background: #ffffff;
   color: #6b7684;
   font-size: 12px;
   font-weight: 900;
+}
+
+.baby-record-query-row {
+  display: grid;
+  align-items: end;
+  gap: 10px;
+}
+
+.baby-record-query-row.month-mode {
+  grid-template-columns: minmax(160px, 190px) minmax(160px, 190px);
+}
+
+.baby-record-query-row.period-mode {
+  grid-template-columns: minmax(160px, 190px) minmax(0, 1fr);
+}
+
+.baby-record-month-picker {
+  min-width: 0;
+}
+
+.baby-record-period-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 10px;
+  min-width: 0;
 }
 
 .baby-growth-history-button {
@@ -844,6 +914,7 @@
 .theme-dark .baby-api-record-card,
 .theme-dark .baby-growth-api-panel,
 .theme-dark .baby-pattern-api-panel,
+.theme-dark .baby-record-query-panel,
 .theme-dark .baby-record-row,
 .theme-dark .baby-pattern-api-summary .pattern-grid article,
 .theme-dark .baby-growth-chart,
@@ -853,6 +924,20 @@
   background: #333942;
   color: #f3f5f7;
   box-shadow: inset 0 0 0 1px #454d58;
+}
+
+.theme-dark .baby-detail-tabs,
+.theme-dark .baby-record-query-tabs {
+  background: #2b3038;
+  box-shadow: inset 0 0 0 1px #454d58;
+}
+
+.theme-dark .baby-detail-tabs button.active,
+.theme-dark .baby-record-query-tabs button.active,
+.theme-dark .baby-pattern-api-panel header span,
+.theme-dark .baby-record-query-panel header span {
+  background: #333942;
+  color: #8ab4ff;
 }
 
 .theme-dark .baby-form textarea,
@@ -883,6 +968,10 @@
     gap: 16px;
   }
 
+  .baby-api-detail-layout.growth-mode {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .baby-api-detail-side {
     max-width: 300px;
     padding: 18px;
@@ -895,6 +984,10 @@
     max-width: 980px;
     gap: 16px;
   }
+
+  .baby-api-detail-layout.growth-mode {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 980px) {
@@ -906,8 +999,16 @@
     grid-template-columns: minmax(300px, 1fr) minmax(260px, 310px);
   }
 
+  .baby-api-detail-layout.growth-mode {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .baby-api-detail-side .baby-api-form-grid,
   .baby-api-detail-side .baby-api-record-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .baby-record-query-row.period-mode {
     grid-template-columns: 1fr;
   }
 }
@@ -934,6 +1035,12 @@
   .baby-growth-api-form .baby-growth-date-field {
     width: 100%;
   }
+
+  .baby-record-query-row.month-mode,
+  .baby-record-query-row.period-mode,
+  .baby-record-period-fields {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
@@ -944,6 +1051,8 @@
   .baby-profile-form,
   .baby-api-form-grid,
   .baby-api-record-actions,
+  .baby-detail-tabs,
+  .baby-record-query-tabs,
   .baby-pattern-api-summary .pattern-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
