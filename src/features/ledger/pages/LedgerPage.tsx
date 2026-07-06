@@ -11,6 +11,7 @@ import './ledger-page.css'
 
 type LedgerQueryMode = 'month' | 'period'
 type ConfirmState = 'save' | 'delete' | null
+type DetailMode = 'view' | 'edit'
 type LedgerSelectOption = { label: string; value: string }
 type ParsedLedgerSms = {
   amount: number
@@ -258,6 +259,8 @@ export default function LedgerPage() {
   const [form, setForm] = useState<LedgerPayload>(() => emptyPayload())
   const [editingId, setEditingId] = useState<number | null>(null)
   const [selectedEntry, setSelectedEntry] = useState<LedgerEntry | null>(null)
+  const [detailMode, setDetailMode] = useState<DetailMode>('view')
+  const [detailForm, setDetailForm] = useState<LedgerPayload>(() => emptyPayload())
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [isQuickNavOpen, setIsQuickNavOpen] = useState(false)
@@ -325,10 +328,8 @@ export default function LedgerPage() {
     focusForm()
   }
 
-  function startEdit(item: LedgerEntry) {
-    setEditingId(item.id)
-    setSelectedEntry(null)
-    setForm({
+  function payloadFromEntry(item: LedgerEntry): LedgerPayload {
+    return {
       title: item.title,
       entryType: item.entryType,
       category: item.category || ledgerCategoryOptions[0] || '기타',
@@ -337,8 +338,35 @@ export default function LedgerPage() {
       amount: item.amount,
       transactionDate: item.transactionDate,
       memo: item.memo || '',
-    })
-    focusForm()
+    }
+  }
+
+  function normalizePayload(payload: LedgerPayload): LedgerPayload {
+    return {
+      ...payload,
+      title: payload.title.trim(),
+      category: payload.category || null,
+      paymentMethod: payload.paymentMethod || null,
+      memberName: payload.memberName?.trim() || null,
+      memo: payload.memo?.trim() || null,
+    }
+  }
+
+  function openLedgerDetail(item: LedgerEntry) {
+    setSelectedEntry(item)
+    setDetailMode('view')
+    setDetailForm(payloadFromEntry(item))
+  }
+
+  function closeLedgerDetail() {
+    setSelectedEntry(null)
+    setDetailMode('view')
+  }
+
+  function startDetailEdit() {
+    if (!selectedEntry) return
+    setDetailForm(payloadFromEntry(selectedEntry))
+    setDetailMode('edit')
   }
 
   function resetForm() {
@@ -346,11 +374,15 @@ export default function LedgerPage() {
     setForm(emptyPayload())
   }
 
-  function validateForm() {
-    if (!form.title.trim()) return '내용을 입력해주세요.'
-    if (!form.transactionDate) return '거래일을 선택해주세요.'
-    if (!form.amount) return '금액을 입력해주세요.'
+  function validatePayload(payload: LedgerPayload) {
+    if (!payload.title.trim()) return '내용을 입력해주세요.'
+    if (!payload.transactionDate) return '거래일을 선택해주세요.'
+    if (!payload.amount) return '금액을 입력해주세요.'
     return ''
+  }
+
+  function validateForm() {
+    return validatePayload(form)
   }
 
   function requestSave(event: FormEvent) {
@@ -367,14 +399,7 @@ export default function LedgerPage() {
     setLoading(true)
     setMessage('')
     try {
-      const payload = {
-        ...form,
-        title: form.title.trim(),
-        category: form.category || null,
-        paymentMethod: form.paymentMethod || null,
-        memberName: form.memberName?.trim() || null,
-        memo: form.memo?.trim() || null,
-      }
+      const payload = normalizePayload(form)
       if (editingId) await updateLedgerEntry(editingId, payload)
       else await createLedgerEntry(payload)
       resetForm()
@@ -388,6 +413,31 @@ export default function LedgerPage() {
     }
   }
 
+  async function saveDetailEdit(event: FormEvent) {
+    event.preventDefault()
+    if (!selectedEntry) return
+    const validation = validatePayload(detailForm)
+    if (validation) {
+      setMessage(validation)
+      return
+    }
+    setLoading(true)
+    setMessage('')
+    try {
+      const payload = normalizePayload(detailForm)
+      const updatedEntry = await updateLedgerEntry(selectedEntry.id, payload)
+      await reloadLedger()
+      setSelectedEntry(updatedEntry)
+      setDetailForm(payloadFromEntry(updatedEntry))
+      setDetailMode('view')
+      setMessage('가계부 내역을 수정했습니다.')
+    } catch (error) {
+      setMessage(apiActionMessage(error, '가계부 수정에 실패했습니다.'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
   async function confirmDelete() {
     if (!pendingDelete) return
     setLoading(true)
@@ -395,7 +445,7 @@ export default function LedgerPage() {
     try {
       await deleteLedgerEntry(pendingDelete.id)
       if (editingId === pendingDelete.id) resetForm()
-      if (selectedEntry?.id === pendingDelete.id) setSelectedEntry(null)
+      if (selectedEntry?.id === pendingDelete.id) closeLedgerDetail()
       await reloadLedger()
       setMessage('가계부 내역을 삭제했습니다.')
     } catch (error) {
@@ -507,15 +557,11 @@ export default function LedgerPage() {
                 </header>
                 {group.items.map((item) => (
                   <article className="ledger-row api-ledger-row" key={item.id}>
-                    <button type="button" className="ledger-row-main" onClick={() => setSelectedEntry(item)}>
+                    <button type="button" className="ledger-row-main" onClick={() => openLedgerDetail(item)}>
                       <strong>{item.title}</strong>
                       <span>{item.category || '-'} · {item.memberName || '-'} · {item.paymentMethod || '-'}</span>
                     </button>
                     <b className={item.entryType}>{signedMoney(item)}</b>
-                    <div className="ledger-row-actions">
-                      <button type="button" onClick={() => startEdit(item)}>수정</button>
-                      <button type="button" className="danger-button" onClick={() => requestDelete(item)}>삭제</button>
-                    </div>
                   </article>
                 ))}
               </section>
@@ -604,24 +650,90 @@ export default function LedgerPage() {
       </section>
 
       {selectedEntry ? (
-        <div className="patch-ledger-detail-backdrop" role="presentation" onClick={() => setSelectedEntry(null)}>
-          <section className="patch-ledger-detail-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-            <button type="button" className="dialog-close" aria-label="닫기" onClick={() => setSelectedEntry(null)}>×</button>
-            <span className="ledger-detail-chip">{selectedEntry.entryType === 'income' ? '수입' : '지출'}</span>
-            <h2>{selectedEntry.title || '내역 없음'}</h2>
-            <strong className={`ledger-detail-amount ${selectedEntry.entryType}`}>{signedMoney(selectedEntry)}</strong>
-            <dl>
-              <div><dt>거래일</dt><dd>{selectedEntry.transactionDate.replace(/-/g, '.')}</dd></div>
-              <div><dt>카테고리</dt><dd>{selectedEntry.category || '-'}</dd></div>
-              <div><dt>결제수단</dt><dd>{selectedEntry.paymentMethod || '-'}</dd></div>
-              <div><dt>사용자</dt><dd>{selectedEntry.memberName || '-'}</dd></div>
-            </dl>
-            <p>{selectedEntry.memo || '메모가 없습니다.'}</p>
-            <div className="ledger-detail-actions">
-              <button type="button" className="edit-button" onClick={() => startEdit(selectedEntry)}>수정</button>
-              <button type="button" className="danger-button" onClick={() => requestDelete(selectedEntry)}>삭제</button>
-            </div>
-          </section>
+        <div className="patch-ledger-detail-backdrop" role="presentation" onClick={closeLedgerDetail}>
+          {detailMode === 'edit' ? (
+            <form
+              className="patch-ledger-detail-dialog ledger-form ledger-detail-edit-dialog"
+              role="dialog"
+              aria-modal="true"
+              onClick={(event) => event.stopPropagation()}
+              onSubmit={saveDetailEdit}
+            >
+              <button type="button" className="dialog-close" aria-label="닫기" onClick={closeLedgerDetail}>×</button>
+              <h2>가계부 수정</h2>
+              <div className="ledger-form-grid ledger-detail-form-grid">
+                <label className="span-2">
+                  <span>내용 <em className="fp-required-mark">*</em></span>
+                  <input value={detailForm.title} onChange={(event) => setDetailForm((value) => ({ ...value, title: event.target.value }))} />
+                </label>
+                <label>
+                  <span>금액 <em className="fp-required-mark">*</em></span>
+                  <input
+                    inputMode="numeric"
+                    value={formatNumberInput(detailForm.amount)}
+                    onChange={(event) => setDetailForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))}
+                  />
+                </label>
+                <DatePickerField
+                  className="fp-ledger-form-date"
+                  label="날짜"
+                  required
+                  value={detailForm.transactionDate}
+                  onChange={(value) => setDetailForm((current) => ({ ...current, transactionDate: value }))}
+                />
+                <LedgerCustomSelect
+                  label="구분"
+                  options={[...LEDGER_ENTRY_TYPE_OPTIONS]}
+                  value={detailForm.entryType}
+                  onChange={(value) => setDetailForm((current) => ({ ...current, entryType: value as LedgerPayload['entryType'] }))}
+                />
+                <LedgerCustomSelect
+                  label="카테고리"
+                  options={ledgerCategoryOptions.map((item) => ({ label: item, value: item }))}
+                  value={detailForm.category || ''}
+                  onChange={(value) => setDetailForm((current) => ({ ...current, category: value || null }))}
+                />
+                <LedgerCustomSelect
+                  label="결제수단"
+                  options={ledgerPaymentMethodOptions.map((item) => ({ label: item, value: item }))}
+                  value={detailForm.paymentMethod || ''}
+                  onChange={(value) => setDetailForm((current) => ({ ...current, paymentMethod: value || null }))}
+                />
+                <LedgerCustomSelect
+                  label="사용자"
+                  options={familyMemberOptions.map((item) => ({ label: item, value: item }))}
+                  value={detailForm.memberName || ''}
+                  onChange={(value) => setDetailForm((current) => ({ ...current, memberName: value || null }))}
+                />
+                <label className="span-2">
+                  <span>메모</span>
+                  <textarea value={detailForm.memo || ''} onChange={(event) => setDetailForm((value) => ({ ...value, memo: event.target.value }))} />
+                </label>
+              </div>
+              <div className="ledger-detail-actions">
+                <button type="button" className="edit-button muted" onClick={() => setDetailMode('view')}>취소</button>
+                <button type="submit" className="edit-button">저장</button>
+              </div>
+            </form>
+          ) : (
+            <section className="patch-ledger-detail-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+              <button type="button" className="dialog-close" aria-label="닫기" onClick={closeLedgerDetail}>×</button>
+              <span className="ledger-detail-chip">{selectedEntry.entryType === 'income' ? '수입' : '지출'}</span>
+              <h2>{selectedEntry.title || '내역 없음'}</h2>
+              <strong className={`ledger-detail-amount ${selectedEntry.entryType}`}>{signedMoney(selectedEntry)}</strong>
+              <dl>
+                <div><dt>거래일</dt><dd>{selectedEntry.transactionDate.replace(/-/g, '.')}</dd></div>
+                <div><dt>카테고리</dt><dd>{selectedEntry.category || '-'}</dd></div>
+                <div><dt>결제수단</dt><dd>{selectedEntry.paymentMethod || '-'}</dd></div>
+                <div><dt>사용자</dt><dd>{selectedEntry.memberName || '-'}</dd></div>
+              </dl>
+              <p>{selectedEntry.memo || '메모가 없습니다.'}</p>
+              <div className="ledger-detail-actions">
+                <button type="button" className="edit-button" onClick={startDetailEdit}>수정</button>
+                <button type="button" className="danger-button" onClick={() => requestDelete(selectedEntry)}>삭제</button>
+              </div>
+            </section>
+          )}
         </div>
       ) : null}
 
