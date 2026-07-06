@@ -10,7 +10,7 @@ import type { LedgerEntry, LedgerPayload, LedgerSummary } from '../types'
 import './ledger-page.css'
 
 type LedgerQueryMode = 'month' | 'period'
-type ConfirmState = 'save' | 'delete' | null
+type ConfirmState = 'save' | 'detail-save' | 'delete' | null
 type DetailMode = 'view' | 'edit'
 type LedgerSelectOption = { label: string; value: string }
 type ParsedLedgerSms = {
@@ -413,7 +413,7 @@ export default function LedgerPage() {
     }
   }
 
-  async function saveDetailEdit(event: FormEvent) {
+  function requestDetailSave(event: FormEvent) {
     event.preventDefault()
     if (!selectedEntry) return
     const validation = validatePayload(detailForm)
@@ -421,6 +421,11 @@ export default function LedgerPage() {
       setMessage(validation)
       return
     }
+    setConfirmAction('detail-save')
+  }
+
+  async function confirmDetailSave() {
+    if (!selectedEntry) return
     setLoading(true)
     setMessage('')
     try {
@@ -434,6 +439,7 @@ export default function LedgerPage() {
     } catch (error) {
       setMessage(apiActionMessage(error, '가계부 수정에 실패했습니다.'))
     } finally {
+      setConfirmAction(null)
       setLoading(false)
     }
   }
@@ -657,7 +663,7 @@ export default function LedgerPage() {
               role="dialog"
               aria-modal="true"
               onClick={(event) => event.stopPropagation()}
-              onSubmit={saveDetailEdit}
+              onSubmit={requestDetailSave}
             >
               <button type="button" className="dialog-close" aria-label="닫기" onClick={closeLedgerDetail}>×</button>
               <h2>가계부 수정</h2>
@@ -744,6 +750,15 @@ export default function LedgerPage() {
           confirmLabel={editingId ? '수정' : '저장'}
           onCancel={() => setConfirmAction(null)}
           onConfirm={confirmSave}
+        />
+      ) : null}
+      {confirmAction === 'detail-save' ? (
+        <ConfirmDialog
+          title="수정"
+          body="가계부 내역을 수정하시겠습니까?"
+          confirmLabel="수정"
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={confirmDetailSave}
         />
       ) : null}
       {confirmAction === 'delete' && pendingDelete ? (
