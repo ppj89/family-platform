@@ -157,6 +157,7 @@ export default function LedgerPage() {
   const [selectedEntry, setSelectedEntry] = useState<LedgerEntry | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [isQuickNavOpen, setIsQuickNavOpen] = useState(false)
   const [confirmAction, setConfirmAction] = useState<ConfirmState>(null)
   const [pendingDelete, setPendingDelete] = useState<LedgerEntry | null>(null)
   const ledgerCategoryOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.ledgerCategories, LEDGER_CATEGORIES)
@@ -204,10 +205,12 @@ export default function LedgerPage() {
 
   function scrollLedgerTop() {
     ledgerTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setIsQuickNavOpen(false)
   }
 
   function scrollLedgerListEnd() {
     ledgerListEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+    setIsQuickNavOpen(false)
   }
 
   function startCreateEntry() {
@@ -215,6 +218,7 @@ export default function LedgerPage() {
       setEditingId(null)
       setForm(emptyPayload())
     }
+    setIsQuickNavOpen(false)
     focusForm()
   }
 
@@ -469,10 +473,24 @@ export default function LedgerPage() {
           <button className="fp-button fp-button-primary submit-action" type="submit">{editingId ? '저장' : '추가'}</button>
         </form>
 
-        <nav className="fp-ledger-scroll-nav" aria-label="가계부 빠른 이동">
-          <button type="button" onClick={scrollLedgerTop}>위</button>
-          <button type="button" onClick={startCreateEntry}>입력</button>
-          <button type="button" onClick={scrollLedgerListEnd}>아래</button>
+        <nav className={`fp-ledger-scroll-nav${isQuickNavOpen ? ' open' : ''}`} aria-label="가계부 빠른 이동">
+          {isQuickNavOpen ? (
+            <div className="fp-ledger-scroll-menu">
+              <button type="button" onClick={scrollLedgerTop}>위쪽</button>
+              <button type="button" onClick={scrollLedgerListEnd}>아래쪽</button>
+              <button type="button" onClick={startCreateEntry}>입력</button>
+              <button type="button" className="collapse" onClick={() => setIsQuickNavOpen(false)}>접기</button>
+            </div>
+          ) : null}
+          <button
+            type="button"
+            className="fp-ledger-scroll-toggle"
+            aria-label={isQuickNavOpen ? '빠른 이동 접기' : '빠른 이동 열기'}
+            aria-expanded={isQuickNavOpen}
+            onClick={() => setIsQuickNavOpen((value) => !value)}
+          >
+            +
+          </button>
         </nav>
       </section>
 

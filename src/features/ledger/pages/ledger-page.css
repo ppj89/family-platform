@@ -82,22 +82,29 @@
   z-index: 90;
   right: 24px;
   bottom: 24px;
-  display: inline-flex;
+  display: grid;
+  justify-items: end;
+  gap: 8px;
+}
+
+.fp-ledger-scroll-menu {
+  display: grid;
   gap: 6px;
   border: 1px solid #dfe5ec;
-  border-radius: 999px;
-  padding: 6px;
-  background: rgb(255 255 255 / 92%);
+  border-radius: 18px;
+  padding: 8px;
+  background: rgb(255 255 255 / 94%);
   box-shadow: 0 12px 30px rgb(25 31 40 / 14%);
   backdrop-filter: blur(8px);
 }
 
-.fp-ledger-scroll-nav button {
-  min-width: 44px;
-  height: 38px;
+.fp-ledger-scroll-menu button,
+.fp-ledger-scroll-toggle {
+  min-width: 54px;
+  height: 40px;
   border: 0;
-  border-radius: 999px;
-  padding: 0 12px;
+  border-radius: 14px;
+  padding: 0 13px;
   background: #f2f7ff;
   color: #1b64da;
   cursor: pointer;
@@ -107,13 +114,33 @@
   line-height: 1;
 }
 
-.fp-ledger-scroll-nav button:first-child,
-.fp-ledger-scroll-nav button:last-child {
+.fp-ledger-scroll-menu button:first-child,
+.fp-ledger-scroll-menu button:nth-child(2),
+.fp-ledger-scroll-menu button.collapse {
   background: #f2f4f6;
   color: #333d4b;
 }
 
-.fp-ledger-scroll-nav button:focus-visible {
+.fp-ledger-scroll-toggle {
+  min-width: 52px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  padding: 0;
+  background: #3182f6;
+  color: #fff;
+  font-size: 28px;
+  font-weight: 500;
+  box-shadow: 0 12px 26px rgb(49 130 246 / 28%);
+}
+
+.fp-ledger-scroll-nav.open .fp-ledger-scroll-toggle {
+  background: #edf4ff;
+  color: #1b64da;
+}
+
+.fp-ledger-scroll-menu button:focus-visible,
+.fp-ledger-scroll-toggle:focus-visible {
   outline: 3px solid rgb(49 130 246 / 18%);
   outline-offset: 2px;
 }
@@ -899,9 +926,16 @@
   }
 
   .fp-ledger-scroll-nav button {
-    min-width: 42px;
+    min-width: 54px;
     height: 36px;
     padding: 0 10px;
+  }
+
+  .fp-ledger-scroll-toggle {
+    min-width: 52px;
+    width: 52px;
+    height: 52px;
+    padding: 0;
   }
 
   .fp-ledger-filter {
