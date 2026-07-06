@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
+import { getStoredUser } from '../../../shared/api/auth'
 import { ConfirmDialog, CustomSelect, ToastMessage } from '../../../shared/components'
 import {
   acceptFamilyInvitation,
@@ -117,6 +118,10 @@ export function FamilyPage() {
 
   const family = families[0]
   const confirm = pendingCopy(pending)
+  const storedUser = getStoredUser()
+  const currentUserId = storedUser?.id
+  const currentMember = currentUserId ? members.find((member) => member.userId === currentUserId) : null
+  const canManageFamily = Boolean(storedUser?.platformAdmin || currentMember?.role === 'FAMILY_ADMIN')
 
   const memberCountText = useMemo(() => `${members.length}명`, [members.length])
 
@@ -128,12 +133,15 @@ export function FamilyPage() {
       setReceivedInvites(incoming)
 
       if (familyList[0]) {
-        const [memberList, invitationList] = await Promise.all([
-          listFamilyMembers(familyList[0].id),
-          listSentInvitations(familyList[0].id),
-        ])
+        const memberList = await listFamilyMembers(familyList[0].id)
         setMembers(memberList)
-        setSentInvites(invitationList)
+        const me = getStoredUser()
+        const ownMember = me?.id ? memberList.find((member) => member.userId === me.id) : null
+        if (me?.platformAdmin || ownMember?.role === 'FAMILY_ADMIN') {
+          setSentInvites(await listSentInvitations(familyList[0].id))
+        } else {
+          setSentInvites([])
+        }
       } else {
         setMembers([])
         setSentInvites([])
@@ -279,12 +287,16 @@ export function FamilyPage() {
                             <small>{roleText(member.role)} · {permissionsText(member)}</small>
                           </div>
                           <div className="fp-row-actions">
-                            <button className="fp-button fp-button-muted fp-button-small" type="button" onClick={() => setEditingMember(member)}>
-                              권한
-                            </button>
-                            <button className="fp-button fp-button-danger fp-button-small" type="button" onClick={() => setPending({ type: 'member-delete', member })}>
-                              내보내기
-                            </button>
+                            {canManageFamily ? (
+                              <>
+                                <button className="fp-button fp-button-muted fp-button-small" type="button" onClick={() => setEditingMember(member)}>
+                                  권한
+                                </button>
+                                <button className="fp-button fp-button-danger fp-button-small" type="button" onClick={() => setPending({ type: 'member-delete', member })}>
+                                  내보내기
+                                </button>
+                              </>
+                            ) : null}
                           </div>
                         </>
                       )}
@@ -297,45 +309,54 @@ export function FamilyPage() {
             </section>
 
             <section className="fp-family-panel fp-family-invite">
-              <h3>초대</h3>
-              <form className="fp-family-invite-form" onSubmit={submitInvite}>
-                <label className="fp-field">
-                  <span>이메일 또는 닉네임 <em className="fp-required-mark">*</em></span>
-                  <input value={inviteForm.invite} onChange={(event) => setInviteForm((current) => ({ ...current, invite: event.target.value }))} required />
-                </label>
-                <CustomSelect
-                  className="fp-family-role-select"
-                  label="역할"
-                  options={roleOptions}
-                  value={inviteForm.role}
-                  onChange={(value) => setInviteForm((current) => ({ ...current, role: value }))}
-                />
-                <PermissionChips value={inviteForm} onChange={updateInvitePermission} />
-                <button className="fp-button fp-button-primary fp-family-invite-submit" type="submit">초대 보내기</button>
-              </form>
-
-              <section className="fp-family-subsection">
-                <h4>보낸 초대</h4>
-                <div className="fp-family-list">
-                  {sentInvites.length ? (
-                    sentInvites.map((invitation) => (
-                      <article className="fp-family-row compact" key={invitation.id}>
-                        <div>
-                          <strong>{invitationTarget(invitation)}</strong>
-                          <p>{roleText(invitation.role)} · {permissionsText(invitation)}</p>
-                        </div>
-                        <div className="fp-row-actions">
-                          <button className="fp-button fp-button-danger fp-button-small" type="button" onClick={() => setPending({ type: 'invite-cancel', invitation })}>
-                            취소
-                          </button>
-                        </div>
-                      </article>
-                    ))
-                  ) : (
-                    <p className="fp-empty-text">대기 중인 보낸 초대가 없습니다.</p>
-                  )}
+              <h3>{canManageFamily ? '초대' : '내 권한'}</h3>
+              {canManageFamily ? (
+                <form className="fp-family-invite-form" onSubmit={submitInvite}>
+                  <label className="fp-field">
+                    <span>이메일 또는 닉네임 <em className="fp-required-mark">*</em></span>
+                    <input value={inviteForm.invite} onChange={(event) => setInviteForm((current) => ({ ...current, invite: event.target.value }))} required />
+                  </label>
+                  <CustomSelect
+                    className="fp-family-role-select"
+                    label="역할"
+                    options={roleOptions}
+                    value={inviteForm.role}
+                    onChange={(value) => setInviteForm((current) => ({ ...current, role: value }))}
+                  />
+                  <PermissionChips value={inviteForm} onChange={updateInvitePermission} />
+                  <button className="fp-button fp-button-primary fp-family-invite-submit" type="submit">초대 보내기</button>
+                </form>
+              ) : (
+                <div className="fp-family-readonly-note">
+                  <strong>{roleText(currentMember?.role || 'MEMBER')}</strong>
+                  <p>{currentMember ? permissionsText(currentMember) : '가족관리자가 부여한 권한으로 이용할 수 있습니다.'}</p>
                 </div>
-              </section>
+              )}
+
+              {canManageFamily ? (
+                <section className="fp-family-subsection">
+                  <h4>보낸 초대</h4>
+                  <div className="fp-family-list">
+                    {sentInvites.length ? (
+                      sentInvites.map((invitation) => (
+                        <article className="fp-family-row compact" key={invitation.id}>
+                          <div>
+                            <strong>{invitationTarget(invitation)}</strong>
+                            <p>{roleText(invitation.role)} · {permissionsText(invitation)}</p>
+                          </div>
+                          <div className="fp-row-actions">
+                            <button className="fp-button fp-button-danger fp-button-small" type="button" onClick={() => setPending({ type: 'invite-cancel', invitation })}>
+                              취소
+                            </button>
+                          </div>
+                        </article>
+                      ))
+                    ) : (
+                      <p className="fp-empty-text">대기 중인 보낸 초대가 없습니다.</p>
+                    )}
+                  </div>
+                </section>
+              ) : null}
             </section>
           </div>
 

@@ -256,6 +256,29 @@
   border-radius: 12px;
 }
 
+.fp-family-readonly-note {
+  display: grid;
+  gap: 8px;
+  border: 1px solid #dfe6ef;
+  border-radius: 13px;
+  padding: 16px;
+  background: #fff;
+}
+
+.fp-family-readonly-note strong {
+  color: #191f28;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.fp-family-readonly-note p {
+  margin: 0;
+  color: #526070;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
 .fp-family .fp-empty-text {
   display: flex;
   align-items: center;
