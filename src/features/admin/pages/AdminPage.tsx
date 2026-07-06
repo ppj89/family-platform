@@ -4,10 +4,19 @@ import { listCommonCodeGroupsWithCodes, type CommonCodeGroupWithCodes } from '..
 import { ConfirmDialog, ToastMessage } from '../../../shared/components'
 import { LEDGER_CATEGORIES, LEDGER_PAYMENT_METHODS, TRAVEL_COST_CATEGORIES } from '../../../shared/constants/commonCodes'
 import type { FamilyGroup } from '../../family/types'
-import { getCurrentUserProfile, listAdminVisibleFamilies, type CurrentUserProfile } from '../api/admin'
+import {
+  getCurrentUserProfile,
+  listAccountRecoveryInquiries,
+  listAdminVisibleFamilies,
+  replyAccountRecoveryInquiry,
+  updateAccountRecoveryInquiryStatus,
+  type AccountInquiryStatus,
+  type AccountRecoveryInquiry,
+  type CurrentUserProfile,
+} from '../api/admin'
 import './admin-page.css'
 
-type AdminTab = 'menus' | 'codes' | 'home'
+type AdminTab = 'menus' | 'codes' | 'home' | 'account-inquiries'
 
 type AdminMenuItem = {
   key: string
@@ -35,6 +44,7 @@ const adminTabs: Array<{ key: AdminTab; label: string }> = [
   { key: 'menus', label: '메뉴관리' },
   { key: 'codes', label: '공통코드' },
   { key: 'home', label: '홈구성' },
+  { key: 'account-inquiries', label: '계정 문의' },
 ]
 
 const initialMenus: AdminMenuItem[] = [
@@ -65,6 +75,32 @@ function providerLabel(provider?: string) {
   if (provider === 'google') return '구글'
   if (provider === 'admin') return '관리자 ID'
   return '이메일'
+}
+
+const inquiryStatusLabels: Record<AccountInquiryStatus | 'ALL', string> = {
+  ALL: '전체',
+  OPEN: '대기',
+  IN_PROGRESS: '처리중',
+  REPLIED: '답변완료',
+  CLOSED: '닫힘',
+}
+
+function formatInquiryDate(value?: string) {
+  if (!value) return '-'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '-'
+  return date.toLocaleString('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function inquiryReplyTarget(item?: AccountRecoveryInquiry | null) {
+  if (!item) return ''
+  if (item.email) return item.email
+  return item.contact?.includes('@') ? item.contact : ''
 }
 
 function moveItem(items: AdminMenuItem[], index: number, direction: -1 | 1) {
@@ -101,6 +137,11 @@ export default function AdminPage() {
   const [toastMessage, setToastMessage] = useState('')
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
   const [codeGroups, setCodeGroups] = useState<AdminCodeGroup[]>(fallbackCodeGroups)
+  const [accountInquiries, setAccountInquiries] = useState<AccountRecoveryInquiry[]>([])
+  const [inquiryStatus, setInquiryStatus] = useState<AccountInquiryStatus | 'ALL'>('OPEN')
+  const [inquiriesLoading, setInquiriesLoading] = useState(false)
+  const [selectedInquiryId, setSelectedInquiryId] = useState<number | null>(null)
+  const [replyMessage, setReplyMessage] = useState('')
 
   useEffect(() => {
     let alive = true
@@ -131,6 +172,30 @@ export default function AdminPage() {
 
   const visibleMenuCount = menus.filter((menu) => menu.visible).length
   const isPlatformAdmin = Boolean(profile?.platformAdmin)
+  const selectedInquiry = accountInquiries.find((item) => item.id === selectedInquiryId) ?? accountInquiries[0] ?? null
+  const selectedReplyTarget = inquiryReplyTarget(selectedInquiry)
+
+  useEffect(() => {
+    if (activeTab !== 'account-inquiries') return
+    let alive = true
+    async function loadInquiries() {
+      setInquiriesLoading(true)
+      try {
+        const items = await listAccountRecoveryInquiries(inquiryStatus)
+        if (!alive) return
+        setAccountInquiries(items)
+        setSelectedInquiryId((current) => (items.some((item) => item.id === current) ? current : items[0]?.id ?? null))
+      } catch (error) {
+        if (alive) setToastMessage(apiActionMessage(error, '계정 문의를 불러오지 못했습니다.'))
+      } finally {
+        if (alive) setInquiriesLoading(false)
+      }
+    }
+    void loadInquiries()
+    return () => {
+      alive = false
+    }
+  }, [activeTab, inquiryStatus])
 
   function startEdit(menu: AdminMenuItem) {
     setEditingKey(menu.key)
@@ -187,6 +252,51 @@ export default function AdminPage() {
       const roles = exists ? current.roles.filter((item) => item !== role) : [...current.roles, role]
       return { ...current, roles: roles.length ? roles : current.roles }
     })
+  }
+
+  async function refreshAccountInquiries() {
+    setInquiriesLoading(true)
+    try {
+      const items = await listAccountRecoveryInquiries(inquiryStatus)
+      setAccountInquiries(items)
+      setSelectedInquiryId((current) => (items.some((item) => item.id === current) ? current : items[0]?.id ?? null))
+    } catch (error) {
+      setToastMessage(apiActionMessage(error, '계정 문의를 불러오지 못했습니다.'))
+    } finally {
+      setInquiriesLoading(false)
+    }
+  }
+
+  async function changeInquiryStatus(status: AccountInquiryStatus) {
+    if (!selectedInquiry) return
+    try {
+      const updated = await updateAccountRecoveryInquiryStatus(selectedInquiry.id, status)
+      setAccountInquiries((items) => items.map((item) => (item.id === updated.id ? updated : item)))
+      setToastMessage('문의 상태를 변경했습니다.')
+    } catch (error) {
+      setToastMessage(apiActionMessage(error, '문의 상태를 변경하지 못했습니다.'))
+    }
+  }
+
+  async function submitInquiryReply() {
+    if (!selectedInquiry) return
+    const message = replyMessage.trim()
+    if (!message) {
+      setToastMessage('답장 내용을 입력해주세요.')
+      return
+    }
+    if (!selectedReplyTarget) {
+      setToastMessage('답장을 보낼 이메일이 없습니다.')
+      return
+    }
+    try {
+      const updated = await replyAccountRecoveryInquiry(selectedInquiry.id, message)
+      setAccountInquiries((items) => items.map((item) => (item.id === updated.id ? updated : item)))
+      setReplyMessage('')
+      setToastMessage('답장을 보냈습니다.')
+    } catch (error) {
+      setToastMessage(apiActionMessage(error, '답장을 보내지 못했습니다.'))
+    }
   }
 
   return (
@@ -334,6 +444,135 @@ export default function AdminPage() {
               <strong>가족 그룹</strong>
               <span>{families.length.toLocaleString('ko-KR')}개 접근 가능</span>
             </article>
+          </div>
+        </section>
+      ) : null}
+
+      {activeTab === 'account-inquiries' ? (
+        <section className="fp-card fp-admin-panel fp-admin-inquiry-panel">
+          <header className="fp-admin-panel-header panel-header">
+            <div>
+              <h2>계정 문의</h2>
+              <p>아이디/비밀번호 찾기에서 접수된 문의를 확인하고 답장합니다.</p>
+            </div>
+            <button className="fp-admin-refresh-button" type="button" onClick={refreshAccountInquiries}>
+              새로고침
+            </button>
+          </header>
+
+          <div className="fp-admin-inquiry-layout">
+            <div className="fp-admin-inquiry-list">
+              <div className="fp-admin-inquiry-toolbar" role="group" aria-label="문의 상태">
+                {(Object.keys(inquiryStatusLabels) as Array<AccountInquiryStatus | 'ALL'>).map((status) => (
+                  <button
+                    className={inquiryStatus === status ? 'active' : ''}
+                    key={status}
+                    type="button"
+                    onClick={() => setInquiryStatus(status)}
+                  >
+                    {inquiryStatusLabels[status]}
+                  </button>
+                ))}
+              </div>
+
+              {inquiriesLoading ? <p className="fp-admin-empty">계정 문의를 불러오는 중입니다.</p> : null}
+              {!inquiriesLoading && accountInquiries.length === 0 ? (
+                <p className="fp-admin-empty">접수된 계정 문의가 없습니다.</p>
+              ) : null}
+
+              {accountInquiries.map((item) => {
+                const selected = selectedInquiry?.id === item.id
+                return (
+                  <button
+                    className={`fp-admin-inquiry-card${selected ? ' active' : ''}`}
+                    key={item.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedInquiryId(item.id)
+                      setReplyMessage('')
+                    }}
+                  >
+                    <span className={`fp-admin-status-pill status-${item.status.toLowerCase()}`}>
+                      {inquiryStatusLabels[item.status]}
+                    </span>
+                    <strong>{item.email || item.nickname || item.contact || '연락처 없음'}</strong>
+                    <span>{item.recoveryType || '계정 문의'} · {formatInquiryDate(item.createdAt)}</span>
+                    <small>{item.message || '문의 내용 없음'}</small>
+                  </button>
+                )
+              })}
+            </div>
+
+            <aside className="fp-admin-inquiry-detail">
+              {selectedInquiry ? (
+                <>
+                  <header>
+                    <div>
+                      <h3>문의 상세</h3>
+                      <p>{formatInquiryDate(selectedInquiry.createdAt)}</p>
+                    </div>
+                    <span className={`fp-admin-status-pill status-${selectedInquiry.status.toLowerCase()}`}>
+                      {inquiryStatusLabels[selectedInquiry.status]}
+                    </span>
+                  </header>
+
+                  <dl className="fp-admin-inquiry-meta">
+                    <div>
+                      <dt>이메일</dt>
+                      <dd>{selectedInquiry.email || '-'}</dd>
+                    </div>
+                    <div>
+                      <dt>닉네임</dt>
+                      <dd>{selectedInquiry.nickname || '-'}</dd>
+                    </div>
+                    <div>
+                      <dt>연락처</dt>
+                      <dd>{selectedInquiry.contact || '-'}</dd>
+                    </div>
+                    <div>
+                      <dt>문의 유형</dt>
+                      <dd>{selectedInquiry.recoveryType || '-'}</dd>
+                    </div>
+                  </dl>
+
+                  <div className="fp-admin-inquiry-message">
+                    <strong>문의 내용</strong>
+                    <p>{selectedInquiry.message || '문의 내용 없음'}</p>
+                  </div>
+
+                  {selectedInquiry.replyMessage ? (
+                    <div className="fp-admin-inquiry-message">
+                      <strong>기존 답변</strong>
+                      <p>{selectedInquiry.replyMessage}</p>
+                    </div>
+                  ) : null}
+
+                  <label className="fp-admin-reply-field">
+                    <span>답장 내용</span>
+                    <textarea
+                      value={replyMessage}
+                      onChange={(event) => setReplyMessage(event.target.value)}
+                      placeholder={selectedReplyTarget ? `${selectedReplyTarget}로 보낼 답장을 입력하세요.` : '이메일이 없는 문의입니다.'}
+                    />
+                  </label>
+
+                  {!selectedReplyTarget ? (
+                    <p className="fp-admin-help-text">이메일이 없는 문의입니다. 상태만 변경하고 연락처로 직접 답변해야 합니다.</p>
+                  ) : null}
+
+                  <div className="fp-admin-detail-actions">
+                    <button className="save-button" type="button" onClick={submitInquiryReply} disabled={!selectedReplyTarget}>
+                      답장 보내기
+                    </button>
+                    <button type="button" onClick={() => changeInquiryStatus('IN_PROGRESS')}>처리중</button>
+                    <button type="button" onClick={() => changeInquiryStatus('CLOSED')}>닫기</button>
+                    <button type="button" onClick={() => changeInquiryStatus('OPEN')}>대기</button>
+                  </div>
+                </>
+              ) : (
+                <p className="fp-admin-empty">선택된 문의가 없습니다.</p>
+              )}
+            </aside>
           </div>
         </section>
       ) : null}

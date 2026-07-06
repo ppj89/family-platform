@@ -295,6 +295,9 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("GET /api/auth/oauth/providers", a.oauthProviders)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/start", a.oauthStart)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", a.oauthCallback)
+	mux.HandleFunc("GET /api/admin/account-inquiries", a.requireAuth(a.listAccountRecoveryInquiries))
+	mux.HandleFunc("PATCH /api/admin/account-inquiries/{inquiryId}", a.requireAuth(a.updateAccountRecoveryInquiry))
+	mux.HandleFunc("POST /api/admin/account-inquiries/{inquiryId}/reply", a.requireAuth(a.replyAccountRecoveryInquiry))
 	mux.HandleFunc("GET /api/families", a.requireAuth(a.listFamilies))
 	mux.HandleFunc("POST /api/families", a.requireAuth(a.createFamily))
 	mux.HandleFunc("GET /api/families/{familyId}/members", a.requireAuth(a.listFamilyMembers))
@@ -1609,6 +1612,239 @@ func (a *app) createAccountRecoveryInquiry(w http.ResponseWriter, r *http.Reques
 	}
 	a.recordLoginHistory(r.Context(), nil, email, "password", "ACCOUNT_RECOVERY_INQUIRY", "SUCCESS", "")
 	writeJSON(w, http.StatusAccepted, map[string]any{"message": "account recovery inquiry accepted", "id": inquiryID})
+}
+
+type accountRecoveryInquiryItem struct {
+	ID              int64      `json:"id"`
+	CreatedAt       time.Time  `json:"createdAt"`
+	UpdatedAt       *time.Time `json:"updatedAt,omitempty"`
+	Email           string     `json:"email"`
+	Nickname        string     `json:"nickname"`
+	Contact         string     `json:"contact"`
+	RecoveryType    string     `json:"recoveryType"`
+	Message         string     `json:"message"`
+	Status          string     `json:"status"`
+	ReplyMessage    string     `json:"replyMessage,omitempty"`
+	RepliedAt       *time.Time `json:"repliedAt,omitempty"`
+	RepliedByUserID *int64     `json:"repliedByUserId,omitempty"`
+}
+
+func scanAccountRecoveryInquiry(row pgx.Row) (accountRecoveryInquiryItem, error) {
+	var item accountRecoveryInquiryItem
+	var updatedAt sql.NullTime
+	var repliedAt sql.NullTime
+	var repliedByUserID sql.NullInt64
+	err := row.Scan(
+		&item.ID,
+		&item.CreatedAt,
+		&updatedAt,
+		&item.Email,
+		&item.Nickname,
+		&item.Contact,
+		&item.RecoveryType,
+		&item.Message,
+		&item.Status,
+		&item.ReplyMessage,
+		&repliedAt,
+		&repliedByUserID,
+	)
+	if err != nil {
+		return item, err
+	}
+	if updatedAt.Valid {
+		value := updatedAt.Time
+		item.UpdatedAt = &value
+	}
+	if repliedAt.Valid {
+		value := repliedAt.Time
+		item.RepliedAt = &value
+	}
+	if repliedByUserID.Valid {
+		value := repliedByUserID.Int64
+		item.RepliedByUserID = &value
+	}
+	return item, nil
+}
+
+const accountRecoveryInquirySelect = `
+	select id, created_at, updated_at, coalesce(email, ''), coalesce(nickname, ''), coalesce(contact, ''),
+		coalesce(recovery_type, ''), coalesce(message, ''), status, coalesce(reply_message, ''),
+		replied_at, replied_by_user_id
+	from account_recovery_inquiries
+`
+
+func validAccountInquiryStatus(status string) bool {
+	switch status {
+	case "OPEN", "IN_PROGRESS", "REPLIED", "CLOSED":
+		return true
+	default:
+		return false
+	}
+}
+
+func (a *app) listAccountRecoveryInquiries(w http.ResponseWriter, r *http.Request, user authUser) {
+	if !user.PlatformAdmin {
+		writeError(w, http.StatusForbidden, "platform admin permission required")
+		return
+	}
+	status := strings.ToUpper(strings.TrimSpace(r.URL.Query().Get("status")))
+	if status == "" {
+		status = "OPEN"
+	}
+	if status != "ALL" && !validAccountInquiryStatus(status) {
+		writeError(w, http.StatusBadRequest, "invalid inquiry status")
+		return
+	}
+	limit := 50
+	if raw := strings.TrimSpace(r.URL.Query().Get("limit")); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value < 1 || value > 100 {
+			writeError(w, http.StatusBadRequest, "invalid limit")
+			return
+		}
+		limit = value
+	}
+	query := accountRecoveryInquirySelect
+	args := []any{}
+	if status != "ALL" {
+		query += " where status = $1"
+		args = append(args, status)
+	}
+	args = append(args, limit)
+	query += fmt.Sprintf(" order by created_at desc, id desc limit $%d", len(args))
+	rows, err := a.db.Query(r.Context(), query, args...)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	defer rows.Close()
+	items := []accountRecoveryInquiryItem{}
+	for rows.Next() {
+		item, err := scanAccountRecoveryInquiry(rows)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "database scan failed")
+			return
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"items": items})
+}
+
+func (a *app) updateAccountRecoveryInquiry(w http.ResponseWriter, r *http.Request, user authUser) {
+	if !user.PlatformAdmin {
+		writeError(w, http.StatusForbidden, "platform admin permission required")
+		return
+	}
+	inquiryID, ok := pathID(w, r, "inquiryId")
+	if !ok {
+		return
+	}
+	var req struct {
+		Status string `json:"status"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	status := strings.ToUpper(strings.TrimSpace(req.Status))
+	if !validAccountInquiryStatus(status) {
+		writeError(w, http.StatusBadRequest, "invalid inquiry status")
+		return
+	}
+	item, err := scanAccountRecoveryInquiry(a.db.QueryRow(r.Context(), accountRecoveryInquirySelect+`
+		where id = $1
+	`, inquiryID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "inquiry not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	updated, err := scanAccountRecoveryInquiry(a.db.QueryRow(r.Context(), `
+		with updated as (
+			update account_recovery_inquiries
+			set status = $2, updated_at = now()
+			where id = $1
+			returning id
+		)
+	`+accountRecoveryInquirySelect+`
+		where id = (select id from updated)
+	`, item.ID, status))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database update failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
+}
+
+func (a *app) replyAccountRecoveryInquiry(w http.ResponseWriter, r *http.Request, user authUser) {
+	if !user.PlatformAdmin {
+		writeError(w, http.StatusForbidden, "platform admin permission required")
+		return
+	}
+	inquiryID, ok := pathID(w, r, "inquiryId")
+	if !ok {
+		return
+	}
+	var req struct {
+		Message string `json:"message"`
+	}
+	if !readJSON(w, r, &req) {
+		return
+	}
+	replyMessage := strings.TrimSpace(req.Message)
+	if replyMessage == "" {
+		writeError(w, http.StatusBadRequest, "reply message is required")
+		return
+	}
+	if len(replyMessage) > 4000 {
+		writeError(w, http.StatusBadRequest, "reply message is too long")
+		return
+	}
+	item, err := scanAccountRecoveryInquiry(a.db.QueryRow(r.Context(), accountRecoveryInquirySelect+`
+		where id = $1
+	`, inquiryID))
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "inquiry not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return
+	}
+	recipient := normalizeEmail(item.Email)
+	if recipient == "" && strings.Contains(item.Contact, "@") {
+		recipient = normalizeEmail(item.Contact)
+	}
+	if recipient == "" {
+		writeError(w, http.StatusBadRequest, "reply email is required")
+		return
+	}
+	if err := a.sendAccountRecoveryReplyEmail(recipient, item, replyMessage); err != nil {
+		a.log.Error("account recovery reply mail failed", "inquiryId", inquiryID, "error", err)
+		writeError(w, http.StatusServiceUnavailable, "mail delivery failed")
+		return
+	}
+	updated, err := scanAccountRecoveryInquiry(a.db.QueryRow(r.Context(), `
+		with updated as (
+			update account_recovery_inquiries
+			set status = 'REPLIED', reply_message = $2, replied_at = now(), updated_at = now(), replied_by_user_id = $3
+			where id = $1
+			returning id
+		)
+	`+accountRecoveryInquirySelect+`
+		where id = (select id from updated)
+	`, inquiryID, replyMessage, user.ID))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database update failed")
+		return
+	}
+	writeJSON(w, http.StatusOK, updated)
 }
 
 func (a *app) listFamilies(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -4220,6 +4456,10 @@ create table if not exists account_recovery_inquiries (
 );
 create index if not exists idx_account_recovery_inquiries_created on account_recovery_inquiries (created_at desc);
 create index if not exists idx_account_recovery_inquiries_status on account_recovery_inquiries (status, created_at desc);
+alter table account_recovery_inquiries add column if not exists updated_at timestamp with time zone;
+alter table account_recovery_inquiries add column if not exists replied_at timestamp with time zone;
+alter table account_recovery_inquiries add column if not exists reply_message text;
+alter table account_recovery_inquiries add column if not exists replied_by_user_id bigint references app_users(id) on delete set null;
 create table if not exists email_send_attempts (
   id bigint generated by default as identity primary key,
   created_at timestamp with time zone not null,
@@ -4812,6 +5052,38 @@ func (a *app) sendRecoveryInquiryEmail(id int64, email, nickname, contact, recov
 		body,
 	}, "\r\n")
 	return a.sendMail(from, []string{from}, subject, body, []byte(message))
+}
+
+func (a *app) sendAccountRecoveryReplyEmail(email string, inquiry accountRecoveryInquiryItem, replyMessage string) error {
+	if !a.mailConfigured() {
+		return fmt.Errorf("mail delivery is not configured")
+	}
+	from := a.mailFromEmail()
+	subject := "Family Platform 계정 문의 답변"
+	body := strings.Join([]string{
+		"Family Platform 계정 문의에 대한 답변입니다.",
+		"",
+		"문의 유형: " + firstNonEmpty(inquiry.RecoveryType, "-"),
+		"문의 이메일: " + firstNonEmpty(inquiry.Email, "-"),
+		"문의 내용:",
+		firstNonEmpty(inquiry.Message, "-"),
+		"",
+		"답변:",
+		replyMessage,
+		"",
+		"추가 도움이 필요하면 관리자 문의로 다시 남겨주세요.",
+	}, "\n")
+	message := strings.Join([]string{
+		"From: " + from,
+		"To: " + email,
+		"Subject: " + mimeHeader(subject),
+		"MIME-Version: 1.0",
+		"Content-Type: text/plain; charset=UTF-8",
+		"Content-Transfer-Encoding: base64",
+		"",
+		base64.StdEncoding.EncodeToString([]byte(body)),
+	}, "\r\n")
+	return a.sendMail(from, []string{email}, subject, body, []byte(message))
 }
 
 func (a *app) mailConfigured() bool {
