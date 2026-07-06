@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiRequest } from '../api/client'
 import { listUnreadNotifications, markNotificationRead, type NotificationItem } from '../api/notifications'
 
@@ -12,34 +12,57 @@ interface InvitationItem {
 export function NotificationBell() {
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState<NotificationItem[]>([])
+  const mountedRef = useRef(false)
 
-  useEffect(() => {
-    let alive = true
-    Promise.allSettled([
+  const loadNotifications = useCallback(async () => {
+    const results = await Promise.allSettled([
       listUnreadNotifications(),
       apiRequest<InvitationItem[]>('/family-invitations'),
-    ]).then((results) => {
-      if (!alive) return
-      const notifications = results[0].status === 'fulfilled' ? results[0].value : []
-      const invites = results[1].status === 'fulfilled' ? results[1].value : []
-      const inviteNotifications = invites
-        .filter((item) => !item.status || item.status === 'pending')
-        .map((item) => ({
-          id: -item.id,
-          type: 'FAMILY_INVITATION',
-          title: '가족 초대장',
-          body: `${item.familyName || '가족그룹'} 초대가 도착했습니다.`,
-          targetDate: '',
-        }))
-      setItems([...inviteNotifications, ...notifications])
-    })
-    return () => {
-      alive = false
-    }
+    ])
+    if (!mountedRef.current) return
+    const notifications = results[0].status === 'fulfilled' ? results[0].value : []
+    const invites = results[1].status === 'fulfilled' ? results[1].value : []
+    const inviteNotifications = invites
+      .filter((item) => !item.status || String(item.status).toUpperCase() === 'PENDING')
+      .map((item) => ({
+        id: -item.id,
+        type: 'FAMILY_INVITATION',
+        title: '가족 초대장',
+        body: `${item.familyName || '가족그룹'} 초대가 도착했습니다.`,
+        targetDate: '',
+      }))
+    setItems([...inviteNotifications, ...notifications])
   }, [])
 
+  useEffect(() => {
+    mountedRef.current = true
+    void loadNotifications()
+    const interval = window.setInterval(() => void loadNotifications(), 15000)
+    const handleRefresh = () => void loadNotifications()
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') void loadNotifications()
+    }
+    window.addEventListener('focus', handleRefresh)
+    window.addEventListener('family-platform-notifications-refresh', handleRefresh)
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      mountedRef.current = false
+      window.clearInterval(interval)
+      window.removeEventListener('focus', handleRefresh)
+      window.removeEventListener('family-platform-notifications-refresh', handleRefresh)
+      document.removeEventListener('visibilitychange', handleVisibility)
+    }
+  }, [loadNotifications])
+
+  useEffect(() => {
+    if (open) void loadNotifications()
+  }, [loadNotifications, open])
+
   async function handleNotificationClick(item: NotificationItem) {
-    if (item.id < 0) return
+    if (item.id < 0) {
+      setOpen(false)
+      return
+    }
     setItems((current) => current.filter((next) => next.id !== item.id))
     try {
       await markNotificationRead(item.id)

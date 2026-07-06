@@ -195,6 +195,7 @@ export function FamilyPage() {
         setToastMessage('초대를 거절했습니다.')
       }
       await loadAll()
+      window.dispatchEvent(new CustomEvent('family-platform-notifications-refresh'))
     } catch (error) {
       setToastMessage(apiActionMessage(error, '처리하지 못했습니다.'))
     } finally {
