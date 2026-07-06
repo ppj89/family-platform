@@ -505,7 +505,12 @@
   left: 50%;
   top: 50%;
   z-index: 30000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: max-content;
   max-width: min(420px, calc(100vw - 40px));
+  box-sizing: border-box;
   border-radius: 14px;
   padding: 13px 16px;
   background: #191f28;
@@ -515,6 +520,9 @@
   font-weight: var(--fp-weight-strong);
   line-height: 1.45;
   text-align: center;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
   transform: translate(-50%, -50%);
 }
 
