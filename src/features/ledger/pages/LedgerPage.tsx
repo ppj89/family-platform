@@ -12,8 +12,20 @@ import './ledger-page.css'
 type LedgerQueryMode = 'month' | 'period'
 type ConfirmState = 'save' | 'delete' | null
 type LedgerSelectOption = { label: string; value: string }
+type ParsedLedgerSms = {
+  amount: number
+  title: string
+  entryType: LedgerPayload['entryType']
+  category?: string
+  paymentMethod?: string
+  transactionDate?: string
+}
 
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
+const smsCardWords =
+  /국민|KB|신한|삼성|현대|롯데|우리|하나|BC|비씨|NH|농협|카카오뱅크|토스|체크카드|카드|승인|이용|사용|일시불|취소|결제|알림|ARS|고객|누적|잔액|한도|포인트|원|KRW|출금|입금|오전|오후|온라인|모바일/gi
+const smsNoiseLine =
+  /잔액|누적|한도|포인트|승인번호|카드번호|문의|고객센터|할부|월\s*\d+회|URL|http|www/i
 
 const emptyPayload = (): LedgerPayload => ({
   title: '',
@@ -59,18 +71,109 @@ function groupEntriesByDate(items: LedgerEntry[]) {
   }, [])
 }
 
-function parseSmsText(text: string) {
-  const amountMatch = text.match(/([0-9][0-9,]*)\s*원?/)
-  const amount = amountMatch ? normalizeAmount(amountMatch[1]) : 0
-  const normalized = text
+function toDateKey(year: number, month: number, day: number) {
+  const date = new Date(year, month - 1, day)
+  if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) return ''
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+}
+
+function parseSmsDate(text: string) {
+  const fullDate = text.match(/(20\d{2})\s*[년./-]\s*(\d{1,2})\s*[월./-]\s*(\d{1,2})\s*일?/)
+  if (fullDate) return toDateKey(Number(fullDate[1]), Number(fullDate[2]), Number(fullDate[3]))
+
+  const year = new Date().getFullYear()
+  const koreanDate = text.match(/(\d{1,2})\s*월\s*(\d{1,2})\s*일/)
+  if (koreanDate) return toDateKey(year, Number(koreanDate[1]), Number(koreanDate[2]))
+
+  const shortDate = text.match(/(?:^|[^\d])(\d{1,2})\s*[./-]\s*(\d{1,2})(?:[^\d]|$)/)
+  if (shortDate) return toDateKey(year, Number(shortDate[1]), Number(shortDate[2]))
+
+  return ''
+}
+
+function extractSmsAmount(text: string) {
+  const matches = Array.from(text.matchAll(/(?:₩|KRW\s*)?(-?\d{1,3}(?:,\d{3})+|-?\d{4,}|-?\d+)\s*(원|KRW|￦)?/gi))
+  const candidates = matches
+    .map((match) => {
+      const start = match.index ?? 0
+      const end = start + match[0].length
+      const context = text.slice(Math.max(0, start - 16), Math.min(text.length, end + 16))
+      const amount = Math.abs(normalizeAmount(match[1]))
+      const hasCurrency = Boolean(match[2]) || /[₩￦]/.test(match[0])
+      const score =
+        (hasCurrency ? 4 : 0) +
+        (/승인|이용|사용|결제|출금|입금|지출|수입|금액/.test(context) ? 2 : 0) -
+        (smsNoiseLine.test(context) ? 4 : 0) -
+        (/^\d{1,2}$/.test(match[1].replace(/,/g, '')) ? 3 : 0)
+      return { amount, score, hasCurrency }
+    })
+    .filter((candidate) => candidate.amount >= 100 && (candidate.hasCurrency || candidate.score > 0))
+    .sort((a, b) => b.score - a.score || b.amount - a.amount)
+
+  return candidates[0]?.amount || 0
+}
+
+function cleanSmsMerchantCandidate(value: string) {
+  return value
     .replace(/\[[^\]]+]/g, ' ')
-    .replace(/승인|이용|사용|일시불|체크|카드|원/g, ' ')
-    .replace(/[\d,:\-./]/g, ' ')
+    .replace(/https?:\/\/\S+|www\.\S+/gi, ' ')
+    .replace(/\d{4}\s*[년./-]\s*\d{1,2}\s*[월./-]\s*\d{1,2}\s*일?/g, ' ')
+    .replace(/\d{1,2}\s*월\s*\d{1,2}\s*일/g, ' ')
+    .replace(/\d{1,2}\s*[:시]\s*\d{1,2}\s*분?/g, ' ')
+    .replace(/(?:₩|KRW\s*)?-?\d{1,3}(?:,\d{3})+\s*(?:원|KRW|￦)?/gi, ' ')
+    .replace(/-?\d{4,}\s*(?:원|KRW|￦)/gi, ' ')
+    .replace(smsCardWords, ' ')
+    .replace(/[^\w가-힣\s&().+-]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
-  const title = normalized.split(' ').find((part) => part.length >= 2) || ''
-  const isIncome = /입금|급여|환급|수입/.test(text)
-  return { amount, title, entryType: isIncome ? 'income' : 'expense' as LedgerPayload['entryType'] }
+}
+
+function extractSmsTitle(text: string) {
+  const lineCandidates = text
+    .split(/\r?\n|[|]/)
+    .map((line) => line.trim())
+    .filter((line) => line && !smsNoiseLine.test(line))
+    .map(cleanSmsMerchantCandidate)
+    .filter((candidate) => /[가-힣A-Za-z]/.test(candidate) && candidate.length >= 2)
+
+  if (lineCandidates[0]) return lineCandidates[0].slice(0, 40)
+
+  const collapsed = cleanSmsMerchantCandidate(text)
+  const token = collapsed.split(' ').find((part) => /[가-힣A-Za-z]/.test(part) && part.length >= 2)
+  return token ? token.slice(0, 40) : ''
+}
+
+function guessLedgerPaymentMethod(text: string) {
+  if (/현금/.test(text)) return '현금'
+  if (/카카오페이|네이버페이|토스페이|페이코|삼성페이|애플페이|간편결제/.test(text)) return '간편결제'
+  if (/계좌|이체|송금|입금|출금/.test(text)) return '계좌이체'
+  if (/카드|체크|승인|일시불/.test(text)) return '카드'
+  return ''
+}
+
+function guessLedgerCategory(text: string) {
+  const value = text.toLowerCase()
+  if (/병원|약국|의원|치과|의료/.test(value)) return '의료'
+  if (/학원|교육|학교|도서|문구/.test(value)) return '교육'
+  if (/여행|숙박|호텔|항공|기차|ktx|펜션|리조트/.test(value)) return '여행'
+  if (/교통|택시|버스|지하철|주차|주유|기름|하이패스|차량/.test(value)) return '교통'
+  if (/마트|편의점|다이소|쿠팡|생활|슈퍼|올리브영/.test(value)) return '생활'
+  if (/식비|식당|카페|커피|치킨|피자|버거|롯데리아|맥도날드|스타벅스|빽다방|이디야|빵|분식|김밥|밥|저녁|점심|아침|분유/.test(value)) {
+    return '식비'
+  }
+  return ''
+}
+
+function parseSmsText(text: string): ParsedLedgerSms {
+  const isIncome = /입금|급여|환급|수입|이자|캐시백|환불/.test(text) && !/출금|결제|승인|사용|이용/.test(text)
+  return {
+    amount: extractSmsAmount(text),
+    title: extractSmsTitle(text),
+    entryType: isIncome ? 'income' : 'expense',
+    category: guessLedgerCategory(text),
+    paymentMethod: guessLedgerPaymentMethod(text),
+    transactionDate: parseSmsDate(text),
+  }
 }
 
 function LedgerCustomSelect({
@@ -311,19 +414,25 @@ export default function LedgerPage() {
 
   function autofillFromSms() {
     const parsed = parseSmsText(smsText)
+    if (!parsed.title && !parsed.amount && !parsed.transactionDate) {
+      setSmsMessage('추출할 금액이나 가맹점 후보를 찾지 못했습니다.')
+      return
+    }
+    const category = parsed.category && ledgerCategoryOptions.includes(parsed.category) ? parsed.category : ''
+    const paymentMethod =
+      parsed.paymentMethod && ledgerPaymentMethodOptions.includes(parsed.paymentMethod) ? parsed.paymentMethod : ''
     setForm((current) => ({
       ...current,
       title: parsed.title || current.title,
       amount: parsed.amount || current.amount,
       entryType: parsed.entryType,
-      paymentMethod: current.paymentMethod || ledgerPaymentMethodOptions[0] || '카드',
+      category: category || current.category,
+      paymentMethod: paymentMethod || current.paymentMethod || ledgerPaymentMethodOptions[0] || '카드',
+      transactionDate: parsed.transactionDate || current.transactionDate,
     }))
-    if (!parsed.title && !parsed.amount) {
-      setSmsMessage('추출할 금액이나 가맹점 후보를 찾지 못했습니다.')
-      return
-    }
     setSmsMessage('')
     setMessage('문자 내용을 기준으로 입력값을 채웠습니다.')
+    setSmsText('')
     setIsSmsParserOpen(false)
     focusForm()
   }
