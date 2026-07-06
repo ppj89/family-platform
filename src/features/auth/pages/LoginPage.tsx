@@ -68,7 +68,14 @@ function isDuplicateSession(error: unknown) {
     return false
   }
   const message = error instanceof Error ? String(error.message || '').toLowerCase() : ''
-  return message.includes('active session') || message.includes('duplicate') || message.includes('session')
+  return (
+    message.includes('active session') ||
+    message.includes('duplicate') ||
+    message.includes('session') ||
+    message.includes('이미 로그인된 세션') ||
+    message.includes('로그인된 세션') ||
+    message.includes('세션이 있습니다')
+  )
 }
 
 function getErrorMessage(error: unknown) {
