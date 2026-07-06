@@ -72,6 +72,52 @@
   outline-offset: 2px;
 }
 
+.fp-ledger-list-end {
+  width: 100%;
+  height: 1px;
+}
+
+.fp-ledger-scroll-nav {
+  position: fixed;
+  z-index: 90;
+  right: 24px;
+  bottom: 24px;
+  display: inline-flex;
+  gap: 6px;
+  border: 1px solid #dfe5ec;
+  border-radius: 999px;
+  padding: 6px;
+  background: rgb(255 255 255 / 92%);
+  box-shadow: 0 12px 30px rgb(25 31 40 / 14%);
+  backdrop-filter: blur(8px);
+}
+
+.fp-ledger-scroll-nav button {
+  min-width: 44px;
+  height: 38px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 12px;
+  background: #f2f7ff;
+  color: #1b64da;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.fp-ledger-scroll-nav button:first-child,
+.fp-ledger-scroll-nav button:last-child {
+  background: #f2f4f6;
+  color: #333d4b;
+}
+
+.fp-ledger-scroll-nav button:focus-visible {
+  outline: 3px solid rgb(49 130 246 / 18%);
+  outline-offset: 2px;
+}
+
 .fp-ledger-filter {
   border-radius: 14px;
   padding: 16px;
@@ -810,6 +856,11 @@
   .ledger-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .fp-ledger-scroll-nav {
+    right: 18px;
+    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 @media (max-width: 760px) {
@@ -840,6 +891,17 @@
   .fp-ledger-entry-panel {
     position: static;
     max-width: none;
+  }
+
+  .fp-ledger-scroll-nav {
+    right: 16px;
+    bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .fp-ledger-scroll-nav button {
+    min-width: 42px;
+    height: 36px;
+    padding: 0 10px;
   }
 
   .fp-ledger-filter {
@@ -942,5 +1004,9 @@
 
   .ledger-row-actions button {
     flex: 1;
+  }
+
+  .fp-ledger-scroll-nav {
+    right: 12px;
   }
 }

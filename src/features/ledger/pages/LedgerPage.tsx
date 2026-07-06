@@ -139,6 +139,8 @@ function LedgerCustomSelect({
 export default function LedgerPage() {
   const today = todayKey()
   const currentMonth = today.slice(0, 7)
+  const ledgerTopRef = useRef<HTMLElement | null>(null)
+  const ledgerListEndRef = useRef<HTMLDivElement | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const [queryMode, setQueryMode] = useState<LedgerQueryMode>('month')
@@ -198,6 +200,14 @@ export default function LedgerPage() {
       formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       window.setTimeout(() => titleInputRef.current?.focus({ preventScroll: true }), 280)
     }, 0)
+  }
+
+  function scrollLedgerTop() {
+    ledgerTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function scrollLedgerListEnd() {
+    ledgerListEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }
 
   function startCreateEntry() {
@@ -324,7 +334,7 @@ export default function LedgerPage() {
       <section className="fp-ledger content-grid">
         {loading ? <div className="fp-loading-blocker">처리 중</div> : null}
 
-        <article className="panel wide fp-ledger-panel">
+        <article className="panel wide fp-ledger-panel" ref={ledgerTopRef}>
           <header className="panel-header fp-ledger-section-header">
             <h2>가계부 조회</h2>
             <button type="button" className="fp-ledger-input-jump" onClick={startCreateEntry}>입력하기</button>
@@ -398,6 +408,7 @@ export default function LedgerPage() {
               </section>
             )) : <p className="fp-empty-text">해당 기간의 가계부 내역이 없습니다.</p>}
           </section>
+          <div className="fp-ledger-list-end" ref={ledgerListEndRef} aria-hidden="true" />
         </article>
 
         <form className="panel entry-panel fp-ledger-entry-panel ledger-form" ref={formRef} onSubmit={requestSave}>
@@ -457,6 +468,12 @@ export default function LedgerPage() {
           </div>
           <button className="fp-button fp-button-primary submit-action" type="submit">{editingId ? '저장' : '추가'}</button>
         </form>
+
+        <nav className="fp-ledger-scroll-nav" aria-label="가계부 빠른 이동">
+          <button type="button" onClick={scrollLedgerTop}>위</button>
+          <button type="button" onClick={startCreateEntry}>입력</button>
+          <button type="button" onClick={scrollLedgerListEnd}>아래</button>
+        </nav>
       </section>
 
       {selectedEntry ? (
