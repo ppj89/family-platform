@@ -944,17 +944,23 @@
     bottom: calc(82px + env(safe-area-inset-bottom, 0px));
   }
 
-  .fp-ledger-scroll-nav button {
+  .fp-ledger-scroll-menu button {
     min-width: 54px;
     height: 36px;
     padding: 0 10px;
   }
 
-  .fp-ledger-scroll-toggle {
+  .fp-ledger-scroll-nav .fp-ledger-scroll-toggle {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 1 / 1;
     min-width: 52px;
+    min-height: 52px;
     width: 52px;
     height: 52px;
+    border-radius: 999px;
     padding: 0;
+    line-height: 1;
   }
 
   .fp-ledger-filter {
