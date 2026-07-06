@@ -195,9 +195,17 @@ export default function LedgerPage() {
 
   function focusForm() {
     window.setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
-      titleInputRef.current?.focus({ preventScroll: true })
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      window.setTimeout(() => titleInputRef.current?.focus({ preventScroll: true }), 280)
     }, 0)
+  }
+
+  function startCreateEntry() {
+    if (editingId) {
+      setEditingId(null)
+      setForm(emptyPayload())
+    }
+    focusForm()
   }
 
   function startEdit(item: LedgerEntry) {
@@ -319,6 +327,7 @@ export default function LedgerPage() {
         <article className="panel wide fp-ledger-panel">
           <header className="panel-header fp-ledger-section-header">
             <h2>가계부 조회</h2>
+            <button type="button" className="fp-ledger-input-jump" onClick={startCreateEntry}>입력하기</button>
           </header>
 
           <section className="filter-panel fp-ledger-filter">
