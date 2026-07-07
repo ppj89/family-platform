@@ -1,5 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react'
-import { HiChevronDown } from 'react-icons/hi'
+import { CgChevronLeft, CgChevronRight } from 'react-icons/cg'
 import HomePage from './features/home/pages/HomePage'
 import CalendarPage from './features/calendar/pages/CalendarPage'
 import LedgerPage from './features/ledger/pages/LedgerPage'
@@ -289,19 +289,6 @@ export default function App() {
             <small>가족 운영 워크스페이스</small>
           </div>
         </div>
-        <button
-          className="fp-sidebar-toggle"
-          type="button"
-          aria-expanded={!isSidebarCollapsed}
-          aria-label={isSidebarCollapsed ? '메뉴 열기' : '메뉴 닫기'}
-          title={isSidebarCollapsed ? '메뉴 열기' : '메뉴 닫기'}
-          onClick={toggleSidebar}
-        >
-          <span className={`fp-sidebar-toggle-icon${isSidebarCollapsed ? '' : ' open'}`} aria-hidden="true">
-            <HiChevronDown />
-          </span>
-          <span className="fp-sidebar-toggle-text">{isSidebarCollapsed ? '메뉴 열기' : '메뉴 닫기'}</span>
-        </button>
         <nav className="fp-nav" aria-label="주 메뉴">
           {menuItems.map((item) => (
             <button
@@ -316,6 +303,19 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <button
+          className="fp-sidebar-toggle"
+          type="button"
+          aria-expanded={!isSidebarCollapsed}
+          aria-label={isSidebarCollapsed ? '메뉴 열기' : '메뉴 닫기'}
+          title={isSidebarCollapsed ? '메뉴 열기' : '메뉴 닫기'}
+          onClick={toggleSidebar}
+        >
+          <span className="fp-sidebar-toggle-icon" aria-hidden="true">
+            {isSidebarCollapsed ? <CgChevronRight /> : <CgChevronLeft />}
+          </span>
+          <span className="fp-sidebar-toggle-text">{isSidebarCollapsed ? '메뉴 열기' : '메뉴 닫기'}</span>
+        </button>
       </aside>
       <main className="fp-main">
         <header className="fp-topbar">

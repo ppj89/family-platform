@@ -79,7 +79,9 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
+  width: 100%;
   min-height: 34px;
+  margin-top: auto;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   background: #ffffff;
@@ -97,11 +99,6 @@
   place-items: center;
   font-size: 20px;
   line-height: 1;
-  transition: transform 0.18s ease;
-}
-
-.fp-sidebar-toggle-icon.open {
-  transform: rotate(180deg);
 }
 
 .fp-sidebar-toggle-icon svg {
