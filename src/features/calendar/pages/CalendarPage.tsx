@@ -1,6 +1,6 @@
 import { type CSSProperties, FormEvent, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage, isAuthError } from '../../../shared/api/client'
-import { ConfirmDialog, DatePickerField, ToastMessage } from '../../../shared/components'
+import { ConfirmDialog, DatePickerField, ToastMessage, type DatePickerChangeMeta } from '../../../shared/components'
 import { CALENDAR_CATEGORIES, COMMON_CODE_GROUPS, FAMILY_MEMBER_OPTIONS } from '../../../shared/constants/commonCodes'
 import { useCommonCodeOptions } from '../../../shared/hooks/useCommonCodeOptions'
 import {
@@ -463,11 +463,19 @@ export default function CalendarPage() {
     syncSelectedDate(value, { yearSelected: false })
   }
 
-  function changeMonth(value: string) {
+  function changeMonth(value: string, meta?: DatePickerChangeMeta) {
+    if (meta?.source === 'today') {
+      syncSelectedDate(todayKey(), { yearSelected: false })
+      return
+    }
     syncSelectedDate(dateKeyInMonth(value, selectedDate), { yearSelected: false })
   }
 
-  function changeYear(value: string) {
+  function changeYear(value: string, meta?: DatePickerChangeMeta) {
+    if (meta?.source === 'today') {
+      syncSelectedDate(todayKey(), { yearSelected: true })
+      return
+    }
     syncSelectedDate(dateKeyInYear(value, selectedDate), { yearSelected: false })
   }
 

@@ -4,6 +4,7 @@ import './date-picker-field.css'
 
 type DatePickerMode = 'date' | 'month' | 'year'
 type PickerLevel = DatePickerMode
+export type DatePickerChangeMeta = { source: 'today' | 'select' }
 
 interface DatePickerFieldProps {
   className?: string
@@ -13,7 +14,7 @@ interface DatePickerFieldProps {
   required?: boolean
   showCalendarIcon?: boolean
   value: string
-  onChange: (value: string) => void
+  onChange: (value: string, meta?: DatePickerChangeMeta) => void
 }
 
 const weekdays = ['일', '월', '화', '수', '목', '금', '토']
@@ -114,7 +115,7 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
   }, [open])
 
   function selectDate(dateKey: string) {
-    onChange(dateKey)
+    onChange(dateKey, { source: 'select' })
     setOpen(false)
   }
 
@@ -122,7 +123,7 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
     const nextDate = new Date(viewDate.getFullYear(), month - 1, 1)
     setViewDate(nextDate)
     if (mode === 'month') {
-      onChange(`${nextDate.getFullYear()}-${String(month).padStart(2, '0')}`)
+      onChange(`${nextDate.getFullYear()}-${String(month).padStart(2, '0')}`, { source: 'select' })
       setOpen(false)
       return
     }
@@ -133,7 +134,7 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
     const nextDate = new Date(year, viewDate.getMonth(), 1)
     setViewDate(nextDate)
     if (mode === 'year') {
-      onChange(String(year))
+      onChange(String(year), { source: 'select' })
       setOpen(false)
       return
     }
@@ -141,9 +142,9 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
   }
 
   function selectToday() {
-    if (mode === 'year') onChange(currentToday.slice(0, 4))
-    else if (mode === 'month') onChange(currentToday.slice(0, 7))
-    else onChange(currentToday)
+    if (mode === 'year') onChange(currentToday.slice(0, 4), { source: 'today' })
+    else if (mode === 'month') onChange(currentToday.slice(0, 7), { source: 'today' })
+    else onChange(currentToday, { source: 'today' })
     setOpen(false)
   }
 
