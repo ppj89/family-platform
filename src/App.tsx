@@ -341,7 +341,7 @@ export default function App() {
             </button>
           </div>
         </header>
-        {activeMenu === '홈' ? <HomePage /> : null}
+        {activeMenu === '홈' ? <HomePage onNavigate={setActiveMenu} /> : null}
         {activeMenu === '캘린더' ? <CalendarPage /> : null}
         {activeMenu === '가계부' ? <LedgerPage /> : null}
         {activeMenu === '여행' ? <TravelPage /> : null}

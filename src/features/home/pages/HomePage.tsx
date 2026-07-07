@@ -20,6 +20,12 @@ interface HomeState {
   familyCount: number
 }
 
+type HomeMenu = '가계부' | '여행' | '육아' | '가족그룹'
+
+interface HomePageProps {
+  onNavigate?: (menu: HomeMenu) => void
+}
+
 const emptySummary: LedgerSummary = { expense: 0, income: 0, total: 0 }
 
 function money(value: number) {
@@ -58,7 +64,7 @@ async function countFamilyMembers() {
   return members.length
 }
 
-export default function HomePage() {
+export default function HomePage({ onNavigate }: HomePageProps) {
   const range = useMemo(() => monthRange(new Date()), [])
   const [state, setState] = useState<HomeState>({
     ledgerEntries: [],
@@ -140,27 +146,28 @@ export default function HomePage() {
   }, [])
 
   const recentLedgerEntries = state.ledgerEntries.slice(0, 3)
+  const navigate = (menu: HomeMenu) => onNavigate?.(menu)
 
   return (
     <section className="fp-home">
       {loading ? <div className="fp-loading-blocker">데이터 불러오는 중</div> : null}
       <div className="fp-home-summary">
-        <article className="expense">
+        <button className="expense fp-home-summary-card" type="button" onClick={() => navigate('가계부')}>
           <span>이번 달 지출</span>
           <strong>{money(state.ledgerSummary.expense)}</strong>
-        </article>
-        <article className="travel">
+        </button>
+        <button className="travel fp-home-summary-card" type="button" onClick={() => navigate('여행')}>
           <span>여행 누적</span>
           <strong>{money(state.tripTotal)}</strong>
-        </article>
-        <article className="baby">
+        </button>
+        <button className="baby fp-home-summary-card" type="button" onClick={() => navigate('육아')}>
           <span>육아 기록</span>
           <strong>{state.babyRecordCount.toLocaleString('ko-KR')}개</strong>
-        </article>
-        <article className="family">
+        </button>
+        <button className="family fp-home-summary-card" type="button" onClick={() => navigate('가족그룹')}>
           <span>가족 멤버</span>
           <strong>{state.familyCount.toLocaleString('ko-KR')}명</strong>
-        </article>
+        </button>
       </div>
 
       <ToastMessage message={message} onClose={() => setMessage('')} />
@@ -174,7 +181,7 @@ export default function HomePage() {
           </header>
           <div className="fp-home-list">
             {recentLedgerEntries.length ? recentLedgerEntries.map((item) => (
-              <article key={item.id}>
+              <button className="fp-home-list-item" key={item.id} type="button" onClick={() => navigate('가계부')}>
                 <div>
                   <strong>{item.title}</strong>
                   <p>{safeDate(item.transactionDate)} · {item.category || '-'}{item.memberName ? ` · ${item.memberName}` : ''}</p>
@@ -183,7 +190,7 @@ export default function HomePage() {
                 <b className={item.entryType === 'income' ? 'income' : 'expense'}>
                   {item.entryType === 'income' ? '+' : '-'}{money(item.amount)}
                 </b>
-              </article>
+              </button>
             )) : <p className="fp-empty-text">최근 가계부 내역이 없습니다.</p>}
           </div>
         </section>
