@@ -476,6 +476,23 @@
   line-height: 1.35;
 }
 
+.api-ledger-day > header span {
+  flex: 0 0 auto;
+  color: #111827;
+  font-size: 13px;
+  font-weight: 400;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.api-ledger-day > header span.expense {
+  color: #d94862;
+}
+
+.api-ledger-day > header span.income {
+  color: #0f9f8f;
+}
+
 .ledger-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -513,7 +530,7 @@
   overflow: hidden;
   color: #111827;
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 400;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;

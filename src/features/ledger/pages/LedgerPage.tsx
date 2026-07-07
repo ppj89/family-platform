@@ -66,6 +66,15 @@ function signedMoney(item: LedgerEntry) {
   return `${item.entryType === 'income' ? '+' : '-'}${money(item.amount)}`
 }
 
+function signedTotalMoney(value: number) {
+  if (value === 0) return money(0)
+  return `${value > 0 ? '+' : '-'}${money(Math.abs(value))}`
+}
+
+function dailyTotal(items: LedgerEntry[]) {
+  return items.reduce((sum, item) => sum + (item.entryType === 'income' ? item.amount : -item.amount), 0)
+}
+
 function sortEntries(items: LedgerEntry[]) {
   return [...items].sort((a, b) => `${b.transactionDate} ${b.createdAt}`.localeCompare(`${a.transactionDate} ${a.createdAt}`))
 }
@@ -698,6 +707,7 @@ export default function LedgerPage() {
               <section className="api-ledger-day" key={group.date}>
                 <header>
                   <strong>{formatDisplayDate(group.date)}</strong>
+                  <span className={dailyTotal(group.items) > 0 ? 'income' : dailyTotal(group.items) < 0 ? 'expense' : ''}>{signedTotalMoney(dailyTotal(group.items))}</span>
                 </header>
                 {group.items.map((item) => (
                   <article className="ledger-row api-ledger-row" key={item.id}>
