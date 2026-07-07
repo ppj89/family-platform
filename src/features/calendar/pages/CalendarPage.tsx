@@ -160,7 +160,7 @@ function lunarLabel(date: Date) {
   if (date.getDate() % 5 !== 0) return ''
   const parts = lunarFormatter.format(date).match(/\d+/g)
   if (!parts || parts.length < 2) return ''
-  return `음 ${Number(parts[0])}월 ${Number(parts[1])}일`
+  return `\uC74C ${Number(parts[0])}/${Number(parts[1])}`
 }
 
 function weekDays(weekDate: string) {
