@@ -91,8 +91,23 @@
 }
 
 .fp-sidebar-toggle-icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
   font-size: 20px;
   line-height: 1;
+  transition: transform 0.18s ease;
+}
+
+.fp-sidebar-toggle-icon.open {
+  transform: rotate(180deg);
+}
+
+.fp-sidebar-toggle-icon svg {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
 .fp-sidebar-toggle-text {
@@ -849,22 +864,8 @@
   }
 
   .fp-sidebar-toggle-icon {
-    position: relative;
     width: 20px;
-    color: transparent;
-  }
-
-  .fp-sidebar-toggle-icon::after {
-    position: absolute;
-    inset: 0;
-    display: grid;
-    place-items: center;
     color: #4e5968;
-    content: "↑";
-  }
-
-  .fp-shell.sidebar-collapsed .fp-sidebar-toggle-icon::after {
-    content: "↓";
   }
 
   .fp-brand {

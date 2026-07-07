@@ -222,6 +222,16 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   font-size: 13px;
 }
 
+.fp-calendar-scroll-chevron {
+  display: block;
+  width: 22px;
+  height: 22px;
+}
+
+.fp-calendar-scroll-chevron.up {
+  transform: rotate(180deg);
+}
+
 .fp-calendar-scroll-menu button:first-child,
 .fp-calendar-scroll-menu button:nth-child(2) {
   background: #f2f4f6;

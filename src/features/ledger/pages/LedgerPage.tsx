@@ -1,4 +1,5 @@
 import { type CSSProperties, FormEvent, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { HiChevronDown } from 'react-icons/hi'
 import { apiActionMessage, isAuthError } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField, ToastMessage } from '../../../shared/components'
 import { COMMON_CODE_GROUPS, FAMILY_MEMBER_OPTIONS, LEDGER_CATEGORIES, LEDGER_ENTRY_TYPE_OPTIONS, LEDGER_PAYMENT_METHODS } from '../../../shared/constants/commonCodes'
@@ -732,8 +733,12 @@ export default function LedgerPage() {
         >
           {isQuickNavOpen ? (
             <div className="fp-ledger-scroll-menu">
-              <button type="button" aria-label="위로 이동" onClick={scrollLedgerTop}>↑</button>
-              <button type="button" aria-label="아래로 이동" onClick={scrollLedgerListEnd}>↓</button>
+              <button type="button" aria-label="위로 이동" onClick={scrollLedgerTop}>
+                <HiChevronDown className="fp-ledger-scroll-chevron up" aria-hidden="true" />
+              </button>
+              <button type="button" aria-label="아래로 이동" onClick={scrollLedgerListEnd}>
+                <HiChevronDown className="fp-ledger-scroll-chevron" aria-hidden="true" />
+              </button>
               <button type="button" onClick={startCreateEntry}>입력</button>
             </div>
           ) : null}

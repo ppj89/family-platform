@@ -1,4 +1,5 @@
 import { type ReactNode, useEffect, useState } from 'react'
+import { HiChevronDown } from 'react-icons/hi'
 import HomePage from './features/home/pages/HomePage'
 import CalendarPage from './features/calendar/pages/CalendarPage'
 import LedgerPage from './features/ledger/pages/LedgerPage'
@@ -298,8 +299,8 @@ export default function App() {
           title={isSidebarCollapsed ? '메뉴 열기' : '메뉴 닫기'}
           onClick={toggleSidebar}
         >
-          <span className="fp-sidebar-toggle-icon" aria-hidden="true">
-            {isSidebarCollapsed ? '›' : '‹'}
+          <span className={`fp-sidebar-toggle-icon${isSidebarCollapsed ? '' : ' open'}`} aria-hidden="true">
+            <HiChevronDown />
           </span>
           <span className="fp-sidebar-toggle-text">{isSidebarCollapsed ? '메뉴 열기' : '메뉴 닫기'}</span>
         </button>

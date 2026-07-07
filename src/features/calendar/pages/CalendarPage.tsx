@@ -1,4 +1,5 @@
 import { type CSSProperties, FormEvent, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { HiChevronDown } from 'react-icons/hi'
 import { apiActionMessage, isAuthError } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField, ToastMessage, type DatePickerChangeMeta } from '../../../shared/components'
 import { CALENDAR_CATEGORIES, COMMON_CODE_GROUPS, FAMILY_MEMBER_OPTIONS } from '../../../shared/constants/commonCodes'
@@ -1184,8 +1185,12 @@ export default function CalendarPage() {
           >
             {isQuickNavOpen ? (
               <div className="fp-calendar-scroll-menu">
-                <button type="button" aria-label="위로 이동" onClick={scrollCalendarTop}>↑</button>
-                <button type="button" aria-label="아래로 이동" onClick={scrollCalendarListEnd}>↓</button>
+                <button type="button" aria-label="위로 이동" onClick={scrollCalendarTop}>
+                  <HiChevronDown className="fp-calendar-scroll-chevron up" aria-hidden="true" />
+                </button>
+                <button type="button" aria-label="아래로 이동" onClick={scrollCalendarListEnd}>
+                  <HiChevronDown className="fp-calendar-scroll-chevron" aria-hidden="true" />
+                </button>
                 <button type="button" onClick={() => startCreate(selectedDate, { focus: true })}>입력</button>
               </div>
             ) : null}
