@@ -1849,13 +1849,19 @@ func (a *app) replyAccountRecoveryInquiry(w http.ResponseWriter, r *http.Request
 
 func (a *app) listFamilies(w http.ResponseWriter, r *http.Request, user authUser) {
 	query := `
-		select f.id, f.created_at, f.name
+		select f.id, f.created_at, f.name,
+		       (own.user_id is not null) as is_member,
+		       coalesce(own.role, ''),
+		       coalesce(own.can_read, false),
+		       coalesce(own.can_create, false),
+		       coalesce(own.can_update, false),
+		       coalesce(own.can_delete, false)
 		from family_groups f
-		where $1 = true or exists (
-			select 1 from family_members m
-			where m.family_id = f.id and m.user_id = $2 and m.can_read = true
-		)
-		order by f.created_at asc
+		left join family_members own on own.family_id = f.id and own.user_id = $2
+		where $1 = true or own.can_read = true
+		order by case when own.user_id is not null then 0 else 1 end,
+		         own.joined_at asc nulls last,
+		         f.created_at asc
 	`
 	rows, err := a.db.Query(r.Context(), query, user.PlatformAdmin, user.ID)
 	if err != nil {
@@ -1867,11 +1873,27 @@ func (a *app) listFamilies(w http.ResponseWriter, r *http.Request, user authUser
 		ID        int64     `json:"id"`
 		CreatedAt time.Time `json:"createdAt"`
 		Name      string    `json:"name"`
+		IsMember  bool      `json:"isMember"`
+		Role      string    `json:"role,omitempty"`
+		CanRead   bool      `json:"canRead"`
+		CanCreate bool      `json:"canCreate"`
+		CanUpdate bool      `json:"canUpdate"`
+		CanDelete bool      `json:"canDelete"`
 	}
 	families := []family{}
 	for rows.Next() {
 		var item family
-		if err := rows.Scan(&item.ID, &item.CreatedAt, &item.Name); err != nil {
+		if err := rows.Scan(
+			&item.ID,
+			&item.CreatedAt,
+			&item.Name,
+			&item.IsMember,
+			&item.Role,
+			&item.CanRead,
+			&item.CanCreate,
+			&item.CanUpdate,
+			&item.CanDelete,
+		); err != nil {
 			writeError(w, http.StatusInternalServerError, "database scan failed")
 			return
 		}
@@ -2465,7 +2487,7 @@ type ledgerEntry struct {
 }
 
 func (a *app) listLedgerEntries(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID, start, end, ok := familyDateRange(w, r)
+	familyID, start, end, ok := a.familyDateRange(w, r, user)
 	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
@@ -2493,7 +2515,7 @@ func (a *app) listLedgerEntries(w http.ResponseWriter, r *http.Request, user aut
 }
 
 func (a *app) ledgerSummary(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID, start, end, ok := familyDateRange(w, r)
+	familyID, start, end, ok := a.familyDateRange(w, r, user)
 	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
@@ -2517,7 +2539,10 @@ func (a *app) ledgerSummary(w http.ResponseWriter, r *http.Request, user authUse
 }
 
 func (a *app) createLedgerEntry(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryFamilyID(r)
+	familyID, ok := a.requestFamilyID(w, r, user)
+	if !ok {
+		return
+	}
 	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
@@ -2584,7 +2609,7 @@ type scheduleItem struct {
 }
 
 func (a *app) listSchedules(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID, start, end, ok := familyDateRange(w, r)
+	familyID, start, end, ok := a.familyDateRange(w, r, user)
 	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
@@ -2616,7 +2641,10 @@ func (a *app) listSchedules(w http.ResponseWriter, r *http.Request, user authUse
 }
 
 func (a *app) createSchedule(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryFamilyID(r)
+	familyID, ok := a.requestFamilyID(w, r, user)
+	if !ok {
+		return
+	}
 	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
@@ -2909,7 +2937,10 @@ type travelRecordItem struct {
 }
 
 func (a *app) listTrips(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryFamilyID(r)
+	familyID, ok := a.requestFamilyID(w, r, user)
+	if !ok {
+		return
+	}
 	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
 		return
 	}
@@ -2936,7 +2967,10 @@ func (a *app) listTrips(w http.ResponseWriter, r *http.Request, user authUser) {
 }
 
 func (a *app) createTrip(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryFamilyID(r)
+	familyID, ok := a.requestFamilyID(w, r, user)
+	if !ok {
+		return
+	}
 	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
@@ -3111,7 +3145,10 @@ type restaurantPayload struct {
 }
 
 func (a *app) listRestaurants(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryFamilyID(r)
+	familyID, ok := a.requestFamilyID(w, r, user)
+	if !ok {
+		return
+	}
 	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
 		return
 	}
@@ -3138,7 +3175,10 @@ func (a *app) listRestaurants(w http.ResponseWriter, r *http.Request, user authU
 }
 
 func (a *app) createRestaurant(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryFamilyID(r)
+	familyID, ok := a.requestFamilyID(w, r, user)
+	if !ok {
+		return
+	}
 	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
@@ -3217,7 +3257,10 @@ type babyRecordItem struct {
 }
 
 func (a *app) listBabies(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryFamilyID(r)
+	familyID, ok := a.requestFamilyID(w, r, user)
+	if !ok {
+		return
+	}
 	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
 		return
 	}
@@ -3244,7 +3287,10 @@ func (a *app) listBabies(w http.ResponseWriter, r *http.Request, user authUser) 
 }
 
 func (a *app) createBaby(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryFamilyID(r)
+	familyID, ok := a.requestFamilyID(w, r, user)
+	if !ok {
+		return
+	}
 	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
@@ -3412,7 +3458,7 @@ type diaryItem struct {
 }
 
 func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID, start, end, ok := familyDateRange(w, r)
+	familyID, start, end, ok := a.familyDateRange(w, r, user)
 	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
@@ -3439,7 +3485,10 @@ func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser)
 }
 
 func (a *app) createDiary(w http.ResponseWriter, r *http.Request, user authUser) {
-	familyID := queryFamilyID(r)
+	familyID, ok := a.requestFamilyID(w, r, user)
+	if !ok {
+		return
+	}
 	if !a.requireFamilyPermission(w, r.Context(), user, familyID, "create") {
 		return
 	}
@@ -5474,15 +5523,47 @@ func queryInt64(r *http.Request, name string, fallback int64) int64 {
 }
 
 func queryFamilyID(r *http.Request) int64 {
-	raw := strings.TrimSpace(r.URL.Query().Get("familyId"))
-	if raw == "0" {
-		return 0
-	}
-	return queryInt64(r, "familyId", 1)
+	return queryInt64(r, "familyId", 0)
 }
 
-func familyDateRange(w http.ResponseWriter, r *http.Request) (int64, string, string, bool) {
+func (a *app) requestFamilyID(w http.ResponseWriter, r *http.Request, user authUser) (int64, bool) {
 	familyID := queryFamilyID(r)
+	if familyID > 0 {
+		return familyID, true
+	}
+
+	resolvedID, err := a.defaultReadableFamilyID(r.Context(), user)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "database read failed")
+		return 0, false
+	}
+	return resolvedID, true
+}
+
+func (a *app) defaultReadableFamilyID(ctx context.Context, user authUser) (int64, error) {
+	var familyID int64
+	err := a.db.QueryRow(ctx, `
+		select f.id
+		from family_groups f
+		join family_members m on m.family_id = f.id
+		where m.user_id = $1 and m.can_read = true
+		order by m.joined_at asc, f.created_at asc
+		limit 1
+	`, user.ID).Scan(&familyID)
+	if errors.Is(err, sql.ErrNoRows) {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return familyID, nil
+}
+
+func (a *app) familyDateRange(w http.ResponseWriter, r *http.Request, user authUser) (int64, string, string, bool) {
+	familyID, ok := a.requestFamilyID(w, r, user)
+	if !ok {
+		return 0, "", "", false
+	}
 	start := strings.TrimSpace(r.URL.Query().Get("startDate"))
 	end := strings.TrimSpace(r.URL.Query().Get("endDate"))
 	if !validDate(start) || !validDate(end) {

@@ -1,6 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { apiActionMessage } from '../../../shared/api/client'
 import { getStoredUser } from '../../../shared/api/auth'
+import { selectReadableFamily } from '../../../shared/api/family'
 import { ConfirmDialog, CustomSelect, ToastMessage } from '../../../shared/components'
 import {
   acceptFamilyInvitation,
@@ -129,16 +130,20 @@ export function FamilyPage() {
     setLoading(true)
     try {
       const [familyList, incoming] = await Promise.all([listFamilies(), listReceivedInvitations()])
-      setFamilies(familyList)
+      const selectedFamily = selectReadableFamily(familyList)
+      const orderedFamilies = selectedFamily
+        ? [selectedFamily, ...familyList.filter((item) => item.id !== selectedFamily.id)]
+        : familyList
+      setFamilies(orderedFamilies)
       setReceivedInvites(incoming)
 
-      if (familyList[0]) {
-        const memberList = await listFamilyMembers(familyList[0].id)
+      if (selectedFamily) {
+        const memberList = await listFamilyMembers(selectedFamily.id)
         setMembers(memberList)
         const me = getStoredUser()
         const ownMember = me?.id ? memberList.find((member) => member.userId === me.id) : null
         if (me?.platformAdmin || ownMember?.role === 'FAMILY_ADMIN') {
-          setSentInvites(await listSentInvitations(familyList[0].id))
+          setSentInvites(await listSentInvitations(selectedFamily.id))
         } else {
           setSentInvites([])
         }

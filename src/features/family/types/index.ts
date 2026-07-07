@@ -2,6 +2,12 @@ export interface FamilyGroup {
   id: number
   createdAt?: string
   name: string
+  isMember?: boolean
+  role?: string
+  canRead?: boolean
+  canCreate?: boolean
+  canUpdate?: boolean
+  canDelete?: boolean
 }
 
 export interface FamilyMember {

@@ -4,8 +4,9 @@ import type { LedgerEntry, LedgerSummary } from '../../ledger/types'
 import { listTrips, listTravelRecords } from '../../travel/api/travel'
 import type { Trip } from '../../travel/types'
 import { listBabies, listBabyRecords } from '../../baby/api/baby'
-import { listFamilies, listFamilyMembers } from '../../family/api/familyGroup'
+import { listFamilyMembers } from '../../family/api/familyGroup'
 import { apiActionMessage, isAuthError } from '../../../shared/api/client'
+import { getReadableFamilyId } from '../../../shared/api/family'
 import { ToastMessage } from '../../../shared/components'
 import { monthRange } from '../../../shared/utils/date'
 import './home-page.css'
@@ -51,10 +52,9 @@ async function countMonthlyBabyRecords(startDate: string, endDate: string) {
 }
 
 async function countFamilyMembers() {
-  const families = await listFamilies()
-  const family = families[0]
-  if (!family) return 0
-  const members = await listFamilyMembers(family.id)
+  const familyId = await getReadableFamilyId()
+  if (!familyId) return 0
+  const members = await listFamilyMembers(familyId)
   return members.length
 }
 
