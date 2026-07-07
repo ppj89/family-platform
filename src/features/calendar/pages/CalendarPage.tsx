@@ -5,7 +5,6 @@ import { CALENDAR_CATEGORIES, COMMON_CODE_GROUPS, FAMILY_MEMBER_OPTIONS } from '
 import { useCommonCodeOptions } from '../../../shared/hooks/useCommonCodeOptions'
 import {
   addDays,
-  addMonths,
   currentTimeText,
   formatDateKey,
   formatKoreanDate,
@@ -117,6 +116,29 @@ function rangeForView(view: CalendarView, dayDate: string, weekDate: string, mon
     return { startDate: `${year}-01-01`, endDate: `${year}-12-31` }
   }
   return monthRange(monthDate)
+}
+
+function clampDate(year: number, monthIndex: number, day: number) {
+  const lastDate = new Date(year, monthIndex + 1, 0).getDate()
+  return new Date(year, monthIndex, Math.min(day, lastDate))
+}
+
+function dateKeyInMonth(monthValue: string, anchorDateKey: string) {
+  const [year, month] = monthValue.split('-').map(Number)
+  if (!Number.isFinite(year) || !Number.isFinite(month)) return anchorDateKey
+  return formatDateKey(clampDate(year, month - 1, parseDateKey(anchorDateKey).getDate()))
+}
+
+function dateKeyInYear(yearValue: string, anchorDateKey: string) {
+  const year = Number(yearValue)
+  if (!Number.isFinite(year)) return anchorDateKey
+  const anchorDate = parseDateKey(anchorDateKey)
+  return formatDateKey(clampDate(year, anchorDate.getMonth(), anchorDate.getDate()))
+}
+
+function addMonthsKeepingDay(dateKey: string, amount: number) {
+  const date = parseDateKey(dateKey)
+  return formatDateKey(clampDate(date.getFullYear(), date.getMonth() + amount, date.getDate()))
 }
 
 function monthCells(monthDate: Date) {
@@ -421,30 +443,32 @@ export default function CalendarPage() {
     calendarListEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
   }
 
+  function syncSelectedDate(dateKey: string, options: { updateForm?: boolean; yearSelected?: boolean } = {}) {
+    const nextDate = parseDateKey(dateKey)
+    setSelectedDate(dateKey)
+    setDayDate(dateKey)
+    setWeekDate(dateKey)
+    setMonthDate(nextDate)
+    if (options.yearSelected !== undefined) setYearSelectedDate(options.yearSelected ? dateKey : null)
+    if (options.updateForm !== false && !editingId) {
+      setForm((current) => ({ ...current, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
+    }
+  }
+
   function changeDayDate(value: string) {
-    setDayDate(value)
-    setSelectedDate(value)
-    if (!editingId) setForm((current) => ({ ...current, scheduleDate: value }))
+    syncSelectedDate(value, { yearSelected: false })
   }
 
   function changeWeekDate(value: string) {
-    setWeekDate(value)
-    setSelectedDate(value)
-    if (!editingId) setForm((current) => ({ ...current, scheduleDate: value }))
+    syncSelectedDate(value, { yearSelected: false })
   }
 
   function changeMonth(value: string) {
-    setMonthDate(parseDateKey(`${value}-01`))
-    if (view === 'month' && !selectedDate.startsWith(value)) setSelectedDate(`${value}-01`)
+    syncSelectedDate(dateKeyInMonth(value, selectedDate), { yearSelected: false })
   }
 
   function changeYear(value: string) {
-    const year = Number(value)
-    if (!Number.isFinite(year)) return
-    const nextMonthDate = new Date(year, monthDate.getMonth(), 1)
-    setMonthDate(nextMonthDate)
-    setSelectedDate(formatDateKey(nextMonthDate))
-    setYearSelectedDate(null)
+    syncSelectedDate(dateKeyInYear(value, selectedDate), { yearSelected: false })
   }
 
   function moveCalendarRange(amount: number) {
@@ -457,30 +481,18 @@ export default function CalendarPage() {
       return
     }
     if (view === 'year') {
-      setMonthDate(addMonths(monthDate, amount * 12))
-      setYearSelectedDate(null)
+      syncSelectedDate(addMonthsKeepingDay(selectedDate, amount * 12), { yearSelected: true })
       return
     }
-    setMonthDate(addMonths(monthDate, amount))
+    syncSelectedDate(addMonthsKeepingDay(selectedDate, amount), { yearSelected: false })
   }
 
   function changeView(nextView: CalendarView) {
     setView(nextView)
-    if (nextView === 'day') {
-      setSelectedDate(dayDate)
-      return
-    }
-    if (nextView === 'week') {
-      setSelectedDate(weekDate)
-      return
-    }
-    if (nextView === 'year') {
-      setSelectedDate(formatDateKey(monthDate))
-      setYearSelectedDate(null)
-      return
-    }
-    const monthKey = formatDateKey(monthDate).slice(0, 7)
-    setSelectedDate(selectedDate.startsWith(monthKey) ? selectedDate : `${monthKey}-01`)
+    setDayDate(selectedDate)
+    setWeekDate(selectedDate)
+    setMonthDate(parseDateKey(selectedDate))
+    setYearSelectedDate(nextView === 'year' ? selectedDate : null)
   }
 
   async function reloadSchedules() {
@@ -529,38 +541,26 @@ export default function CalendarPage() {
   }, [isQuickNavOpen])
 
   function setActiveDate(dateKey: string) {
-    setSelectedDate(dateKey)
-    if (view === 'day') setDayDate(dateKey)
-    if (view === 'week') setWeekDate(dateKey)
-    if (view === 'month') setMonthDate(parseDateKey(dateKey))
-    if (!editingId) setForm((value) => ({ ...value, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
+    syncSelectedDate(dateKey, { yearSelected: view === 'year' })
   }
 
-  function selectYearMonth(monthKey: string, month: number) {
-    const nextDate = new Date(monthDate.getFullYear(), month - 1, 1)
-    setMonthDate(nextDate)
-    setSelectedDate(`${monthKey}-01`)
-    setYearSelectedDate(null)
-    if (!editingId) setForm((value) => ({ ...value, scheduleDate: `${monthKey}-01`, scheduleTime: currentTimeText() }))
+  function selectYearMonth(monthKey: string) {
+    syncSelectedDate(dateKeyInMonth(monthKey, selectedDate), { yearSelected: false })
   }
 
-  function openYearMonth(monthKey: string, month: number, monthSchedules: CalendarScheduleInstance[], label: string) {
-    selectYearMonth(monthKey, month)
+  function openYearMonth(monthKey: string, monthSchedules: CalendarScheduleInstance[], label: string) {
+    selectYearMonth(monthKey)
     setMonthDialog(monthSchedules.length > 0 ? { label, items: monthSchedules } : null)
   }
 
   function selectYearDay(dateKey: string, dayItems: CalendarScheduleInstance[]) {
     if (!dateKey) return
-    setMonthDate(parseDateKey(dateKey))
-    setSelectedDate(dateKey)
-    setYearSelectedDate(dateKey)
-    if (!editingId) setForm((value) => ({ ...value, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
+    syncSelectedDate(dateKey, { yearSelected: true })
     if (dayItems.length > 0) setDayDialog({ date: dateKey, items: dayItems })
   }
 
   function openMonthDay(dateKey: string, dayItems: CalendarScheduleInstance[]) {
-    setSelectedDate(dateKey)
-    if (!editingId) setForm((value) => ({ ...value, scheduleDate: dateKey, scheduleTime: currentTimeText() }))
+    syncSelectedDate(dateKey, { yearSelected: false })
     if (dayItems.length > 0) setDayDialog({ date: dateKey, items: dayItems })
   }
 
@@ -1030,7 +1030,7 @@ export default function CalendarPage() {
                       const eventDays = Array.from(new Set(monthSchedules.map((item) => parseDateKey(item.occurrenceDate).getDate())))
                       const isActiveMonth = formatDateKey(monthDate).startsWith(monthItem.key)
                       const openMonth = () => {
-                        openYearMonth(monthItem.key, monthItem.month, monthSchedules, monthItem.label)
+                        openYearMonth(monthItem.key, monthSchedules, monthItem.label)
                       }
                       return (
                         <div
