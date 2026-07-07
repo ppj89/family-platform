@@ -1,14 +1,21 @@
 .fp-community {
   position: relative;
+  display: grid;
+  gap: 16px;
 }
 
-.fp-community-header {
-  margin-bottom: 16px;
-  padding: 20px 22px;
+.fp-community-header,
+.fp-community-list,
+.fp-community-form,
+.fp-community-detail {
   border: 1px solid #dfe6ef;
   border-radius: 16px;
   background: #fff;
   box-shadow: none;
+}
+
+.fp-community-header {
+  padding: 20px 22px;
 }
 
 .fp-community-tabs {
@@ -27,10 +34,11 @@
   border-radius: 12px;
   background: transparent;
   color: #4e5968;
+  cursor: pointer;
+  font: inherit;
   font-size: 15px;
   font-weight: 800;
   line-height: 1;
-  cursor: pointer;
 }
 
 .fp-community-tabs button.active {
@@ -39,25 +47,16 @@
   box-shadow: 0 8px 20px rgba(47, 128, 237, 0.18);
 }
 
-.fp-community-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 368px;
-  align-items: start;
-  gap: 20px;
-}
-
 .fp-community-list,
 .fp-community-form,
 .fp-community-detail {
-  border: 1px solid #dfe6ef;
-  border-radius: 16px;
-  background: #fff;
-  box-shadow: none;
+  display: grid;
+  gap: 16px;
+  padding: 20px;
 }
 
 .fp-community-list {
   min-height: calc(100vh - 250px);
-  padding: 20px;
 }
 
 .fp-community-list > header,
@@ -71,7 +70,6 @@
 
 .fp-community-list > header {
   min-height: 56px;
-  margin-bottom: 16px;
   padding-bottom: 16px;
   border-bottom: 1px solid #edf1f5;
 }
@@ -88,7 +86,8 @@
   letter-spacing: 0;
 }
 
-.fp-community-list header p {
+.fp-community-list header p,
+.fp-community-form header p {
   margin: 4px 0 0;
   color: #526070;
   font-size: 13px;
@@ -133,7 +132,7 @@
 }
 
 .fp-community-posts > .fp-empty-text,
-.fp-community-detail > .fp-empty-text {
+.fp-community-comments .fp-empty-text {
   margin: 0;
   min-height: 58px;
   padding: 18px;
@@ -146,70 +145,58 @@
   text-align: center;
 }
 
-.fp-community-posts article {
+.fp-community-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 170px 88px;
   align-items: center;
   gap: 14px;
-  min-height: 74px;
-  padding: 13px 16px;
+  min-height: 58px;
+  border: 1px solid #dfe6ef;
   border-radius: 8px;
-  background: #f6f8fb;
-}
-
-.fp-community-posts article.active {
-  outline: 2px solid #2f80ed;
-  background: #eef6ff;
-}
-
-.fp-community-posts article > button {
-  display: grid;
-  gap: 5px;
-  min-width: 0;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  text-align: left;
+  padding: 0 16px;
+  background: #fff;
+  color: inherit;
   cursor: pointer;
+  font: inherit;
+  text-align: left;
 }
 
-.fp-community-posts article strong,
-.fp-community-posts article span,
-.fp-community-posts article p {
+.fp-community-row:hover,
+.fp-community-row:focus-visible {
+  border-color: #2f80ed;
+  background: #f7fbff;
+  outline: none;
+}
+
+.fp-community-row strong,
+.fp-community-row span {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.fp-community-posts article strong {
+.fp-community-row strong {
   color: #0f172a;
-  font-size: 16px;
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 700;
   line-height: 1.25;
 }
 
-.fp-community-posts article span,
-.fp-community-posts article p {
-  margin: 0;
+.fp-community-row span {
   color: #526070;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.3;
-}
-
-.fp-community-side {
-  display: grid;
-  gap: 16px;
+  text-align: right;
 }
 
 .fp-community-form {
-  display: grid;
-  gap: 16px;
-  padding: 18px;
+  max-width: none;
 }
 
-.fp-community-form .fp-button-muted {
-  min-width: auto;
+.fp-community-form .fp-button-muted,
+.fp-community-detail .fp-button-muted {
+  min-width: 72px;
   height: 40px;
   padding: 0 16px;
   border: 0;
@@ -248,16 +235,18 @@
 .fp-community-form input,
 .fp-community-form textarea,
 .fp-community-comment-form input {
+  box-sizing: border-box;
   width: 100%;
   border: 1px solid #cfd9e6;
   border-radius: 14px;
   background: #fff;
   color: #0f172a;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.35;
   outline: none;
   box-shadow: none;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.35;
 }
 
 .fp-community-form input,
@@ -267,7 +256,7 @@
 }
 
 .fp-community-form textarea {
-  min-height: 122px;
+  min-height: 320px;
   padding: 14px;
   resize: vertical;
 }
@@ -284,8 +273,14 @@
   color: #8b95a1;
 }
 
-.fp-community-form > .fp-button {
-  width: 100%;
+.fp-community-submit-row {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.fp-community-submit-row .fp-button {
+  min-width: 120px;
   height: 48px;
   border-radius: 12px;
   font-size: 15px;
@@ -302,23 +297,17 @@
   font-weight: 700;
 }
 
-.fp-community-detail {
-  display: grid;
-  gap: 16px;
-  padding: 18px;
-}
-
 .fp-community-detail-article {
   display: grid;
-  gap: 8px;
-  padding: 14px;
+  gap: 10px;
+  padding: 18px;
   border: 1px solid #dfe6ef;
   border-radius: 12px;
   background: #fff;
 }
 
 .fp-community-detail-article h3 {
-  font-size: 18px;
+  font-size: 24px;
 }
 
 .fp-community-detail-article span {
@@ -329,11 +318,12 @@
 }
 
 .fp-community-detail-article p {
+  min-height: 180px;
   margin: 0;
   color: #2d3748;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 500;
-  line-height: 1.55;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 
@@ -374,8 +364,7 @@
   font-weight: 500;
 }
 
-.fp-community-comment p,
-.fp-community-comments .fp-empty-text {
+.fp-community-comment p {
   margin: 0;
   color: #2d3748;
   font-size: 14px;
@@ -387,6 +376,7 @@
 .fp-community-comment-form {
   display: grid;
   gap: 10px;
+  padding-top: 8px;
 }
 
 .fp-community .fp-row-actions {
@@ -404,6 +394,8 @@
   border-radius: 10px;
   background: #eff6ff;
   color: #0064ff;
+  cursor: pointer;
+  font: inherit;
   font-size: 14px;
   font-weight: 800;
   white-space: nowrap;
@@ -415,32 +407,11 @@
   color: #ff3b57;
 }
 
-@media (min-width: 1181px) and (max-width: 1368px) {
-  .fp-community-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(270px, 300px);
-    max-width: 980px;
-    gap: 16px;
-  }
-
+@media (max-width: 760px) {
+  .fp-community-header,
+  .fp-community-list,
   .fp-community-form,
   .fp-community-detail {
-    max-width: 300px;
-    padding: 18px;
-  }
-}
-
-@media (max-width: 1180px) {
-  .fp-community-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .fp-community-list {
-    min-height: 0;
-  }
-}
-
-@media (max-width: 640px) {
-  .fp-community-header {
     padding: 16px;
   }
 
@@ -453,31 +424,43 @@
     font-size: 14px;
   }
 
-  .fp-community-list,
-  .fp-community-form,
-  .fp-community-detail {
-    padding: 16px;
-  }
-
-  .fp-community-list > header {
+  .fp-community-list > header,
+  .fp-community-form > header,
+  .fp-community-detail > header {
     align-items: stretch;
     flex-direction: column;
   }
 
-  .fp-community-list-actions {
-    justify-content: space-between;
-  }
-
-  .fp-community-posts article {
-    grid-template-columns: 1fr;
-  }
-
+  .fp-community-list-actions,
+  .fp-community-submit-row,
   .fp-community .fp-row-actions {
     justify-content: stretch;
   }
 
+  .fp-community-list-actions .fp-button,
+  .fp-community-submit-row .fp-button,
   .fp-community .fp-row-actions button {
     flex: 1;
+  }
+
+  .fp-community-row {
+    grid-template-columns: minmax(0, 1fr) 88px;
+    min-height: 70px;
+  }
+
+  .fp-community-row span:first-of-type {
+    grid-column: 1;
+    grid-row: 2;
+    text-align: left;
+  }
+
+  .fp-community-row span:last-of-type {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .fp-community-form textarea {
+    min-height: 240px;
   }
 }
 
@@ -485,13 +468,13 @@ html[data-theme='dark'] .fp-community-header,
 html[data-theme='dark'] .fp-community-list,
 html[data-theme='dark'] .fp-community-form,
 html[data-theme='dark'] .fp-community-detail,
-html[data-theme='dark'] .fp-community-detail-article {
+html[data-theme='dark'] .fp-community-detail-article,
+html[data-theme='dark'] .fp-community-row {
   background: #111827;
   border-color: #334155;
 }
 
 html[data-theme='dark'] .fp-community-tabs,
-html[data-theme='dark'] .fp-community-posts article,
 html[data-theme='dark'] .fp-community-comment,
 html[data-theme='dark'] .fp-community-form input,
 html[data-theme='dark'] .fp-community-form textarea,
