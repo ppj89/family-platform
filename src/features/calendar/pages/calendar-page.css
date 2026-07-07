@@ -74,12 +74,15 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-loading-blocker {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 10;
+  z-index: 20000;
   display: grid;
-  place-items: center;
+  align-items: start;
+  justify-items: center;
+  box-sizing: border-box;
   border-radius: 18px;
+  padding-top: clamp(48px, 10vh, 108px);
   background: rgba(255, 255, 255, 0.72);
   color: transparent;
   font-size: 0;

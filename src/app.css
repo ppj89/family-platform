@@ -308,13 +308,45 @@
   background: #eef6ff;
 }
 
+.fp-button:disabled {
+  cursor: wait;
+  opacity: 0.78;
+}
+
+.fp-button-loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.fp-button-loading::before {
+  content: "";
+  width: 15px;
+  height: 15px;
+  box-sizing: border-box;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 999px;
+  animation: fp-spin 0.75s linear infinite;
+}
+
+@keyframes fp-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .fp-loading-blocker {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  z-index: 10;
+  z-index: 20000;
   display: grid;
-  place-items: center;
+  align-items: start;
+  justify-items: center;
+  box-sizing: border-box;
   border-radius: 18px;
+  padding-top: clamp(48px, 10vh, 108px);
   background: rgba(255, 255, 255, 0.72);
   color: transparent;
   font-size: 0;

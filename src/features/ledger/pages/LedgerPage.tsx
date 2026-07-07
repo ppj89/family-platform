@@ -289,6 +289,7 @@ export default function LedgerPage() {
   const [detailMode, setDetailMode] = useState<DetailMode>('view')
   const [detailForm, setDetailForm] = useState<LedgerPayload>(() => emptyPayload())
   const [loading, setLoading] = useState(false)
+  const [ledgerActionLoading, setLedgerActionLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [isQuickNavOpen, setIsQuickNavOpen] = useState(false)
   const [isQuickNavDragging, setIsQuickNavDragging] = useState(false)
@@ -304,6 +305,7 @@ export default function LedgerPage() {
     return monthRange(parseDateKey(`${monthValue}-01`))
   }, [monthValue, periodEnd, periodStart, queryMode])
   const groupedEntries = useMemo(() => groupEntriesByDate(entries), [entries])
+  const isLedgerActionLoading = ledgerActionLoading
   const quickNavStyle = quickNavPosition
     ? ({ left: `${quickNavPosition.x}px`, top: `${quickNavPosition.y}px` } satisfies CSSProperties)
     : undefined
@@ -517,6 +519,8 @@ export default function LedgerPage() {
   }
 
   async function confirmSave() {
+    setConfirmAction(null)
+    setLedgerActionLoading(true)
     setLoading(true)
     setMessage('')
     try {
@@ -529,7 +533,7 @@ export default function LedgerPage() {
     } catch (error) {
       setMessage(apiActionMessage(error, editingId ? '가계부 수정에 실패했습니다.' : '가계부 추가에 실패했습니다.'))
     } finally {
-      setConfirmAction(null)
+      setLedgerActionLoading(false)
       setLoading(false)
     }
   }
@@ -547,6 +551,8 @@ export default function LedgerPage() {
 
   async function confirmDetailSave() {
     if (!selectedEntry) return
+    setConfirmAction(null)
+    setLedgerActionLoading(true)
     setLoading(true)
     setMessage('')
     try {
@@ -560,13 +566,15 @@ export default function LedgerPage() {
     } catch (error) {
       setMessage(apiActionMessage(error, '가계부 수정에 실패했습니다.'))
     } finally {
-      setConfirmAction(null)
+      setLedgerActionLoading(false)
       setLoading(false)
     }
   }
 
   async function confirmDelete() {
     if (!pendingDelete) return
+    setConfirmAction(null)
+    setLedgerActionLoading(true)
     setLoading(true)
     setMessage('')
     try {
@@ -579,7 +587,7 @@ export default function LedgerPage() {
       setMessage(apiActionMessage(error, '가계부 삭제에 실패했습니다.'))
     } finally {
       setPendingDelete(null)
-      setConfirmAction(null)
+      setLedgerActionLoading(false)
       setLoading(false)
     }
   }
@@ -752,7 +760,13 @@ export default function LedgerPage() {
               <textarea value={form.memo || ''} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} />
             </label>
           </div>
-          <button className="fp-button fp-button-primary submit-action" type="submit">{editingId ? '저장' : '추가'}</button>
+          <button
+            className={`fp-button fp-button-primary submit-action${isLedgerActionLoading ? ' fp-button-loading' : ''}`}
+            type="submit"
+            disabled={isLedgerActionLoading}
+          >
+            {isLedgerActionLoading ? '처리 중' : editingId ? '저장' : '추가'}
+          </button>
         </form>
 
         <nav
@@ -854,7 +868,9 @@ export default function LedgerPage() {
               </div>
               <div className="ledger-detail-actions">
                 <button type="button" className="edit-button muted" onClick={() => setDetailMode('view')}>취소</button>
-                <button type="submit" className="edit-button">저장</button>
+                <button type="submit" className={`edit-button${isLedgerActionLoading ? ' fp-button-loading' : ''}`} disabled={isLedgerActionLoading}>
+                  {isLedgerActionLoading ? '처리 중' : '저장'}
+                </button>
               </div>
             </form>
           ) : (
@@ -884,6 +900,7 @@ export default function LedgerPage() {
           title={editingId ? '수정' : '저장'}
           body={editingId ? '가계부 내역을 수정하시겠습니까?' : '가계부 내역을 저장하시겠습니까?'}
           confirmLabel={editingId ? '수정' : '저장'}
+          busy={isLedgerActionLoading}
           onCancel={() => setConfirmAction(null)}
           onConfirm={confirmSave}
         />
@@ -893,6 +910,7 @@ export default function LedgerPage() {
           title="수정"
           body="가계부 내역을 수정하시겠습니까?"
           confirmLabel="수정"
+          busy={isLedgerActionLoading}
           onCancel={() => setConfirmAction(null)}
           onConfirm={confirmDetailSave}
         />
@@ -903,6 +921,7 @@ export default function LedgerPage() {
           title="삭제"
           body="가계부 내역을 삭제하시겠습니까?"
           confirmLabel="삭제"
+          busy={isLedgerActionLoading}
           onCancel={() => {
             setPendingDelete(null)
             setConfirmAction(null)
