@@ -1,9 +1,18 @@
 import { type DragEvent, useEffect, useState } from 'react'
 import { CgChevronDown, CgChevronUp } from 'react-icons/cg'
 import { apiActionMessage } from '../../../shared/api/client'
-import { listCommonCodeGroupsWithCodes, type CommonCodeGroupWithCodes } from '../../../shared/api/commonCodes'
+import {
+  createCommonCode,
+  createCommonCodeGroup,
+  deleteCommonCode,
+  deleteCommonCodeGroup,
+  listCommonCodeGroupsWithCodes,
+  updateCommonCode,
+  updateCommonCodeGroup,
+  type CommonCode,
+  type CommonCodeGroupWithCodes,
+} from '../../../shared/api/commonCodes'
 import { ConfirmDialog, ToastMessage } from '../../../shared/components'
-import { LEDGER_CATEGORIES, LEDGER_PAYMENT_METHODS, TRAVEL_COST_CATEGORIES } from '../../../shared/constants/commonCodes'
 import type { FamilyGroup } from '../../family/types'
 import {
   getCurrentUserProfile,
@@ -36,9 +45,15 @@ type ConfirmState = {
 }
 
 type AdminCodeGroup = {
-  title: string
-  description: string
-  values: readonly string[]
+  menuKey: string
+  code: string
+  name: string
+  active: boolean
+}
+
+type AdminCodeDraft = {
+  code: string
+  name: string
 }
 
 const adminTabs: Array<{ key: AdminTab; label: string }> = [
@@ -63,11 +78,14 @@ const initialMenus: AdminMenuItem[] = [
 
 const roleOptions = ['총괄관리자', '가족관리자', '가족구성원']
 
-const fallbackCodeGroups: AdminCodeGroup[] = [
-  { title: '가계부 카테고리', description: '수입/지출 입력 카테고리', values: LEDGER_CATEGORIES },
-  { title: '결제수단', description: '가계부 결제수단', values: LEDGER_PAYMENT_METHODS },
-  { title: '여행 비용 구분', description: '여행 기록 비용 분류', values: TRAVEL_COST_CATEGORIES },
-  { title: '가족 사용자', description: '기본 사용자 선택값', values: ['아빠', '엄마', '가족'] },
+const commonCodeMenus = [
+  { key: 'calendar', label: '캘린더' },
+  { key: 'ledger', label: '가계부' },
+  { key: 'travel', label: '여행' },
+  { key: 'baby', label: '육아' },
+  { key: 'diary', label: '일기' },
+  { key: 'family', label: '가족그룹' },
+  { key: 'restaurant', label: '맛집' },
 ]
 
 function providerLabel(provider?: string) {
@@ -123,20 +141,6 @@ function moveItemToTarget(items: AdminMenuItem[], sourceKey: string, targetKey: 
   return next
 }
 
-function codeGroupsFromApi(items: CommonCodeGroupWithCodes[]): AdminCodeGroup[] {
-  return items
-    .filter((group) => group.active)
-    .map((group) => ({
-      title: group.name,
-      description: `${group.menuKey} / ${group.code}`,
-      values: group.codes
-        .filter((code) => code.active)
-        .sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
-        .map((code) => code.name),
-    }))
-    .filter((group) => group.values.length > 0)
-}
-
 export default function AdminPage() {
   const [profile, setProfile] = useState<CurrentUserProfile | null>(null)
   const [families, setFamilies] = useState<FamilyGroup[]>([])
@@ -147,7 +151,16 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(true)
   const [toastMessage, setToastMessage] = useState('')
   const [confirm, setConfirm] = useState<ConfirmState | null>(null)
-  const [codeGroups, setCodeGroups] = useState<AdminCodeGroup[]>(fallbackCodeGroups)
+  const [codeGroups, setCodeGroups] = useState<CommonCodeGroupWithCodes[]>([])
+  const [selectedCodeMenuKey, setSelectedCodeMenuKey] = useState(commonCodeMenus[1].key)
+  const [selectedCodeGroupId, setSelectedCodeGroupId] = useState<number | null>(null)
+  const [groupDraft, setGroupDraft] = useState<AdminCodeGroup>({ menuKey: commonCodeMenus[1].key, code: '', name: '', active: true })
+  const [editingGroupId, setEditingGroupId] = useState<number | null>(null)
+  const [editingGroupDraft, setEditingGroupDraft] = useState<AdminCodeGroup | null>(null)
+  const [codeDraft, setCodeDraft] = useState<AdminCodeDraft>({ code: '', name: '' })
+  const [editingCodeId, setEditingCodeId] = useState<number | null>(null)
+  const [editingCodeDraft, setEditingCodeDraft] = useState<AdminCodeDraft | null>(null)
+  const [commonCodeBusy, setCommonCodeBusy] = useState(false)
   const [accountInquiries, setAccountInquiries] = useState<AccountRecoveryInquiry[]>([])
   const [inquiryStatus, setInquiryStatus] = useState<AccountInquiryStatus | 'ALL'>('OPEN')
   const [inquiriesLoading, setInquiriesLoading] = useState(false)
@@ -164,12 +177,13 @@ export default function AdminPage() {
         const [nextProfile, nextFamilies, nextCodeGroups] = await Promise.all([
           getCurrentUserProfile(),
           listAdminVisibleFamilies(),
-          listCommonCodeGroupsWithCodes().then(codeGroupsFromApi).catch(() => []),
+          listCommonCodeGroupsWithCodes().catch(() => []),
         ])
         if (!alive) return
         setProfile(nextProfile)
         setFamilies(nextFamilies)
-        setCodeGroups(nextCodeGroups.length ? nextCodeGroups : fallbackCodeGroups)
+        setCodeGroups(nextCodeGroups)
+        setSelectedCodeGroupId((current) => current ?? nextCodeGroups.find((group) => group.menuKey === selectedCodeMenuKey)?.id ?? null)
       } catch (error) {
         if (!alive) return
         setToastMessage(apiActionMessage(error, '관리자 정보를 불러오지 못했습니다.'))
@@ -186,8 +200,22 @@ export default function AdminPage() {
   const visibleMenuCount = menus.filter((menu) => menu.visible).length
   const isPlatformAdmin = Boolean(profile?.platformAdmin)
   const visibleAdminTabs = adminTabs.filter((tab) => tab.key !== 'account-inquiries' || isPlatformAdmin)
+  const filteredCodeGroups = codeGroups.filter((group) => group.menuKey === selectedCodeMenuKey)
+  const selectedCodeGroup = codeGroups.find((group) => group.id === selectedCodeGroupId) ?? filteredCodeGroups[0] ?? null
   const selectedInquiry = accountInquiries.find((item) => item.id === selectedInquiryId) ?? accountInquiries[0] ?? null
   const selectedReplyTarget = inquiryReplyTarget(selectedInquiry)
+
+  useEffect(() => {
+    setGroupDraft((current) => ({ ...current, menuKey: selectedCodeMenuKey }))
+    setSelectedCodeGroupId((current) => {
+      if (current && codeGroups.some((group) => group.id === current && group.menuKey === selectedCodeMenuKey)) return current
+      return codeGroups.find((group) => group.menuKey === selectedCodeMenuKey)?.id ?? null
+    })
+    setEditingGroupId(null)
+    setEditingGroupDraft(null)
+    setEditingCodeId(null)
+    setEditingCodeDraft(null)
+  }, [codeGroups, selectedCodeMenuKey])
 
   useEffect(() => {
     if (!loading && activeTab === 'account-inquiries' && !isPlatformAdmin) {
@@ -307,6 +335,194 @@ export default function AdminPage() {
   function handleMenuDragEnd() {
     setDraggingMenuKey(null)
     setDragOverMenuKey(null)
+  }
+
+  async function reloadCommonCodes() {
+    const items = await listCommonCodeGroupsWithCodes()
+    setCodeGroups(items)
+    return items
+  }
+
+  async function submitCodeGroup() {
+    if (commonCodeBusy) return
+    const payload = {
+      menuKey: groupDraft.menuKey,
+      code: groupDraft.code.trim(),
+      name: groupDraft.name.trim(),
+      active: true,
+    }
+    if (!payload.code || !payload.name) {
+      setToastMessage('그룹코드와 그룹명을 입력해주세요.')
+      return
+    }
+    setCommonCodeBusy(true)
+    try {
+      const created = await createCommonCodeGroup(payload)
+      const items = await reloadCommonCodes()
+      setSelectedCodeGroupId(items.find((group) => group.id === created.id)?.id ?? created.id)
+      setGroupDraft({ menuKey: groupDraft.menuKey, code: '', name: '', active: true })
+      setToastMessage('코드그룹을 추가했습니다.')
+    } catch (error) {
+      setToastMessage(apiActionMessage(error, '코드그룹을 추가하지 못했습니다.'))
+    } finally {
+      setCommonCodeBusy(false)
+    }
+  }
+
+  function startEditCodeGroup(group: CommonCodeGroupWithCodes) {
+    setEditingGroupId(group.id)
+    setEditingGroupDraft({ menuKey: group.menuKey, code: group.code, name: group.name, active: group.active })
+  }
+
+  async function saveCodeGroup(group: CommonCodeGroupWithCodes, override?: Partial<AdminCodeGroup>) {
+    if (!editingGroupDraft && !override) return
+    const source = { menuKey: group.menuKey, code: group.code, name: group.name, active: group.active, ...(editingGroupDraft ?? {}), ...override }
+    const payload = {
+      menuKey: source.menuKey,
+      code: source.code.trim(),
+      name: source.name.trim(),
+      active: source.active,
+    }
+    if (!payload.code || !payload.name) {
+      setToastMessage('그룹코드와 그룹명을 입력해주세요.')
+      return
+    }
+    setCommonCodeBusy(true)
+    try {
+      await updateCommonCodeGroup(group.id, payload)
+      await reloadCommonCodes()
+      setEditingGroupId(null)
+      setEditingGroupDraft(null)
+      setToastMessage('코드그룹을 수정했습니다.')
+    } catch (error) {
+      setToastMessage(apiActionMessage(error, '코드그룹을 수정하지 못했습니다.'))
+    } finally {
+      setCommonCodeBusy(false)
+    }
+  }
+
+  function requestDeleteCodeGroup(group: CommonCodeGroupWithCodes) {
+    setConfirm({
+      title: '코드그룹 삭제',
+      body: `${group.name} 그룹과 하위 공통코드를 삭제하시겠습니까?`,
+      confirmLabel: '삭제',
+      danger: true,
+      onConfirm: async () => {
+        setCommonCodeBusy(true)
+        try {
+          await deleteCommonCodeGroup(group.id)
+          const items = await reloadCommonCodes()
+          setSelectedCodeGroupId(items.find((item) => item.menuKey === selectedCodeMenuKey)?.id ?? null)
+          setConfirm(null)
+          setToastMessage('코드그룹을 삭제했습니다.')
+        } catch (error) {
+          setToastMessage(apiActionMessage(error, '코드그룹을 삭제하지 못했습니다.'))
+        } finally {
+          setCommonCodeBusy(false)
+        }
+      },
+    })
+  }
+
+  async function submitCommonCode() {
+    if (!selectedCodeGroup || commonCodeBusy) return
+    const name = codeDraft.name.trim()
+    if (!name) {
+      setToastMessage('코드명을 입력해주세요.')
+      return
+    }
+    const code = codeDraft.code.trim() || name
+    const nextSortOrder = Math.max(0, ...selectedCodeGroup.codes.map((item) => item.sortOrder)) + 1
+    setCommonCodeBusy(true)
+    try {
+      await createCommonCode(selectedCodeGroup.id, { code, name, sortOrder: nextSortOrder, active: true })
+      await reloadCommonCodes()
+      setCodeDraft({ code: '', name: '' })
+      setToastMessage('공통코드를 추가했습니다.')
+    } catch (error) {
+      setToastMessage(apiActionMessage(error, '공통코드를 추가하지 못했습니다.'))
+    } finally {
+      setCommonCodeBusy(false)
+    }
+  }
+
+  function startEditCommonCode(code: CommonCode) {
+    setEditingCodeId(code.id)
+    setEditingCodeDraft({ code: code.code, name: code.name })
+  }
+
+  async function saveCommonCode(group: CommonCodeGroupWithCodes, code: CommonCode, override?: Partial<CommonCode>) {
+    const source = { ...code, ...override }
+    const payload = {
+      code: (editingCodeDraft?.code ?? source.code).trim(),
+      name: (editingCodeDraft?.name ?? source.name).trim(),
+      sortOrder: source.sortOrder,
+      active: source.active,
+    }
+    if (!payload.name) {
+      setToastMessage('코드명을 입력해주세요.')
+      return
+    }
+    if (!payload.code) payload.code = payload.name
+    setCommonCodeBusy(true)
+    try {
+      await updateCommonCode(group.id, code.id, payload)
+      await reloadCommonCodes()
+      setEditingCodeId(null)
+      setEditingCodeDraft(null)
+      setToastMessage('공통코드를 수정했습니다.')
+    } catch (error) {
+      setToastMessage(apiActionMessage(error, '공통코드를 수정하지 못했습니다.'))
+    } finally {
+      setCommonCodeBusy(false)
+    }
+  }
+
+  function requestDeleteCommonCode(group: CommonCodeGroupWithCodes, code: CommonCode) {
+    setConfirm({
+      title: '공통코드 삭제',
+      body: `${code.name} 공통코드를 삭제하시겠습니까?`,
+      confirmLabel: '삭제',
+      danger: true,
+      onConfirm: async () => {
+        setCommonCodeBusy(true)
+        try {
+          await deleteCommonCode(group.id, code.id)
+          await reloadCommonCodes()
+          setConfirm(null)
+          setToastMessage('공통코드를 삭제했습니다.')
+        } catch (error) {
+          setToastMessage(apiActionMessage(error, '공통코드를 삭제하지 못했습니다.'))
+        } finally {
+          setCommonCodeBusy(false)
+        }
+      },
+    })
+  }
+
+  async function moveCommonCode(group: CommonCodeGroupWithCodes, code: CommonCode, direction: -1 | 1) {
+    const sorted = [...group.codes].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id)
+    const index = sorted.findIndex((item) => item.id === code.id)
+    const nextIndex = index + direction
+    if (index < 0 || nextIndex < 0 || nextIndex >= sorted.length) return
+    const next = [...sorted]
+    const [item] = next.splice(index, 1)
+    next.splice(nextIndex, 0, item)
+    setCommonCodeBusy(true)
+    try {
+      await Promise.all(next.map((nextCode, nextSortIndex) => updateCommonCode(group.id, nextCode.id, {
+        code: nextCode.code,
+        name: nextCode.name,
+        sortOrder: nextSortIndex + 1,
+        active: nextCode.active,
+      })))
+      await reloadCommonCodes()
+      setToastMessage('공통코드 순서를 변경했습니다.')
+    } catch (error) {
+      setToastMessage(apiActionMessage(error, '공통코드 순서를 변경하지 못했습니다.'))
+    } finally {
+      setCommonCodeBusy(false)
+    }
   }
 
   async function refreshAccountInquiries() {
@@ -458,26 +674,186 @@ export default function AdminPage() {
       ) : null}
 
       {activeTab === 'codes' ? (
-        <section className="fp-card fp-admin-panel">
+        <section className="fp-card fp-admin-panel fp-admin-common-panel">
           <header className="fp-admin-panel-header panel-header">
             <div>
               <h2>공통코드</h2>
               <p>입력 화면에서 공통으로 쓰는 선택값입니다.</p>
             </div>
+            <button className="fp-admin-refresh-button" type="button" onClick={() => void reloadCommonCodes()} disabled={commonCodeBusy}>
+              새로고침
+            </button>
           </header>
-          <div className="fp-admin-code-grid">
-            {codeGroups.map((group) => (
-              <article className="fp-admin-code-card" key={group.title}>
-                <header>
-                  <strong>{group.title}</strong>
-                  <span>{group.values.length}개</span>
-                </header>
-                <p>{group.description}</p>
+          <div className="fp-admin-code-manager">
+            <section className="fp-admin-code-form" aria-label="코드그룹 추가">
+              <label className="span-2">
+                <span>관리 메뉴</span>
+                <select value={selectedCodeMenuKey} onChange={(event) => setSelectedCodeMenuKey(event.target.value)}>
+                  {commonCodeMenus.map((menu) => (
+                    <option key={menu.key} value={menu.key}>{menu.label}</option>
+                  ))}
+                </select>
+              </label>
+              <label>
+                <span>그룹코드</span>
+                <input
+                  value={groupDraft.code}
+                  onChange={(event) => setGroupDraft((current) => ({ ...current, code: event.target.value }))}
+                  placeholder="category"
+                />
+              </label>
+              <label>
+                <span>그룹명</span>
+                <input
+                  value={groupDraft.name}
+                  onChange={(event) => setGroupDraft((current) => ({ ...current, name: event.target.value }))}
+                  placeholder="가계부 카테고리"
+                />
+              </label>
+              <button className="save-button span-2" type="button" onClick={submitCodeGroup} disabled={commonCodeBusy}>
+                코드그룹 추가
+              </button>
+            </section>
+
+            <section className="fp-admin-code-groups" aria-label="코드그룹 목록">
+              {filteredCodeGroups.length === 0 ? <p className="fp-admin-empty">등록된 코드그룹이 없습니다.</p> : null}
+              {filteredCodeGroups.map((group) => {
+                const editing = editingGroupId === group.id && editingGroupDraft
+                return (
+                  <article className={`${selectedCodeGroup?.id === group.id ? 'active' : ''}${!group.active ? ' muted' : ''}`} key={group.id}>
+                    <button className="fp-admin-code-group-main" type="button" onClick={() => setSelectedCodeGroupId(group.id)}>
+                      {editing ? (
+                        <div className="fp-admin-code-inline-form">
+                          <input
+                            value={editingGroupDraft.code}
+                            onChange={(event) => setEditingGroupDraft((current) => (current ? { ...current, code: event.target.value } : current))}
+                            aria-label="그룹코드"
+                          />
+                          <input
+                            value={editingGroupDraft.name}
+                            onChange={(event) => setEditingGroupDraft((current) => (current ? { ...current, name: event.target.value } : current))}
+                            aria-label="그룹명"
+                          />
+                        </div>
+                      ) : (
+                        <>
+                          <strong>{group.name}</strong>
+                          <span>{group.code}</span>
+                        </>
+                      )}
+                    </button>
+                    <div className="fp-admin-row-actions fp-admin-code-actions">
+                      {editing ? (
+                        <>
+                          <button className="save-button" type="button" onClick={() => void saveCodeGroup(group)} disabled={commonCodeBusy}>저장</button>
+                          <button className="cancel-button" type="button" onClick={() => {
+                            setEditingGroupId(null)
+                            setEditingGroupDraft(null)
+                          }}>취소</button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="edit-button" type="button" onClick={() => startEditCodeGroup(group)}>수정</button>
+                          <button type="button" onClick={() => void saveCodeGroup(group, { active: !group.active })} disabled={commonCodeBusy}>
+                            {group.active ? '숨기기' : '표시'}
+                          </button>
+                          <button className="danger-button" type="button" onClick={() => requestDeleteCodeGroup(group)}>삭제</button>
+                        </>
+                      )}
+                    </div>
+                  </article>
+                )
+              })}
+            </section>
+
+            <section className="fp-admin-code-detail" aria-label="공통코드 목록">
+              <header>
                 <div>
-                  {group.values.map((value) => <span key={value}>{value}</span>)}
+                  <strong>{selectedCodeGroup?.name ?? '선택 그룹'}</strong>
+                  <span>{selectedCodeGroup ? `${selectedCodeGroup.codes.length}개 코드` : '그룹을 선택해주세요.'}</span>
                 </div>
-              </article>
-            ))}
+                {selectedCodeGroup ? <span className="fp-admin-code-key">{selectedCodeGroup.code}</span> : null}
+              </header>
+
+              {selectedCodeGroup ? (
+                <>
+                  <div className="fp-admin-code-form compact">
+                    <label>
+                      <span>코드값</span>
+                      <input value={codeDraft.code} onChange={(event) => setCodeDraft((current) => ({ ...current, code: event.target.value }))} placeholder="food" />
+                    </label>
+                    <label>
+                      <span>코드명</span>
+                      <input value={codeDraft.name} onChange={(event) => setCodeDraft((current) => ({ ...current, name: event.target.value }))} placeholder="식비" />
+                    </label>
+                    <button className="save-button span-2" type="button" onClick={submitCommonCode} disabled={commonCodeBusy}>
+                      공통코드 추가
+                    </button>
+                  </div>
+
+                  <div className="fp-admin-common-code-list">
+                    {[...selectedCodeGroup.codes].sort((a, b) => a.sortOrder - b.sortOrder || a.id - b.id).map((code, index, sortedCodes) => {
+                      const editing = editingCodeId === code.id && editingCodeDraft
+                      return (
+                        <article className={!code.active ? 'muted' : ''} key={code.id}>
+                          <span className="fp-admin-drag" aria-hidden="true">::</span>
+                          <div className="fp-admin-code-copy">
+                            {editing ? (
+                              <div className="fp-admin-code-inline-form">
+                                <input
+                                  value={editingCodeDraft.code}
+                                  onChange={(event) => setEditingCodeDraft((current) => (current ? { ...current, code: event.target.value } : current))}
+                                  aria-label="코드값"
+                                />
+                                <input
+                                  value={editingCodeDraft.name}
+                                  onChange={(event) => setEditingCodeDraft((current) => (current ? { ...current, name: event.target.value } : current))}
+                                  aria-label="코드명"
+                                />
+                              </div>
+                            ) : (
+                              <>
+                                <strong>{code.name}</strong>
+                                <span>{code.code}</span>
+                                <small>{code.active ? '사용 중' : '숨김'}</small>
+                              </>
+                            )}
+                          </div>
+                          <div className="fp-admin-row-actions fp-admin-code-actions">
+                            {editing ? (
+                              <>
+                                <button className="save-button" type="button" onClick={() => void saveCommonCode(selectedCodeGroup, code)} disabled={commonCodeBusy}>저장</button>
+                                <button className="cancel-button" type="button" onClick={() => {
+                                  setEditingCodeId(null)
+                                  setEditingCodeDraft(null)
+                                }}>취소</button>
+                              </>
+                            ) : (
+                              <>
+                                <button className="edit-button" type="button" onClick={() => startEditCommonCode(code)}>수정</button>
+                                <button type="button" onClick={() => void saveCommonCode(selectedCodeGroup, code, { active: !code.active })} disabled={commonCodeBusy}>
+                                  {code.active ? '숨기기' : '표시'}
+                                </button>
+                                <button className="danger-button" type="button" onClick={() => requestDeleteCommonCode(selectedCodeGroup, code)}>삭제</button>
+                                <button className="move-button" type="button" aria-label={`${code.name} 위로 이동`} onClick={() => void moveCommonCode(selectedCodeGroup, code, -1)} disabled={index === 0 || commonCodeBusy}>
+                                  <CgChevronUp aria-hidden="true" />
+                                </button>
+                                <button className="move-button" type="button" aria-label={`${code.name} 아래로 이동`} onClick={() => void moveCommonCode(selectedCodeGroup, code, 1)} disabled={index === sortedCodes.length - 1 || commonCodeBusy}>
+                                  <CgChevronDown aria-hidden="true" />
+                                </button>
+                              </>
+                            )}
+                          </div>
+                        </article>
+                      )
+                    })}
+                    {selectedCodeGroup.codes.length === 0 ? <p className="fp-admin-empty">등록된 공통코드가 없습니다.</p> : null}
+                  </div>
+                </>
+              ) : (
+                <p className="fp-admin-empty">코드그룹을 먼저 추가해주세요.</p>
+              )}
+            </section>
           </div>
         </section>
       ) : null}
