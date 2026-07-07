@@ -530,7 +530,7 @@
   overflow: hidden;
   color: #111827;
   font-size: 15px;
-  font-weight: 400;
+  font-weight: 600;
   line-height: 1.35;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -549,7 +549,7 @@
 
 .ledger-row > b {
   font-size: 15px;
-  font-weight: 400;
+  font-weight: 600;
   line-height: 1;
   white-space: nowrap;
 }
