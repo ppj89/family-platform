@@ -848,6 +848,25 @@
     padding: 0;
   }
 
+  .fp-sidebar-toggle-icon {
+    position: relative;
+    width: 20px;
+    color: transparent;
+  }
+
+  .fp-sidebar-toggle-icon::after {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #4e5968;
+    content: "↑";
+  }
+
+  .fp-shell.sidebar-collapsed .fp-sidebar-toggle-icon::after {
+    content: "↓";
+  }
+
   .fp-brand {
     grid-column: 1;
     grid-row: 1;
@@ -866,7 +885,9 @@
   }
 
   .fp-shell.sidebar-collapsed .fp-nav {
-    display: none;
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 6px;
   }
 
   .fp-nav button {
@@ -879,6 +900,11 @@
     line-height: 1.1;
     text-align: center;
     white-space: nowrap;
+  }
+
+  .fp-shell.sidebar-collapsed .fp-nav button {
+    min-height: 42px;
+    padding: 4px;
   }
 
   .fp-nav-label {
@@ -895,6 +921,10 @@
 @media (max-width: 620px) {
   .fp-nav {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .fp-shell.sidebar-collapsed .fp-nav {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
   .fp-shell.sidebar-collapsed .fp-brand > div {
