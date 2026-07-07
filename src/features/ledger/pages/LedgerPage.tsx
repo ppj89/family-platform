@@ -273,7 +273,6 @@ export default function LedgerPage() {
   const ledgerTopRef = useRef<HTMLElement | null>(null)
   const ledgerListEndRef = useRef<HTMLDivElement | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
-  const formRef = useRef<HTMLFormElement>(null)
   const [queryMode, setQueryMode] = useState<LedgerQueryMode>('month')
   const [monthValue, setMonthValue] = useState(currentMonth)
   const [periodStart, setPeriodStart] = useState(`${currentMonth}-01`)
@@ -284,6 +283,7 @@ export default function LedgerPage() {
   const [entries, setEntries] = useState<LedgerEntry[]>([])
   const [summary, setSummary] = useState<LedgerSummary>(emptySummary)
   const [form, setForm] = useState<LedgerPayload>(() => emptyPayload())
+  const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [selectedEntry, setSelectedEntry] = useState<LedgerEntry | null>(null)
   const [detailMode, setDetailMode] = useState<DetailMode>('view')
@@ -427,8 +427,7 @@ export default function LedgerPage() {
 
   function focusForm() {
     window.setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      window.setTimeout(() => titleInputRef.current?.focus({ preventScroll: true }), 280)
+      titleInputRef.current?.focus({ preventScroll: true })
     }, 0)
   }
 
@@ -448,7 +447,14 @@ export default function LedgerPage() {
       setForm(emptyPayload())
     }
     setIsQuickNavOpen(false)
+    setIsEntryDialogOpen(true)
     focusForm()
+  }
+
+  function closeEntryDialog() {
+    if (isLedgerActionLoading) return
+    if (editingId) resetForm()
+    setIsEntryDialogOpen(false)
   }
 
   function payloadFromEntry(item: LedgerEntry): LedgerPayload {
@@ -523,15 +529,17 @@ export default function LedgerPage() {
     setLedgerActionLoading(true)
     setLoading(true)
     setMessage('')
+    const wasEditing = Boolean(editingId)
     try {
       const payload = normalizePayload(form)
       if (editingId) await updateLedgerEntry(editingId, payload)
       else await createLedgerEntry(payload)
       resetForm()
       await reloadLedger()
-      setMessage(editingId ? '가계부 내역을 수정했습니다.' : '가계부 내역을 추가했습니다.')
+      setIsEntryDialogOpen(false)
+      setMessage(wasEditing ? '가계부 내역을 수정했습니다.' : '가계부 내역을 추가했습니다.')
     } catch (error) {
-      setMessage(apiActionMessage(error, editingId ? '가계부 수정에 실패했습니다.' : '가계부 추가에 실패했습니다.'))
+      setMessage(apiActionMessage(error, wasEditing ? '가계부 수정에 실패했습니다.' : '가계부 추가에 실패했습니다.'))
     } finally {
       setLedgerActionLoading(false)
       setLoading(false)
@@ -619,6 +627,7 @@ export default function LedgerPage() {
     setMessage('문자 내용을 기준으로 입력값을 채웠습니다.')
     setSmsText('')
     setIsSmsParserOpen(false)
+    setIsEntryDialogOpen(true)
     focusForm()
   }
 
@@ -635,7 +644,7 @@ export default function LedgerPage() {
         <article className="panel wide fp-ledger-panel" ref={ledgerTopRef}>
           <header className="panel-header fp-ledger-section-header">
             <h2>가계부 조회</h2>
-            <button type="button" className="fp-ledger-input-jump" onClick={startCreateEntry}>입력하기</button>
+            <button type="button" className="fp-ledger-input-jump" onClick={startCreateEntry}>입력</button>
           </header>
 
           <section className="filter-panel fp-ledger-filter">
@@ -705,70 +714,6 @@ export default function LedgerPage() {
           <div className="fp-ledger-list-end" ref={ledgerListEndRef} aria-hidden="true" />
         </article>
 
-        <form className="panel entry-panel fp-ledger-entry-panel ledger-form" ref={formRef} onSubmit={requestSave}>
-          <header className="panel-header">
-            <h2>{editingId ? '가계부 수정' : '가계부 입력'}</h2>
-            {editingId ? <button className="fp-button fp-button-muted" type="button" onClick={resetForm}>취소</button> : null}
-          </header>
-
-          <div className="ledger-form-grid">
-            <label className="span-2">
-              <span>내용 <em className="fp-required-mark">*</em></span>
-              <input ref={titleInputRef} value={form.title} onChange={(event) => setForm((value) => ({ ...value, title: event.target.value }))} />
-            </label>
-            <label>
-              <span>금액 <em className="fp-required-mark">*</em></span>
-              <input
-                inputMode="numeric"
-                value={formatNumberInput(form.amount)}
-                onChange={(event) => setForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))}
-              />
-            </label>
-            <DatePickerField
-              className="fp-ledger-form-date"
-              label="날짜"
-              required
-              value={form.transactionDate}
-              onChange={(value) => setForm((current) => ({ ...current, transactionDate: value }))}
-            />
-            <LedgerCustomSelect
-              label="구분"
-              options={[...LEDGER_ENTRY_TYPE_OPTIONS]}
-              value={form.entryType}
-              onChange={(value) => setForm((current) => ({ ...current, entryType: value as LedgerPayload['entryType'] }))}
-            />
-            <LedgerCustomSelect
-              label="카테고리"
-              options={ledgerCategoryOptions.map((item) => ({ label: item, value: item }))}
-              value={form.category || ''}
-              onChange={(value) => setForm((current) => ({ ...current, category: value || null }))}
-            />
-            <LedgerCustomSelect
-              label="결제수단"
-              options={ledgerPaymentMethodOptions.map((item) => ({ label: item, value: item }))}
-              value={form.paymentMethod || ''}
-              onChange={(value) => setForm((current) => ({ ...current, paymentMethod: value || null }))}
-            />
-            <LedgerCustomSelect
-              label="사용자"
-              options={familyMemberOptions.map((item) => ({ label: item, value: item }))}
-              value={form.memberName || ''}
-              onChange={(value) => setForm((current) => ({ ...current, memberName: value || null }))}
-            />
-            <label className="span-2">
-              <span>메모</span>
-              <textarea value={form.memo || ''} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} />
-            </label>
-          </div>
-          <button
-            className={`fp-button fp-button-primary submit-action${isLedgerActionLoading ? ' fp-button-loading' : ''}`}
-            type="submit"
-            disabled={isLedgerActionLoading}
-          >
-            {isLedgerActionLoading ? '처리 중' : editingId ? '저장' : '추가'}
-          </button>
-        </form>
-
         <nav
           className={`fp-ledger-scroll-nav${isQuickNavOpen ? ' open' : ''}${quickNavPosition ? ' positioned' : ''}${isQuickNavDragging ? ' dragging' : ''}`}
           style={quickNavStyle}
@@ -804,6 +749,83 @@ export default function LedgerPage() {
           </button>
         </nav>
       </section>
+
+      {isEntryDialogOpen ? (
+        <div className="patch-ledger-detail-backdrop fp-ledger-entry-backdrop" role="presentation" onClick={closeEntryDialog}>
+          <form
+            className="patch-ledger-detail-dialog ledger-form fp-ledger-entry-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fp-ledger-entry-title"
+            onClick={(event) => event.stopPropagation()}
+            onSubmit={requestSave}
+          >
+            <button type="button" className="dialog-close" aria-label="닫기" onClick={closeEntryDialog}>×</button>
+            <h2 id="fp-ledger-entry-title">{editingId ? '가계부 수정' : '가계부 입력'}</h2>
+
+            <div className="ledger-form-grid">
+              <label className="span-2">
+                <span>내용 <em className="fp-required-mark">*</em></span>
+                <input ref={titleInputRef} value={form.title} onChange={(event) => setForm((value) => ({ ...value, title: event.target.value }))} />
+              </label>
+              <label>
+                <span>금액 <em className="fp-required-mark">*</em></span>
+                <input
+                  inputMode="numeric"
+                  value={formatNumberInput(form.amount)}
+                  onChange={(event) => setForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))}
+                />
+              </label>
+              <DatePickerField
+                className="fp-ledger-form-date"
+                label="날짜"
+                required
+                value={form.transactionDate}
+                onChange={(value) => setForm((current) => ({ ...current, transactionDate: value }))}
+              />
+              <LedgerCustomSelect
+                label="구분"
+                options={[...LEDGER_ENTRY_TYPE_OPTIONS]}
+                value={form.entryType}
+                onChange={(value) => setForm((current) => ({ ...current, entryType: value as LedgerPayload['entryType'] }))}
+              />
+              <LedgerCustomSelect
+                label="카테고리"
+                options={ledgerCategoryOptions.map((item) => ({ label: item, value: item }))}
+                value={form.category || ''}
+                onChange={(value) => setForm((current) => ({ ...current, category: value || null }))}
+              />
+              <LedgerCustomSelect
+                label="결제수단"
+                options={ledgerPaymentMethodOptions.map((item) => ({ label: item, value: item }))}
+                value={form.paymentMethod || ''}
+                onChange={(value) => setForm((current) => ({ ...current, paymentMethod: value || null }))}
+              />
+              <LedgerCustomSelect
+                label="사용자"
+                options={familyMemberOptions.map((item) => ({ label: item, value: item }))}
+                value={form.memberName || ''}
+                onChange={(value) => setForm((current) => ({ ...current, memberName: value || null }))}
+              />
+              <label className="span-2">
+                <span>메모</span>
+                <textarea value={form.memo || ''} onChange={(event) => setForm((value) => ({ ...value, memo: event.target.value }))} />
+              </label>
+            </div>
+
+            <div className="ledger-detail-actions">
+              <button type="button" className="edit-button muted" disabled={isLedgerActionLoading} onClick={closeEntryDialog}>취소</button>
+              <button
+                className={`edit-button${isLedgerActionLoading ? ' fp-button-loading' : ''}`}
+                type="submit"
+                disabled={isLedgerActionLoading}
+              >
+                {isLedgerActionLoading ? '처리 중' : '저장'}
+              </button>
+            </div>
+          </form>
+        </div>
+      ) : null}
 
       {selectedEntry ? (
         <div className="patch-ledger-detail-backdrop" role="presentation" onClick={closeLedgerDetail}>
