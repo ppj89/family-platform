@@ -783,15 +783,22 @@
 }
 
 .fp-account-info-list dt {
+  flex: 0 0 auto;
   color: #6b7684;
   font-weight: var(--fp-weight-label);
+  white-space: nowrap;
 }
 
 .fp-account-info-list dd {
+  flex: 0 1 auto;
+  min-width: 0;
   color: #191f28;
-  font-weight: var(--fp-weight-title);
+  font-size: 13px;
+  font-weight: 500;
   text-align: right;
-  word-break: break-all;
+  white-space: nowrap;
+  word-break: normal;
+  overflow-wrap: normal;
 }
 
 @media (max-width: 980px) {
