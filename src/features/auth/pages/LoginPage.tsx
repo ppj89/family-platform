@@ -463,36 +463,13 @@ export function LoginPage() {
             <div className="brand-mark">FP</div>
             <div>
               <p>Family Platform</p>
-              <span>가족 운영 워크스페이스</span>
+              <span>함께 쓰는 워크스페이스</span>
             </div>
           </div>
           <section className="auth-copy">
-            <span className="auth-kicker">가족을 위한 하나의 공간</span>
-            {/*
-            <h1>
-              가족 기록을
-              <br />
-              한곳에서 편하게
-            </h1>
-            */}
-            <p>일정, 가계부, 여행, 육아, 일기를 가족끼리 공유하고 권한에 맞게 관리합니다.</p>
+            <span className="auth-kicker">가족, 커플, 지인을 위한 하나의 공간</span>
+            <p>일정, 가계부, 여행, 육아, 일기를 필요한 사람들과 메뉴별로 공유하고 관리합니다.</p>
           </section>
-          {/*
-          <div className="auth-preview">
-            <div>
-              <strong>공유 캘린더</strong>
-              <span>생일, 병원, 학교, 가족 일정을 한 달력에서 확인</span>
-            </div>
-            <div>
-              <strong>가족 가계부</strong>
-              <span>지출과 수입을 메뉴별로 정리하고 기간별로 조회</span>
-            </div>
-            <div>
-              <strong>육아 기록</strong>
-              <span>수유, 배변, 키, 몸무게 변화를 기록</span>
-            </div>
-          </div>
-          */}
         </div>
 
         <form className="auth-card" data-auth-mode={mode} onSubmit={handleSubmit}>
@@ -508,14 +485,6 @@ export function LoginPage() {
             </button>
           </div>
           <div className="auth-heading">
-            {/*
-            <strong>{mode === 'login' ? '로그인' : '회원가입'}</strong>
-            <p>
-              {mode === 'login'
-                ? '가입한 이메일 또는 관리자 아이디로 접속합니다.'
-                : '가족 운영 워크스페이스 계정을 만듭니다. 회원가입 후 이메일 인증을 완료해야 로그인할 수 있습니다.'}
-            </p>
-            */}
             {mode === 'register' ? <p className="auth-verification-notice">회원가입 신청 후 이메일 인증이 필요합니다.</p> : null}
           </div>
 

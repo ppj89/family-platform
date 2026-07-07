@@ -39,6 +39,17 @@ const (
 	maxPasswordBytes       = 128
 )
 
+var shareableMenuKeys = []string{"calendar", "ledger", "travel", "baby", "diary", "restaurant", "community"}
+var shareableMenuKeySet = map[string]bool{
+	"calendar":   true,
+	"ledger":     true,
+	"travel":     true,
+	"baby":       true,
+	"diary":      true,
+	"restaurant": true,
+	"community":  true,
+}
+
 type config struct {
 	port                      string
 	databaseURL               string
@@ -1965,36 +1976,38 @@ func (a *app) createFamily(w http.ResponseWriter, r *http.Request, user authUser
 }
 
 type familyMember struct {
-	ID        int64  `json:"id"`
-	FamilyID  int64  `json:"familyId"`
-	UserID    int64  `json:"userId"`
-	Email     string `json:"email,omitempty"`
-	Nickname  string `json:"nickname,omitempty"`
-	Role      string `json:"role"`
-	CanRead   bool   `json:"canRead"`
-	CanCreate bool   `json:"canCreate"`
-	CanUpdate bool   `json:"canUpdate"`
-	CanDelete bool   `json:"canDelete"`
-	JoinedAt  string `json:"joinedAt"`
+	ID             int64    `json:"id"`
+	FamilyID       int64    `json:"familyId"`
+	UserID         int64    `json:"userId"`
+	Email          string   `json:"email,omitempty"`
+	Nickname       string   `json:"nickname,omitempty"`
+	Role           string   `json:"role"`
+	CanRead        bool     `json:"canRead"`
+	CanCreate      bool     `json:"canCreate"`
+	CanUpdate      bool     `json:"canUpdate"`
+	CanDelete      bool     `json:"canDelete"`
+	SharedMenuKeys []string `json:"sharedMenuKeys"`
+	JoinedAt       string   `json:"joinedAt"`
 }
 
 type familyInvitation struct {
-	ID            int64  `json:"id"`
-	FamilyID      int64  `json:"familyId"`
-	FamilyName    string `json:"familyName"`
-	InviterUserID int64  `json:"inviterUserId"`
-	InviterName   string `json:"inviterName,omitempty"`
-	InviteeUserID int64  `json:"inviteeUserId"`
-	InviteeEmail  string `json:"inviteeEmail,omitempty"`
-	InviteeName   string `json:"inviteeName,omitempty"`
-	Role          string `json:"role"`
-	CanRead       bool   `json:"canRead"`
-	CanCreate     bool   `json:"canCreate"`
-	CanUpdate     bool   `json:"canUpdate"`
-	CanDelete     bool   `json:"canDelete"`
-	Status        string `json:"status"`
-	CreatedAt     string `json:"createdAt"`
-	RespondedAt   string `json:"respondedAt,omitempty"`
+	ID             int64    `json:"id"`
+	FamilyID       int64    `json:"familyId"`
+	FamilyName     string   `json:"familyName"`
+	InviterUserID  int64    `json:"inviterUserId"`
+	InviterName    string   `json:"inviterName,omitempty"`
+	InviteeUserID  int64    `json:"inviteeUserId"`
+	InviteeEmail   string   `json:"inviteeEmail,omitempty"`
+	InviteeName    string   `json:"inviteeName,omitempty"`
+	Role           string   `json:"role"`
+	CanRead        bool     `json:"canRead"`
+	CanCreate      bool     `json:"canCreate"`
+	CanUpdate      bool     `json:"canUpdate"`
+	CanDelete      bool     `json:"canDelete"`
+	SharedMenuKeys []string `json:"sharedMenuKeys"`
+	Status         string   `json:"status"`
+	CreatedAt      string   `json:"createdAt"`
+	RespondedAt    string   `json:"respondedAt,omitempty"`
 }
 
 func (a *app) listFamilyMembers(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -2003,7 +2016,7 @@ func (a *app) listFamilyMembers(w http.ResponseWriter, r *http.Request, user aut
 		return
 	}
 	rows, err := a.db.Query(r.Context(), `
-		select m.id, m.family_id, m.user_id, coalesce(u.email, ''), coalesce(u.nickname, ''), m.role, m.can_read, m.can_create, m.can_update, m.can_delete, m.joined_at
+		select m.id, m.family_id, m.user_id, coalesce(u.email, ''), coalesce(u.nickname, ''), m.role, m.can_read, m.can_create, m.can_update, m.can_delete, m.shared_menu_keys, m.joined_at
 		from family_members m
 		left join app_users u on u.id = m.user_id
 		where m.family_id = $1
@@ -2018,7 +2031,7 @@ func (a *app) listFamilyMembers(w http.ResponseWriter, r *http.Request, user aut
 	for rows.Next() {
 		var item familyMember
 		var joinedAt time.Time
-		if err := rows.Scan(&item.ID, &item.FamilyID, &item.UserID, &item.Email, &item.Nickname, &item.Role, &item.CanRead, &item.CanCreate, &item.CanUpdate, &item.CanDelete, &joinedAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.FamilyID, &item.UserID, &item.Email, &item.Nickname, &item.Role, &item.CanRead, &item.CanCreate, &item.CanUpdate, &item.CanDelete, &item.SharedMenuKeys, &joinedAt); err != nil {
 			writeError(w, http.StatusInternalServerError, "database scan failed")
 			return
 		}
@@ -2034,13 +2047,14 @@ func (a *app) addFamilyMember(w http.ResponseWriter, r *http.Request, user authU
 		return
 	}
 	var req struct {
-		UserID    int64  `json:"userId"`
-		Invite    string `json:"invite"`
-		Role      string `json:"role"`
-		CanRead   bool   `json:"canRead"`
-		CanCreate bool   `json:"canCreate"`
-		CanUpdate bool   `json:"canUpdate"`
-		CanDelete bool   `json:"canDelete"`
+		UserID         int64     `json:"userId"`
+		Invite         string    `json:"invite"`
+		Role           string    `json:"role"`
+		CanRead        bool      `json:"canRead"`
+		CanCreate      bool      `json:"canCreate"`
+		CanUpdate      bool      `json:"canUpdate"`
+		CanDelete      bool      `json:"canDelete"`
+		SharedMenuKeys *[]string `json:"sharedMenuKeys"`
 	}
 	if !readJSON(w, r, &req) {
 		return
@@ -2074,11 +2088,11 @@ func (a *app) addFamilyMember(w http.ResponseWriter, r *http.Request, user authU
 	var item familyMember
 	var joinedAt time.Time
 	err := a.db.QueryRow(r.Context(), `
-		insert into family_members (family_id, user_id, role, joined_at, can_read, can_create, can_update, can_delete)
-		values ($1, $2, $3, now(), $4, $5, $6, $7)
-		returning id, family_id, user_id, role, can_read, can_create, can_update, can_delete, joined_at
-	`, familyID, req.UserID, emptyDefault(req.Role, "MEMBER"), req.CanRead, req.CanCreate, req.CanUpdate, req.CanDelete).
-		Scan(&item.ID, &item.FamilyID, &item.UserID, &item.Role, &item.CanRead, &item.CanCreate, &item.CanUpdate, &item.CanDelete, &joinedAt)
+		insert into family_members (family_id, user_id, role, joined_at, can_read, can_create, can_update, can_delete, shared_menu_keys)
+		values ($1, $2, $3, now(), $4, $5, $6, $7, $8)
+		returning id, family_id, user_id, role, can_read, can_create, can_update, can_delete, shared_menu_keys, joined_at
+	`, familyID, req.UserID, emptyDefault(req.Role, "MEMBER"), req.CanRead, req.CanCreate, req.CanUpdate, req.CanDelete, normalizeSharedMenuKeys(req.SharedMenuKeys)).
+		Scan(&item.ID, &item.FamilyID, &item.UserID, &item.Role, &item.CanRead, &item.CanCreate, &item.CanUpdate, &item.CanDelete, &item.SharedMenuKeys, &joinedAt)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "family member creation failed")
 		return
@@ -2095,12 +2109,13 @@ func (a *app) updateFamilyMember(w http.ResponseWriter, r *http.Request, user au
 		return
 	}
 	var req struct {
-		UserID    int64  `json:"userId"`
-		Role      string `json:"role"`
-		CanRead   bool   `json:"canRead"`
-		CanCreate bool   `json:"canCreate"`
-		CanUpdate bool   `json:"canUpdate"`
-		CanDelete bool   `json:"canDelete"`
+		UserID         int64     `json:"userId"`
+		Role           string    `json:"role"`
+		CanRead        bool      `json:"canRead"`
+		CanCreate      bool      `json:"canCreate"`
+		CanUpdate      bool      `json:"canUpdate"`
+		CanDelete      bool      `json:"canDelete"`
+		SharedMenuKeys *[]string `json:"sharedMenuKeys"`
 	}
 	if !readJSON(w, r, &req) || req.UserID <= 0 {
 		return
@@ -2124,11 +2139,11 @@ func (a *app) updateFamilyMember(w http.ResponseWriter, r *http.Request, user au
 	var item familyMember
 	var joinedAt time.Time
 	err := a.db.QueryRow(r.Context(), `
-		update family_members set user_id = $1, role = $2, can_read = $3, can_create = $4, can_update = $5, can_delete = $6
-		where id = $7 and family_id = $8
-		returning id, family_id, user_id, role, can_read, can_create, can_update, can_delete, joined_at
-	`, req.UserID, nextRole, req.CanRead, req.CanCreate, req.CanUpdate, req.CanDelete, memberID, familyID).
-		Scan(&item.ID, &item.FamilyID, &item.UserID, &item.Role, &item.CanRead, &item.CanCreate, &item.CanUpdate, &item.CanDelete, &joinedAt)
+		update family_members set user_id = $1, role = $2, can_read = $3, can_create = $4, can_update = $5, can_delete = $6, shared_menu_keys = $7
+		where id = $8 and family_id = $9
+		returning id, family_id, user_id, role, can_read, can_create, can_update, can_delete, shared_menu_keys, joined_at
+	`, req.UserID, nextRole, req.CanRead, req.CanCreate, req.CanUpdate, req.CanDelete, normalizeSharedMenuKeys(req.SharedMenuKeys), memberID, familyID).
+		Scan(&item.ID, &item.FamilyID, &item.UserID, &item.Role, &item.CanRead, &item.CanCreate, &item.CanUpdate, &item.CanDelete, &item.SharedMenuKeys, &joinedAt)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "family member not found")
 		return
@@ -2195,7 +2210,7 @@ func (a *app) listFamilyInvitations(w http.ResponseWriter, r *http.Request, user
 	rows, err := a.db.Query(r.Context(), `
 		select i.id, i.family_id, coalesce(f.name, ''), i.inviter_user_id, coalesce(inviter.nickname, ''), i.invitee_user_id,
 		       coalesce(invitee.email, ''), coalesce(invitee.nickname, ''), i.role, i.can_read, i.can_create, i.can_update, i.can_delete,
-		       i.status, i.created_at, i.responded_at
+		       i.shared_menu_keys, i.status, i.created_at, i.responded_at
 		from family_invitations i
 		left join family_groups f on f.id = i.family_id
 		left join app_users inviter on inviter.id = i.inviter_user_id
@@ -2227,7 +2242,7 @@ func (a *app) listSentFamilyInvitations(w http.ResponseWriter, r *http.Request, 
 	rows, err := a.db.Query(r.Context(), `
 		select i.id, i.family_id, coalesce(f.name, ''), i.inviter_user_id, coalesce(inviter.nickname, ''), i.invitee_user_id,
 		       coalesce(invitee.email, ''), coalesce(invitee.nickname, ''), i.role, i.can_read, i.can_create, i.can_update, i.can_delete,
-		       i.status, i.created_at, i.responded_at
+		       i.shared_menu_keys, i.status, i.created_at, i.responded_at
 		from family_invitations i
 		left join family_groups f on f.id = i.family_id
 		left join app_users inviter on inviter.id = i.inviter_user_id
@@ -2257,12 +2272,13 @@ func (a *app) createFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 		return
 	}
 	var req struct {
-		Invite    string `json:"invite"`
-		Role      string `json:"role"`
-		CanRead   bool   `json:"canRead"`
-		CanCreate bool   `json:"canCreate"`
-		CanUpdate bool   `json:"canUpdate"`
-		CanDelete bool   `json:"canDelete"`
+		Invite         string    `json:"invite"`
+		Role           string    `json:"role"`
+		CanRead        bool      `json:"canRead"`
+		CanCreate      bool      `json:"canCreate"`
+		CanUpdate      bool      `json:"canUpdate"`
+		CanDelete      bool      `json:"canDelete"`
+		SharedMenuKeys *[]string `json:"sharedMenuKeys"`
 	}
 	if !readJSON(w, r, &req) {
 		return
@@ -2304,10 +2320,10 @@ func (a *app) createFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 		return
 	}
 	row := a.db.QueryRow(r.Context(), `
-		insert into family_invitations (family_id, inviter_user_id, invitee_user_id, role, can_read, can_create, can_update, can_delete, status, created_at)
-		values ($1, $2, $3, $4, $5, $6, $7, $8, 'PENDING', now())
-		returning id, family_id, '', inviter_user_id, '', invitee_user_id, '', '', role, can_read, can_create, can_update, can_delete, status, created_at, responded_at
-	`, familyID, user.ID, inviteeID, emptyDefault(req.Role, "MEMBER"), req.CanRead, req.CanCreate, req.CanUpdate, req.CanDelete)
+		insert into family_invitations (family_id, inviter_user_id, invitee_user_id, role, can_read, can_create, can_update, can_delete, shared_menu_keys, status, created_at)
+		values ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING', now())
+		returning id, family_id, '', inviter_user_id, '', invitee_user_id, '', '', role, can_read, can_create, can_update, can_delete, shared_menu_keys, status, created_at, responded_at
+	`, familyID, user.ID, inviteeID, emptyDefault(req.Role, "MEMBER"), req.CanRead, req.CanCreate, req.CanUpdate, req.CanDelete, normalizeSharedMenuKeys(req.SharedMenuKeys))
 	item, ok := scanFamilyInvitation(w, row)
 	if !ok {
 		return
@@ -2397,12 +2413,13 @@ func (a *app) acceptFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 	var inviterUserID int64
 	var role string
 	var canRead, canCreate, canUpdate, canDelete bool
+	var sharedMenuKeys []string
 	err = tx.QueryRow(r.Context(), `
-		select family_id, inviter_user_id, role, can_read, can_create, can_update, can_delete
+		select family_id, inviter_user_id, role, can_read, can_create, can_update, can_delete, shared_menu_keys
 		from family_invitations
 		where id = $1 and invitee_user_id = $2 and status = 'PENDING'
 		for update
-	`, invitationID, user.ID).Scan(&familyID, &inviterUserID, &role, &canRead, &canCreate, &canUpdate, &canDelete)
+	`, invitationID, user.ID).Scan(&familyID, &inviterUserID, &role, &canRead, &canCreate, &canUpdate, &canDelete, &sharedMenuKeys)
 	if err != nil {
 		writeError(w, http.StatusNotFound, "invitation not found")
 		return
@@ -2417,9 +2434,9 @@ func (a *app) acceptFamilyInvitation(w http.ResponseWriter, r *http.Request, use
 		return
 	}
 	if _, err := tx.Exec(r.Context(), `
-		insert into family_members (family_id, user_id, role, joined_at, can_read, can_create, can_update, can_delete)
-		values ($1, $2, $3, now(), $4, $5, $6, $7)
-	`, familyID, user.ID, emptyDefault(role, "MEMBER"), canRead, canCreate, canUpdate, canDelete); err != nil {
+		insert into family_members (family_id, user_id, role, joined_at, can_read, can_create, can_update, can_delete, shared_menu_keys)
+		values ($1, $2, $3, now(), $4, $5, $6, $7, $8)
+	`, familyID, user.ID, emptyDefault(role, "MEMBER"), canRead, canCreate, canUpdate, canDelete, sharedMenuKeys); err != nil {
 		writeError(w, http.StatusInternalServerError, "family membership creation failed")
 		return
 	}
@@ -2491,6 +2508,7 @@ func (a *app) listLedgerEntries(w http.ResponseWriter, r *http.Request, user aut
 	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
+	canShare := familyID > 0 && a.hasFamilyPermissionForMenu(r.Context(), user, familyID, "read", "ledger")
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, title, entry_type, category, payment_method, member_name, coalesce(amount, 0),
 		       transaction_date, memo, created_at
@@ -2498,10 +2516,13 @@ func (a *app) listLedgerEntries(w http.ResponseWriter, r *http.Request, user aut
 		where transaction_date between $2 and $3 and deleted_at is null
 		  and (
 		    created_by_user_id = $4
-		    or ($1 > 0 and family_id = $1)
+		    or ($1 > 0 and $5 = true and family_id = $1 and exists (
+		      select 1 from family_members owner
+		      where owner.family_id = $1 and owner.user_id = created_by_user_id and $6 = any(owner.shared_menu_keys)
+		    ))
 		  )
 		order by transaction_date desc, created_at desc
-	`, familyID, start, end, user.ID)
+	`, familyID, start, end, user.ID, canShare, "ledger")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -2519,6 +2540,7 @@ func (a *app) ledgerSummary(w http.ResponseWriter, r *http.Request, user authUse
 	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
+	canShare := familyID > 0 && a.hasFamilyPermissionForMenu(r.Context(), user, familyID, "read", "ledger")
 	var expense, income float64
 	err := a.db.QueryRow(r.Context(), `
 		select
@@ -2528,9 +2550,12 @@ func (a *app) ledgerSummary(w http.ResponseWriter, r *http.Request, user authUse
 		where transaction_date between $2 and $3 and deleted_at is null
 		  and (
 		    created_by_user_id = $4
-		    or ($1 > 0 and family_id = $1)
+		    or ($1 > 0 and $5 = true and family_id = $1 and exists (
+		      select 1 from family_members owner
+		      where owner.family_id = $1 and owner.user_id = created_by_user_id and $6 = any(owner.shared_menu_keys)
+		    ))
 		  )
-	`, familyID, start, end, user.ID).Scan(&expense, &income)
+	`, familyID, start, end, user.ID, canShare, "ledger").Scan(&expense, &income)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -2564,7 +2589,7 @@ func (a *app) updateLedgerEntry(w http.ResponseWriter, r *http.Request, user aut
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from ledger_entries where id = $1 and deleted_at is null", entryID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "update", ownerID, "ledger") {
 		return
 	}
 	req, ok := readLedgerPayload(w, r)
@@ -2585,7 +2610,7 @@ func (a *app) deleteLedgerEntry(w http.ResponseWriter, r *http.Request, user aut
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from ledger_entries where id = $1 and deleted_at is null", entryID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "delete", ownerID, "ledger") {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update ledger_entries set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", entryID)
@@ -2613,6 +2638,7 @@ func (a *app) listSchedules(w http.ResponseWriter, r *http.Request, user authUse
 	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
+	canShare := familyID > 0 && a.hasFamilyPermissionForMenu(r.Context(), user, familyID, "read", "calendar")
 	rows, err := a.db.Query(r.Context(), `
 		select id, coalesce(family_id, 0), title, calendar_basis, schedule_date, schedule_time::text, category, member_name, repeat_rule, memo, created_at,
 		  coalesce((
@@ -2624,10 +2650,13 @@ func (a *app) listSchedules(w http.ResponseWriter, r *http.Request, user authUse
 		where schedule_date between $2 and $3 and deleted_at is null
 		  and (
 		    created_by_user_id = $4
-		    or ($1 > 0 and family_id = $1)
+		    or ($1 > 0 and $5 = true and family_id = $1 and exists (
+		      select 1 from family_members owner
+		      where owner.family_id = $1 and owner.user_id = created_by_user_id and $6 = any(owner.shared_menu_keys)
+		    ))
 		  )
 		order by schedule_date asc, schedule_time asc nulls last, created_at desc
-	`, familyID, start, end, user.ID)
+	`, familyID, start, end, user.ID, canShare, "calendar")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -2666,7 +2695,7 @@ func (a *app) updateSchedule(w http.ResponseWriter, r *http.Request, user authUs
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select coalesce(family_id, 0), created_by_user_id from family_schedules where id = $1 and deleted_at is null", id)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "update", ownerID, "calendar") {
 		return
 	}
 	req, ok := readSchedulePayload(w, r)
@@ -2687,7 +2716,7 @@ func (a *app) deleteSchedule(w http.ResponseWriter, r *http.Request, user authUs
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select coalesce(family_id, 0), created_by_user_id from family_schedules where id = $1 and deleted_at is null", id)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "delete", ownerID, "calendar") {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update family_schedules set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", id)
@@ -2701,7 +2730,7 @@ func (a *app) createScheduleException(w http.ResponseWriter, r *http.Request, us
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select coalesce(family_id, 0), created_by_user_id from family_schedules where id = $1 and deleted_at is null", id)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "update", ownerID, "calendar") {
 		return
 	}
 	req, ok := readScheduleExceptionPayload(w, r)
@@ -2944,16 +2973,20 @@ func (a *app) listTrips(w http.ResponseWriter, r *http.Request, user authUser) {
 	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
 		return
 	}
+	canShare := familyID > 0 && a.hasFamilyPermissionForMenu(r.Context(), user, familyID, "read", "travel")
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, title, start_date, end_date, description, created_at
 		from trips
 		where deleted_at is null
 		  and (
 		    created_by_user_id = $2
-		    or ($1 > 0 and family_id = $1)
+		    or ($1 > 0 and $3 = true and family_id = $1 and exists (
+		      select 1 from family_members owner
+		      where owner.family_id = $1 and owner.user_id = created_by_user_id and $4 = any(owner.shared_menu_keys)
+		    ))
 		  )
 		order by created_at desc
-	`, familyID, user.ID)
+	`, familyID, user.ID, canShare, "travel")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -2992,7 +3025,7 @@ func (a *app) updateTrip(w http.ResponseWriter, r *http.Request, user authUser) 
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from trips where id = $1 and deleted_at is null", tripID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "update", ownerID, "travel") {
 		return
 	}
 	req, ok := readTripPayload(w, r)
@@ -3013,7 +3046,7 @@ func (a *app) deleteTrip(w http.ResponseWriter, r *http.Request, user authUser) 
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from trips where id = $1 and deleted_at is null", tripID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "delete", ownerID, "travel") {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update travel_records set deleted_at = now(), updated_at = now() where trip_id = $1 and deleted_at is null", tripID)
@@ -3028,7 +3061,7 @@ func (a *app) listTravelRecords(w http.ResponseWriter, r *http.Request, user aut
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from trips where id = $1 and deleted_at is null", tripID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "read", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "read", ownerID, "travel") {
 		return
 	}
 	items, ok := a.travelRecordsByTrip(w, r.Context(), tripID)
@@ -3044,7 +3077,7 @@ func (a *app) createTravelRecord(w http.ResponseWriter, r *http.Request, user au
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from trips where id = $1 and deleted_at is null", tripID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "create", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "create", ownerID, "travel") {
 		return
 	}
 	req, ok := readTravelRecordPayload(w, r)
@@ -3073,7 +3106,7 @@ func (a *app) updateTravelRecord(w http.ResponseWriter, r *http.Request, user au
 		writeError(w, http.StatusNotFound, "travel record not found")
 		return
 	}
-	if !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
+	if !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "update", ownerID, "travel") {
 		return
 	}
 	req, ok := readTravelRecordPayload(w, r)
@@ -3102,7 +3135,7 @@ func (a *app) deleteTravelRecord(w http.ResponseWriter, r *http.Request, user au
 		writeError(w, http.StatusNotFound, "travel record not found")
 		return
 	}
-	if !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
+	if !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "delete", ownerID, "travel") {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update travel_records set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", recordID)
@@ -3152,16 +3185,20 @@ func (a *app) listRestaurants(w http.ResponseWriter, r *http.Request, user authU
 	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
 		return
 	}
+	canShare := familyID > 0 && a.hasFamilyPermissionForMenu(r.Context(), user, familyID, "read", "restaurant")
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, name, menu, price, rating, visit_date, location, address, latitude, longitude, scope, memo, created_at
 		from restaurants
 		where deleted_at is null
 		  and (
 		    created_by_user_id = $2
-		    or ($1 > 0 and family_id = $1)
+		    or ($1 > 0 and $3 = true and family_id = $1 and exists (
+		      select 1 from family_members owner
+		      where owner.family_id = $1 and owner.user_id = created_by_user_id and $4 = any(owner.shared_menu_keys)
+		    ))
 		  )
 		order by visit_date desc, created_at desc
-	`, familyID, user.ID)
+	`, familyID, user.ID, canShare, "restaurant")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -3200,7 +3237,7 @@ func (a *app) updateRestaurant(w http.ResponseWriter, r *http.Request, user auth
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from restaurants where id = $1 and deleted_at is null", restaurantID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "update", ownerID, "restaurant") {
 		return
 	}
 	req, ok := readRestaurantPayload(w, r)
@@ -3221,7 +3258,7 @@ func (a *app) deleteRestaurant(w http.ResponseWriter, r *http.Request, user auth
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from restaurants where id = $1 and deleted_at is null", restaurantID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "delete", ownerID, "restaurant") {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update restaurants set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", restaurantID)
@@ -3264,16 +3301,20 @@ func (a *app) listBabies(w http.ResponseWriter, r *http.Request, user authUser) 
 	if familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
 		return
 	}
+	canShare := familyID > 0 && a.hasFamilyPermissionForMenu(r.Context(), user, familyID, "read", "baby")
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, name, gender, birth_date, memo, photo_url, latest_height_cm, latest_weight_kg, created_at
 		from baby_profiles
 		where deleted_at is null
 		  and (
 		    created_by_user_id = $2
-		    or ($1 > 0 and family_id = $1)
+		    or ($1 > 0 and $3 = true and family_id = $1 and exists (
+		      select 1 from family_members owner
+		      where owner.family_id = $1 and owner.user_id = created_by_user_id and $4 = any(owner.shared_menu_keys)
+		    ))
 		  )
 		order by created_at desc
-	`, familyID, user.ID)
+	`, familyID, user.ID, canShare, "baby")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -3312,7 +3353,7 @@ func (a *app) updateBaby(w http.ResponseWriter, r *http.Request, user authUser) 
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from baby_profiles where id = $1 and deleted_at is null", babyID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "update", ownerID, "baby") {
 		return
 	}
 	req, ok := readBabyPayload(w, r)
@@ -3333,7 +3374,7 @@ func (a *app) deleteBaby(w http.ResponseWriter, r *http.Request, user authUser) 
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from baby_profiles where id = $1 and deleted_at is null", babyID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "delete", ownerID, "baby") {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update baby_records set deleted_at = now(), updated_at = now() where baby_id = $1 and deleted_at is null", babyID)
@@ -3348,7 +3389,7 @@ func (a *app) listBabyRecords(w http.ResponseWriter, r *http.Request, user authU
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from baby_profiles where id = $1 and deleted_at is null", babyID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "read", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "read", ownerID, "baby") {
 		return
 	}
 	start, end := r.URL.Query().Get("startDate"), r.URL.Query().Get("endDate")
@@ -3381,7 +3422,7 @@ func (a *app) createBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from baby_profiles where id = $1 and deleted_at is null", babyID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "create", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "create", ownerID, "baby") {
 		return
 	}
 	req, ok := readBabyRecordPayload(w, r)
@@ -3408,7 +3449,7 @@ func (a *app) updateBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 		writeError(w, http.StatusNotFound, "baby record not found")
 		return
 	}
-	if !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
+	if !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "update", ownerID, "baby") {
 		return
 	}
 	req, ok := readBabyRecordPayload(w, r)
@@ -3435,7 +3476,7 @@ func (a *app) deleteBabyRecord(w http.ResponseWriter, r *http.Request, user auth
 		writeError(w, http.StatusNotFound, "baby record not found")
 		return
 	}
-	if !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
+	if !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "delete", ownerID, "baby") {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update baby_records set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", recordID)
@@ -3462,16 +3503,20 @@ func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser)
 	if !ok || (familyID > 0 && !a.requireFamilyPermission(w, r.Context(), user, familyID, "read")) {
 		return
 	}
+	canShare := familyID > 0 && a.hasFamilyPermissionForMenu(r.Context(), user, familyID, "read", "diary")
 	rows, err := a.db.Query(r.Context(), `
 		select id, family_id, title, body, diary_date, weather, mood, min_temperature, max_temperature, created_at
 		from family_diaries
 		where diary_date between $2 and $3 and deleted_at is null
 		  and (
 		    created_by_user_id = $4
-		    or ($1 > 0 and family_id = $1)
+		    or ($1 > 0 and $5 = true and family_id = $1 and exists (
+		      select 1 from family_members owner
+		      where owner.family_id = $1 and owner.user_id = created_by_user_id and $6 = any(owner.shared_menu_keys)
+		    ))
 		  )
 		order by diary_date desc, created_at desc
-	`, familyID, start, end, user.ID)
+	`, familyID, start, end, user.ID, canShare, "diary")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
 		return
@@ -3510,7 +3555,7 @@ func (a *app) updateDiary(w http.ResponseWriter, r *http.Request, user authUser)
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from family_diaries where id = $1 and deleted_at is null", diaryID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "update", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "update", ownerID, "diary") {
 		return
 	}
 	req, ok := readDiaryPayload(w, r)
@@ -3531,7 +3576,7 @@ func (a *app) deleteDiary(w http.ResponseWriter, r *http.Request, user authUser)
 		return
 	}
 	familyID, ownerID, ok := a.resourceFamilyOwner(w, r.Context(), "select family_id, created_by_user_id from family_diaries where id = $1 and deleted_at is null", diaryID)
-	if !ok || !a.requireFamilyPermissionOrOwner(w, r.Context(), user, familyID, "delete", ownerID) {
+	if !ok || !a.requireFamilyPermissionOrOwnerForMenu(w, r.Context(), user, familyID, "delete", ownerID, "diary") {
 		return
 	}
 	_, _ = a.db.Exec(r.Context(), "update family_diaries set deleted_at = now(), updated_at = now() where id = $1 and deleted_at is null", diaryID)
@@ -3576,8 +3621,15 @@ func (a *app) listCommunityPosts(w http.ResponseWriter, r *http.Request, user au
 		if !a.requireFamilyPermission(w, r.Context(), user, familyID, "read") {
 			return
 		}
-		query += " and family_id = $2"
-		args = append(args, familyID)
+		canShare := a.hasFamilyPermissionForMenu(r.Context(), user, familyID, "read", "community")
+		query += ` and family_id = $2 and (
+			author_id = $3
+			or ($4 = true and exists (
+				select 1 from family_members owner
+				where owner.family_id = $2 and owner.user_id = author_id and $5 = any(owner.shared_menu_keys)
+			))
+		)`
+		args = append(args, familyID, user.ID, canShare, "community")
 	}
 	query += " order by created_at desc"
 	rows, err := a.db.Query(r.Context(), query, args...)
@@ -4539,8 +4591,10 @@ create table if not exists family_members (
   family_id bigint,
   joined_at timestamp with time zone,
   role varchar(255),
+  shared_menu_keys text[] not null default array['calendar','ledger','travel','baby','diary','restaurant','community']::text[],
   user_id bigint
 );
+alter table if exists family_members add column if not exists shared_menu_keys text[] not null default array['calendar','ledger','travel','baby','diary','restaurant','community']::text[];
 create index if not exists idx_family_members_user on family_members (user_id);
 create index if not exists idx_family_members_family on family_members (family_id);
 create table if not exists family_invitations (
@@ -4553,10 +4607,12 @@ create table if not exists family_invitations (
   can_create boolean not null default false,
   can_update boolean not null default false,
   can_delete boolean not null default false,
+  shared_menu_keys text[] not null default array['calendar','ledger','travel','baby','diary','restaurant','community']::text[],
   status varchar(64) not null default 'PENDING',
   created_at timestamp with time zone not null,
   responded_at timestamp with time zone
 );
+alter table if exists family_invitations add column if not exists shared_menu_keys text[] not null default array['calendar','ledger','travel','baby','diary','restaurant','community']::text[];
 create index if not exists idx_family_invitations_invitee on family_invitations (invitee_user_id, status, created_at desc);
 create index if not exists idx_family_invitations_family on family_invitations (family_id, status, created_at desc);
 create table if not exists family_schedules (
@@ -5635,6 +5691,7 @@ func scanFamilyInvitation(w http.ResponseWriter, scanner interface{ Scan(...any)
 		&item.CanCreate,
 		&item.CanUpdate,
 		&item.CanDelete,
+		&item.SharedMenuKeys,
 		&item.Status,
 		&createdAt,
 		&respondedAt,
@@ -5648,6 +5705,39 @@ func scanFamilyInvitation(w http.ResponseWriter, scanner interface{ Scan(...any)
 		item.RespondedAt = formatTime(respondedAt.Time)
 	}
 	return item, true
+}
+
+func normalizeSharedMenuKeys(keys *[]string) []string {
+	if keys == nil {
+		return append([]string{}, shareableMenuKeys...)
+	}
+	seen := map[string]bool{}
+	normalized := []string{}
+	for _, key := range *keys {
+		key = strings.TrimSpace(key)
+		if shareableMenuKeySet[key] && !seen[key] {
+			seen[key] = true
+			normalized = append(normalized, key)
+		}
+	}
+	return normalized
+}
+
+func menuPermissionColumn(permission string, prefix string) string {
+	columns := map[string]string{
+		"read":   "can_read",
+		"create": "can_create",
+		"update": "can_update",
+		"delete": "can_delete",
+	}
+	column := columns[permission]
+	if column == "" {
+		return ""
+	}
+	if prefix == "" {
+		return column
+	}
+	return prefix + "." + column
 }
 
 func (a *app) requireFamilyPermission(w http.ResponseWriter, ctx context.Context, user authUser, familyID int64, permission string) bool {
@@ -5680,6 +5770,37 @@ func (a *app) hasFamilyPermission(ctx context.Context, user authUser, familyID i
 	var allowed bool
 	query := fmt.Sprintf("select exists(select 1 from family_members where family_id = $1 and user_id = $2 and %s = true)", column)
 	if err := a.db.QueryRow(ctx, query, familyID, user.ID).Scan(&allowed); err != nil {
+		return false
+	}
+	return allowed
+}
+
+func (a *app) hasFamilyPermissionForMenu(ctx context.Context, user authUser, familyID int64, permission string, menuKey string) bool {
+	if menuKey == "" {
+		return a.hasFamilyPermission(ctx, user, familyID, permission)
+	}
+	if user.PlatformAdmin {
+		return true
+	}
+	if !shareableMenuKeySet[menuKey] {
+		return false
+	}
+	column := menuPermissionColumn(permission, "")
+	if column == "" {
+		return false
+	}
+	var allowed bool
+	query := fmt.Sprintf(`
+		select exists(
+			select 1
+			from family_members
+			where family_id = $1
+			  and user_id = $2
+			  and %s = true
+			  and $3 = any(shared_menu_keys)
+		)
+	`, column)
+	if err := a.db.QueryRow(ctx, query, familyID, user.ID, menuKey).Scan(&allowed); err != nil {
 		return false
 	}
 	return allowed
@@ -5722,6 +5843,47 @@ func (a *app) hasSharedFamilyPermission(ctx context.Context, user authUser, owne
 		)
 	`, column)
 	if err := a.db.QueryRow(ctx, query, user.ID, ownerID).Scan(&allowed); err != nil {
+		return false
+	}
+	return allowed
+}
+
+func (a *app) requireFamilyPermissionOrOwnerForMenu(w http.ResponseWriter, ctx context.Context, user authUser, familyID int64, permission string, ownerID sql.NullInt64, menuKey string) bool {
+	if ownerID.Valid && ownerID.Int64 == user.ID {
+		return true
+	}
+	if ownerID.Valid && a.hasSharedFamilyPermissionForMenu(ctx, user, ownerID.Int64, permission, menuKey) {
+		return true
+	}
+	writeError(w, http.StatusForbidden, "permission denied")
+	return false
+}
+
+func (a *app) hasSharedFamilyPermissionForMenu(ctx context.Context, user authUser, ownerID int64, permission string, menuKey string) bool {
+	if user.PlatformAdmin {
+		return true
+	}
+	if !shareableMenuKeySet[menuKey] {
+		return false
+	}
+	column := menuPermissionColumn(permission, "viewer")
+	if column == "" {
+		return false
+	}
+	var allowed bool
+	query := fmt.Sprintf(`
+		select exists(
+			select 1
+			from family_members viewer
+			join family_members owner on owner.family_id = viewer.family_id
+			where viewer.user_id = $1
+			  and owner.user_id = $2
+			  and %s = true
+			  and $3 = any(viewer.shared_menu_keys)
+			  and $3 = any(owner.shared_menu_keys)
+		)
+	`, column)
+	if err := a.db.QueryRow(ctx, query, user.ID, ownerID, menuKey).Scan(&allowed); err != nil {
 		return false
 	}
 	return allowed
@@ -6788,7 +6950,11 @@ func (a *app) requirePostRead(w http.ResponseWriter, ctx context.Context, user a
 		return false
 	}
 	if post.FamilyID != nil {
-		return a.requireFamilyPermission(w, ctx, user, *post.FamilyID, "read")
+		var ownerID sql.NullInt64
+		if post.AuthorID != nil {
+			ownerID = sql.NullInt64{Int64: *post.AuthorID, Valid: true}
+		}
+		return a.requireFamilyPermissionOrOwnerForMenu(w, ctx, user, *post.FamilyID, "read", ownerID, "community")
 	}
 	return true
 }

@@ -21,6 +21,7 @@ export interface FamilyMember {
   canCreate: boolean
   canUpdate: boolean
   canDelete: boolean
+  sharedMenuKeys?: string[]
   joinedAt: string
 }
 
@@ -38,6 +39,7 @@ export interface FamilyInvitation {
   canCreate: boolean
   canUpdate: boolean
   canDelete: boolean
+  sharedMenuKeys?: string[]
   status: string
   createdAt: string
   respondedAt?: string
@@ -50,6 +52,7 @@ export interface FamilyPermissionPayload {
   canCreate: boolean
   canUpdate: boolean
   canDelete: boolean
+  sharedMenuKeys?: string[]
 }
 
 export interface FamilyInvitePayload {
@@ -59,4 +62,5 @@ export interface FamilyInvitePayload {
   canCreate: boolean
   canUpdate: boolean
   canDelete: boolean
+  sharedMenuKeys?: string[]
 }

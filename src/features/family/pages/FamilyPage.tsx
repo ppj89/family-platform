@@ -21,6 +21,8 @@ import './family-page.css'
 
 type PermissionKey = 'canRead' | 'canCreate' | 'canUpdate' | 'canDelete'
 type PermissionValue = Record<PermissionKey, boolean>
+type ShareMenuKey = 'calendar' | 'ledger' | 'travel' | 'baby' | 'diary' | 'restaurant' | 'community'
+type ShareMenuValue = { sharedMenuKeys?: string[] }
 type PendingAction =
   | { type: 'create-family' }
   | { type: 'invite' }
@@ -38,6 +40,18 @@ const permissionLabels: Record<PermissionKey, string> = {
   canDelete: '삭제',
 }
 
+const shareMenuOptions: Array<{ key: ShareMenuKey; label: string }> = [
+  { key: 'calendar', label: '캘린더' },
+  { key: 'ledger', label: '가계부' },
+  { key: 'travel', label: '여행' },
+  { key: 'baby', label: '육아' },
+  { key: 'diary', label: '일기' },
+  { key: 'restaurant', label: '맛집' },
+  { key: 'community', label: '커뮤니티' },
+]
+
+const defaultSharedMenuKeys = shareMenuOptions.map((item) => item.key)
+
 const roleOptions = [
   { label: '가족구성원', value: 'MEMBER' },
   { label: '가족관리자', value: 'FAMILY_ADMIN' },
@@ -50,6 +64,7 @@ const defaultInvite = (): FamilyInvitePayload => ({
   canCreate: true,
   canUpdate: true,
   canDelete: false,
+  sharedMenuKeys: defaultSharedMenuKeys,
 })
 
 function roleText(role: string) {
@@ -59,6 +74,18 @@ function roleText(role: string) {
 function permissionsText(item: PermissionValue) {
   const parts = permissionKeys.filter((key) => item[key]).map((key) => permissionLabels[key])
   return parts.length ? parts.join('/') : '권한 없음'
+}
+
+function sharedMenuKeys(item: ShareMenuValue) {
+  const keys = item.sharedMenuKeys ?? defaultSharedMenuKeys
+  return keys.filter((key): key is ShareMenuKey => shareMenuOptions.some((option) => option.key === key))
+}
+
+function sharedMenusText(item: ShareMenuValue) {
+  const keys = sharedMenuKeys(item)
+  if (!keys.length) return '공유 메뉴 없음'
+  if (keys.length === shareMenuOptions.length) return '전체 메뉴 공유'
+  return keys.map((key) => shareMenuOptions.find((option) => option.key === key)?.label || key).join('/')
 }
 
 function invitationTarget(invitation: FamilyInvitation) {
@@ -101,6 +128,39 @@ function PermissionChips({
           {permissionLabels[key]}
         </button>
       ))}
+    </div>
+  )
+}
+
+function ShareMenuChips({
+  className = '',
+  value,
+  onChange,
+}: {
+  className?: string
+  value: ShareMenuValue
+  onChange: (key: ShareMenuKey, checked: boolean) => void
+}) {
+  const keys = sharedMenuKeys(value)
+  const allChecked = shareMenuOptions.every((option) => keys.includes(option.key))
+
+  return (
+    <div className={`fp-family-share-menu ${className}`}>
+      <span>공유 메뉴</span>
+      <div className="fp-family-permission-chips">
+        <button
+          className={allChecked ? 'active' : ''}
+          type="button"
+          onClick={() => shareMenuOptions.forEach((option) => onChange(option.key, !allChecked))}
+        >
+          전체
+        </button>
+        {shareMenuOptions.map((option) => (
+          <button className={keys.includes(option.key) ? 'active' : ''} key={option.key} type="button" onClick={() => onChange(option.key, !keys.includes(option.key))}>
+            {option.label}
+          </button>
+        ))}
+      </div>
     </div>
   )
 }
@@ -175,6 +235,23 @@ export function FamilyPage() {
     setEditingMember((current) => (current ? { ...current, [key]: checked } : current))
   }
 
+  function updateInviteSharedMenu(key: ShareMenuKey, checked: boolean) {
+    setInviteForm((current) => {
+      const keys = sharedMenuKeys(current)
+      const next = checked ? Array.from(new Set([...keys, key])) : keys.filter((item) => item !== key)
+      return { ...current, sharedMenuKeys: next }
+    })
+  }
+
+  function updateEditingSharedMenu(key: ShareMenuKey, checked: boolean) {
+    setEditingMember((current) => {
+      if (!current) return current
+      const keys = sharedMenuKeys(current)
+      const next = checked ? Array.from(new Set([...keys, key])) : keys.filter((item) => item !== key)
+      return { ...current, sharedMenuKeys: next }
+    })
+  }
+
   async function runPending() {
     if (!pending) return
     try {
@@ -196,6 +273,7 @@ export function FamilyPage() {
           canCreate: editingMember.canCreate,
           canUpdate: editingMember.canUpdate,
           canDelete: editingMember.canDelete,
+          sharedMenuKeys: sharedMenuKeys(editingMember),
         })
         setEditingMember(null)
         setToastMessage('권한을 수정했습니다.')
@@ -281,6 +359,7 @@ export function FamilyPage() {
                                 onChange={(value) => setEditingMember((current) => (current ? { ...current, role: value } : current))}
                               />
                               <PermissionChips value={editingMember} onChange={updateEditingPermission} />
+                              <ShareMenuChips value={editingMember} onChange={updateEditingSharedMenu} />
                             </div>
                             <div className="fp-row-actions">
                               <button className="fp-button fp-button-primary fp-button-small" type="button" onClick={() => setPending({ type: 'member-update', member })}>
@@ -299,7 +378,7 @@ export function FamilyPage() {
                                 {isSelf ? <em>(본인)</em> : null}
                               </strong>
                               <p>{member.email || '이메일 없음'}</p>
-                              <small>{roleText(member.role)} · {permissionsText(member)}</small>
+                              <small>{roleText(member.role)} · {permissionsText(member)} · {sharedMenusText(member)}</small>
                             </div>
                             <div className="fp-row-actions">
                               {canManageFamily ? (
@@ -340,12 +419,13 @@ export function FamilyPage() {
                     onChange={(value) => setInviteForm((current) => ({ ...current, role: value }))}
                   />
                   <PermissionChips value={inviteForm} onChange={updateInvitePermission} />
+                  <ShareMenuChips value={inviteForm} onChange={updateInviteSharedMenu} />
                   <button className="fp-button fp-button-primary fp-family-invite-submit" type="submit">초대 보내기</button>
                 </form>
               ) : (
                 <div className="fp-family-readonly-note">
                   <strong>{roleText(currentMember?.role || 'MEMBER')}</strong>
-                  <p>{currentMember ? permissionsText(currentMember) : '가족관리자가 부여한 권한으로 이용할 수 있습니다.'}</p>
+                  <p>{currentMember ? `${permissionsText(currentMember)} · ${sharedMenusText(currentMember)}` : '관리자가 부여한 권한으로 이용할 수 있습니다.'}</p>
                 </div>
               )}
 
@@ -358,7 +438,7 @@ export function FamilyPage() {
                         <article className="fp-family-row compact" key={invitation.id}>
                           <div>
                             <strong>{invitationTarget(invitation)}</strong>
-                            <p>{roleText(invitation.role)} · {permissionsText(invitation)}</p>
+                            <p>{roleText(invitation.role)} · {permissionsText(invitation)} · {sharedMenusText(invitation)}</p>
                           </div>
                           <div className="fp-row-actions">
                             <button className="fp-button fp-button-danger fp-button-small" type="button" onClick={() => setPending({ type: 'invite-cancel', invitation })}>
@@ -415,7 +495,7 @@ function ReceivedInvites({
               <div>
                 <strong>{invitation.familyName}</strong>
                 <p>{invitation.inviterName || '초대한 사용자'}</p>
-                <small>{roleText(invitation.role)} · {permissionsText(invitation)}</small>
+                <small>{roleText(invitation.role)} · {permissionsText(invitation)} · {sharedMenusText(invitation)}</small>
               </div>
               <div className="fp-row-actions">
                 <button className="fp-button fp-button-primary fp-button-small" type="button" onClick={() => onAccept(invitation)}>

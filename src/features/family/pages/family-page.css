@@ -262,6 +262,17 @@
   min-width: 0;
 }
 
+.fp-family-share-menu {
+  display: grid;
+  gap: 8px;
+}
+
+.fp-family-share-menu > span {
+  color: #6b7280;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .fp-family-permission-chips button {
   height: 28px;
   padding: 0 11px;
