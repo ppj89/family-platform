@@ -552,11 +552,11 @@
 
 .auth-session-dialog {
   position: relative;
-  width: min(520px, 100%);
+  width: min(440px, 100%);
   display: grid;
-  gap: 18px;
-  padding: 32px;
-  border-radius: 24px;
+  gap: 14px;
+  padding: 28px;
+  border-radius: 22px;
   background: #ffffff;
   color: #191f28;
   box-shadow: 0 28px 72px rgba(15, 23, 42, 0.22);
@@ -566,7 +566,7 @@
   width: calc(100% - 62px);
   max-width: none;
   margin: 0;
-  font-size: var(--auth-font-title);
+  font-size: 22px;
   line-height: 1.35;
   font-weight: var(--auth-weight-body);
   word-break: keep-all;
@@ -576,7 +576,7 @@
 .auth-session-dialog p {
   margin: 0;
   color: #4e5968;
-  font-size: var(--auth-font-control);
+  font-size: 15px;
   line-height: 1.5;
   font-weight: var(--auth-weight-body);
 }
@@ -588,8 +588,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 46px;
-  height: 46px;
+  width: 42px;
+  height: 42px;
   border: 0;
   border-radius: 14px;
   background: #f2f4f6;
@@ -601,16 +601,16 @@
 
 .auth-session-actions {
   display: grid;
-  grid-template-columns: 1fr 1.4fr;
-  gap: 14px;
-  margin-top: 10px;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
 }
 
 .auth-session-actions button {
-  min-height: 52px;
+  min-height: 48px;
   border: 0;
   border-radius: 14px;
-  font-size: var(--auth-font-control);
+  font-size: 15px;
   font-weight: var(--auth-weight-body);
 }
 
@@ -936,7 +936,7 @@
 
   .auth-session-dialog h2 {
     width: calc(100% - 56px);
-    font-size: var(--auth-font-title);
+    font-size: 22px;
   }
 
   .auth-recovery-dialog {

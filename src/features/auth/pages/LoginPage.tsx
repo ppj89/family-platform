@@ -623,14 +623,14 @@ export function LoginPage() {
             <button className="auth-session-close" type="button" aria-label="닫기" onClick={closeSessionConfirm}>
               X
             </button>
-            <h2 id="auth-session-title">이미 로그인된 세션이 있습니다</h2>
-            <p>기존 세션을 종료하고 다시 로그인할까요?</p>
+            <h2 id="auth-session-title">이미 로그인 되어 있습니다.</h2>
+            <p>기존 로그인을 종료하고 다시 로그인할까요?</p>
             <div className="auth-session-actions">
               <button type="button" onClick={closeSessionConfirm}>
                 취소
               </button>
               <button type="button" onClick={forceLogin}>
-                기존 세션 종료
+                확인
               </button>
             </div>
           </section>
