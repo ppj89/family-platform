@@ -18,10 +18,20 @@ import { apiActionMessage, apiRequest } from './shared/api/client'
 import { listReadableFamilies, selectReadableFamily } from './shared/api/family'
 import './app.css'
 
+type AppTheme = 'light' | 'dark'
+
 type MenuItem = {
   label: string
   icon: ReactNode
   iconClass?: string
+}
+
+const appThemeKey = 'family-platform-app-theme'
+
+function initialAppTheme(): AppTheme {
+  const stored = window.localStorage.getItem(appThemeKey)
+  if (stored === 'dark' || stored === 'light') return stored
+  return window.matchMedia?.('(prefers-color-scheme: dark)')?.matches ? 'dark' : 'light'
 }
 
 function MenuSvg({ children }: { children: ReactNode }) {
@@ -216,6 +226,7 @@ export default function App() {
   const [isAccountLoading, setIsAccountLoading] = useState(false)
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const [theme, setTheme] = useState<AppTheme>(initialAppTheme)
   const pageEyebrow = activeMenu === '관리자'
     ? '권한과 설정 관리'
     : activeMenu === '가계부' || activeMenu === '여행' || activeMenu === '홈'
@@ -231,6 +242,12 @@ export default function App() {
     window.addEventListener('family-platform-auth-invalid', handleAuthInvalid)
     return () => window.removeEventListener('family-platform-auth-invalid', handleAuthInvalid)
   }, [])
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.body.classList.toggle('dark', theme === 'dark')
+    window.localStorage.setItem(appThemeKey, theme)
+  }, [theme])
 
   if (!hasAuthToken()) {
     return <LoginPage />
@@ -279,8 +296,12 @@ export default function App() {
     })
   }
 
+  function toggleTheme() {
+    setTheme((current) => (current === 'dark' ? 'light' : 'dark'))
+  }
+
   return (
-    <div className={['fp-shell', isSidebarCollapsed ? 'sidebar-collapsed' : ''].filter(Boolean).join(' ')}>
+    <div className={['fp-shell', `theme-${theme}`, isSidebarCollapsed ? 'sidebar-collapsed' : ''].filter(Boolean).join(' ')}>
       <aside className="fp-sidebar">
         <div className="fp-brand">
           <span>FP</span>
@@ -324,7 +345,13 @@ export default function App() {
             <h1>{activeMenu}</h1>
           </div>
           <div className="fp-topbar-actions">
-            <button className="fp-topbar-button fp-icon-button" type="button" aria-label="다크모드">
+            <button
+              className="fp-topbar-button fp-icon-button"
+              type="button"
+              aria-label={theme === 'dark' ? '라이트모드' : '다크모드'}
+              title={theme === 'dark' ? '라이트모드' : '다크모드'}
+              onClick={toggleTheme}
+            >
               <svg className="fp-action-icon" aria-hidden="true" fill="none" viewBox="0 0 24 24">
                 <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
               </svg>

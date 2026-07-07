@@ -291,6 +291,69 @@
   box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03);
 }
 
+html[data-theme='dark'],
+html[data-theme='dark'] body {
+  background: #0f172a;
+}
+
+html[data-theme='dark'] .fp-shell {
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+html[data-theme='dark'] .fp-sidebar {
+  border-color: #253244;
+  background: #111827;
+}
+
+html[data-theme='dark'] .fp-brand strong,
+html[data-theme='dark'] .fp-topbar h1,
+html[data-theme='dark'] .fp-card h2,
+html[data-theme='dark'] .fp-card h3,
+html[data-theme='dark'] .fp-card strong {
+  color: #f8fafc;
+}
+
+html[data-theme='dark'] .fp-brand small,
+html[data-theme='dark'] .fp-eyebrow {
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .fp-nav button {
+  color: #cbd5e1;
+}
+
+html[data-theme='dark'] .fp-nav-icon {
+  color: #94a3b8;
+}
+
+html[data-theme='dark'] .fp-nav button.active {
+  background: #1e3a5f;
+  color: #93c5fd;
+}
+
+html[data-theme='dark'] .fp-nav button.active .fp-nav-icon,
+html[data-theme='dark'] .fp-nav button.active .fp-nav-label {
+  color: #93c5fd;
+}
+
+html[data-theme='dark'] .fp-topbar-button,
+html[data-theme='dark'] .fp-notification-button,
+html[data-theme='dark'] .fp-sidebar-toggle {
+  border-color: #334155;
+  background: #111827;
+  color: #e2e8f0;
+  box-shadow: inset 0 0 0 1px #334155;
+}
+
+html[data-theme='dark'] .fp-card,
+html[data-theme='dark'] .fp-empty-panel,
+html[data-theme='dark'] .fp-confirm-dialog {
+  border-color: #334155;
+  background: #111827;
+  color: #e2e8f0;
+}
+
 .fp-empty-panel {
   padding: 28px;
 }
