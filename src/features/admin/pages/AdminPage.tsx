@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react'
+import { type DragEvent, useEffect, useState } from 'react'
+import { CgChevronDown, CgChevronUp } from 'react-icons/cg'
 import { apiActionMessage } from '../../../shared/api/client'
 import { listCommonCodeGroupsWithCodes, type CommonCodeGroupWithCodes } from '../../../shared/api/commonCodes'
 import { ConfirmDialog, ToastMessage } from '../../../shared/components'
@@ -112,6 +113,16 @@ function moveItem(items: AdminMenuItem[], index: number, direction: -1 | 1) {
   return next
 }
 
+function moveItemToTarget(items: AdminMenuItem[], sourceKey: string, targetKey: string) {
+  const sourceIndex = items.findIndex((item) => item.key === sourceKey)
+  const targetIndex = items.findIndex((item) => item.key === targetKey)
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return items
+  const next = [...items]
+  const [item] = next.splice(sourceIndex, 1)
+  next.splice(targetIndex, 0, item)
+  return next
+}
+
 function codeGroupsFromApi(items: CommonCodeGroupWithCodes[]): AdminCodeGroup[] {
   return items
     .filter((group) => group.active)
@@ -142,6 +153,8 @@ export default function AdminPage() {
   const [inquiriesLoading, setInquiriesLoading] = useState(false)
   const [selectedInquiryId, setSelectedInquiryId] = useState<number | null>(null)
   const [replyMessage, setReplyMessage] = useState('')
+  const [draggingMenuKey, setDraggingMenuKey] = useState<string | null>(null)
+  const [dragOverMenuKey, setDragOverMenuKey] = useState<string | null>(null)
 
   useEffect(() => {
     let alive = true
@@ -172,11 +185,21 @@ export default function AdminPage() {
 
   const visibleMenuCount = menus.filter((menu) => menu.visible).length
   const isPlatformAdmin = Boolean(profile?.platformAdmin)
+  const visibleAdminTabs = adminTabs.filter((tab) => tab.key !== 'account-inquiries' || isPlatformAdmin)
   const selectedInquiry = accountInquiries.find((item) => item.id === selectedInquiryId) ?? accountInquiries[0] ?? null
   const selectedReplyTarget = inquiryReplyTarget(selectedInquiry)
 
   useEffect(() => {
+    if (!loading && activeTab === 'account-inquiries' && !isPlatformAdmin) {
+      setActiveTab('menus')
+      setAccountInquiries([])
+      setSelectedInquiryId(null)
+    }
+  }, [activeTab, isPlatformAdmin, loading])
+
+  useEffect(() => {
     if (activeTab !== 'account-inquiries') return
+    if (!isPlatformAdmin) return
     let alive = true
     async function loadInquiries() {
       setInquiriesLoading(true)
@@ -186,7 +209,7 @@ export default function AdminPage() {
         setAccountInquiries(items)
         setSelectedInquiryId((current) => (items.some((item) => item.id === current) ? current : items[0]?.id ?? null))
       } catch (error) {
-        if (alive) setToastMessage(apiActionMessage(error, '계정 문의를 불러오지 못했습니다.'))
+        if (alive && isPlatformAdmin) setToastMessage(apiActionMessage(error, '계정 문의를 불러오지 못했습니다.'))
       } finally {
         if (alive) setInquiriesLoading(false)
       }
@@ -195,7 +218,7 @@ export default function AdminPage() {
     return () => {
       alive = false
     }
-  }, [activeTab, inquiryStatus])
+  }, [activeTab, inquiryStatus, isPlatformAdmin])
 
   function startEdit(menu: AdminMenuItem) {
     setEditingKey(menu.key)
@@ -254,6 +277,38 @@ export default function AdminPage() {
     })
   }
 
+  function handleMenuDragStart(event: DragEvent<HTMLElement>, menu: AdminMenuItem) {
+    if (editingKey) {
+      event.preventDefault()
+      return
+    }
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', menu.key)
+    setDraggingMenuKey(menu.key)
+  }
+
+  function handleMenuDragOver(event: DragEvent<HTMLElement>, menu: AdminMenuItem) {
+    if (!draggingMenuKey || draggingMenuKey === menu.key) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'move'
+    setDragOverMenuKey(menu.key)
+  }
+
+  function handleMenuDrop(event: DragEvent<HTMLElement>, menu: AdminMenuItem) {
+    event.preventDefault()
+    const sourceKey = event.dataTransfer.getData('text/plain') || draggingMenuKey
+    setDraggingMenuKey(null)
+    setDragOverMenuKey(null)
+    if (!sourceKey || sourceKey === menu.key) return
+    setMenus((items) => moveItemToTarget(items, sourceKey, menu.key))
+    setToastMessage('메뉴 순서를 변경했습니다.')
+  }
+
+  function handleMenuDragEnd() {
+    setDraggingMenuKey(null)
+    setDragOverMenuKey(null)
+  }
+
   async function refreshAccountInquiries() {
     setInquiriesLoading(true)
     try {
@@ -305,7 +360,7 @@ export default function AdminPage() {
       <ToastMessage message={toastMessage} onClose={() => setToastMessage('')} />
 
       <div className="fp-admin-tabs admin-tabs" role="tablist" aria-label="관리자 설정">
-        {adminTabs.map((tab) => (
+        {visibleAdminTabs.map((tab) => (
           <button
             className={activeTab === tab.key ? 'active' : ''}
             key={tab.key}
@@ -336,7 +391,15 @@ export default function AdminPage() {
               const editing = editingKey === menu.key && draft
               const fixedAdmin = menu.key === 'admin'
               return (
-                <article className={`fp-admin-menu-row menu-edit-row${editing ? ' active' : ''}${!menu.visible ? ' muted' : ''}`} key={menu.key}>
+                <article
+                  className={`fp-admin-menu-row menu-edit-row${editing ? ' active' : ''}${!menu.visible ? ' muted' : ''}${draggingMenuKey === menu.key ? ' dragging' : ''}${dragOverMenuKey === menu.key ? ' drag-over' : ''}`}
+                  draggable={!editing}
+                  key={menu.key}
+                  onDragEnd={handleMenuDragEnd}
+                  onDragOver={(event) => handleMenuDragOver(event, menu)}
+                  onDragStart={(event) => handleMenuDragStart(event, menu)}
+                  onDrop={(event) => handleMenuDrop(event, menu)}
+                >
                   <span className="fp-admin-drag" aria-hidden="true">::</span>
 
                   {editing ? (
@@ -378,8 +441,12 @@ export default function AdminPage() {
                           {menu.visible ? '숨기기' : '표시'}
                         </button>
                         <button className="danger-button" type="button" onClick={() => requestDelete(menu)} disabled={fixedAdmin}>삭제</button>
-                        <button className="move-button" type="button" aria-label={`${menu.label} 위로 이동`} onClick={() => setMenus((items) => moveItem(items, index, -1))} disabled={index === 0}>⌃</button>
-                        <button className="move-button" type="button" aria-label={`${menu.label} 아래로 이동`} onClick={() => setMenus((items) => moveItem(items, index, 1))} disabled={index === menus.length - 1}>⌄</button>
+                        <button className="move-button" type="button" aria-label={`${menu.label} 위로 이동`} onClick={() => setMenus((items) => moveItem(items, index, -1))} disabled={index === 0}>
+                          <CgChevronUp aria-hidden="true" />
+                        </button>
+                        <button className="move-button" type="button" aria-label={`${menu.label} 아래로 이동`} onClick={() => setMenus((items) => moveItem(items, index, 1))} disabled={index === menus.length - 1}>
+                          <CgChevronDown aria-hidden="true" />
+                        </button>
                       </>
                     )}
                   </div>

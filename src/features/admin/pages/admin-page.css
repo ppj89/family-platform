@@ -71,44 +71,63 @@
 
 .fp-admin-menu-list {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .fp-admin-menu-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-height: 82px;
-  border: 0;
+  border: 1px solid #e5e8eb;
   border-radius: 8px;
-  padding: 10px;
-  background: #f4f8ff;
+  padding: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(25, 31, 40, 0.03);
+  cursor: grab;
+  transition: border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease, background 0.16s ease;
 }
 
 .fp-admin-menu-row.muted {
-  background: #f7f8fa;
+  background: #f8fafc;
   opacity: 0.78;
 }
 
 .fp-admin-menu-row.active {
   align-items: start;
-  background: #f4f8ff;
-  box-shadow: inset 0 0 0 1px #dcecff;
+  border-color: #d9e1ec;
+  background: #fff;
+  box-shadow: inset 0 0 0 1px #eef2f6;
+  cursor: default;
+}
+
+.fp-admin-menu-row.dragging {
+  opacity: 0.55;
+  cursor: grabbing;
+}
+
+.fp-admin-menu-row.drag-over {
+  border-color: #3182f6;
+  background: #f8fbff;
+  box-shadow: 0 8px 22px rgba(49, 130, 246, 0.12);
+  transform: translateY(-1px);
 }
 
 .fp-admin-drag {
   display: grid;
-  width: 24px;
-  height: 34px;
+  width: 28px;
+  height: 38px;
   place-items: center;
-  border-radius: 10px;
-  background: #e9edf2;
+  border: 1px solid #e5e8eb;
+  border-radius: 12px;
+  background: #f8fafc;
   color: #8b95a1;
   font-size: 14px;
   font-weight: 900;
   line-height: 1;
   letter-spacing: -2px;
+  cursor: grab;
 }
 
 .fp-admin-menu-copy {
@@ -220,11 +239,11 @@
 .fp-admin-row-actions button {
   min-width: 50px;
   min-height: 36px;
-  border: 0;
-  border-radius: 14px;
+  border: 1px solid transparent;
+  border-radius: 12px;
   padding: 0 14px;
-  background: #eef6ff;
-  color: #1b64da;
+  background: #f3f7fc;
+  color: #2563eb;
   cursor: pointer;
   font: inherit;
   font-size: 13px;
@@ -234,13 +253,14 @@
 }
 
 .fp-admin-row-actions button:nth-child(2) {
-  background: #f2f4f6;
+  border-color: #e5e8eb;
+  background: #f8fafc;
   color: #4e5968;
 }
 
 .fp-admin-row-actions .danger-button {
-  background: #fff1f3;
-  color: #ff3b57;
+  background: #fff5f6;
+  color: #e5484d;
 }
 
 .fp-admin-row-actions .save-button {
@@ -249,7 +269,8 @@
 }
 
 .fp-admin-row-actions .cancel-button {
-  background: #f2f4f6;
+  border-color: #e5e8eb;
+  background: #f8fafc;
   color: #4e5968;
 }
 
@@ -259,10 +280,16 @@
   width: 36px;
   padding: 0;
   place-items: center;
-  border-radius: 14px;
-  background: #dcecff;
-  color: #1b64da;
-  font-size: 17px;
+  border-color: #d9e1ec;
+  border-radius: 12px;
+  background: #fff;
+  color: #2563eb;
+  font-size: 20px;
+}
+
+.fp-admin-row-actions .move-button svg {
+  width: 20px;
+  height: 20px;
 }
 
 .fp-admin-row-actions button:disabled {
@@ -640,6 +667,17 @@ html[data-theme='dark'] .fp-admin-inquiry-toolbar,
 html[data-theme='dark'] .fp-admin-inquiry-meta div,
 html[data-theme='dark'] .fp-admin-inquiry-message {
   background: #1f2937;
+}
+
+html[data-theme='dark'] .fp-admin-menu-row,
+html[data-theme='dark'] .fp-admin-drag,
+html[data-theme='dark'] .fp-admin-row-actions .move-button {
+  border-color: #334155;
+}
+
+html[data-theme='dark'] .fp-admin-drag,
+html[data-theme='dark'] .fp-admin-row-actions .move-button {
+  background: #111827;
 }
 
 @media (max-width: 1024px) {
