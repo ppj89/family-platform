@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, FormEvent, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage, isAuthError } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField, ToastMessage } from '../../../shared/components'
 import { CALENDAR_CATEGORIES, COMMON_CODE_GROUPS, FAMILY_MEMBER_OPTIONS } from '../../../shared/constants/commonCodes'
@@ -21,6 +21,22 @@ import './calendar-page.css'
 
 type CalendarView = 'day' | 'week' | 'month' | 'year'
 type YearDisplayMode = 'calendar' | 'list'
+type QuickNavPosition = { x: number; y: number }
+
+const quickNavPositionKey = 'family-platform-calendar-quick-nav-position'
+
+function readQuickNavPosition() {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(quickNavPositionKey)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<QuickNavPosition>
+    if (typeof parsed.x !== 'number' || typeof parsed.y !== 'number') return null
+    return parsed as QuickNavPosition
+  } catch {
+    return null
+  }
+}
 
 const shortWeekdays = ['일', '월', '화', '수', '목', '금', '토']
 
@@ -265,6 +281,18 @@ export default function CalendarPage() {
   const categoryOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.calendarCategories, CALENDAR_CATEGORIES)
   const memberOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.familyMembers, FAMILY_MEMBER_OPTIONS)
   const today = todayKey()
+  const quickNavRef = useRef<HTMLElement | null>(null)
+  const quickNavDragRef = useRef({
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+    moved: false,
+  })
+  const suppressQuickNavClickRef = useRef(false)
+  const calendarTopRef = useRef<HTMLElement | null>(null)
+  const calendarListEndRef = useRef<HTMLDivElement | null>(null)
   const formRef = useRef<HTMLFormElement>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
   const [view, setView] = useState<CalendarView>('month')
@@ -276,6 +304,7 @@ export default function CalendarPage() {
   const [yearSelectedDate, setYearSelectedDate] = useState<string | null>(null)
   const [items, setItems] = useState<ScheduleItem[]>([])
   const [form, setForm] = useState<SchedulePayload>(() => emptyPayload(today))
+  const [isFormDialogOpen, setIsFormDialogOpen] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [editingSource, setEditingSource] = useState<ScheduleItem | null>(null)
   const [editingOccurrenceDate, setEditingOccurrenceDate] = useState<string | null>(null)
@@ -285,6 +314,12 @@ export default function CalendarPage() {
   const [scheduleDetail, setScheduleDetail] = useState<CalendarScheduleInstance | null>(null)
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
+  const [isQuickNavOpen, setIsQuickNavOpen] = useState(false)
+  const [isQuickNavDragging, setIsQuickNavDragging] = useState(false)
+  const [quickNavPosition, setQuickNavPosition] = useState<QuickNavPosition | null>(() => readQuickNavPosition())
+  const quickNavStyle = quickNavPosition
+    ? ({ left: `${quickNavPosition.x}px`, top: `${quickNavPosition.y}px` } satisfies CSSProperties)
+    : undefined
 
   const range = useMemo(() => rangeForView(view, dayDate, weekDate, monthDate), [dayDate, monthDate, view, weekDate])
   const visibleItems = useMemo(() => expandScheduleInstances(items, range.startDate, range.endDate), [items, range.endDate, range.startDate])
@@ -315,6 +350,76 @@ export default function CalendarPage() {
   const cells = useMemo(() => monthCells(monthDate), [monthDate])
   const weekDateKeys = useMemo(() => weekDays(weekDate), [weekDate])
   const yearMonthItems = useMemo(() => yearMonths(monthDate.getFullYear()), [monthDate])
+
+  function clampQuickNavPosition(x: number, y: number) {
+    const rect = quickNavRef.current?.getBoundingClientRect()
+    const width = rect?.width || 44
+    const height = rect?.height || 44
+    const margin = 8
+    return {
+      x: Math.min(Math.max(margin, x), Math.max(margin, window.innerWidth - width - margin)),
+      y: Math.min(Math.max(margin, y), Math.max(margin, window.innerHeight - height - margin)),
+    }
+  }
+
+  function storeQuickNavPosition(position: QuickNavPosition) {
+    try {
+      window.localStorage.setItem(quickNavPositionKey, JSON.stringify(position))
+    } catch {
+      // Dragging should still work if storage is unavailable.
+    }
+  }
+
+  function startQuickNavDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0) return
+    const rect = quickNavRef.current?.getBoundingClientRect()
+    if (!rect) return
+    quickNavDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: rect.left,
+      originY: rect.top,
+      moved: false,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setIsQuickNavDragging(true)
+  }
+
+  function moveQuickNav(event: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = quickNavDragRef.current
+    if (drag.pointerId !== event.pointerId) return
+    const diffX = event.clientX - drag.startX
+    const diffY = event.clientY - drag.startY
+    if (Math.abs(diffX) + Math.abs(diffY) > 4) {
+      drag.moved = true
+      suppressQuickNavClickRef.current = true
+    }
+    if (!drag.moved) return
+    setQuickNavPosition(clampQuickNavPosition(drag.originX + diffX, drag.originY + diffY))
+  }
+
+  function stopQuickNavDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = quickNavDragRef.current
+    if (drag.pointerId !== event.pointerId) return
+    event.currentTarget.releasePointerCapture(event.pointerId)
+    setIsQuickNavDragging(false)
+    quickNavDragRef.current.pointerId = -1
+    if (!drag.moved) return
+    const rect = quickNavRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const position = clampQuickNavPosition(rect.left, rect.top)
+    setQuickNavPosition(position)
+    storeQuickNavPosition(position)
+  }
+
+  function scrollCalendarTop() {
+    calendarTopRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  function scrollCalendarListEnd() {
+    calendarListEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' })
+  }
 
   function changeDayDate(value: string) {
     setDayDate(value)
@@ -396,6 +501,33 @@ export default function CalendarPage() {
     void reloadSchedules()
   }, [range.endDate])
 
+  useEffect(() => {
+    function clampOnResize() {
+      setQuickNavPosition((current) => {
+        if (!current) return current
+        const position = clampQuickNavPosition(current.x, current.y)
+        storeQuickNavPosition(position)
+        return position
+      })
+    }
+
+    window.addEventListener('resize', clampOnResize)
+    return () => window.removeEventListener('resize', clampOnResize)
+  }, [])
+
+  useEffect(() => {
+    if (!quickNavPosition) return
+    const frame = window.requestAnimationFrame(() => {
+      setQuickNavPosition((current) => {
+        if (!current) return current
+        const position = clampQuickNavPosition(current.x, current.y)
+        storeQuickNavPosition(position)
+        return position
+      })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [isQuickNavOpen])
+
   function setActiveDate(dateKey: string) {
     setSelectedDate(dateKey)
     if (view === 'day') setDayDate(dateKey)
@@ -434,7 +566,6 @@ export default function CalendarPage() {
 
   function focusScheduleTitleInput() {
     window.setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
       titleInputRef.current?.focus({ preventScroll: true })
     }, 0)
   }
@@ -444,7 +575,15 @@ export default function CalendarPage() {
     setEditingSource(null)
     setEditingOccurrenceDate(null)
     setForm(emptyPayload(dateKey))
-    if (options?.focus) focusScheduleTitleInput()
+    if (options?.focus) {
+      setIsFormDialogOpen(true)
+      focusScheduleTitleInput()
+    }
+  }
+
+  function closeFormDialog() {
+    setIsFormDialogOpen(false)
+    if (editingId) startCreate(form.scheduleDate)
   }
 
   function startEdit(item: CalendarScheduleInstance) {
@@ -465,10 +604,8 @@ export default function CalendarPage() {
     })
     setDayDialog(null)
     setScheduleDetail(null)
-    window.setTimeout(() => {
-      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      titleInputRef.current?.focus({ preventScroll: true })
-    }, 0)
+    setIsFormDialogOpen(true)
+    focusScheduleTitleInput()
   }
 
   function requestSave(event: FormEvent) {
@@ -499,6 +636,7 @@ export default function CalendarPage() {
       const savedDate = form.scheduleDate
       startCreate(savedDate)
       setSelectedDate(savedDate)
+      setIsFormDialogOpen(false)
       setMessage(editingId ? '일정을 수정했습니다.' : '일정을 저장했습니다.')
     } catch (error) {
       setMessage(apiActionMessage(error, '일정을 저장하지 못했습니다.'))
@@ -523,6 +661,7 @@ export default function CalendarPage() {
       await reloadSchedules()
       startCreate(savedDate)
       setSelectedDate(savedDate)
+      setIsFormDialogOpen(false)
       setMessage('일정을 수정했습니다.')
     } catch (error) {
       setMessage(apiActionMessage(error, '일정을 수정하지 못했습니다.'))
@@ -769,7 +908,7 @@ export default function CalendarPage() {
     <>
       <section className="fp-calendar content-grid">
         {loading ? <div className="fp-loading-blocker">처리 중입니다.</div> : null}
-        <article className="panel wide family-calendar-panel fp-calendar-left">
+        <article className="panel wide family-calendar-panel fp-calendar-left" ref={calendarTopRef}>
           <section className="fp-calendar-left-card">
             <header className="fp-calendar-header">
               <div className="fp-calendar-actions calendar-toolbar">
@@ -792,6 +931,13 @@ export default function CalendarPage() {
                     </button>
                   ))}
                 </div>
+                <button
+                  className="fp-calendar-input-button"
+                  type="button"
+                  onClick={() => startCreate(selectedDate, { focus: true })}
+                >
+                  입력
+                </button>
               </div>
             </header>
 
@@ -877,13 +1023,6 @@ export default function CalendarPage() {
                         목록형
                       </button>
                     </div>
-                    <button
-                      className="year-mobile-add-button"
-                      type="button"
-                      onClick={() => startCreate(selectedDate, { focus: true })}
-                    >
-                      일정등록
-                    </button>
                   </div>
                   <section className={`fp-year-board year-schedule-grid year-mode-${yearMode}`}>
                     {yearMonthItems.map((monthItem) => {
@@ -1026,13 +1165,57 @@ export default function CalendarPage() {
                   ? agendaItems.map((item) => renderScheduleRow(item))
                   : <p className="fp-empty-text">등록된 일정이 없습니다.</p>}
             </div>
+            <div className="fp-calendar-list-end" ref={calendarListEndRef} aria-hidden="true" />
           </section>
-        </article>
 
-        <form className="panel schedule-form-card fp-calendar-right fp-schedule-form" ref={formRef} onSubmit={requestSave}>
+          <nav
+            className={`fp-calendar-scroll-nav${isQuickNavOpen ? ' open' : ''}${quickNavPosition ? ' positioned' : ''}${isQuickNavDragging ? ' dragging' : ''}`}
+            style={quickNavStyle}
+            ref={quickNavRef}
+            aria-label="캘린더 빠른 이동"
+          >
+            {isQuickNavOpen ? (
+              <div className="fp-calendar-scroll-menu">
+                <button type="button" aria-label="위로 이동" onClick={scrollCalendarTop}>↑</button>
+                <button type="button" aria-label="아래로 이동" onClick={scrollCalendarListEnd}>↓</button>
+                <button type="button" onClick={() => startCreate(selectedDate, { focus: true })}>입력</button>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className="fp-calendar-scroll-toggle"
+              aria-label={isQuickNavOpen ? '빠른 이동 접기' : '빠른 이동 열기'}
+              aria-expanded={isQuickNavOpen}
+              onPointerDown={startQuickNavDrag}
+              onPointerMove={moveQuickNav}
+              onPointerUp={stopQuickNavDrag}
+              onPointerCancel={stopQuickNavDrag}
+              onClick={() => {
+                if (suppressQuickNavClickRef.current) {
+                  suppressQuickNavClickRef.current = false
+                  return
+                }
+                setIsQuickNavOpen((value) => !value)
+              }}
+            >
+              {isQuickNavOpen ? '-' : '+'}
+            </button>
+          </nav>
+
+          {isFormDialogOpen ? (
+            <div className="fp-calendar-form-backdrop" role="presentation" onClick={closeFormDialog}>
+              <form
+                className="panel schedule-form-card fp-calendar-right fp-calendar-form-dialog fp-schedule-form"
+                ref={formRef}
+                onSubmit={requestSave}
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="fp-calendar-form-title"
+                onClick={(event) => event.stopPropagation()}
+              >
             <header>
-              <h3>{editingId ? '일정 수정' : '일정 추가'}</h3>
-              {editingId ? <button type="button" className="fp-button fp-button-muted" onClick={() => startCreate(form.scheduleDate)}>취소</button> : null}
+              <h3 id="fp-calendar-form-title">{editingId ? '일정 수정' : '일정 입력'}</h3>
+              <button type="button" className="fp-calendar-form-close" aria-label="닫기" onClick={closeFormDialog}>x</button>
             </header>
         <div className="fp-form-grid">
           <label className="fp-field span-2">
@@ -1095,7 +1278,10 @@ export default function CalendarPage() {
           </label>
         </div>
             <button className="fp-button fp-button-primary" type="submit">{editingId ? '저장' : '추가'}</button>
-        </form>
+              </form>
+            </div>
+          ) : null}
+        </article>
       </section>
 
       {dayDialog ? (

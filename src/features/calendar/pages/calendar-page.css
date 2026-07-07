@@ -16,7 +16,7 @@
 
 .fp-calendar.content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 300px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 16px;
   align-items: start;
   width: 100%;
@@ -134,12 +134,135 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 
 .fp-calendar-actions {
   display: grid;
-  grid-template-columns: minmax(250px, 320px) minmax(0, 1fr);
+  grid-template-columns: minmax(250px, 320px) minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
   width: 100%;
   min-width: 0;
   overflow: visible;
+}
+
+.fp-calendar-input-button {
+  display: inline-flex;
+  min-width: 86px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 14px;
+  padding: 0 18px;
+  background: #edf4ff;
+  color: #1b64da;
+  cursor: pointer;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: inset 0 0 0 1px #bfdcff;
+}
+
+.fp-calendar-list-end {
+  width: 100%;
+  height: 1px;
+}
+
+.fp-calendar-scroll-nav {
+  position: fixed;
+  z-index: 90;
+  right: 24px;
+  bottom: 24px;
+  width: 44px;
+  height: 44px;
+}
+
+.fp-calendar-scroll-nav.positioned {
+  right: auto;
+  bottom: auto;
+}
+
+.fp-calendar-scroll-nav.dragging {
+  user-select: none;
+}
+
+.fp-calendar-scroll-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: grid;
+  gap: 6px;
+  border: 1px solid #dfe5ec;
+  border-radius: 999px;
+  padding: 6px;
+  background: rgb(255 255 255 / 94%);
+  box-shadow: 0 12px 30px rgb(25 31 40 / 14%);
+  backdrop-filter: blur(8px);
+}
+
+.fp-calendar-scroll-menu button {
+  display: grid;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  padding: 0;
+  background: #f2f7ff;
+  color: #1b64da;
+  cursor: pointer;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.fp-calendar-scroll-menu button:nth-child(3) {
+  font-size: 13px;
+}
+
+.fp-calendar-scroll-menu button:first-child,
+.fp-calendar-scroll-menu button:nth-child(2) {
+  background: #f2f4f6;
+  color: #333d4b;
+}
+
+.fp-calendar-scroll-toggle {
+  display: grid;
+  place-items: center;
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  box-sizing: border-box;
+  border: 0;
+  border-radius: 999px !important;
+  padding: 0 !important;
+  background: #3182f6;
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1 !important;
+  text-align: center;
+  box-shadow: 0 12px 26px rgb(49 130 246 / 28%);
+  touch-action: none;
+}
+
+.fp-calendar-scroll-nav.open .fp-calendar-scroll-toggle {
+  background: #3182f6;
+  color: #fff;
+}
+
+.fp-calendar-input-button:focus-visible,
+.fp-calendar-scroll-menu button:focus-visible,
+.fp-calendar-scroll-toggle:focus-visible {
+  outline: 3px solid rgb(49 130 246 / 18%);
+  outline-offset: 2px;
 }
 
 .fp-calendar-month-nav {
@@ -1785,6 +1908,43 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   margin-top: 4px !important;
 }
 
+.fp-calendar-form-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(39, 49, 65, 0.46);
+}
+
+.fp-calendar .fp-calendar-form-dialog {
+  position: relative;
+  top: auto;
+  width: min(560px, calc(100vw - 40px));
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.22) !important;
+}
+
+.fp-calendar-form-close {
+  display: grid;
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 0;
+  border-radius: 14px;
+  background: #f7f8fa;
+  color: #4e5968;
+  cursor: pointer;
+  font: inherit;
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .fp-calendar-popup-backdrop {
   position: fixed;
   inset: 0;
@@ -2116,6 +2276,10 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
     max-width: none;
   }
 
+  .fp-calendar-input-button {
+    width: 100%;
+  }
+
   .fp-calendar-tabs {
     justify-self: stretch;
     width: 100%;
@@ -2163,6 +2327,33 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   .fp-calendar-month-nav {
     grid-template-columns: 38px minmax(0, 1fr) 38px;
     max-width: none;
+  }
+
+  .fp-calendar-input-button {
+    width: 100%;
+  }
+
+  .fp-calendar-scroll-nav {
+    right: 16px;
+    bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .fp-calendar-scroll-menu button {
+    width: 42px;
+    min-width: 42px;
+    max-width: 42px;
+    height: 42px;
+    min-height: 42px;
+    max-height: 42px;
+  }
+
+  .fp-calendar-scroll-nav .fp-calendar-scroll-toggle {
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
   }
 
   .fp-calendar-tabs {
@@ -2330,6 +2521,10 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 
   .fp-schedule-row {
     grid-template-columns: 1fr;
+  }
+
+  .fp-calendar-scroll-nav {
+    right: 12px;
   }
 
   .fp-row-actions {
