@@ -725,7 +725,6 @@ export default function LedgerPage() {
               <button type="button" aria-label="위로 이동" onClick={scrollLedgerTop}>↑</button>
               <button type="button" aria-label="아래로 이동" onClick={scrollLedgerListEnd}>↓</button>
               <button type="button" onClick={startCreateEntry}>입력</button>
-              <button type="button" className="collapse" aria-label="접기" onClick={() => setIsQuickNavOpen(false)}>-</button>
             </div>
           ) : null}
           <button

@@ -82,9 +82,8 @@
   z-index: 90;
   right: 24px;
   bottom: 24px;
-  display: grid;
-  justify-items: end;
-  gap: 8px;
+  width: 44px;
+  height: 44px;
 }
 
 .fp-ledger-scroll-nav.positioned {
@@ -97,6 +96,9 @@
 }
 
 .fp-ledger-scroll-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
   display: grid;
   gap: 6px;
   border: 1px solid #dfe5ec;
@@ -133,8 +135,7 @@
 }
 
 .fp-ledger-scroll-menu button:first-child,
-.fp-ledger-scroll-menu button:nth-child(2),
-.fp-ledger-scroll-menu button.collapse {
+.fp-ledger-scroll-menu button:nth-child(2) {
   background: #f2f4f6;
   color: #333d4b;
 }
@@ -167,8 +168,8 @@
 }
 
 .fp-ledger-scroll-nav.open .fp-ledger-scroll-toggle {
-  background: #edf4ff;
-  color: #1b64da;
+  background: #3182f6;
+  color: #fff;
 }
 
 .fp-ledger-scroll-menu button:focus-visible,
