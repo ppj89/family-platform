@@ -503,7 +503,7 @@
 .fp-toast {
   position: fixed;
   left: 50%;
-  top: 50%;
+  top: calc(92px + env(safe-area-inset-top, 0px));
   z-index: 30000;
   display: inline-flex;
   align-items: center;
@@ -523,7 +523,7 @@
   white-space: normal;
   word-break: keep-all;
   overflow-wrap: anywhere;
-  transform: translate(-50%, -50%);
+  transform: translateX(-50%);
 }
 
 .fp-empty-text {

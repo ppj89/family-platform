@@ -87,30 +87,49 @@
   gap: 8px;
 }
 
+.fp-ledger-scroll-nav.positioned {
+  right: auto;
+  bottom: auto;
+}
+
+.fp-ledger-scroll-nav.dragging {
+  user-select: none;
+}
+
 .fp-ledger-scroll-menu {
   display: grid;
   gap: 6px;
   border: 1px solid #dfe5ec;
-  border-radius: 18px;
-  padding: 8px;
+  border-radius: 999px;
+  padding: 6px;
   background: rgb(255 255 255 / 94%);
   box-shadow: 0 12px 30px rgb(25 31 40 / 14%);
   backdrop-filter: blur(8px);
 }
 
 .fp-ledger-scroll-menu button {
-  min-width: 54px;
-  height: 40px;
+  display: grid;
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  height: 44px;
+  min-height: 44px;
+  max-height: 44px;
+  place-items: center;
   border: 0;
-  border-radius: 14px;
-  padding: 0 13px;
+  border-radius: 999px;
+  padding: 0;
   background: #f2f7ff;
   color: #1b64da;
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 800;
   line-height: 1;
+}
+
+.fp-ledger-scroll-menu button:nth-child(3) {
+  font-size: 13px;
 }
 
 .fp-ledger-scroll-menu button:first-child,
@@ -123,14 +142,14 @@
 .fp-ledger-scroll-toggle {
   display: grid;
   place-items: center;
-  flex: 0 0 52px;
+  flex: 0 0 44px;
   aspect-ratio: 1 / 1;
-  width: 52px !important;
-  min-width: 52px !important;
-  max-width: 52px !important;
-  height: 52px !important;
-  min-height: 52px !important;
-  max-height: 52px !important;
+  width: 44px !important;
+  min-width: 44px !important;
+  max-width: 44px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
   box-sizing: border-box;
   border: 0;
   border-radius: 999px !important;
@@ -139,11 +158,12 @@
   color: #fff;
   cursor: pointer;
   font: inherit;
-  font-size: 28px;
-  font-weight: 500;
+  font-size: 24px;
+  font-weight: 700;
   line-height: 1 !important;
   text-align: center;
   box-shadow: 0 12px 26px rgb(49 130 246 / 28%);
+  touch-action: none;
 }
 
 .fp-ledger-scroll-nav.open .fp-ledger-scroll-toggle {
@@ -957,18 +977,22 @@
   }
 
   .fp-ledger-scroll-menu button {
-    min-width: 54px;
-    height: 36px;
-    padding: 0 10px;
+    width: 42px;
+    min-width: 42px;
+    max-width: 42px;
+    height: 42px;
+    min-height: 42px;
+    max-height: 42px;
+    padding: 0;
   }
 
   .fp-ledger-scroll-nav .fp-ledger-scroll-toggle {
-    width: 52px !important;
-    min-width: 52px !important;
-    max-width: 52px !important;
-    height: 52px !important;
-    min-height: 52px !important;
-    max-height: 52px !important;
+    width: 42px !important;
+    min-width: 42px !important;
+    max-width: 42px !important;
+    height: 42px !important;
+    min-height: 42px !important;
+    max-height: 42px !important;
   }
 
   .fp-ledger-filter {

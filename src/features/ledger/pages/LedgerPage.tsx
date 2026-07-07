@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
+import { type CSSProperties, FormEvent, type PointerEvent as ReactPointerEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { apiActionMessage, isAuthError } from '../../../shared/api/client'
 import { ConfirmDialog, DatePickerField, ToastMessage } from '../../../shared/components'
 import { COMMON_CODE_GROUPS, FAMILY_MEMBER_OPTIONS, LEDGER_CATEGORIES, LEDGER_ENTRY_TYPE_OPTIONS, LEDGER_PAYMENT_METHODS } from '../../../shared/constants/commonCodes'
@@ -13,6 +13,23 @@ type LedgerQueryMode = 'month' | 'period'
 type ConfirmState = 'save' | 'detail-save' | 'delete' | null
 type DetailMode = 'view' | 'edit'
 type LedgerSelectOption = { label: string; value: string }
+type QuickNavPosition = { x: number; y: number }
+
+const quickNavPositionKey = 'family-platform-ledger-quick-nav-position'
+
+function readQuickNavPosition() {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(quickNavPositionKey)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as Partial<QuickNavPosition>
+    if (typeof parsed.x !== 'number' || typeof parsed.y !== 'number') return null
+    return parsed as QuickNavPosition
+  } catch {
+    return null
+  }
+}
+
 type ParsedLedgerSms = {
   amount: number
   title: string
@@ -243,6 +260,16 @@ function LedgerCustomSelect({
 export default function LedgerPage() {
   const today = todayKey()
   const currentMonth = today.slice(0, 7)
+  const quickNavRef = useRef<HTMLElement | null>(null)
+  const quickNavDragRef = useRef({
+    pointerId: -1,
+    startX: 0,
+    startY: 0,
+    originX: 0,
+    originY: 0,
+    moved: false,
+  })
+  const suppressQuickNavClickRef = useRef(false)
   const ledgerTopRef = useRef<HTMLElement | null>(null)
   const ledgerListEndRef = useRef<HTMLDivElement | null>(null)
   const titleInputRef = useRef<HTMLInputElement>(null)
@@ -264,6 +291,8 @@ export default function LedgerPage() {
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState('')
   const [isQuickNavOpen, setIsQuickNavOpen] = useState(false)
+  const [isQuickNavDragging, setIsQuickNavDragging] = useState(false)
+  const [quickNavPosition, setQuickNavPosition] = useState<QuickNavPosition | null>(() => readQuickNavPosition())
   const [confirmAction, setConfirmAction] = useState<ConfirmState>(null)
   const [pendingDelete, setPendingDelete] = useState<LedgerEntry | null>(null)
   const ledgerCategoryOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.ledgerCategories, LEDGER_CATEGORIES)
@@ -275,6 +304,98 @@ export default function LedgerPage() {
     return monthRange(parseDateKey(`${monthValue}-01`))
   }, [monthValue, periodEnd, periodStart, queryMode])
   const groupedEntries = useMemo(() => groupEntriesByDate(entries), [entries])
+  const quickNavStyle = quickNavPosition
+    ? ({ left: `${quickNavPosition.x}px`, top: `${quickNavPosition.y}px` } satisfies CSSProperties)
+    : undefined
+
+  function clampQuickNavPosition(x: number, y: number) {
+    const rect = quickNavRef.current?.getBoundingClientRect()
+    const width = rect?.width || 44
+    const height = rect?.height || 44
+    const margin = 8
+    return {
+      x: Math.min(Math.max(margin, x), Math.max(margin, window.innerWidth - width - margin)),
+      y: Math.min(Math.max(margin, y), Math.max(margin, window.innerHeight - height - margin)),
+    }
+  }
+
+  function storeQuickNavPosition(position: QuickNavPosition) {
+    try {
+      window.localStorage.setItem(quickNavPositionKey, JSON.stringify(position))
+    } catch {
+      // Dragging should still work if storage is unavailable.
+    }
+  }
+
+  function startQuickNavDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.button !== 0) return
+    const rect = quickNavRef.current?.getBoundingClientRect()
+    if (!rect) return
+    quickNavDragRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      originX: rect.left,
+      originY: rect.top,
+      moved: false,
+    }
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setIsQuickNavDragging(true)
+  }
+
+  function moveQuickNav(event: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = quickNavDragRef.current
+    if (drag.pointerId !== event.pointerId) return
+    const diffX = event.clientX - drag.startX
+    const diffY = event.clientY - drag.startY
+    if (Math.abs(diffX) + Math.abs(diffY) > 4) {
+      drag.moved = true
+      suppressQuickNavClickRef.current = true
+    }
+    if (!drag.moved) return
+    setQuickNavPosition(clampQuickNavPosition(drag.originX + diffX, drag.originY + diffY))
+  }
+
+  function stopQuickNavDrag(event: ReactPointerEvent<HTMLButtonElement>) {
+    const drag = quickNavDragRef.current
+    if (drag.pointerId !== event.pointerId) return
+    event.currentTarget.releasePointerCapture(event.pointerId)
+    setIsQuickNavDragging(false)
+    quickNavDragRef.current.pointerId = -1
+    if (!drag.moved) return
+    const rect = quickNavRef.current?.getBoundingClientRect()
+    if (!rect) return
+    const position = clampQuickNavPosition(rect.left, rect.top)
+    setQuickNavPosition(position)
+    storeQuickNavPosition(position)
+  }
+
+  useEffect(() => {
+    function clampOnResize() {
+      setQuickNavPosition((current) => {
+        if (!current) return current
+        const position = clampQuickNavPosition(current.x, current.y)
+        storeQuickNavPosition(position)
+        return position
+      })
+    }
+
+    window.addEventListener('resize', clampOnResize)
+    return () => window.removeEventListener('resize', clampOnResize)
+  }, [])
+
+  useEffect(() => {
+    if (!quickNavPosition) return
+    const frame = window.requestAnimationFrame(() => {
+      setQuickNavPosition((current) => {
+        if (!current) return current
+        const position = clampQuickNavPosition(current.x, current.y)
+        storeQuickNavPosition(position)
+        return position
+      })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [isQuickNavOpen])
 
   async function reloadLedger() {
     setLoading(true)
@@ -634,13 +755,18 @@ export default function LedgerPage() {
           <button className="fp-button fp-button-primary submit-action" type="submit">{editingId ? '저장' : '추가'}</button>
         </form>
 
-        <nav className={`fp-ledger-scroll-nav${isQuickNavOpen ? ' open' : ''}`} aria-label="가계부 빠른 이동">
+        <nav
+          className={`fp-ledger-scroll-nav${isQuickNavOpen ? ' open' : ''}${quickNavPosition ? ' positioned' : ''}${isQuickNavDragging ? ' dragging' : ''}`}
+          style={quickNavStyle}
+          ref={quickNavRef}
+          aria-label="가계부 빠른 이동"
+        >
           {isQuickNavOpen ? (
             <div className="fp-ledger-scroll-menu">
-              <button type="button" onClick={scrollLedgerTop}>위쪽</button>
-              <button type="button" onClick={scrollLedgerListEnd}>아래쪽</button>
+              <button type="button" aria-label="위로 이동" onClick={scrollLedgerTop}>↑</button>
+              <button type="button" aria-label="아래로 이동" onClick={scrollLedgerListEnd}>↓</button>
               <button type="button" onClick={startCreateEntry}>입력</button>
-              <button type="button" className="collapse" onClick={() => setIsQuickNavOpen(false)}>접기</button>
+              <button type="button" className="collapse" aria-label="접기" onClick={() => setIsQuickNavOpen(false)}>-</button>
             </div>
           ) : null}
           <button
@@ -648,9 +774,19 @@ export default function LedgerPage() {
             className="fp-ledger-scroll-toggle"
             aria-label={isQuickNavOpen ? '빠른 이동 접기' : '빠른 이동 열기'}
             aria-expanded={isQuickNavOpen}
-            onClick={() => setIsQuickNavOpen((value) => !value)}
+            onPointerDown={startQuickNavDrag}
+            onPointerMove={moveQuickNav}
+            onPointerUp={stopQuickNavDrag}
+            onPointerCancel={stopQuickNavDrag}
+            onClick={() => {
+              if (suppressQuickNavClickRef.current) {
+                suppressQuickNavClickRef.current = false
+                return
+              }
+              setIsQuickNavOpen((value) => !value)
+            }}
           >
-            +
+            {isQuickNavOpen ? '-' : '+'}
           </button>
         </nav>
       </section>
