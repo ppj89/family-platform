@@ -140,6 +140,36 @@
   line-height: 1.25;
 }
 
+.fp-family-member-name {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  gap: 6px;
+}
+
+.fp-family-member-name span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-family-member-name.self {
+  color: #1264d8;
+}
+
+.fp-family-member-name em {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #eaf4ff;
+  color: #1264d8;
+  font-size: 12px;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
 .fp-family-row p {
   margin: 0;
   color: #526070;
@@ -381,6 +411,15 @@ body.dark .fp-family-header h2,
 body.dark .fp-family-panel h3,
 body.dark .fp-family-row strong {
   color: #f9fafb;
+}
+
+body.dark .fp-family-member-name.self {
+  color: #7ab7ff;
+}
+
+body.dark .fp-family-member-name em {
+  background: #153b68;
+  color: #9dccff;
 }
 
 body.dark .fp-family-header p,

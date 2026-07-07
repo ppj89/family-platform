@@ -121,7 +121,12 @@ export function FamilyPage() {
   const confirm = pendingCopy(pending)
   const storedUser = getStoredUser()
   const currentUserId = storedUser?.id
-  const currentMember = currentUserId ? members.find((member) => member.userId === currentUserId) : null
+  const currentUserEmail = (storedUser?.email || storedUser?.loginEmail || '').toLowerCase()
+  const isCurrentMember = (member: FamilyMember) => Boolean(
+    (currentUserId && member.userId === currentUserId) ||
+    (currentUserEmail && member.email?.toLowerCase() === currentUserEmail),
+  )
+  const currentMember = members.find(isCurrentMember) || null
   const canManageFamily = Boolean(storedUser?.platformAdmin || currentMember?.role === 'FAMILY_ADMIN')
 
   const memberCountText = useMemo(() => `${members.length}명`, [members.length])
@@ -261,52 +266,58 @@ export function FamilyPage() {
 
               <div className="fp-family-list">
                 {members.length ? (
-                  members.map((member) => (
-                    <article className="fp-family-row" key={member.id}>
-                      {editingMember?.id === member.id ? (
-                        <>
-                          <div className="fp-family-edit-fields">
-                            <CustomSelect
-                              className="fp-family-role-select"
-                              label="역할"
-                              options={roleOptions}
-                              value={editingMember.role}
-                              onChange={(value) => setEditingMember((current) => (current ? { ...current, role: value } : current))}
-                            />
-                            <PermissionChips value={editingMember} onChange={updateEditingPermission} />
-                          </div>
-                          <div className="fp-row-actions">
-                            <button className="fp-button fp-button-primary fp-button-small" type="button" onClick={() => setPending({ type: 'member-update', member })}>
-                              저장
-                            </button>
-                            <button className="fp-button fp-button-muted fp-button-small" type="button" onClick={() => setEditingMember(null)}>
-                              취소
-                            </button>
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <div>
-                            <strong>{member.nickname || member.email || `사용자 ${member.userId}`}</strong>
-                            <p>{member.email || '이메일 없음'}</p>
-                            <small>{roleText(member.role)} · {permissionsText(member)}</small>
-                          </div>
-                          <div className="fp-row-actions">
-                            {canManageFamily ? (
-                              <>
-                                <button className="fp-button fp-button-muted fp-button-small" type="button" onClick={() => setEditingMember(member)}>
-                                  권한
-                                </button>
-                                <button className="fp-button fp-button-danger fp-button-small" type="button" onClick={() => setPending({ type: 'member-delete', member })}>
-                                  내보내기
-                                </button>
-                              </>
-                            ) : null}
-                          </div>
-                        </>
-                      )}
-                    </article>
-                  ))
+                  members.map((member) => {
+                    const isSelf = isCurrentMember(member)
+                    return (
+                      <article className="fp-family-row" key={member.id}>
+                        {editingMember?.id === member.id ? (
+                          <>
+                            <div className="fp-family-edit-fields">
+                              <CustomSelect
+                                className="fp-family-role-select"
+                                label="역할"
+                                options={roleOptions}
+                                value={editingMember.role}
+                                onChange={(value) => setEditingMember((current) => (current ? { ...current, role: value } : current))}
+                              />
+                              <PermissionChips value={editingMember} onChange={updateEditingPermission} />
+                            </div>
+                            <div className="fp-row-actions">
+                              <button className="fp-button fp-button-primary fp-button-small" type="button" onClick={() => setPending({ type: 'member-update', member })}>
+                                저장
+                              </button>
+                              <button className="fp-button fp-button-muted fp-button-small" type="button" onClick={() => setEditingMember(null)}>
+                                취소
+                              </button>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div>
+                              <strong className={`fp-family-member-name${isSelf ? ' self' : ''}`}>
+                                <span>{member.nickname || member.email || `사용자 ${member.userId}`}</span>
+                                {isSelf ? <em>(본인)</em> : null}
+                              </strong>
+                              <p>{member.email || '이메일 없음'}</p>
+                              <small>{roleText(member.role)} · {permissionsText(member)}</small>
+                            </div>
+                            <div className="fp-row-actions">
+                              {canManageFamily ? (
+                                <>
+                                  <button className="fp-button fp-button-muted fp-button-small" type="button" onClick={() => setEditingMember(member)}>
+                                    권한
+                                  </button>
+                                  <button className="fp-button fp-button-danger fp-button-small" type="button" onClick={() => setPending({ type: 'member-delete', member })}>
+                                    내보내기
+                                  </button>
+                                </>
+                              ) : null}
+                            </div>
+                          </>
+                        )}
+                      </article>
+                    )
+                  })
                 ) : (
                   <p className="fp-empty-text">등록된 구성원이 없습니다.</p>
                 )}

@@ -14,6 +14,7 @@ import { NotificationBell } from './shared/components/NotificationBell'
 import { ConfirmDialog, ToastMessage } from './shared/components'
 import { clearAuthSession, getStoredUser, hasAuthToken, normalizeAuthUser, storeAuthSession, type AuthSessionResponse, type StoredUser } from './shared/api/auth'
 import { apiActionMessage, apiRequest } from './shared/api/client'
+import { listReadableFamilies, selectReadableFamily } from './shared/api/family'
 import './app.css'
 
 type MenuItem = {
@@ -155,11 +156,18 @@ function providerLabel(provider?: string) {
   return '이메일'
 }
 
+function accountRoleLabel(platformAdmin?: boolean, familyRole?: string) {
+  if (platformAdmin) return '플랫폼 관리자'
+  return familyRole === 'FAMILY_ADMIN' ? '가족관리자' : '가족구성원'
+}
+
 function AccountInfoDialog({
+  familyRole,
   loading,
   user,
   onClose,
 }: {
+  familyRole?: string
   loading: boolean
   user: StoredUser | null
   onClose: () => void
@@ -187,7 +195,7 @@ function AccountInfoDialog({
           </div>
           <div>
             <dt>권한</dt>
-            <dd>{user?.platformAdmin ? '플랫폼 관리자' : '가족구성원'}</dd>
+            <dd>{accountRoleLabel(user?.platformAdmin, familyRole)}</dd>
           </div>
         </dl>
       </section>
@@ -202,6 +210,7 @@ export default function App() {
     () => window.localStorage.getItem('family-platform-sidebar-collapsed') === 'true',
   )
   const [accountInfo, setAccountInfo] = useState<StoredUser | null>(getStoredUser())
+  const [accountFamilyRole, setAccountFamilyRole] = useState('')
   const [isAccountOpen, setIsAccountOpen] = useState(false)
   const [isAccountLoading, setIsAccountLoading] = useState(false)
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false)
@@ -231,11 +240,18 @@ export default function App() {
   async function openAccountInfo() {
     setIsAccountOpen(true)
     setIsAccountLoading(true)
+    setAccountFamilyRole('')
     try {
       const response = await apiRequest<AuthSessionResponse>('/auth/me')
       const user = normalizeAuthUser(response)
       setAccountInfo(user)
       storeAuthSession(response, Boolean(window.localStorage.getItem('family-platform-access-token')))
+      try {
+        const selectedFamily = selectReadableFamily(await listReadableFamilies())
+        setAccountFamilyRole(selectedFamily?.role || '')
+      } catch {
+        setAccountFamilyRole('')
+      }
     } catch (error) {
       setToastMessage(apiActionMessage(error, '내정보를 불러오지 못했습니다.'))
     } finally {
@@ -339,6 +355,7 @@ export default function App() {
       </main>
       {isAccountOpen ? (
         <AccountInfoDialog
+          familyRole={accountFamilyRole}
           loading={isAccountLoading}
           user={accountInfo}
           onClose={() => setIsAccountOpen(false)}
