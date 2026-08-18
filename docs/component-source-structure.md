@@ -19,8 +19,6 @@ Family Platform의 신규 화면, 메뉴 수정, 공통 UI 수정은 실제 프�
 - `hooks`: 해당 메뉴 전용 hook.
 - `utils`: 해당 메뉴 전용 계산/포맷 함수.
 - `types`: 해당 메뉴 전용 타입.
-- `legacy-patch`: 현재 운영 legacy patch 호환 코드.
-- `index.js`: 해당 메뉴 공개 진입점과 legacy patch 조립 경로.
 
 메뉴 하나를 수정할 때는 해당 메뉴 폴더와 필요한 `src/shared`만 수정한다. 다른 메뉴 폴더를 함께 수정하지 않는다.
 
@@ -34,20 +32,12 @@ Family Platform의 신규 화면, 메뉴 수정, 공통 UI 수정은 실제 프�
 - `utils`: 날짜, 시간, 숫자, 문자열, 권한 계산.
 - `types`: 공통 타입.
 - `styles`: 공통 class, token, layout 기준.
-- `legacy-patch`: 여러 legacy patch 메뉴가 같이 쓰는 공통 코드.
 
 공통으로 쓸 가능성이 있는 코드를 메뉴 폴더에 복사하지 않는다. 반대로 한 메뉴에서만 쓰는 코드를 shared로 과하게 올리지 않는다.
 
-## legacy patch 작업 기준
+## legacy patch 관련 안내
 
-운영은 아직 `public/legacy-patch.js`를 로드한다. 이 파일은 생성물이다.
-
-- 메뉴 원본: `src/features/<menu>/legacy-patch`
-- 공통 원본: `src/shared/legacy-patch`
-- 조립 순서: `src/legacy-patch-manifest.mjs`
-- 생성 명령: `npm run build:legacy-patch`
-
-legacy patch를 수정해야 하면 feature/shared 원본을 수정하고 `public/legacy-patch.js`를 재생성한다.
+React 이관이 완료되어 운영 화면은 `public/legacy-patch.js`를 더 이상 로드하지 않는다. 관련 원본(`src/features/*/legacy-patch`, `src/shared/legacy-patch`, `src/legacy-patch-manifest.mjs`, `scripts/build-legacy-patch.mjs`, `public/legacy-patch.js`, `public/legacy/`)은 2026-08-18 정리 작업에서 `_deprecated_candidates/`로 이동했다. 새 작업에서 legacy patch 원본을 만들거나 참조하지 않는다.
 
 ## 금지 사항
 
