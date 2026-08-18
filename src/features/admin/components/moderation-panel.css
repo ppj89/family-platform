@@ -1,0 +1,634 @@
+.fp-moderation-panel {
+  gap: 16px;
+}
+
+.fp-moderation-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: min(100%, 360px);
+}
+
+.fp-moderation-search input {
+  min-width: 0;
+  flex: 1;
+  min-height: 38px;
+  border: 1px solid #dfe5ec;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #fff;
+  color: #191f28;
+  font: inherit;
+  font-size: 13px;
+}
+
+.fp-moderation-search .save-button,
+.fp-moderation-actions .edit-button,
+.fp-moderation-actions .fp-moderation-release {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 13px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.fp-moderation-search .save-button,
+.fp-moderation-actions .edit-button {
+  background: #3182f6;
+  color: #fff;
+}
+
+.fp-moderation-actions .fp-moderation-release {
+  background: #edf4ff;
+  color: #1b64da;
+}
+
+.fp-moderation-list {
+  display: grid;
+  gap: 10px;
+}
+
+.fp-moderation-user {
+  display: grid;
+  gap: 10px;
+  border: 1px solid #e5eaf0;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fff;
+}
+
+.fp-moderation-user.suspended {
+  border-color: #ffc7c9;
+  background: #fffafb;
+}
+
+.fp-moderation-user-selectable {
+  cursor: pointer;
+}
+
+.fp-moderation-user-selectable:focus-visible {
+  outline: 3px solid rgba(49, 130, 246, 0.45);
+  outline-offset: 2px;
+}
+
+.fp-moderation-user-main,
+.fp-moderation-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fp-moderation-user-main > div {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.fp-moderation-user-main strong {
+  overflow: hidden;
+  color: #191f28;
+  font-size: 14px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-moderation-user-main span,
+.fp-moderation-suspension span,
+.fp-moderation-history span {
+  overflow: hidden;
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-moderation-warning-count {
+  flex: none;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: #edf4ff;
+  color: #1b64da;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.fp-moderation-warning-count.suspended {
+  background: #ffebed;
+  color: #e44852;
+}
+
+.fp-moderation-suspension {
+  display: grid;
+  gap: 3px;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff1f2;
+}
+
+.fp-moderation-suspension strong {
+  color: #e44852;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fp-moderation-storage {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-radius: 8px;
+  padding: 9px 10px;
+  background: #f7f9fc;
+}
+
+.fp-moderation-storage span,
+.fp-moderation-storage strong {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fp-moderation-storage strong {
+  color: #1b64da;
+}
+
+.fp-moderation-storage strong.unlimited {
+  color: #0f9f6e;
+}
+
+.fp-moderation-storage-status {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  min-width: 0;
+  text-align: right;
+}
+
+.fp-moderation-history {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fp-moderation-user > .fp-moderation-history {
+  display: none;
+}
+
+.fp-moderation-history-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fp-moderation-history-summary span {
+  overflow: hidden;
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-moderation-history-summary button {
+  min-height: 32px;
+  flex: none;
+  border: 1px solid #d8e7ff;
+  border-radius: 8px;
+  padding: 0 10px;
+  background: #f4f8ff;
+  color: #1b64da;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fp-moderation-history li {
+  display: grid;
+  gap: 2px;
+  border-top: 1px solid #f0f2f5;
+  padding-top: 7px;
+}
+
+.fp-moderation-history li > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.fp-moderation-history li > div > span {
+  min-width: 0;
+}
+
+.fp-moderation-history li.cancelled strong,
+.fp-moderation-history li.cancelled span {
+  color: #9aa4b2;
+  text-decoration: line-through;
+}
+
+.fp-moderation-history li button {
+  flex: none;
+  border: 0;
+  border-radius: 6px;
+  padding: 4px 7px;
+  background: #fff0f1;
+  color: #e44852;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.fp-moderation-history li:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.fp-moderation-history strong {
+  overflow: hidden;
+  color: #333d4b;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-moderation-actions {
+  justify-content: flex-end;
+}
+
+.fp-moderation-actions .fp-moderation-storage-toggle {
+  min-height: 38px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 13px;
+  background: #edf8f3;
+  color: #16845f;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.fp-moderation-pagination,
+.fp-moderation-pagination nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fp-moderation-pagination {
+  justify-content: space-between;
+  border-top: 1px solid #eef1f5;
+  padding-top: 12px;
+}
+
+.fp-moderation-pagination > span,
+.fp-moderation-pagination strong {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fp-moderation-pagination button {
+  min-height: 34px;
+  border: 1px solid #dfe5ec;
+  border-radius: 8px;
+  padding: 0 11px;
+  background: #f8fafc;
+  color: #4e5968;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fp-moderation-pagination button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.fp-moderation-dialog-backdrop {
+  position: fixed;
+  z-index: 7100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(25, 31, 40, 0.5);
+}
+
+.fp-moderation-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(440px, 100%);
+  max-height: min(480px, calc(100dvh - 36px));
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(25, 31, 40, 0.22);
+}
+
+.fp-moderation-history-dialog {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(480px, 100%);
+  max-height: min(560px, calc(100dvh - 36px));
+  overflow: hidden;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 18px 48px rgba(25, 31, 40, 0.22);
+}
+
+.fp-moderation-history-dialog header,
+.fp-moderation-history-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px;
+}
+
+.fp-moderation-history-dialog header {
+  border-bottom: 1px solid #eef1f5;
+}
+
+.fp-moderation-history-dialog header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.fp-moderation-history-dialog header strong {
+  color: #191f28;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.fp-moderation-history-dialog header span {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fp-moderation-history-dialog header button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: #f4f6f8;
+  color: #4e5968;
+  cursor: pointer;
+  font-size: 21px;
+}
+
+.fp-moderation-history-dialog-content {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.fp-moderation-history-dialog footer {
+  border-top: 1px solid #eef1f5;
+}
+
+.fp-moderation-history-dialog footer > span {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.fp-moderation-history-dialog footer > div {
+  display: flex;
+  gap: 8px;
+}
+
+.fp-moderation-history-dialog footer button {
+  min-height: 34px;
+  border: 1px solid #dfe5ec;
+  border-radius: 8px;
+  padding: 0 11px;
+  background: #f8fafc;
+  color: #4e5968;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fp-moderation-history-dialog footer button:disabled {
+  cursor: default;
+  opacity: 0.45;
+}
+
+.fp-moderation-dialog header,
+.fp-moderation-dialog footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 16px;
+}
+
+.fp-moderation-dialog header {
+  border-bottom: 1px solid #eef1f5;
+}
+
+.fp-moderation-dialog header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.fp-moderation-dialog header strong {
+  color: #191f28;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.fp-moderation-dialog header span {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.fp-moderation-dialog header button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  flex: none;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  background: #f4f6f8;
+  color: #4e5968;
+  cursor: pointer;
+  font-size: 21px;
+}
+
+.fp-moderation-dialog label {
+  display: grid;
+  min-height: 0;
+  gap: 8px;
+  padding: 16px;
+}
+
+.fp-moderation-dialog label > span {
+  color: #4e5968;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fp-moderation-dialog textarea {
+  min-height: 130px;
+  resize: vertical;
+  border: 1px solid #dfe5ec;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+  color: #191f28;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.fp-moderation-dialog footer {
+  border-top: 1px solid #eef1f5;
+}
+
+.fp-moderation-dialog footer button {
+  min-height: 42px;
+  flex: 1;
+  border: 0;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.fp-moderation-dialog footer .cancel-button {
+  background: #f2f4f6;
+  color: #4e5968;
+}
+
+.fp-moderation-dialog footer .save-button {
+  background: #3182f6;
+  color: #fff;
+}
+
+@media (max-width: 640px) {
+  .fp-moderation-panel .fp-admin-panel-header {
+    align-items: stretch;
+  }
+
+  .fp-moderation-search {
+    width: 100%;
+  }
+
+  .fp-moderation-pagination {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+html[data-theme='dark'] .fp-moderation-search input,
+html[data-theme='dark'] .fp-moderation-user,
+html[data-theme='dark'] .fp-moderation-dialog,
+html[data-theme='dark'] .fp-moderation-history-dialog,
+html[data-theme='dark'] .fp-moderation-dialog textarea {
+  border-color: #334155;
+  background: #202b3d;
+  color: #edf3ff;
+}
+
+html[data-theme='dark'] .fp-moderation-user.suspended {
+  border-color: #6c3f4a;
+  background: #2c2530;
+}
+
+html[data-theme='dark'] .fp-moderation-user-main strong,
+html[data-theme='dark'] .fp-moderation-history strong,
+html[data-theme='dark'] .fp-moderation-dialog header strong,
+html[data-theme='dark'] .fp-moderation-history-dialog header strong,
+html[data-theme='dark'] .fp-moderation-dialog label > span {
+  color: #f5f8ff;
+}
+
+html[data-theme='dark'] .fp-moderation-user-main span,
+html[data-theme='dark'] .fp-moderation-suspension span,
+html[data-theme='dark'] .fp-moderation-history span,
+html[data-theme='dark'] .fp-moderation-dialog header span,
+html[data-theme='dark'] .fp-moderation-history-dialog header span,
+html[data-theme='dark'] .fp-moderation-history-summary span {
+  color: #aebbd0;
+}
+
+html[data-theme='dark'] .fp-moderation-history li,
+html[data-theme='dark'] .fp-moderation-dialog header,
+html[data-theme='dark'] .fp-moderation-dialog footer,
+html[data-theme='dark'] .fp-moderation-history-dialog header,
+html[data-theme='dark'] .fp-moderation-history-dialog footer,
+html[data-theme='dark'] .fp-moderation-pagination {
+  border-color: #334155;
+}
+
+html[data-theme='dark'] .fp-moderation-pagination > span,
+html[data-theme='dark'] .fp-moderation-pagination strong {
+  color: #aebbd0;
+}
+
+html[data-theme='dark'] .fp-moderation-pagination button {
+  border-color: #334155;
+  background: #2d3a50;
+  color: #d9e5f8;
+}
+
+html[data-theme='dark'] .fp-moderation-suspension {
+  background: #3a2630;
+}
+
+html[data-theme='dark'] .fp-moderation-storage {
+  background: #27364d;
+}
+
+html[data-theme='dark'] .fp-moderation-storage span {
+  color: #aebbd0;
+}
+
+html[data-theme='dark'] .fp-moderation-actions .fp-moderation-storage-toggle {
+  background: #1f443a;
+  color: #8ce0bd;
+}
+
+html[data-theme='dark'] .fp-moderation-history li button {
+  background: #3d2933;
+  color: #ff9aa2;
+}
+
+html[data-theme='dark'] .fp-moderation-dialog header button,
+html[data-theme='dark'] .fp-moderation-dialog footer .cancel-button,
+html[data-theme='dark'] .fp-moderation-history-dialog header button,
+html[data-theme='dark'] .fp-moderation-history-dialog footer button,
+html[data-theme='dark'] .fp-moderation-history-summary button {
+  background: #2d3a50;
+  color: #d9e5f8;
+}

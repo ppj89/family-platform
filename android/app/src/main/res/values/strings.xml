@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">공유 가계부·공유 일정·공유 여행·공유 육아·일기·맛집</string>
+    <string name="title_activity_main">공유 가계부·공유 일정·공유 여행·공유 육아·일기·맛집</string>
+    <string name="package_name">com.familyplatform.app</string>
+    <string name="custom_url_scheme">com.familyplatform.app</string>
+</resources>

@@ -1,0 +1,23 @@
+services:
+  web:
+    ports: !reset []
+
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: ${CADDY_CONTAINER_NAME:-family-platform-caddy}
+    restart: unless-stopped
+    depends_on:
+      - web
+    environment:
+      APP_DOMAIN: ${APP_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - family_platform_caddy_data:/data
+      - family_platform_caddy_config:/config
+
+volumes:
+  family_platform_caddy_data:
+  family_platform_caddy_config:

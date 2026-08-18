@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+      Android 15/16 force edge-to-edge and ignore statusBarColor,
+      navigationBarColor, and windowOptOutEdgeToEdgeEnforcement (the latter
+      existed only as a temporary Android 15 opt-out and was removed in
+      Android 16). Do not rely on any color item in this file to actually
+      paint the system bars — that is handled by @capacitor/status-bar
+      (icon color, src/App.tsx) and app.css (background color, via
+      env(safe-area-inset-top)). A style in values-v35 replaces the whole
+      style bag, so every theme must still keep its original parent and
+      launch hand-off here as well.
+    -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowBackground">#eef1f5</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowBackground">#eef1f5</item>
+        <item name="android:colorBackground">#eef1f5</item>
+    </style>
+
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#eef1f5</item>
+        <!-- Required when the Android 15 resource is selected: it switches
+             from the launch surface to Capacitor's WebView theme. -->
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>

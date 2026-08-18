@@ -1,0 +1,271 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  frontend:
+    name: Frontend build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+  backend:
+    name: Backend test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Test
+        working-directory: backend-go
+        run: go test ./...
+
+  security:
+    name: Security checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: backend-go/go.mod
+          cache-dependency-path: backend-go/go.sum
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Audit frontend dependencies
+        run: npm audit --audit-level=high
+
+      - name: Check Go vulnerabilities
+        working-directory: backend-go
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+  api-integration:
+    name: Go API integration
+    runs-on: ubuntu-latest
+    needs: backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Start API stack
+        run: docker compose up --build -d db api
+
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 40); do
+            if curl -fsS http://127.0.0.1:8080/api/health; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker compose logs api
+          exit 1
+
+      - name: Run API integration tests
+        run: sh scripts/test-go-api.sh
+
+      - name: Show logs on failure
+        if: failure()
+        run: docker compose logs
+
+  docker:
+    name: Docker production config
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate production readiness
+        run: ALLOW_PLACEHOLDERS=1 scripts/validate-prod-config.sh .env.production.example
+
+      - name: Validate production compose
+        run: docker compose -f docker-compose.prod.yml --env-file .env.production.example config --quiet
+
+      - name: Build backend image
+        run: |
+          for attempt in 1 2 3; do
+            if docker build -f backend-go/Dockerfile backend-go; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Docker build failed. Retrying in 15 seconds..."
+              sleep 15
+            fi
+          done
+          exit 1
+
+      - name: Build web image
+        run: |
+          for attempt in 1 2 3; do
+            if docker build -f Dockerfile .; then
+              exit 0
+            fi
+            if [ "$attempt" -lt 3 ]; then
+              echo "Docker build failed. Retrying in 15 seconds..."
+              sleep 15
+            fi
+          done
+          exit 1
+
+  production-smoke:
+    name: Production stack smoke
+    runs-on: ubuntu-latest
+    needs: [backend, frontend]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run production stack smoke test
+        run: scripts/test-prod-stack.sh
+
+  android:
+    name: Android debug build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java for Android
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync Capacitor
+        run: npm run cap:android
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug
+
+  release-play-store:
+    name: Release AAB to Play Store
+    runs-on: ubuntu-latest
+    needs: [frontend, android]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Java for Android
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Decode release keystore
+        run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > "$RUNNER_TEMP/release.keystore"
+
+      - name: Build web assets and sync Capacitor
+        run: npm run cap:android
+        env:
+          CAPACITOR_SERVER_URL: https://familyhistory.dedyn.io
+          VITE_API_BASE_URL: https://familyhistory.dedyn.io/api
+
+      - name: Build release AAB
+        working-directory: android
+        run: ./gradlew bundleRelease -PreleaseVersionCode=${{ github.run_number }}
+        env:
+          ANDROID_KEYSTORE_PATH: ${{ runner.temp }}/release.keystore
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Write Play service account key
+        run: echo '${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}' > "$RUNNER_TEMP/play-service-account.json"
+
+      - name: Upload to Play Console (production)
+        run: node scripts/publish-play-console.mjs --track production
+        env:
+          PLAY_SERVICE_ACCOUNT_JSON: ${{ runner.temp }}/play-service-account.json
+
+  ios:
+    name: iOS simulator build
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Sync Capacitor
+        run: npm run cap:ios
+
+      - name: Build iOS simulator app
+        run: |
+          xcodebuild \
+            -project ios/App/App.xcodeproj \
+            -scheme App \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            CODE_SIGNING_ALLOWED=NO \
+            build

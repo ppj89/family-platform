@@ -1,0 +1,129 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="760" viewBox="0 0 1440 760">
+  <defs>
+    <filter id="soft" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#18243A" flood-opacity=".16"/>
+    </filter>
+    <filter id="innerGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <linearGradient id="i1" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#4AA3FF"/>
+      <stop offset=".52" stop-color="#2476F2"/>
+      <stop offset="1" stop-color="#0E45B7"/>
+    </linearGradient>
+    <linearGradient id="i2" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#102038"/>
+      <stop offset=".56" stop-color="#173A78"/>
+      <stop offset="1" stop-color="#266CFF"/>
+    </linearGradient>
+    <linearGradient id="i3" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#FAFCFF"/>
+      <stop offset="1" stop-color="#DCEBFF"/>
+    </linearGradient>
+    <linearGradient id="i4" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#6DE9DC"/>
+      <stop offset=".5" stop-color="#45A7FF"/>
+      <stop offset="1" stop-color="#134BC4"/>
+    </linearGradient>
+    <linearGradient id="i5" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#EEF7FF"/>
+      <stop offset=".5" stop-color="#CDE4FF"/>
+      <stop offset="1" stop-color="#FFFFFF"/>
+    </linearGradient>
+    <linearGradient id="markBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#56B6FF"/>
+      <stop offset="1" stop-color="#1760E8"/>
+    </linearGradient>
+    <style>
+      .page { fill:#EEF3F8; }
+      .tile { }
+      .no { fill:#6E7D8F; font:700 17px Arial, sans-serif; text-anchor:middle; letter-spacing:.04em; }
+      .hint { fill:#A0ACBA; font:600 12px Arial, sans-serif; text-anchor:middle; letter-spacing:.02em; }
+    </style>
+  </defs>
+
+  <rect class="page" width="1440" height="760"/>
+
+  <!-- 01: orbit mark -->
+  <g transform="translate(64 54)">
+    <rect class="tile" width="250" height="250" rx="62" fill="url(#i1)"/>
+    <path d="M76 139c0-41 30-72 71-72 28 0 48 13 64 33-18-8-39-7-58 4-34 20-49 61-34 92-26-9-43-31-43-57Z" fill="#fff" opacity=".96"/>
+    <circle cx="151" cy="126" r="34" fill="#B9F4EA"/>
+    <circle cx="96" cy="169" r="18" fill="#fff"/>
+    <text class="no" x="125" y="298">01</text>
+    <text class="hint" x="125" y="318">ORBIT</text>
+  </g>
+
+  <!-- 02: layered wave -->
+  <g transform="translate(404 54)">
+    <rect class="tile" width="250" height="250" rx="62" fill="url(#i2)"/>
+    <path d="M58 143c29-58 82-88 141-78 15 3 23 20 14 33-33 48-84 75-143 69-12-1-17-13-12-24Z" fill="#fff"/>
+    <path d="M65 158c38-19 78-22 119-8 12 4 14 20 4 27-35 24-75 31-120 18-17-5-19-29-3-37Z" fill="#73E9DA"/>
+    <text class="no" x="125" y="298">02</text>
+    <text class="hint" x="125" y="318">FLOW</text>
+  </g>
+
+  <!-- 03: premium ring -->
+  <g transform="translate(744 54)">
+    <rect class="tile" width="250" height="250" rx="62" fill="url(#i3)"/>
+    <circle cx="125" cy="125" r="78" fill="#1760E8"/>
+    <circle cx="125" cy="125" r="44" fill="url(#i3)"/>
+    <circle cx="125" cy="62" r="21" fill="#73E9DA"/>
+    <circle cx="69" cy="155" r="19" fill="#1760E8"/>
+    <circle cx="181" cy="155" r="19" fill="#1760E8"/>
+    <text class="no" x="125" y="298">03</text>
+    <text class="hint" x="125" y="318">RING</text>
+  </g>
+
+  <!-- 04: soft portal -->
+  <g transform="translate(1084 54)">
+    <rect class="tile" width="250" height="250" rx="62" fill="url(#i4)"/>
+    <rect x="59" y="59" width="132" height="132" rx="47" fill="#fff"/>
+    <rect x="86" y="86" width="78" height="78" rx="30" fill="#1760E8"/>
+    <circle cx="125" cy="125" r="18" fill="#73E9DA"/>
+    <text class="no" x="125" y="298">04</text>
+    <text class="hint" x="125" y="318">PORTAL</text>
+  </g>
+
+  <!-- 05: calm fold -->
+  <g transform="translate(64 404)">
+    <rect class="tile" width="250" height="250" rx="62" fill="url(#i5)"/>
+    <path d="M72 83c0-16 13-29 29-29h83v93c0 37-30 67-67 67H72V83Z" fill="url(#markBlue)"/>
+    <path d="M126 54h58c16 0 29 13 29 29v83c0 16-13 29-29 29h-58V54Z" fill="#183862"/>
+    <path d="M94 116h97" stroke="#fff" stroke-width="20" stroke-linecap="round"/>
+    <text class="no" x="125" y="298">05</text>
+    <text class="hint" x="125" y="318">FOLD</text>
+  </g>
+
+  <!-- 06: connected pebble -->
+  <g transform="translate(404 404)">
+    <rect class="tile" width="250" height="250" rx="62" fill="#11233F"/>
+    <path d="M77 130c0-42 34-76 76-76 36 0 65 29 65 65 0 43-35 78-78 78H77v-67Z" fill="#fff"/>
+    <circle cx="109" cy="122" r="18" fill="#1760E8"/>
+    <circle cx="157" cy="122" r="18" fill="#73E9DA"/>
+    <path d="M126 122h14" stroke="#1760E8" stroke-width="10" stroke-linecap="round"/>
+    <text class="no" x="125" y="298">06</text>
+    <text class="hint" x="125" y="318">PEBBLE</text>
+  </g>
+
+  <!-- 07: private space -->
+  <g transform="translate(744 404)">
+    <rect class="tile" width="250" height="250" rx="62" fill="url(#i1)"/>
+    <path d="M125 50c47 0 85 38 85 85 0 45-35 81-78 84v-50c16-3 28-17 28-34 0-19-16-35-35-35s-35 16-35 35c0 17 12 31 28 34v50c-43-3-78-39-78-84 0-47 38-85 85-85Z" fill="#fff"/>
+    <circle cx="125" cy="135" r="19" fill="#73E9DA"/>
+    <text class="no" x="125" y="298">07</text>
+    <text class="hint" x="125" y="318">SPACE</text>
+  </g>
+
+  <!-- 08: minimal mark -->
+  <g transform="translate(1084 404)">
+    <rect class="tile" width="250" height="250" rx="62" fill="#fff"/>
+    <rect x="55" y="55" width="140" height="140" rx="54" fill="#1760E8"/>
+    <path d="M83 133c0-31 25-56 56-56h28v56c0 31-25 56-56 56H83v-56Z" fill="#fff"/>
+    <circle cx="139" cy="133" r="20" fill="#73E9DA"/>
+    <text class="no" x="125" y="298">08</text>
+    <text class="hint" x="125" y="318">MARK</text>
+  </g>
+</svg>
+

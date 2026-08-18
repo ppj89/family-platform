@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "918066470694",
+    "project_id": "together-records",
+    "storage_bucket": "together-records.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:918066470694:android:97743fe8a712ef0acfebe7",
+        "android_client_info": {
+          "package_name": "com.familyplatform.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD49P9hG1GjeYNoWXZ1KN6Oo_piCd1FGqw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

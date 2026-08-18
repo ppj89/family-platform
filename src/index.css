@@ -1,0 +1,152 @@
+﻿:root {
+  font-family: Pretendard, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: #191f28;
+  background: #eef1f5;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background: #eef1f5;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+textarea,
+select {
+  background: #ffffff;
+}
+
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.fp-ellipsis {
+  display: block;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-floating-quick-nav {
+  --fp-floating-action-size: 42px;
+  position: fixed;
+  z-index: 30;
+  right: 20px;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  width: var(--fp-floating-action-size);
+  height: var(--fp-floating-action-size);
+}
+
+.fp-floating-quick-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  display: grid;
+  gap: 8px;
+}
+
+.fp-floating-quick-menu button,
+.fp-floating-action-button {
+  display: grid;
+  width: var(--fp-floating-action-size);
+  height: var(--fp-floating-action-size);
+  place-items: center;
+  border: 0;
+  border-radius: 999px;
+  background: #3182f6;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(49, 130, 246, 0.34);
+  cursor: pointer;
+}
+
+.fp-floating-quick-menu button {
+  border: 0;
+  background: #f2f4f6;
+  color: #333d4b;
+  box-shadow: 0 6px 16px rgb(25 31 40 / 10%);
+}
+
+.fp-floating-quick-menu .fp-floating-quick-input {
+  background: #eef5ff;
+  color: #2477d9;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fp-floating-quick-chevron {
+  width: 22px;
+  height: 22px;
+}
+
+.fp-floating-quick-chevron.up {
+  transform: rotate(180deg);
+}
+
+.fp-floating-quick-nav.open .fp-floating-action-button {
+  font-size: 28px;
+  font-weight: 400;
+  line-height: 1;
+}
+
+.fp-floating-action-button svg {
+  width: 22px;
+  height: 22px;
+}
+
+.fp-floating-action-button:focus-visible {
+  outline: 3px solid rgba(49, 130, 246, 0.3);
+  outline-offset: 3px;
+}
+
+/*
+ * The mobile visual viewport shrinks when the software keyboard opens.
+ * A fixed FAB would therefore jump upward behind a form dialog.  A form is
+ * already being edited at that point, so keep the page action unavailable
+ * until the dialog closes instead of letting it move around in the backdrop.
+ */
+body:has(
+  .fp-calendar-form-backdrop,
+  .fp-diary-form-backdrop,
+  .fp-restaurant-form-backdrop,
+  .fp-ledger-entry-backdrop,
+  .fp-ledger-detail-edit-backdrop,
+  .baby-form-dialog-backdrop,
+  .baby-record-form-dialog-backdrop,
+  .fp-trip-form-backdrop,
+  .fp-community-form-backdrop
+) .fp-floating-action-button {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+body:has(
+  .fp-calendar-form-backdrop,
+  .fp-diary-form-backdrop,
+  .fp-restaurant-form-backdrop,
+  .fp-ledger-entry-backdrop,
+  .fp-ledger-detail-edit-backdrop,
+  .baby-form-dialog-backdrop,
+  .baby-record-form-dialog-backdrop,
+  .fp-trip-form-backdrop,
+  .fp-community-form-backdrop
+) .fp-floating-quick-nav {
+  visibility: hidden;
+  pointer-events: none;
+}

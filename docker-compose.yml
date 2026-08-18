@@ -1,0 +1,66 @@
+services:
+  db:
+    image: postgres:18.4-alpine
+    container_name: family-platform-db
+    environment:
+      POSTGRES_DB: family_platform
+      POSTGRES_USER: family_app
+      POSTGRES_PASSWORD: family_app_password
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT_BIND:-5432}:5432"
+    volumes:
+      - family_platform_db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U family_app -d family_platform"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: ./backend-go
+    container_name: family-platform-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: family_platform
+      POSTGRES_USER: family_app
+      POSTGRES_PASSWORD: family_app_password
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:5173,http://127.0.0.1:5173
+      APP_SECURITY_TOKEN_SECRET: local-docker-dev-secret-change-before-production-20260605
+      APP_SECURITY_TOKEN_VALIDITY_SECONDS: 86400
+      APP_PUBLIC_BASE_URL: ${APP_PUBLIC_BASE_URL:-http://localhost:5173}
+      APP_OAUTH_GOOGLE_CLIENT_ID: ${APP_OAUTH_GOOGLE_CLIENT_ID:-}
+      APP_OAUTH_GOOGLE_CLIENT_SECRET: ${APP_OAUTH_GOOGLE_CLIENT_SECRET:-}
+      APP_GOOGLE_PLACES_API_KEY: ${APP_GOOGLE_PLACES_API_KEY:-}
+      APP_GOOGLE_MAPS_API_KEY: ${APP_GOOGLE_MAPS_API_KEY:-}
+      APP_NAVER_SEARCH_CLIENT_ID: ${APP_NAVER_SEARCH_CLIENT_ID:-}
+      APP_NAVER_SEARCH_CLIENT_SECRET: ${APP_NAVER_SEARCH_CLIENT_SECRET:-}
+      APP_OAUTH_NAVER_CLIENT_ID: ${APP_OAUTH_NAVER_CLIENT_ID:-}
+      APP_OAUTH_NAVER_CLIENT_SECRET: ${APP_OAUTH_NAVER_CLIENT_SECRET:-}
+      APP_OAUTH_KAKAO_CLIENT_ID: ${APP_OAUTH_KAKAO_CLIENT_ID:-}
+      APP_OAUTH_KAKAO_CLIENT_SECRET: ${APP_OAUTH_KAKAO_CLIENT_SECRET:-}
+      APP_MEDIA_MAX_FILES_PER_POST: 6
+      APP_MEDIA_MAX_REFERENCE_LENGTH: 2048
+      APP_MEDIA_MAX_IMAGE_SIZE: 8MB
+      APP_MEDIA_MAX_VIDEO_SIZE: 30MB
+      APP_MEDIA_STORAGE_DRIVER: ${APP_MEDIA_STORAGE_DRIVER:-local}
+      APP_MEDIA_STORAGE_PATH: /app/uploads
+      APP_MEDIA_PUBLIC_URL_PREFIX: /api/media/files
+      APP_MEDIA_S3_ENDPOINT: ${APP_MEDIA_S3_ENDPOINT:-}
+      APP_MEDIA_S3_REGION: ${APP_MEDIA_S3_REGION:-auto}
+      APP_MEDIA_S3_BUCKET: ${APP_MEDIA_S3_BUCKET:-}
+      APP_MEDIA_S3_ACCESS_KEY_ID: ${APP_MEDIA_S3_ACCESS_KEY_ID:-}
+      APP_MEDIA_S3_SECRET_ACCESS_KEY: ${APP_MEDIA_S3_SECRET_ACCESS_KEY:-}
+    ports:
+      - "${API_PORT_BIND:-8080}:8080"
+    volumes:
+      - family_platform_uploads:/app/uploads
+
+volumes:
+  family_platform_db:
+  family_platform_uploads:

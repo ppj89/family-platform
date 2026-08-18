@@ -1,0 +1,283 @@
+.fp-date-picker-field {
+  position: relative;
+  width: 160px;
+}
+
+.fp-date-picker-field.open {
+  z-index: 20020;
+}
+
+.fp-date-picker-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 48px;
+  border: 1px solid #cfd9e6;
+  border-radius: 14px;
+  padding: 0 14px;
+  background: #fff;
+  color: #191f28;
+  cursor: pointer;
+}
+
+.fp-date-picker-trigger strong {
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-date-picker-caret {
+  color: #2f80ed;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.fp-date-picker-calendar-icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  color: #2f80ed;
+}
+
+.fp-date-picker-calendar-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.fp-date-picker-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 20030;
+  width: 310px;
+  padding: 14px;
+  border: 1px solid #e1e7ef;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 20px 46px rgba(15, 23, 42, 0.18);
+}
+
+.fp-right-rail .fp-date-picker-popover,
+.fp-ledger-entry-panel .fp-date-picker-popover,
+.fp-travel-record-form .fp-date-picker-popover,
+.fp-baby-form .fp-date-picker-popover,
+.baby-api-detail-side .fp-date-picker-popover,
+.fp-diary-form .fp-date-picker-popover,
+.fp-restaurant-form .fp-date-picker-popover {
+  right: 0;
+  left: auto;
+}
+
+.fp-date-picker-popover header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.fp-date-picker-title-button {
+  display: inline-flex;
+  min-width: 0;
+  height: 38px;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dfe5ec;
+  border-radius: 12px;
+  padding: 0 10px;
+  background: #fff;
+  color: #191f28;
+  cursor: pointer;
+}
+
+.fp-date-picker-title-button strong {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.fp-date-picker-popover header > button:not(.fp-date-picker-title-button),
+.fp-date-picker-days button,
+.fp-date-picker-months button,
+.fp-date-picker-years button,
+.fp-date-picker-today {
+  border: 0;
+  border-radius: 12px;
+  background: #fff;
+  color: #191f28;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.fp-date-picker-popover header > button:not(.fp-date-picker-title-button) {
+  width: 38px;
+  height: 38px;
+  border: 1px solid #dfe5ec;
+  color: #4e5968;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.fp-date-picker-popover header > button:not(.fp-date-picker-title-button) svg {
+  width: 19px;
+  height: 19px;
+}
+
+.fp-date-picker-today-row {
+  display: flex;
+  justify-content: flex-end;
+  margin: 12px 0 12px;
+  padding-right: 4px;
+}
+
+.fp-date-picker-weekdays,
+.fp-date-picker-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.fp-date-picker-weekdays {
+  margin-bottom: 8px;
+  color: #718096;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.fp-date-picker-days button {
+  height: 34px;
+  background: transparent;
+  color: #333d4b;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.fp-date-picker-days button:disabled {
+  cursor: default;
+}
+
+.fp-date-picker-days button.sunday,
+.fp-date-picker-days button.holiday {
+  color: #f04452;
+}
+
+.fp-date-picker-days button.saturday {
+  color: #3182f6;
+}
+
+.fp-date-picker-days button.today:not(.selected) {
+  background: #edf4ff;
+  color: #1b64da;
+}
+
+.fp-date-picker-days button.selected,
+.fp-date-picker-months button.selected,
+.fp-date-picker-years button.selected {
+  background: #2f80ed;
+  color: #fff;
+  font-weight: 700;
+}
+
+.fp-date-picker-months,
+.fp-date-picker-years {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fp-date-picker-months button,
+.fp-date-picker-years button {
+  height: 38px;
+}
+
+.fp-date-picker-today {
+  display: inline-flex;
+  width: auto;
+  min-width: 54px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0;
+  padding: 0 12px;
+  background: #eef6ff;
+  color: #1264d8;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.fp-date-picker-popover-month .fp-date-picker-today,
+.fp-date-picker-popover-year .fp-date-picker-today {
+  width: 100%;
+  height: 38px;
+  margin-top: 12px;
+}
+
+html[data-theme='dark'] .fp-date-picker-trigger,
+html[data-theme='dark'] .fp-date-picker-title-button,
+html[data-theme='dark'] .fp-date-picker-popover header > button:not(.fp-date-picker-title-button),
+html[data-theme='dark'] .fp-date-picker-today {
+  border-color: #374151;
+  background: #172033;
+  color: #f8fafc;
+}
+
+html[data-theme='dark'] .fp-date-picker-trigger strong,
+html[data-theme='dark'] .fp-date-picker-title-button strong {
+  color: #f8fafc;
+}
+
+html[data-theme='dark'] .fp-date-picker-popover {
+  border-color: #334155;
+  background: #111827;
+  color: #e5e7eb;
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.38);
+}
+
+html[data-theme='dark'] .fp-date-picker-weekdays {
+  color: #9ca3af;
+}
+
+html[data-theme='dark'] .fp-date-picker-days button,
+html[data-theme='dark'] .fp-date-picker-months button,
+html[data-theme='dark'] .fp-date-picker-years button {
+  background: transparent;
+  color: #e5e7eb;
+}
+
+html[data-theme='dark'] .fp-date-picker-days button:disabled {
+  color: #64748b;
+}
+
+html[data-theme='dark'] .fp-date-picker-days button.today:not(.selected),
+html[data-theme='dark'] .fp-date-picker-today {
+  background: #1e3a5f;
+  color: #bfdbfe;
+}
+
+html[data-theme='dark'] .fp-date-picker-days button.selected,
+html[data-theme='dark'] .fp-date-picker-months button.selected,
+html[data-theme='dark'] .fp-date-picker-years button.selected {
+  background: #3182f6;
+  color: #fff;
+}
+
+@media (max-width: 760px) {
+  .fp-date-picker-field {
+    width: 100%;
+  }
+
+  .fp-date-picker-popover {
+    width: min(310px, calc(100vw - 56px));
+  }
+}

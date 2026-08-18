@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <!-- The application theme is visible briefly before the splash theme.
+             Match the default (light) app theme so there is no color flash;
+             @capacitor/status-bar (src/App.tsx) takes over once the WebView
+             loads and switches this to match the user's saved theme. -->
+        <item name="android:windowBackground">#eef1f5</item>
+        <item name="android:statusBarColor">#eef1f5</item>
+        <item name="android:navigationBarColor">#eef1f5</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <!-- Never leave the Capacitor host transparent: Android then exposes
+             its black default surface while the WebView is being restored. -->
+        <item name="android:windowBackground">#eef1f5</item>
+        <item name="android:colorBackground">#eef1f5</item>
+        <item name="android:statusBarColor">#eef1f5</item>
+        <item name="android:navigationBarColor">#eef1f5</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:windowTranslucentNavigation">false</item>
+    </style>
+
+
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <!-- The launch theme must explicitly hand off to NoActionBar.
+             Otherwise Android falls back to AppTheme and draws the app label
+             as a second, empty-looking header above the web screen. -->
+        <item name="windowSplashScreenBackground">#eef1f5</item>
+        <item name="android:statusBarColor">#eef1f5</item>
+        <item name="android:navigationBarColor">#eef1f5</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+        <item name="android:windowTranslucentStatus">false</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:windowActionBar">false</item>
+        <item name="android:windowNoTitle">true</item>
+    </style>
+</resources>

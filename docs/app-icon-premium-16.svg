@@ -1,0 +1,196 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1440" viewBox="0 0 1440 1440" role="img" aria-label="Family Platform premium app icon candidates">
+  <defs>
+    <linearGradient id="blueA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1f7aff"/>
+      <stop offset="1" stop-color="#0b4fd8"/>
+    </linearGradient>
+    <linearGradient id="navyA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#172033"/>
+      <stop offset="1" stop-color="#071327"/>
+    </linearGradient>
+    <linearGradient id="mintA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#38d3c3"/>
+      <stop offset="1" stop-color="#1f7aff"/>
+    </linearGradient>
+    <linearGradient id="softA" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f7fbff"/>
+      <stop offset="1" stop-color="#ddebff"/>
+    </linearGradient>
+    <style>
+      .page { fill: #eef3f8; }
+      .tile { fill: #fff; }
+      .label { fill: #5f6f84; font-family: Arial, sans-serif; font-size: 22px; font-weight: 700; text-anchor: middle; }
+      .icon-bg { rx: 48; }
+      .white { fill: #fff; }
+      .blue { fill: #1f7aff; }
+      .navy { fill: #0c172a; }
+      .muted { fill: #dbeafe; }
+      .mint { fill: #38d3c3; }
+      .line-white { fill: none; stroke: #fff; stroke-linecap: round; stroke-linejoin: round; stroke-width: 24; }
+      .line-blue { fill: none; stroke: #1f7aff; stroke-linecap: round; stroke-linejoin: round; stroke-width: 24; }
+      .line-navy { fill: none; stroke: #0c172a; stroke-linecap: round; stroke-linejoin: round; stroke-width: 22; }
+    </style>
+  </defs>
+
+  <rect class="page" width="1440" height="1440"/>
+
+  <!-- A1 -->
+  <g transform="translate(60 60)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="url(#blueA)"/>
+    <path class="line-white" d="M104 150c0-30 22-52 52-52s52 22 52 52-22 52-52 52"/>
+    <circle class="white" cx="107" cy="150" r="18"/>
+    <circle class="white" cx="195" cy="150" r="18"/>
+    <text class="label" x="150" y="272">A1</text>
+  </g>
+
+  <!-- A2 -->
+  <g transform="translate(390 60)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="url(#navyA)"/>
+    <circle class="mint" cx="150" cy="97" r="23"/>
+    <circle class="white" cx="105" cy="176" r="25"/>
+    <circle class="white" cx="195" cy="176" r="25"/>
+    <path d="M105 176c26-35 64-35 90 0" fill="none" stroke="#38d3c3" stroke-width="18" stroke-linecap="round"/>
+    <text class="label" x="150" y="272">A2</text>
+  </g>
+
+  <!-- A3 -->
+  <g transform="translate(720 60)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="url(#softA)"/>
+    <rect x="92" y="89" width="116" height="122" rx="36" fill="#1f7aff"/>
+    <rect x="119" y="116" width="62" height="68" rx="22" fill="#fff"/>
+    <circle class="mint" cx="150" cy="150" r="17"/>
+    <text class="label" x="150" y="272">A3</text>
+  </g>
+
+  <!-- A4 -->
+  <g transform="translate(1050 60)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="#0c172a"/>
+    <path d="M104 112h92v36h-62v18h52v35h-82z" fill="#fff"/>
+    <circle class="mint" cx="206" cy="194" r="18"/>
+    <text class="label" x="150" y="272">A4</text>
+  </g>
+
+  <!-- B1 -->
+  <g transform="translate(60 390)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="url(#mintA)"/>
+    <path class="line-white" d="M98 160h104M150 108v104"/>
+    <circle class="white" cx="98" cy="160" r="20"/>
+    <circle class="white" cx="202" cy="160" r="20"/>
+    <text class="label" x="150" y="272">B1</text>
+  </g>
+
+  <!-- B2 -->
+  <g transform="translate(390 390)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="#1f7aff"/>
+    <rect x="94" y="102" width="112" height="96" rx="32" fill="#fff"/>
+    <rect x="117" y="123" width="66" height="54" rx="18" fill="#dbeafe"/>
+    <path d="M117 123l33 27 33-27" fill="none" stroke="#1f7aff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+    <text class="label" x="150" y="272">B2</text>
+  </g>
+
+  <!-- B3 -->
+  <g transform="translate(720 390)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="#fff"/>
+    <path d="M102 116h96a20 20 0 0 1 20 20v52a20 20 0 0 1-20 20h-96a20 20 0 0 1-20-20v-52a20 20 0 0 1 20-20z" fill="#e8f2ff"/>
+    <path class="line-blue" d="M104 162h92"/>
+    <circle class="blue" cx="104" cy="162" r="19"/>
+    <circle class="blue" cx="196" cy="162" r="19"/>
+    <text class="label" x="150" y="272">B3</text>
+  </g>
+
+  <!-- B4 -->
+  <g transform="translate(1050 390)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="#0b4fd8"/>
+    <path d="M150 82c43 0 78 35 78 78s-35 78-78 78-78-35-78-78 35-78 78-78zm0 42a36 36 0 1 0 0 72 36 36 0 0 0 0-72z" fill="#fff"/>
+    <circle class="mint" cx="150" cy="160" r="18"/>
+    <text class="label" x="150" y="272">B4</text>
+  </g>
+
+  <!-- C1 -->
+  <g transform="translate(60 720)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="#f8fbff"/>
+    <path d="M98 190c0-54 25-94 52-94s52 40 52 94" fill="none" stroke="#1f7aff" stroke-width="24" stroke-linecap="round"/>
+    <circle class="navy" cx="150" cy="113" r="18"/>
+    <path d="M103 188h94" fill="none" stroke="#38d3c3" stroke-width="22" stroke-linecap="round"/>
+    <text class="label" x="150" y="272">C1</text>
+  </g>
+
+  <!-- C2 -->
+  <g transform="translate(390 720)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="#15223a"/>
+    <path d="M104 126h92c13 0 24 11 24 24s-11 24-24 24h-92c-13 0-24-11-24-24s11-24 24-24z" fill="#38d3c3"/>
+    <circle class="white" cx="104" cy="150" r="16"/>
+    <circle class="white" cx="196" cy="150" r="16"/>
+    <text class="label" x="150" y="272">C2</text>
+  </g>
+
+  <!-- C3 -->
+  <g transform="translate(720 720)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="#1f7aff"/>
+    <path d="M98 122c0-16 12-28 28-28h48c16 0 28 12 28 28v78H98z" fill="#fff"/>
+    <path d="M124 122h52v40h-52z" fill="#dbeafe"/>
+    <circle class="mint" cx="150" cy="196" r="18"/>
+    <text class="label" x="150" y="272">C3</text>
+  </g>
+
+  <!-- C4 -->
+  <g transform="translate(1050 720)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="url(#softA)"/>
+    <path d="M95 156c0-31 24-55 55-55s55 24 55 55-24 55-55 55-55-24-55-55z" fill="#1f7aff"/>
+    <path d="M122 156c0-16 12-28 28-28s28 12 28 28-12 28-28 28-28-12-28-28z" fill="#fff"/>
+    <path d="M150 92v128" stroke="#38d3c3" stroke-width="18" stroke-linecap="round"/>
+    <text class="label" x="150" y="272">C4</text>
+  </g>
+
+  <!-- D1 -->
+  <g transform="translate(60 1050)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="#0c172a"/>
+    <path d="M96 158l54-58 54 58-54 58z" fill="#fff"/>
+    <circle class="blue" cx="150" cy="158" r="24"/>
+    <text class="label" x="150" y="272">D1</text>
+  </g>
+
+  <!-- D2 -->
+  <g transform="translate(390 1050)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="#1f7aff"/>
+    <path d="M91 164c25-46 93-46 118 0" fill="none" stroke="#fff" stroke-width="28" stroke-linecap="round"/>
+    <circle class="white" cx="104" cy="164" r="18"/>
+    <circle class="white" cx="196" cy="164" r="18"/>
+    <circle class="mint" cx="150" cy="104" r="18"/>
+    <text class="label" x="150" y="272">D2</text>
+  </g>
+
+  <!-- D3 -->
+  <g transform="translate(720 1050)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="#fff"/>
+    <rect x="92" y="92" width="116" height="116" rx="34" fill="#0c172a"/>
+    <path d="M118 151h64" stroke="#fff" stroke-width="18" stroke-linecap="round"/>
+    <circle class="mint" cx="150" cy="151" r="18"/>
+    <text class="label" x="150" y="272">D3</text>
+  </g>
+
+  <!-- D4 -->
+  <g transform="translate(1050 1050)">
+    <rect class="tile" width="300" height="300" rx="42"/>
+    <rect x="52" y="38" width="196" height="196" rx="48" fill="url(#blueA)"/>
+    <path d="M105 196h90c19 0 35-16 35-35s-16-35-35-35h-90c-19 0-35 16-35 35s16 35 35 35z" fill="#fff"/>
+    <rect x="104" y="139" width="92" height="44" rx="22" fill="#dbeafe"/>
+    <circle class="blue" cx="150" cy="161" r="18"/>
+    <text class="label" x="150" y="272">D4</text>
+  </g>
+</svg>

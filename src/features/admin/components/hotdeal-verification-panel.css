@@ -1,0 +1,222 @@
+.fp-hotdeal-verification {
+  gap: 16px;
+}
+
+.fp-hotdeal-verification-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.fp-hotdeal-verification-actions .fp-button {
+  min-height: 38px;
+  white-space: nowrap;
+}
+
+.fp-hotdeal-verification-actions > span {
+  border-radius: 999px;
+  padding: 7px 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fp-hotdeal-verification-actions > span.published {
+  background: #e8f8f2;
+  color: #06856c;
+}
+
+.fp-hotdeal-verification-actions > span.unpublished {
+  background: #fff7e7;
+  color: #a86600;
+}
+
+.fp-hotdeal-verification-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fp-hotdeal-verification-summary > div {
+  min-width: 0;
+  border: 1px solid #e5eaf0;
+  border-radius: 10px;
+  padding: 12px;
+  background: #f8fafc;
+}
+
+.fp-hotdeal-verification-summary span,
+.fp-hotdeal-verification-summary strong {
+  display: block;
+}
+
+.fp-hotdeal-verification-summary span {
+  color: #6b7684;
+  font-size: 12px;
+}
+
+.fp-hotdeal-verification-summary strong {
+  overflow: hidden;
+  margin-top: 5px;
+  color: #191f28;
+  font-size: 15px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-hotdeal-verification-section {
+  display: grid;
+  gap: 10px;
+}
+
+.fp-hotdeal-verification-section h3 {
+  margin: 0;
+  color: #191f28;
+  font-size: 16px;
+}
+
+.fp-hotdeal-verification-items,
+.fp-hotdeal-verification-sources {
+  display: grid;
+  gap: 8px;
+}
+
+.fp-hotdeal-verification-items a,
+.fp-hotdeal-verification-sources a {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid #e5eaf0;
+  border-radius: 10px;
+  padding: 11px 12px;
+  background: #fff;
+  color: inherit;
+  text-decoration: none;
+}
+
+.fp-hotdeal-verification-items a {
+  align-items: flex-start;
+}
+
+.fp-hotdeal-verification-items a:hover,
+.fp-hotdeal-verification-items a:focus-visible,
+.fp-hotdeal-verification-sources a:hover,
+.fp-hotdeal-verification-sources a:focus-visible {
+  border-color: #8bbbf8;
+  background: #f5f9ff;
+  outline: none;
+}
+
+.fp-hotdeal-verification-items a > div,
+.fp-hotdeal-verification-sources a {
+  min-width: 0;
+}
+
+.fp-hotdeal-verification-item-content {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.fp-hotdeal-verification-item-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.fp-hotdeal-verification-item-meta span {
+  color: #2878df;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.fp-hotdeal-verification-item-meta b {
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.fp-hotdeal-verification-items strong,
+.fp-hotdeal-verification-items span,
+.fp-hotdeal-verification-sources span,
+.fp-hotdeal-verification-sources small {
+  display: block;
+}
+
+.fp-hotdeal-verification-items strong,
+.fp-hotdeal-verification-sources span {
+  color: #191f28;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fp-hotdeal-verification-items strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-hotdeal-verification-items p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0;
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.fp-hotdeal-verification-items span,
+.fp-hotdeal-verification-items small,
+.fp-hotdeal-verification-sources small {
+  margin-top: 3px;
+  color: #6b7684;
+  font-size: 12px;
+}
+
+.fp-hotdeal-verification-items small {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.fp-hotdeal-verification-sources a {
+  align-items: flex-start;
+  flex-direction: column;
+  gap: 1px;
+}
+
+@media (max-width: 620px) {
+  .fp-hotdeal-verification .fp-admin-panel-header {
+    align-items: flex-start;
+  }
+
+  .fp-hotdeal-verification-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: auto minmax(0, 1fr);
+    justify-content: stretch;
+  }
+
+  .fp-hotdeal-verification-actions > span {
+    grid-column: 1;
+    align-self: center;
+  }
+
+  .fp-hotdeal-verification-actions > button:first-of-type {
+    grid-column: 2;
+  }
+
+  .fp-hotdeal-verification-actions > button:last-of-type {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  .fp-hotdeal-verification-summary {
+    grid-template-columns: 1fr;
+  }
+}

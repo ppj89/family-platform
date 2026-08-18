@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1440" viewBox="0 0 1440 1440">
+  <defs>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#13233d" flood-opacity=".16"/>
+    </filter>
+    <linearGradient id="blueA" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#3f8cff"/>
+      <stop offset="1" stop-color="#1256d8"/>
+    </linearGradient>
+    <linearGradient id="blueB" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#16233d"/>
+      <stop offset="1" stop-color="#1f6fff"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#80ead8"/>
+      <stop offset="1" stop-color="#2e82ff"/>
+    </linearGradient>
+    <linearGradient id="warm" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#f7fbff"/>
+      <stop offset="1" stop-color="#dbeafe"/>
+    </linearGradient>
+    <linearGradient id="ice" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#edf5ff"/>
+    </linearGradient>
+    <style>
+      .bg { fill:#eef3f8; }
+      .icon { filter:url(#shadow); }
+      .no { font: 700 18px Arial, sans-serif; fill:#8a97a8; text-anchor:middle; }
+      .s { stroke-linecap:round; stroke-linejoin:round; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1440" height="1440"/>
+
+  <!-- 01: protected family home -->
+  <g transform="translate(70 58)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#blueA)"/>
+    <path d="M125 45 198 84v64c0 47-31 80-73 101-42-21-73-54-73-101V84l73-39Z" fill="#fff"/>
+    <path d="M83 127 125 90l42 37v45h-29v-33h-26v33H83v-45Z" fill="#1760d9"/>
+    <text class="no" x="125" y="300">01</text>
+  </g>
+
+  <!-- 02: family node mark -->
+  <g transform="translate(410 58)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#blueB)"/>
+    <circle cx="125" cy="82" r="34" fill="#fff"/>
+    <circle cx="78" cy="158" r="30" fill="#7eead8"/>
+    <circle cx="172" cy="158" r="30" fill="#fff"/>
+    <path class="s" d="M125 116v35M100 151h50" stroke="#fff" stroke-width="18"/>
+    <text class="no" x="125" y="300">02</text>
+  </g>
+
+  <!-- 03: rounded family archive -->
+  <g transform="translate(750 58)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#ice)"/>
+    <rect x="57" y="62" width="136" height="126" rx="36" fill="#17345f"/>
+    <rect x="78" y="88" width="94" height="18" rx="9" fill="#fff"/>
+    <rect x="78" y="121" width="68" height="18" rx="9" fill="#8de7d8"/>
+    <rect x="78" y="154" width="92" height="18" rx="9" fill="#fff"/>
+    <text class="no" x="125" y="300">03</text>
+  </g>
+
+  <!-- 04: shared calendar -->
+  <g transform="translate(1090 58)">
+    <rect class="icon" width="250" height="250" rx="58" fill="#17345f"/>
+    <rect x="57" y="70" width="136" height="122" rx="32" fill="#fff"/>
+    <rect x="57" y="70" width="136" height="40" rx="28" fill="#7eead8"/>
+    <circle cx="93" cy="148" r="19" fill="#2f80ed"/>
+    <circle cx="143" cy="148" r="19" fill="#2f80ed"/>
+    <path class="s" d="M89 55v28M161 55v28" stroke="#fff" stroke-width="16"/>
+    <text class="no" x="125" y="300">04</text>
+  </g>
+
+  <!-- 05: simple home + timeline -->
+  <g transform="translate(70 388)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#mint)"/>
+    <path d="M63 118 125 66l62 52v70a18 18 0 0 1-18 18H81a18 18 0 0 1-18-18v-70Z" fill="#fff"/>
+    <circle cx="92" cy="151" r="14" fill="#2f80ed"/>
+    <circle cx="125" cy="151" r="14" fill="#2f80ed"/>
+    <circle cx="158" cy="151" r="14" fill="#2f80ed"/>
+    <text class="no" x="125" y="300">05</text>
+  </g>
+
+  <!-- 06: privacy vault -->
+  <g transform="translate(410 388)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#ice)"/>
+    <circle cx="125" cy="125" r="78" fill="#1256d8"/>
+    <path d="M83 116h84v55a22 22 0 0 1-22 22h-40a22 22 0 0 1-22-22v-55Z" fill="#fff"/>
+    <path d="M101 116V91a24 24 0 0 1 48 0v25" fill="none" stroke="#fff" stroke-width="18" stroke-linecap="round"/>
+    <circle cx="125" cy="149" r="13" fill="#1256d8"/>
+    <text class="no" x="125" y="300">06</text>
+  </g>
+
+  <!-- 07: family tree -->
+  <g transform="translate(750 388)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#blueA)"/>
+    <path class="s" d="M125 82v58M88 160h74M88 160v28M162 160v28" stroke="#fff" stroke-width="18"/>
+    <circle cx="125" cy="76" r="29" fill="#fff"/>
+    <circle cx="88" cy="194" r="25" fill="#7eead8"/>
+    <circle cx="162" cy="194" r="25" fill="#fff"/>
+    <text class="no" x="125" y="300">07</text>
+  </g>
+
+  <!-- 08: record stack -->
+  <g transform="translate(1090 388)">
+    <rect class="icon" width="250" height="250" rx="58" fill="#f7fbff"/>
+    <rect x="78" y="52" width="108" height="138" rx="28" fill="#dcecff"/>
+    <rect x="64" y="70" width="108" height="138" rx="28" fill="#1256d8"/>
+    <rect x="88" y="100" width="60" height="14" rx="7" fill="#fff"/>
+    <rect x="88" y="132" width="42" height="14" rx="7" fill="#7eead8"/>
+    <rect x="88" y="164" width="58" height="14" rx="7" fill="#fff"/>
+    <text class="no" x="125" y="300">08</text>
+  </g>
+
+  <!-- 09: soft family loop -->
+  <g transform="translate(70 718)">
+    <rect class="icon" width="250" height="250" rx="58" fill="#12213b"/>
+    <path class="s" d="M78 134c0-31 20-52 47-52 24 0 36 18 49 39 10 17 19 31 36 31 15 0 26-12 26-29 0-18-11-31-27-31-14 0-23 7-33 20" transform="translate(-32 0)" fill="none" stroke="#fff" stroke-width="22"/>
+    <circle cx="92" cy="125" r="18" fill="#7eead8"/>
+    <circle cx="158" cy="125" r="18" fill="#2f80ed"/>
+    <text class="no" x="125" y="300">09</text>
+  </g>
+
+  <!-- 10: memory pin -->
+  <g transform="translate(410 718)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#blueB)"/>
+    <path d="M125 48c42 0 75 33 75 75 0 56-75 98-75 98s-75-42-75-98c0-42 33-75 75-75Z" fill="#fff"/>
+    <circle cx="125" cy="121" r="31" fill="#1256d8"/>
+    <circle cx="125" cy="121" r="12" fill="#7eead8"/>
+    <text class="no" x="125" y="300">10</text>
+  </g>
+
+  <!-- 11: four module grid -->
+  <g transform="translate(750 718)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#ice)"/>
+    <rect x="58" y="58" width="58" height="58" rx="19" fill="#1256d8"/>
+    <rect x="134" y="58" width="58" height="58" rx="19" fill="#7eead8"/>
+    <rect x="58" y="134" width="58" height="58" rx="19" fill="#17345f"/>
+    <rect x="134" y="134" width="58" height="58" rx="19" fill="#1256d8"/>
+    <text class="no" x="125" y="300">11</text>
+  </g>
+
+  <!-- 12: family book -->
+  <g transform="translate(1090 718)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#blueA)"/>
+    <path d="M62 63h74c25 0 45 20 45 45v92H105c-24 0-43-19-43-43V63Z" fill="#fff"/>
+    <path d="M188 63h-52c-25 0-45 20-45 45v92h54c24 0 43-19 43-43V63Z" fill="#dcecff"/>
+    <circle cx="125" cy="130" r="24" fill="#1256d8"/>
+    <text class="no" x="125" y="300">12</text>
+  </g>
+
+  <!-- 13: clean FP-like block without letters -->
+  <g transform="translate(70 1048)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#ice)"/>
+    <path d="M58 81c0-16 13-29 29-29h76c16 0 29 13 29 29v88c0 16-13 29-29 29H87c-16 0-29-13-29-29V81Z" fill="#1256d8"/>
+    <path d="M85 95h80v27H85V95Zm0 43h48v27H85v-27Z" fill="#fff"/>
+    <text class="no" x="125" y="300">13</text>
+  </g>
+
+  <!-- 14: shielded connection -->
+  <g transform="translate(410 1048)">
+    <rect class="icon" width="250" height="250" rx="58" fill="#17345f"/>
+    <path d="M125 43 192 80v59c0 45-27 75-67 96-40-21-67-51-67-96V80l67-37Z" fill="#fff"/>
+    <path class="s" d="M95 130h60M125 100v60" stroke="#1256d8" stroke-width="17"/>
+    <circle cx="125" cy="130" r="15" fill="#7eead8"/>
+    <text class="no" x="125" y="300">14</text>
+  </g>
+
+  <!-- 15: calm shared space -->
+  <g transform="translate(750 1048)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#mint)"/>
+    <rect x="54" y="68" width="142" height="114" rx="36" fill="#fff"/>
+    <circle cx="94" cy="125" r="22" fill="#1256d8"/>
+    <circle cx="156" cy="125" r="22" fill="#1256d8"/>
+    <rect x="86" y="155" width="78" height="15" rx="8" fill="#7eead8"/>
+    <text class="no" x="125" y="300">15</text>
+  </g>
+
+  <!-- 16: premium bookmark archive -->
+  <g transform="translate(1090 1048)">
+    <rect class="icon" width="250" height="250" rx="58" fill="url(#blueB)"/>
+    <path d="M78 54h94c13 0 24 11 24 24v121l-71-33-71 33V78c0-13 11-24 24-24Z" fill="#fff"/>
+    <rect x="90" y="88" width="70" height="17" rx="9" fill="#1256d8"/>
+    <rect x="90" y="122" width="52" height="17" rx="9" fill="#7eead8"/>
+    <text class="no" x="125" y="300">16</text>
+  </g>
+</svg>
