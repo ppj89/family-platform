@@ -65,7 +65,8 @@
 - Claude has no interactive browser session. Play Console web UI cannot be checked or operated directly.
 - Use the Play Developer API instead, authenticated with the `play-release-bot@together-records.iam.gserviceaccount.com` service account key, to read track/release status and to upload and publish new bundles.
 - Never guess or restate a stale status ("검토 중" / "게시됨") from memory or from a prior chat log. Query the API fresh each time and report only what that response actually says.
-- New Android builds go to the `internal` track first for the user to install and confirm on a real device. Only promote to `production` after that confirmation. Do not publish directly to production.
+- Default: new Android builds go to the `internal` track first for the user to install and confirm on a real device, then get promoted to `production` after that confirmation.
+- **Temporary override (requested 2026-08-18, still in effect until the user says otherwise):** the user asked to skip the internal-test step for now and publish new builds straight to `production`. Follow that until they say to go back to the internal-test-first flow.
 - If the API returns `PERMISSION_DENIED`, the service account has not been granted access to this app in Play Console (Settings → API access / Users and permissions) — report that plainly instead of retrying blindly.
 
 ## Local/Native Change Discipline (post-incident rule)
