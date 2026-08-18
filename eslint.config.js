@@ -9,9 +9,7 @@ export default tseslint.config(
       'dist/**',
       'ios/**',
       'node_modules/**',
-      'public/legacy/**',
-      'src/features/*/legacy-patch/**/*.js',
-      'src/shared/legacy-patch/**/*.js',
+      '_deprecated_candidates/**',
     ],
   },
   {

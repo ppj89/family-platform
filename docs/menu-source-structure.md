@@ -1,30 +1,6 @@
 # 메뉴별 소스 구조 기준
 
-운영 화면은 아직 레거시 번들과 `public/legacy-patch.js` 조합으로 동작한다. 하지만 수정 원본은 메뉴별 feature 디렉터리에 둔다.
-
-## 원본 위치
-
-- 공통 legacy patch: `src/shared/legacy-patch`
-- 여행: `src/features/travel/legacy-patch`
-- 육아: `src/features/baby/legacy-patch`
-- 일기: `src/features/diary/legacy-patch`
-- 맛집: `src/features/restaurant/legacy-patch`
-- 가계부: `src/features/ledger/legacy-patch`
-- 캘린더: `src/features/calendar/legacy-patch`
-- 가족그룹: `src/features/family/legacy-patch`
-- 홈: `src/features/home/legacy-patch`
-- 커뮤니티: `src/features/community/legacy-patch`
-
-`src/legacy-patch-modules`는 더 이상 원본 위치로 사용하지 않는다.
-
-## 빌드 흐름
-
-- 조립 순서: `src/legacy-patch-manifest.mjs`
-- 생성 파일: `public/legacy-patch.js`
-- 생성 명령: `npm run build:legacy-patch`
-- 동기화 확인: `npm run check:legacy-patch`
-
-`public/legacy-patch.js`는 생성물이다. 직접 수정하지 말고 feature/shared 원본을 수정한 뒤 다시 생성한다.
+운영 화면은 React 이관이 완료되어 `src/App.tsx`가 메뉴별 `src/features/<menu>/pages`를 직접 렌더링한다. 레거시 번들(`public/legacy-patch.js`, `public/legacy/`)과 그 원본이었던 `src/features/*/legacy-patch`, `src/shared/legacy-patch`, `src/legacy-patch-manifest.mjs`, `scripts/build-legacy-patch.mjs`는 2026-08-18 정리 작업에서 `_deprecated_candidates/`로 이동했다. 최종 삭제 전 검토용 보관 폴더이며, 실제 소스 수정 시 참조하지 않는다.
 
 ## 수정 원칙
 
@@ -39,8 +15,6 @@
 변경 후 기본 검증은 아래 순서로 진행한다.
 
 ```bash
-npm run build:legacy-patch
-npm run check:legacy-patch
 npm run lint
 npm run build
 ```

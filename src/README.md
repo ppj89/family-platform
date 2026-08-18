@@ -5,9 +5,8 @@ The source tree is organized by real ownership.
 ## Main Areas
 
 - `app`: app bootstrap, routing, shell, global providers.
-- `features`: menu-specific code. Each menu owns its own page, API, hook, utility, type, component, and legacy compatibility code.
+- `features`: menu-specific code. Each menu owns its own page, API, hook, utility, type, and component code.
 - `shared`: code used by more than one menu.
-- `legacy-patch-manifest.mjs`: ordered assembly list for the generated `public/legacy-patch.js` file.
 
 ## Feature Areas
 
@@ -19,8 +18,6 @@ Each menu lives under `src/features/<menu>`.
 - `hooks`: menu-specific hooks.
 - `utils`: menu-specific calculations and formatting.
 - `types`: menu-specific types.
-- `legacy-patch`: current production compatibility code for that menu.
-- `index.js`: public entry point for that menu and the menu's legacy patch assembly map.
 
 Do not edit another menu folder when fixing one menu unless the change is genuinely shared.
 
@@ -34,29 +31,14 @@ Shared code lives under `src/shared`.
 - `utils`: date, time, number, text, and permission helpers.
 - `types`: common types.
 - `styles`: common classes, tokens, and layout rules.
-- `legacy-patch`: current production compatibility code shared by legacy-patch menus.
 
 Do not copy shared UI/API/hook/util code into each menu.
 
-## Legacy Patch Flow
+## Legacy Patch Flow (retired)
 
-The app still uses the generated `public/legacy-patch.js` file in production.
+React migration is complete: `src/App.tsx` renders every menu's `pages` component directly, and production no longer loads a generated legacy bundle. The former legacy-patch source (`src/features/*/legacy-patch`, `src/shared/legacy-patch`, `src/legacy-patch-manifest.mjs`, `scripts/build-legacy-patch.mjs`, `public/legacy-patch.js`, `public/legacy/`) was moved to `_deprecated_candidates/` on 2026-08-18 for final review before deletion. Do not create new legacy-patch source.
 
-Source files are no longer kept in `src/legacy-patch-modules`.
-
-- Menu-specific patch source: `src/features/<menu>/legacy-patch`.
-- Shared patch source: `src/shared/legacy-patch`.
-- Assembly order: `src/legacy-patch-manifest.mjs`.
-- Generated output: `public/legacy-patch.js`.
-
-When changing legacy patch source, edit the feature/shared source file first and run:
-
-```bash
-npm run build:legacy-patch
-npm run check:legacy-patch
-```
-
-Then run the normal verification:
+Normal verification:
 
 ```bash
 npm run lint
