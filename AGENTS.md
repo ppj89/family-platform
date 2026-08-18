@@ -52,6 +52,29 @@
 - When the global API loading bar is visible, the screen must block clicks, touches, keyboard submits, and menu movement until the API request finishes.
 - Travel menu entry must always show the top-level trip list first. A trip detail screen may open only after the user clicks a trip row.
 
+## Evidence-First Completion Rule
+
+- Do not report a fix, deployment, or completion based on source inspection, a successful build, or an assumed cause alone.
+- Before reporting a defect fixed, reproduce the reported failure when possible and record the failing request, response, or rendered state that explains the cause.
+- For API-backed screens, verify both the API response and the rendered browser result with the same authenticated user and data relevant to the report.
+- A production deployment is not complete until the deployed URL passes the same real user-path test. State the exact tests that passed; never claim that untested paths are fixed.
+- If verification cannot be performed, clearly report it as unverified and continue diagnosis. Never substitute a fallback UI, toast, or guessed workaround for root-cause handling.
+
+## Google Play Console Access Rule
+
+- Claude has no interactive browser session. Play Console web UI cannot be checked or operated directly.
+- Use the Play Developer API instead, authenticated with the `play-release-bot@together-records.iam.gserviceaccount.com` service account key, to read track/release status and to upload and publish new bundles.
+- Never guess or restate a stale status ("검토 중" / "게시됨") from memory or from a prior chat log. Query the API fresh each time and report only what that response actually says.
+- New Android builds go to the `internal` track first for the user to install and confirm on a real device. Only promote to `production` after that confirmation. Do not publish directly to production.
+- If the API returns `PERMISSION_DENIED`, the service account has not been granted access to this app in Play Console (Settings → API access / Users and permissions) — report that plainly instead of retrying blindly.
+
+## Local/Native Change Discipline (post-incident rule)
+
+- On 2026-08-18 a broken Android 15 splash-screen theme reached production because a native (`android/`) fix was made and built only in a local working copy and was never committed to GitHub, while a separate local copy had also drifted out of sync. Nobody could tell which local folder was authoritative, and the actually-live Play Store build could not be verified against any source in this repository.
+- Any change under `android/`, `ios/`, or `capacitor.config.ts` must be committed and pushed before or immediately after building a release from it. A release build that only exists in an uncommitted local working copy is not considered done.
+- Keep exactly one local working copy per machine. If a second copy or worktree is created for an experiment, merge or discard it before starting the next task — do not leave two folders both claiming to be "the real one."
+- Before reporting a native/release issue as fixed, confirm which versionCode is actually live via the Play Developer API (see the rule above), not from a chat log or a prior "빌드 성공" message.
+
 ## Repeated Travel/Common UI Rules
 
 - 여행 메뉴를 수정할 때는 여행 메뉴 `.js`만 수정한다. 사용자가 명시하지 않은 다른 메뉴 `.js`는 절대 건드리지 않는다.
