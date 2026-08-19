@@ -4,6 +4,11 @@
      reported inside an embedded Android WebView. Fall back to env() for the
      brief moment before that JS runs, and for web/other platforms. */
   --fp-safe-top: var(--status-bar-height, env(safe-area-inset-top));
+  /* Android's edge-to-edge WebView also draws behind the bottom system bar
+     (3-button nav or gesture pill), so content needs its own reserved
+     space there too, or the last row on screen runs flush into the nav
+     bar with no visible boundary between app content and system UI. */
+  --fp-safe-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .fp-shell {
@@ -253,7 +258,10 @@
 
 .fp-main {
   min-width: 0;
-  padding: 28px 36px 48px;
+  /* env(safe-area-inset-bottom) can under-report inside an embedded Android
+     WebView the same way safe-area-inset-top did (see --fp-safe-top), so
+     guarantee a minimum gap even if it resolves to 0 on some devices. */
+  padding: 28px 36px max(calc(48px + var(--fp-safe-bottom, 0px)), 64px);
 }
 
 .fp-topbar {
@@ -1145,7 +1153,7 @@ html[data-theme='dark'] .fp-account-danger-zone {
   }
 
   .fp-main {
-    padding: 18px 14px 40px;
+    padding: 18px 14px max(calc(40px + var(--fp-safe-bottom, 0px)), 56px);
   }
 }
 
