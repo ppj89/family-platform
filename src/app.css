@@ -6,28 +6,6 @@
   --fp-safe-top: var(--status-bar-height, env(safe-area-inset-top));
 }
 
-/* Android 15/16 force edge-to-edge, so there is no OS-drawn status bar
-   surface anymore — the app must paint that strip itself. Give it its own
-   solid bar (like a normal app header) instead of letting the page's own
-   background bleed into it, so it reads as a distinct system-bar section
-   rather than the page design "eating into" the clock/icons area. */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: var(--fp-safe-top);
-  background: #ffffff;
-  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.06);
-  z-index: 9999;
-}
-
-html[data-theme='dark'] body::before {
-  background: #0f172a;
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
-}
-
 .fp-shell {
   --fp-font-caption: 14px;
   --fp-font-body: 15px;
