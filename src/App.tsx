@@ -420,7 +420,12 @@ export default function App() {
       // safe-area padding in app.css). Only the icon/text color can actually
       // be controlled here, and it must follow the active theme.
       void StatusBar.setOverlaysWebView({ overlay: true })
-      void StatusBar.setStyle({ style: theme === 'dark' ? Style.Light : Style.Dark })
+      // Style.Dark = dark status bar surface -> light/white icons.
+      // Style.Light = light status bar surface -> dark icons.
+      // This was previously inverted, so the icons/clock rendered the same
+      // color as the (now opaque) body::before status-bar strip and were
+      // invisible: white-on-white in light theme, dark-on-dark in dark theme.
+      void StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : Style.Light })
     }
   }, [theme])
 
