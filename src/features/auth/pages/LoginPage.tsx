@@ -1,5 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { HiOutlineX } from 'react-icons/hi'
+import { Capacitor } from '@capacitor/core'
+import { Style, StatusBar } from '@capacitor/status-bar'
 import { apiRequest } from '../../../shared/api/client'
 import type { ApiError } from '../../../shared/api/client'
 import { clearAuthSession, storeAuthSession } from '../../../shared/api/auth'
@@ -41,6 +43,10 @@ interface VerificationResendResponse {
 const rememberedEmailKey = 'family-platform-remember-email'
 const autoLoginKey = 'family-platform-auto-login'
 const authThemeKey = 'family-platform-auth-theme'
+// Kept in sync with App.tsx's own `appThemeKey` so the app-level theme (and
+// therefore the native StatusBar color) doesn't fall out of sync with the
+// theme the user picked on the login screen.
+const appThemeKey = 'family-platform-app-theme'
 const providerOrder: SsoProvider[] = ['naver', 'kakao', 'google']
 const providerLabels: Record<SsoProvider, string> = {
   naver: '네이버 로그인',
@@ -199,6 +205,17 @@ export function LoginPage() {
 
   useEffect(() => {
     window.localStorage.setItem(authThemeKey, theme)
+    // LoginPage used to keep its own theme entirely separate from App.tsx's
+    // app-level theme, so toggling dark mode here never touched the native
+    // StatusBar: the OS clock/icons kept whatever color the app-level theme
+    // had last set, which was invisible against the login screen's flipped
+    // background. Mirror the choice into the shared theme key and drive the
+    // StatusBar directly from here too.
+    window.localStorage.setItem(appThemeKey, theme)
+    if (Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('StatusBar')) {
+      void StatusBar.setOverlaysWebView({ overlay: true })
+      void StatusBar.setStyle({ style: theme === 'dark' ? Style.Dark : Style.Light })
+    }
   }, [theme])
 
   useEffect(() => {
