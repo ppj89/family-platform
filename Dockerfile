@@ -1,6 +1,9 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package*.json ./
+# postinstall (patch:capacitor-android) needs scripts/ present, so it must be
+# copied in before `npm ci` runs postinstall — not just package*.json.
+COPY scripts ./scripts
 RUN npm ci
 COPY . .
 ARG VITE_API_BASE_URL=/api
