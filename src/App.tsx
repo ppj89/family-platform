@@ -431,15 +431,45 @@ export default function App() {
     // measured status bar height and publish it as a CSS variable; app.css
     // prefers this variable and only falls back to env() when it is unset
     // (web/other platforms).
-    if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable('StatusBar')) return
+
+    // TEMPORARY on-screen diagnostic banner — remove once the status bar
+    // inset issue is confirmed fixed on a real device. There is no remote
+    // devtools access to this WebView, so this is the fastest way to see
+    // what's actually happening natively.
+    const debugEl = document.createElement('div')
+    debugEl.style.cssText =
+      'position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#e11d48;color:#fff;font:11px/1.4 monospace;padding:4px 6px;white-space:pre-wrap;pointer-events:none;'
+    document.body.appendChild(debugEl)
+    const setDebug = (text: string) => {
+      debugEl.textContent = text
+    }
+
+    if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable('StatusBar')) {
+      setDebug(
+        `native=${Capacitor.isNativePlatform()} statusBarPlugin=${Capacitor.isPluginAvailable('StatusBar')} platform=${Capacitor.getPlatform()}`,
+      )
+      return () => {
+        debugEl.remove()
+      }
+    }
+
     let cancelled = false
     const applyStatusBarHeight = () => {
       StatusBar.getInfo()
         .then((info) => {
-          if (cancelled || !info.height) return
-          document.documentElement.style.setProperty('--status-bar-height', `${info.height}px`)
+          if (cancelled) return
+          if (info.height) {
+            document.documentElement.style.setProperty('--status-bar-height', `${info.height}px`)
+          }
+          const computedEnv = getComputedStyle(document.documentElement).getPropertyValue('--fp-safe-top')
+          setDebug(
+            `getInfo height=${info.height} overlays=${info.overlays} visible=${info.visible}\n--fp-safe-top(computed)=${computedEnv}`,
+          )
         })
-        .catch(() => undefined)
+        .catch((err) => {
+          if (cancelled) return
+          setDebug(`StatusBar.getInfo() threw: ${String(err)}`)
+        })
     }
     applyStatusBarHeight()
     // The height can be 0 on the very first frame before the window finishes
@@ -448,6 +478,7 @@ export default function App() {
     return () => {
       cancelled = true
       window.clearTimeout(retryTimer)
+      debugEl.remove()
     }
   }, [])
 
