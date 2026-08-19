@@ -17,7 +17,10 @@ android {
         // main gets a unique, increasing versionCode without a manual edit
         // here. Local/manual builds keep using the hardcoded fallback below.
         versionCode project.hasProperty('releaseVersionCode') ? (project.property('releaseVersionCode') as Integer) : 60
-        versionName "2.48"
+        // Keep versionName visibly unique per CI build too (was stuck at a
+        // fixed "2.48" while versionCode kept climbing, which made every
+        // auto-published release look identical in the Play Store listing).
+        versionName project.hasProperty('releaseVersionCode') ? "2.${project.property('releaseVersionCode')}" : "2.48"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
