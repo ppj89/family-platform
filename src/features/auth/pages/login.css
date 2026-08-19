@@ -14,7 +14,7 @@
   color: #191f28;
   /* Match .fp-shell: Android 15/16 force edge-to-edge, so the status bar
      area must be painted by our own background via the safe-area inset. */
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--fp-safe-top, env(safe-area-inset-top));
   box-sizing: border-box;
 }
 

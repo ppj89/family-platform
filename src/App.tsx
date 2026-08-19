@@ -424,6 +424,33 @@ export default function App() {
     }
   }, [theme])
 
+  useEffect(() => {
+    // CSS env(safe-area-inset-top) is not reliably reported inside an
+    // embedded Android WebView (unlike a real mobile browser), so don't
+    // depend on it alone. Ask the native StatusBar plugin for the real,
+    // measured status bar height and publish it as a CSS variable; app.css
+    // prefers this variable and only falls back to env() when it is unset
+    // (web/other platforms).
+    if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable('StatusBar')) return
+    let cancelled = false
+    const applyStatusBarHeight = () => {
+      StatusBar.getInfo()
+        .then((info) => {
+          if (cancelled || !info.height) return
+          document.documentElement.style.setProperty('--status-bar-height', `${info.height}px`)
+        })
+        .catch(() => undefined)
+    }
+    applyStatusBarHeight()
+    // The height can be 0 on the very first frame before the window finishes
+    // laying out edge-to-edge; check again shortly after mount.
+    const retryTimer = window.setTimeout(applyStatusBarHeight, 500)
+    return () => {
+      cancelled = true
+      window.clearTimeout(retryTimer)
+    }
+  }, [])
+
   if (!authenticated) {
     return <LoginPage />
   }

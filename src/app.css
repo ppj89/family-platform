@@ -1,3 +1,11 @@
+:root {
+  /* App.tsx measures the real status bar height natively (StatusBar.getInfo)
+     and publishes it here, because env(safe-area-inset-top) is not reliably
+     reported inside an embedded Android WebView. Fall back to env() for the
+     brief moment before that JS runs, and for web/other platforms. */
+  --fp-safe-top: var(--status-bar-height, env(safe-area-inset-top));
+}
+
 .fp-shell {
   --fp-font-caption: 14px;
   --fp-font-body: 15px;
@@ -18,7 +26,7 @@
      from XML themes or window flags. Painting the shell's own background
      through the inset (instead of trying to tint the system bar) is the
      only approach that keeps working across OS versions. */
-  padding-top: env(safe-area-inset-top);
+  padding-top: var(--fp-safe-top);
 }
 
 .fp-shell.sidebar-collapsed {
@@ -31,7 +39,7 @@
   display: flex;
   flex-direction: column;
   gap: 22px;
-  height: calc(100vh - env(safe-area-inset-top));
+  height: calc(100vh - var(--fp-safe-top));
   border-right: 1px solid #e2e6ea;
   padding: 22px 18px;
   background: #f7f8fa;
@@ -635,7 +643,7 @@ html[data-theme='dark'] .fp-confirm-dialog {
 .fp-toast {
   position: fixed;
   left: 50%;
-  top: calc(92px + env(safe-area-inset-top, 0px));
+  top: calc(92px + var(--fp-safe-top, 0px));
   z-index: 2147483000;
   display: inline-flex;
   align-items: center;
