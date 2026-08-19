@@ -70,7 +70,13 @@ if [ "$ALLOW_PLACEHOLDERS" != "1" ]; then
       ;;
   esac
 
-  case "$cors_origins" in
+  # The Capacitor mobile app's WebView sends these fixed, non-HTTPS Origin
+  # headers (https://localhost, http://localhost, capacitor://localhost) on
+  # every request regardless of the real backing domain — see
+  # .env.production.example. They are not a misconfiguration, so strip them
+  # before checking that every other origin is a real production HTTPS host.
+  cors_origins_to_check="$(printf '%s' "$cors_origins" | tr ',' '\n' | grep -vE '^(https://localhost|http://localhost|capacitor://localhost)$' | paste -sd, -)"
+  case "$cors_origins_to_check" in
     *localhost*|*127.0.0.1*|http://*)
       fail "APP_CORS_ALLOWED_ORIGINS must use production HTTPS origins only"
       ;;
