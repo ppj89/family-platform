@@ -1,4 +1,4 @@
-const CACHE_NAME = 'family-platform-v5'
+const CACHE_NAME = 'family-platform-v6'
 const APP_SHELL = ['/manifest.webmanifest', '/fp-icon.svg']
 
 self.addEventListener('install', (event) => {
