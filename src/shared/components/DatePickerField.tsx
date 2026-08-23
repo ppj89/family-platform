@@ -66,6 +66,14 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
   const [level, setLevel] = useState<PickerLevel>(mode)
   const [viewDate, setViewDate] = useState(() => initialViewDate(value, mode))
   const rootRef = useRef<HTMLLabelElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+  // The popover always opened downward. When the trigger sits low on the
+  // page (e.g. a filter field near the bottom of a scroll view), that put
+  // its "오늘" button and lower rows off the bottom of the screen — behind
+  // the Android nav bar or simply unreachable. Flip it upward, and cap its
+  // height to whatever space is actually available, when there isn't
+  // enough room below.
+  const [dropDirection, setDropDirection] = useState<{ upward: boolean; maxHeight: number } | null>(null)
   const cells = useMemo(() => monthDays(viewDate), [viewDate])
   const selectedViewDate = useMemo(() => initialViewDate(value, mode), [mode, value])
   const currentToday = todayKey()
@@ -93,6 +101,20 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
       document.removeEventListener('keydown', closeOnEscape)
     }
   }, [open])
+
+  useEffect(() => {
+    if (!open || !triggerRef.current) {
+      setDropDirection(null)
+      return
+    }
+    const rect = triggerRef.current.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const wantedHeight = 420
+    const spaceBelow = viewportHeight - rect.bottom - 12
+    const spaceAbove = rect.top - 12
+    const upward = spaceBelow < wantedHeight && spaceAbove > spaceBelow
+    setDropDirection({ upward, maxHeight: Math.max(240, Math.min(wantedHeight, upward ? spaceAbove : spaceBelow)) })
+  }, [open, level])
 
   function selectDate(dateKey: string) {
     onChange(dateKey, { source: 'select' })
@@ -158,7 +180,7 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
   return (
     <label className={`fp-field fp-date-picker-field date-picker-field ${open ? 'open' : ''} ${className}`} ref={rootRef}>
       {label ? <span>{label}{required ? <em className="fp-required-mark">*</em> : null}</span> : null}
-      <button className="fp-date-picker-trigger date-picker-trigger" type="button" onClick={toggleOpen}>
+      <button ref={triggerRef} className="fp-date-picker-trigger date-picker-trigger" type="button" onClick={toggleOpen}>
         <strong>{displayValue || (mode === 'year' ? displayYear(value) : mode === 'month' ? displayMonth(value) : displayDate(value))}</strong>
         {showCalendarIcon ? (
           <span aria-hidden="true" className="fp-date-picker-calendar-icon">
@@ -180,7 +202,19 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
         )}
       </button>
       {open ? (
-        <div className={`fp-date-picker-popover fp-date-picker-popover-${mode} fp-date-picker-level-${level}`}>
+        <div
+          className={`fp-date-picker-popover fp-date-picker-popover-${mode} fp-date-picker-level-${level}`}
+          style={
+            dropDirection
+              ? {
+                  top: dropDirection.upward ? 'auto' : 'calc(100% + 8px)',
+                  bottom: dropDirection.upward ? 'calc(100% + 8px)' : 'auto',
+                  maxHeight: dropDirection.maxHeight,
+                  overflowY: 'auto',
+                }
+              : undefined
+          }
+        >
           <header>
             <button type="button" aria-label="이전" onClick={() => moveView(-1)}>
               <CgChevronLeft aria-hidden="true" />
