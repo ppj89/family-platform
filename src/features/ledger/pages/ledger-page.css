@@ -1555,13 +1555,14 @@
   bottom: 0;
   align-self: end;
   margin-top: 0;
-  padding-top: 10px !important;
-  padding-right: 22px !important;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
-  padding-left: 22px !important;
-  border-top: 1px solid #edf0f3;
+  padding: 10px 22px 12px !important;
+  /* The dialog's own backdrop already reserves the device's bottom safe
+     area (see body[class$="backdrop"] in app.css), so adding
+     env(safe-area-inset-bottom) here too just doubled up as extra dead
+     white space below the buttons. A plain, modest 12px is enough.
+     Dropped the border/shadow divider as well so this reads as the same
+     surface as the form above it instead of a visually separate strip. */
   background: #ffffff;
-  box-shadow: 0 -8px 18px rgba(15, 23, 42, 0.05);
   z-index: 3;
 }
 
@@ -1619,14 +1620,13 @@
   bottom: 0;
   align-self: end;
   margin-top: 0;
-  padding-top: 10px !important;
-  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
-  border-top: 1px solid #edf0f3;
+  /* See .ledger-detail-edit-dialog .ledger-detail-actions: no extra
+     env(safe-area-inset-bottom) padding (the backdrop already reserves
+     it) and no border/shadow divider, so this matches the form's
+     background instead of reading as a separate strip. */
+  padding: 10px 22px 12px !important;
   background: #ffffff;
-  box-shadow: 0 -8px 18px rgba(15, 23, 42, 0.05);
   z-index: 3;
-  padding-right: 22px !important;
-  padding-left: 22px !important;
 }
 
 .fp-ledger-entry-dialog .ledger-detail-actions button {
@@ -2220,10 +2220,9 @@ html[data-theme='dark'] .fp-ledger-entry-dialog .ledger-detail-actions button:no
   box-shadow: inset 0 0 0 1px #334155 !important;
 }
 
-html[data-theme='dark'] .fp-ledger-entry-dialog .ledger-detail-actions {
-  border-color: #334155;
+html[data-theme='dark'] .fp-ledger-entry-dialog .ledger-detail-actions,
+html[data-theme='dark'] .ledger-detail-edit-dialog .ledger-detail-actions {
   background: #172033;
-  box-shadow: 0 -8px 18px rgba(0, 0, 0, 0.18);
 }
 
 html[data-theme='dark'] .fp-ledger .fp-button-primary,
