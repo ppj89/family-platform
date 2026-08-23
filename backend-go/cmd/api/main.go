@@ -7279,6 +7279,18 @@ create table if not exists family_members (
   user_id bigint
 );
 alter table if exists family_members add column if not exists shared_menu_keys text[] not null default array['calendar','ledger','travel','baby','diary','restaurant','community']::text[];
+-- Rows inserted before a menu key existed keep whatever shorter array was
+-- the default at insert time (the column default only applies on insert),
+-- so members added before e.g. 'travel'/'restaurant'/'community' shipped
+-- never got it in their shared_menu_keys and sharing silently stayed off
+-- for that menu. Backfill any key from the current default that's missing.
+update family_members set shared_menu_keys = array_append(shared_menu_keys, 'calendar') where not ('calendar' = any(shared_menu_keys));
+update family_members set shared_menu_keys = array_append(shared_menu_keys, 'ledger') where not ('ledger' = any(shared_menu_keys));
+update family_members set shared_menu_keys = array_append(shared_menu_keys, 'travel') where not ('travel' = any(shared_menu_keys));
+update family_members set shared_menu_keys = array_append(shared_menu_keys, 'baby') where not ('baby' = any(shared_menu_keys));
+update family_members set shared_menu_keys = array_append(shared_menu_keys, 'diary') where not ('diary' = any(shared_menu_keys));
+update family_members set shared_menu_keys = array_append(shared_menu_keys, 'restaurant') where not ('restaurant' = any(shared_menu_keys));
+update family_members set shared_menu_keys = array_append(shared_menu_keys, 'community') where not ('community' = any(shared_menu_keys));
 create index if not exists idx_family_members_user on family_members (user_id);
 create index if not exists idx_family_members_family on family_members (family_id);
 create table if not exists family_invitations (
@@ -7297,6 +7309,9 @@ create table if not exists family_invitations (
   responded_at timestamp with time zone
 );
 alter table if exists family_invitations add column if not exists shared_menu_keys text[] not null default array['calendar','ledger','travel','baby','diary','restaurant','community']::text[];
+update family_invitations set shared_menu_keys = array_append(shared_menu_keys, 'travel') where status = 'PENDING' and not ('travel' = any(shared_menu_keys));
+update family_invitations set shared_menu_keys = array_append(shared_menu_keys, 'restaurant') where status = 'PENDING' and not ('restaurant' = any(shared_menu_keys));
+update family_invitations set shared_menu_keys = array_append(shared_menu_keys, 'community') where status = 'PENDING' and not ('community' = any(shared_menu_keys));
 create index if not exists idx_family_invitations_invitee on family_invitations (invitee_user_id, status, created_at desc);
 create index if not exists idx_family_invitations_family on family_invitations (family_id, status, created_at desc);
 create table if not exists family_schedules (
