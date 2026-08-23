@@ -2036,7 +2036,9 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   grid-template-rows: auto minmax(0, 1fr) auto;
   top: auto;
   width: min(560px, calc(100vw - 40px));
-  height: min(720px, calc(100dvh - 28px));
+  /* max-height (not a forced height) lets the dialog shrink to fit its
+     content instead of always stretching to fill the viewport. */
+  max-height: min(720px, calc(100dvh - 28px));
   min-height: 0;
   gap: 0 !important;
   overflow: hidden;

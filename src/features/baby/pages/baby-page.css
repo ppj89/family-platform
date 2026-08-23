@@ -960,7 +960,10 @@
 
 .baby-form-dialog {
   width: min(520px, calc(100vw - 36px));
-  height: min(720px, calc(100dvh - 28px));
+  /* max-height (not a forced height) lets the dialog shrink to fit its
+     content instead of always stretching to fill the viewport, which left
+     a dead white gap below the save button on short forms. */
+  max-height: min(720px, calc(100dvh - 28px));
   overflow: hidden;
   padding: 0;
 }
@@ -993,7 +996,7 @@
 }
 
 .baby-record-form-dialog {
-  height: min(680px, calc(100dvh - 28px));
+  max-height: min(680px, calc(100dvh - 28px));
 }
 
 .baby-record-form-dialog .baby-api-record-card {

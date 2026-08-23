@@ -70,7 +70,9 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(640px, 100%);
   max-width: 640px;
-  height: min(720px, calc(100dvh - 28px));
+  /* max-height (not a forced height) lets the dialog shrink to fit its
+     content instead of always stretching to fill the viewport. */
+  max-height: min(720px, calc(100dvh - 28px));
   min-height: 0;
   gap: 0;
   overflow: hidden;

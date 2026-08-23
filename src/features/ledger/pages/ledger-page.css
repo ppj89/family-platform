@@ -1523,8 +1523,13 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(520px, calc(100vw - 40px));
-  height: min(760px, calc(100dvh - 28px));
-  max-height: calc(100dvh - 28px);
+  /* A forced `height` (instead of `max-height`) made the dialog stretch to
+     nearly the full viewport even when the form's content was much
+     shorter, leaving a large dead white gap below the action buttons and
+     pushing the header close to the top edge. max-height lets it shrink
+     to fit the content and only cap out / scroll on short viewports
+     (e.g. with the keyboard open). */
+  max-height: min(760px, calc(100dvh - 28px));
   min-height: 0;
   gap: 0;
   overflow: hidden;
@@ -1564,8 +1569,10 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(560px, calc(100vw - 40px));
-  height: min(760px, calc(100dvh - 28px));
-  max-height: calc(100dvh - 28px);
+  /* See .ledger-detail-edit-dialog: max-height (not a forced height) lets
+     this shrink to fit its content instead of always stretching to fill
+     the viewport. */
+  max-height: min(760px, calc(100dvh - 28px));
   min-height: 0;
   gap: 0;
   overflow: hidden;
@@ -1751,6 +1758,19 @@
 }
 
 @media (max-width: 760px) {
+  /* These two dialogs were forced near-full-viewport tall, so centering
+     them (place-items:center from .patch-ledger-detail-backdrop) put
+     their header right at the very top of the screen — and when the
+     on-screen keyboard opens and shrinks the visible area further, the
+     header can end up hidden behind/above it. Anchor them to the top
+     with a fixed safe gap instead of re-centering as the keyboard opens;
+     the dialog's own max-height + internal scroll still handle overflow. */
+  .fp-ledger-entry-backdrop,
+  .fp-ledger-detail-edit-backdrop {
+    align-items: flex-start;
+    padding-top: max(28px, calc(var(--fp-safe-top, 0px) + 16px));
+  }
+
   .fp-ledger.content-grid {
     grid-template-columns: minmax(0, 1fr);
   }
