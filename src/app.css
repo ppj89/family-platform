@@ -1710,11 +1710,16 @@ html[data-theme='dark'] .fp-shell :where(
   gap: 10px !important;
   align-items: center;
   margin: 0 !important;
-  padding: 6px 16px calc(8px + env(safe-area-inset-bottom, 0px)) !important;
+  /* No extra env(safe-area-inset-bottom) here: the dialog's own backdrop
+     already reserves the device's bottom safe area (see
+     body[class$="backdrop"] in this file), so this only needs a plain,
+     modest bottom padding. Dropped the border/shadow divider too, so this
+     reads as the same surface as the form above it instead of a visually
+     separate strip (matches every dialog app-wide, since they all share
+     this class). */
+  padding: 10px 16px 12px !important;
   align-self: end;
-  border-top: 1px solid #edf0f3;
   background: #ffffff;
-  box-shadow: 0 -8px 18px rgb(15 23 42 / 5%);
   z-index: 3;
 }
 
@@ -1743,9 +1748,7 @@ html[data-theme='dark'] .fp-shell :where(
 }
 
 html[data-theme='dark'] .fp-dialog-action-footer {
-  border-color: #334155;
   background: #172033;
-  box-shadow: 0 -8px 18px rgb(0 0 0 / 18%);
 }
 
 html[data-theme='dark'] .fp-dialog-action-footer > :is(.fp-button-muted, .muted, .cancel-action, .cancel-button) {
