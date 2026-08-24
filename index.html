@@ -29,6 +29,30 @@
     </script>
     <script type="module" src="/src/main.tsx"></script>
     <script>
+      // Backgrounding the app while /src/main.tsx's module fetch is still
+      // in flight can leave it permanently suspended on Android (the
+      // WebView throttles/pauses network for a backgrounded activity, and
+      // the in-progress request never resumes cleanly) — the app comes
+      // back to a blank white #root with no JS ever mounting into it and
+      // no way to recover on its own. If the page is still empty a
+      // moment after becoming visible again, force a fresh reload rather
+      // than leave the user stuck.
+      ;(function () {
+        var recoveredFromBlankResume = false
+        function recoverIfStuck() {
+          if (document.visibilityState !== 'visible' || recoveredFromBlankResume) return
+          var root = document.getElementById('root')
+          if (root && root.childElementCount === 0) {
+            recoveredFromBlankResume = true
+            window.location.reload()
+          }
+        }
+        document.addEventListener('visibilitychange', function () {
+          if (document.visibilityState === 'visible') window.setTimeout(recoverIfStuck, 1500)
+        })
+      })()
+    </script>
+    <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', function () {
           navigator.serviceWorker.register('/sw.js').catch(function () {})
