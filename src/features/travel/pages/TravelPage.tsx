@@ -72,8 +72,8 @@ function recordDateTime(record: TravelRecord) {
   return [record.recordDate, record.recordTime?.slice(0, 5)].filter(Boolean).join(' ')
 }
 
-function recordCostLine(record: TravelRecord) {
-  return [record.category || '기타', money(record.amount), record.location].filter(Boolean).join(' · ')
+function recordSubLine(record: TravelRecord) {
+  return [record.category || '기타', record.location].filter(Boolean).join(' · ')
 }
 
 function formatMonthLabel(value: string) {
@@ -105,6 +105,7 @@ export default function TravelPage() {
   const [isRecordFormOpen, setIsRecordFormOpen] = useState(false)
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null)
   const [editingRecord, setEditingRecord] = useState<TravelRecord | null>(null)
+  const [selectedRecord, setSelectedRecord] = useState<TravelRecord | null>(null)
   const [pendingTripDelete, setPendingTripDelete] = useState<Trip | null>(null)
   const [pendingRecordDelete, setPendingRecordDelete] = useState<TravelRecord | null>(null)
   const [confirmKind, setConfirmKind] = useState<ConfirmKind | null>(null)
@@ -152,10 +153,14 @@ export default function TravelPage() {
       const nextRecords = await listTravelRecords(trip.id)
       setRecords(nextRecords)
       setEditingRecord(null)
-      setRecordForm((value) => {
-        if (value.title.trim() || value.location.trim() || value.note?.trim() || value.amount) return value
-        return emptyRecord(nextOrder(nextRecords))
-      })
+      // Always start the next add/edit form from a clean slate. This used
+      // to only reset when the form looked untouched, meant to protect an
+      // in-progress draft — but since the form now lives in a popup that's
+      // fully closed after every save, that check just left the just-
+      // submitted title (and its now-stale sortOrder) sitting in state,
+      // so the very next "add" reused the same order number instead of
+      // incrementing.
+      setRecordForm(emptyRecord(nextOrder(nextRecords)))
     } catch (error) {
       setToastMessage(apiActionMessage(error, '여행 기록을 불러오지 못했습니다.'))
     } finally {
@@ -394,47 +399,68 @@ export default function TravelPage() {
             <h2>여행</h2>
             <p>{selectedTrip.startDate}{selectedTrip.endDate !== selectedTrip.startDate ? ` ~ ${selectedTrip.endDate}` : ''}</p>
           </div>
-          <button className="fp-button fp-button-muted" type="button" onClick={() => setSelectedTrip(null)}>목록</button>
+          <div className="fp-travel-detail-header-actions">
+            <button className="fp-button fp-button-primary" type="button" onClick={openRecordCreate}>입력</button>
+            <button className="fp-button fp-button-muted" type="button" onClick={() => setSelectedTrip(null)}>목록</button>
+          </div>
         </header>
 
         <section className="fp-travel-detail-main">
           <div className="fp-travel-summary">
             <article><span>총 사용금액</span><strong>{money(totalAmount)}</strong></article>
-            <article><span>다음 순서</span><strong>{String(nextOrder(recordList)).padStart(2, '0')}</strong></article>
+            <article><span>기록 수</span><strong>{recordList.length}건</strong></article>
           </div>
           <TravelMap records={recordList} />
           <div className="fp-travel-record-list">
             {recordList.length ? recordList.map((record, index) => (
-              <article className="fp-travel-record-card" key={record.id}>
-                <aside className="fp-travel-record-media">
-                  <b>{String(record.sortOrder || index + 1).padStart(2, '0')}</b>
-                  <span aria-hidden="true">▣</span>
-                </aside>
-                <div className="fp-travel-record-body">
-                  <time>{recordDateTime(record)}</time>
+              <button type="button" className="fp-travel-record-row" key={record.id} onClick={() => setSelectedRecord(record)}>
+                <span className="fp-travel-record-order">{String(record.sortOrder || index + 1).padStart(2, '0')}</span>
+                <span className="fp-travel-record-row-main">
                   <strong className="fp-ellipsis" title={record.title}>{record.title}</strong>
-                  {record.note ? <p>{record.note}</p> : null}
-                  <small>{recordCostLine(record)}</small>
-                </div>
-                <div className="fp-row-actions fp-travel-record-actions">
-                  <button type="button" onClick={() => startRecordEdit(record)}>수정</button>
-                  <button
-                    type="button"
-                    className="danger"
-                    onClick={() => {
-                      setPendingRecordDelete(record)
-                      setConfirmKind('record-delete')
-                    }}
-                  >
-                    삭제
-                  </button>
-                </div>
-              </article>
+                  <span className="fp-travel-record-row-sub">{recordSubLine(record)}</span>
+                </span>
+                <span className="fp-travel-record-row-end">
+                  <time>{recordDateTime(record)}</time>
+                  <b>{money(record.amount)}</b>
+                </span>
+              </button>
             )) : <p className="fp-empty-text">등록된 여행 기록이 없습니다.</p>}
           </div>
         </section>
 
         {!isRecordFormOpen ? <FloatingActionButton ariaLabel="여행 기록 추가" onClick={openRecordCreate} /> : null}
+
+        {selectedRecord ? (
+          <div className="fp-travel-record-detail-backdrop" role="presentation" onClick={() => setSelectedRecord(null)}>
+            <section className="fp-travel-record-detail-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+              <button type="button" className="dialog-close" aria-label="닫기" onClick={() => setSelectedRecord(null)}>
+                <HiOutlineX aria-hidden="true" />
+              </button>
+              <span className="fp-travel-record-detail-chip">{selectedRecord.category || '기타'}</span>
+              <h2>{selectedRecord.title}</h2>
+              <strong className="fp-travel-record-detail-amount">{money(selectedRecord.amount)}</strong>
+              <dl>
+                <div><dt>일시</dt><dd>{recordDateTime(selectedRecord)}</dd></div>
+                <div><dt>위치</dt><dd>{selectedRecord.location || '-'}</dd></div>
+              </dl>
+              <p>{selectedRecord.note || '메모가 없습니다.'}</p>
+              <div className="fp-travel-record-detail-actions">
+                <button type="button" className="edit-button" onClick={() => { setSelectedRecord(null); startRecordEdit(selectedRecord) }}>수정</button>
+                <button
+                  type="button"
+                  className="danger-button"
+                  onClick={() => {
+                    setSelectedRecord(null)
+                    setPendingRecordDelete(selectedRecord)
+                    setConfirmKind('record-delete')
+                  }}
+                >
+                  삭제
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
 
         {isRecordFormOpen ? (
           <div className="fp-travel-record-form-backdrop" role="presentation" onClick={closeRecordForm}>
@@ -456,14 +482,6 @@ export default function TravelPage() {
               </header>
               <form className="fp-travel-record-form" onSubmit={requestRecordSave}>
                 <div className="fp-form-grid travel-record-grid">
-                  <label className="fp-field">
-                    <span>순서</span>
-                    <input
-                      inputMode="numeric"
-                      value={recordForm.sortOrder || ''}
-                      onChange={(event) => setRecordForm((value) => ({ ...value, sortOrder: Number(event.target.value.replace(/\D/g, '')) || null }))}
-                    />
-                  </label>
                   <CustomSelect
                     label="비용 구분"
                     options={travelCostCategoryOptions.map((category) => ({ label: category, value: category }))}
