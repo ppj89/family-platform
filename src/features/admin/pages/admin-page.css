@@ -1576,17 +1576,21 @@
   min-width: 0;
 }
 
+/* Same look as .fp-admin-tabs (the 대시보드/회원조회/... tab bar), so the
+   status filter reads as the same kind of control instead of a
+   differently colored, differently shaped block. */
 .fp-admin-inquiry-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 4px;
   padding: 4px;
   border-radius: 8px;
-  background: #f2f4f6;
+  background: #e9edf2;
 }
 
 .fp-admin-inquiry-toolbar button {
-  min-height: 32px;
+  min-height: 34px;
   border: 0;
   border-radius: 8px;
   padding: 0 12px;
@@ -1596,6 +1600,7 @@
   font: inherit;
   font-size: 12px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .fp-admin-inquiry-toolbar button.active {
@@ -1861,7 +1866,8 @@ html[data-theme='dark'] .fp-admin-inquiry-message {
   background: #1f2937;
 }
 
-html[data-theme='dark'] .fp-admin-tabs button.active {
+html[data-theme='dark'] .fp-admin-tabs button.active,
+html[data-theme='dark'] .fp-admin-inquiry-toolbar button.active {
   background: #334155;
   color: #bfdbfe;
   box-shadow: none;
@@ -2128,9 +2134,15 @@ html[data-theme='dark'] .fp-admin-refresh-button {
     flex-direction: column;
   }
 
-  .fp-admin-menu-panel .fp-admin-panel-header {
+  .fp-admin-menu-panel .fp-admin-panel-header,
+  .fp-admin-inquiry-panel .fp-admin-panel-header {
     align-items: flex-start;
     flex-direction: row;
+  }
+
+  .fp-admin-inquiry-panel .fp-admin-panel-header .fp-admin-refresh-button {
+    flex: none;
+    margin-left: auto;
   }
 
   .fp-admin-menu-panel .fp-admin-panel-header .edit-button,
@@ -2312,8 +2324,15 @@ html[data-theme='dark'] .fp-admin-refresh-button {
   }
 
   .fp-admin-inquiry-toolbar {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-wrap: nowrap;
+    width: 100%;
+  }
+
+  .fp-admin-inquiry-toolbar button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 0 4px;
   }
 
   .fp-admin-inquiry-meta {
