@@ -633,7 +633,9 @@
   position: relative;
   display: grid;
   width: min(420px, 100%);
+  max-height: min(680px, calc(var(--fp-dialog-viewport-height) - 40px));
   gap: 14px;
+  overflow-y: auto;
   border-radius: 22px;
   padding: 22px;
   background: #fff;

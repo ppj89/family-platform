@@ -114,6 +114,7 @@ export default function TravelPage() {
   const [toastMessage, setToastMessage] = useState('')
   const [placeCandidates, setPlaceCandidates] = useState<PlaceSearchResult[]>([])
   const [placeSearching, setPlaceSearching] = useState(false)
+  const [isLocationFieldFocused, setIsLocationFieldFocused] = useState(false)
   const tripNameInputRef = useRef<HTMLInputElement>(null)
   const travelCostCategoryOptions = useCommonCodeOptions(COMMON_CODE_GROUPS.travelCostCategories, TRAVEL_COST_CATEGORIES)
 
@@ -185,8 +186,12 @@ export default function TravelPage() {
   }, [isTripFormOpen])
 
   useEffect(() => {
+    // Editing an existing record pre-fills this field with its saved
+    // location, which used to trigger a search and pop the candidate list
+    // open immediately — before the user had touched the field at all.
+    // Only search while the field is actually focused.
     const query = recordForm.location.trim()
-    if (query.length < 2) {
+    if (!isLocationFieldFocused || query.length < 2) {
       setPlaceCandidates([])
       return
     }
@@ -206,7 +211,7 @@ export default function TravelPage() {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [recordForm.location])
+  }, [recordForm.location, isLocationFieldFocused])
 
   function startTripEdit(trip: Trip) {
     setEditingTrip(trip)
@@ -446,6 +451,10 @@ export default function TravelPage() {
                 <div><dt>카테고리</dt><dd>{selectedRecord.category || '기타'}</dd></div>
                 <div><dt>위치</dt><dd>{selectedRecord.location || '-'}</dd></div>
               </dl>
+              <TravelMap
+                point={selectedRecord.latitude && selectedRecord.longitude ? { latitude: selectedRecord.latitude, longitude: selectedRecord.longitude, label: selectedRecord.location } : null}
+                className="preview"
+              />
               <div className="fp-travel-record-detail-note">
                 <span>메모</span>
                 <p>{selectedRecord.note || '메모가 없습니다.'}</p>
@@ -508,12 +517,21 @@ export default function TravelPage() {
                     <span>시간 <em className="fp-required-mark">*</em></span>
                     <input inputMode="numeric" maxLength={5} value={recordForm.recordTime || ''} onChange={(event) => setRecordForm((value) => ({ ...value, recordTime: sanitizeTime(event.target.value) }))} />
                   </label>
+                  <label className="fp-field">
+                    <span>사용금액</span>
+                    <input inputMode="numeric" value={formatNumberInput(recordForm.amount)} onChange={(event) => setRecordForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))} />
+                  </label>
                   <label className="fp-field span-2 fp-place-field">
                     <span>위치</span>
-                    <input value={recordForm.location} onChange={(event) => setRecordForm((value) => ({ ...value, location: event.target.value, latitude: 0, longitude: 0 }))} />
+                    <input
+                      value={recordForm.location}
+                      onChange={(event) => setRecordForm((value) => ({ ...value, location: event.target.value, latitude: 0, longitude: 0 }))}
+                      onFocus={() => setIsLocationFieldFocused(true)}
+                      onBlur={() => setIsLocationFieldFocused(false)}
+                    />
                     {placeSearching ? <span className="fp-place-status">위치를 검색하는 중입니다.</span> : null}
                     {placeCandidates.length ? (
-                      <div className="fp-place-candidates">
+                      <div className="fp-place-candidates" onMouseDown={(event) => event.preventDefault()}>
                         {placeCandidates.map((place) => (
                           <button key={place.id} type="button" onClick={() => selectPlace(place)}>
                             <strong>{place.name}</strong>
@@ -527,10 +545,6 @@ export default function TravelPage() {
                   <div className="span-2">
                     <TravelMap point={recordForm.latitude && recordForm.longitude ? { latitude: recordForm.latitude, longitude: recordForm.longitude, label: recordForm.location } : null} className="preview" />
                   </div>
-                  <label className="fp-field">
-                    <span>사용금액</span>
-                    <input inputMode="numeric" value={formatNumberInput(recordForm.amount)} onChange={(event) => setRecordForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))} />
-                  </label>
                   <label className="fp-field span-2">
                     <span>내용</span>
                     <textarea value={recordForm.note || ''} onChange={(event) => setRecordForm((value) => ({ ...value, note: event.target.value }))} />
