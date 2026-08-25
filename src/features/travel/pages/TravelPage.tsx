@@ -68,8 +68,9 @@ function nextOrder(records: TravelRecord[]) {
   return max + 1
 }
 
-function recordDateTime(record: TravelRecord) {
-  return [record.recordDate, record.recordTime?.slice(0, 5)].filter(Boolean).join(' ')
+function recordShortDate(record: TravelRecord) {
+  const [, month, day] = record.recordDate.split('-')
+  return month && day ? `${month}.${day}` : record.recordDate
 }
 
 function recordSubLine(record: TravelRecord) {
@@ -399,7 +400,7 @@ export default function TravelPage() {
             <h2>여행</h2>
             <p>{selectedTrip.startDate}{selectedTrip.endDate !== selectedTrip.startDate ? ` ~ ${selectedTrip.endDate}` : ''}</p>
           </div>
-          <div className="fp-travel-detail-header-actions">
+          <div className="fp-travel-list-actions">
             <button className="fp-button fp-button-primary" type="button" onClick={openRecordCreate}>입력</button>
             <button className="fp-button fp-button-muted" type="button" onClick={() => setSelectedTrip(null)}>목록</button>
           </div>
@@ -420,8 +421,8 @@ export default function TravelPage() {
                   <span className="fp-travel-record-row-sub">{recordSubLine(record)}</span>
                 </span>
                 <span className="fp-travel-record-row-end">
-                  <time>{recordDateTime(record)}</time>
                   <b>{money(record.amount)}</b>
+                  <time>{recordShortDate(record)}</time>
                 </span>
               </button>
             )) : <p className="fp-empty-text">등록된 여행 기록이 없습니다.</p>}
@@ -440,10 +441,15 @@ export default function TravelPage() {
               <h2>{selectedRecord.title}</h2>
               <strong className="fp-travel-record-detail-amount">{money(selectedRecord.amount)}</strong>
               <dl>
-                <div><dt>일시</dt><dd>{recordDateTime(selectedRecord)}</dd></div>
+                <div><dt>날짜</dt><dd>{selectedRecord.recordDate}</dd></div>
+                <div><dt>시간</dt><dd>{selectedRecord.recordTime?.slice(0, 5) || '-'}</dd></div>
+                <div><dt>카테고리</dt><dd>{selectedRecord.category || '기타'}</dd></div>
                 <div><dt>위치</dt><dd>{selectedRecord.location || '-'}</dd></div>
               </dl>
-              <p>{selectedRecord.note || '메모가 없습니다.'}</p>
+              <div className="fp-travel-record-detail-note">
+                <span>메모</span>
+                <p>{selectedRecord.note || '메모가 없습니다.'}</p>
+              </div>
               <div className="fp-travel-record-detail-actions">
                 <button type="button" className="edit-button" onClick={() => { setSelectedRecord(null); startRecordEdit(selectedRecord) }}>수정</button>
                 <button

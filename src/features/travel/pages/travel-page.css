@@ -23,22 +23,6 @@
   margin-bottom: 0;
 }
 
-.fp-travel-detail-header-actions {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
-}
-
-.fp-travel-detail-header .fp-button {
-  min-height: 40px;
-  border-radius: 14px;
-  padding: 0 16px;
-  font-size: 13px;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .fp-travel-list-header h2,
 .fp-travel-detail-header h2,
 .fp-travel-record-form-dialog h3 {
@@ -85,6 +69,11 @@
   line-height: 1;
   box-shadow: none;
   white-space: nowrap;
+}
+
+.fp-travel-list-actions .fp-button-muted {
+  background: #f2f4f6;
+  color: #4e5968;
 }
 
 .fp-trip-query-form {
@@ -678,21 +667,27 @@
 
 .fp-travel-record-detail-dialog dl {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   margin: 0;
-  padding: 14px;
+  padding: 14px 16px;
   border-radius: 14px;
   background: #f7f8fa;
 }
 
 .fp-travel-record-detail-dialog dl div {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 12px;
 }
 
+.fp-travel-record-detail-dialog dl div + div {
+  padding-top: 10px;
+  border-top: 1px solid #e5e8eb;
+}
+
 .fp-travel-record-detail-dialog dt {
+  flex: 0 0 auto;
   color: #6b7684;
   font-size: 13px;
   font-weight: 700;
@@ -700,21 +695,30 @@
 
 .fp-travel-record-detail-dialog dd {
   margin: 0;
-  overflow: hidden;
+  overflow-wrap: anywhere;
   color: #191f28;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   text-align: right;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+}
+
+.fp-travel-record-detail-note {
+  display: grid;
+  gap: 6px;
+}
+
+.fp-travel-record-detail-note > span {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .fp-travel-record-detail-dialog p {
   margin: 0;
-  color: #4e5968;
+  color: #333d4b;
   font-size: 14px;
   font-weight: 600;
-  line-height: 1.5;
+  line-height: 1.6;
   word-break: break-word;
 }
 
@@ -801,6 +805,14 @@
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.fp-travel-record-form-header-actions .fp-button {
+  min-width: 0;
+  height: 34px;
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .fp-travel-record-form-dialog > header button[aria-label="닫기"] {
@@ -1100,26 +1112,6 @@
     width: auto;
   }
 
-  .fp-travel-record-row {
-    grid-template-columns: auto minmax(0, 1fr);
-    row-gap: 4px;
-  }
-
-  .fp-travel-record-row-end {
-    grid-column: 1 / -1;
-    justify-items: start;
-    text-align: left;
-  }
-
-  .fp-travel-record-row-end time,
-  .fp-travel-record-row-end b {
-    display: inline;
-  }
-
-  .fp-travel-record-row-end time::after {
-    content: " · ";
-  }
-
   .fp-travel-record-detail-backdrop {
     align-items: end;
     padding: 16px;
@@ -1193,13 +1185,21 @@ html[data-theme='dark'] .fp-trip-row span,
 html[data-theme='dark'] .fp-travel-record-row-sub,
 html[data-theme='dark'] .fp-travel-record-row-end time,
 html[data-theme='dark'] .fp-travel-record-detail-dialog dt,
-html[data-theme='dark'] .fp-travel-record-detail-dialog p,
+html[data-theme='dark'] .fp-travel-record-detail-note > span,
 html[data-theme='dark'] .fp-travel-summary span {
   color: #cbd5e1 !important;
 }
 
+html[data-theme='dark'] .fp-travel-record-detail-dialog p {
+  color: #e5e7eb !important;
+}
+
 html[data-theme='dark'] .fp-travel-record-detail-dialog dl {
   background: #0f172a !important;
+}
+
+html[data-theme='dark'] .fp-travel-record-detail-dialog dl div + div {
+  border-top-color: #1f2937 !important;
 }
 
 html[data-theme='dark'] .fp-travel-record-detail-actions button {
