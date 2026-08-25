@@ -403,7 +403,7 @@ export default function TravelPage() {
         <header className="fp-travel-detail-header">
           <div>
             <h2>{selectedTrip.title}</h2>
-            <p>날짜 {selectedTrip.startDate}{selectedTrip.endDate !== selectedTrip.startDate ? ` ~ ${selectedTrip.endDate}` : ''}</p>
+            <p>{selectedTrip.startDate}{selectedTrip.endDate !== selectedTrip.startDate ? ` ~ ${selectedTrip.endDate}` : ''}</p>
           </div>
           <div className="fp-travel-list-actions">
             <button className="fp-button fp-button-primary" type="button" onClick={openRecordCreate}>입력</button>
@@ -495,6 +495,10 @@ export default function TravelPage() {
               </header>
               <form className="fp-travel-record-form" onSubmit={requestRecordSave}>
                 <div className="fp-form-grid travel-record-grid">
+                  <label className="fp-field">
+                    <span>순서</span>
+                    <input value={String(recordForm.sortOrder ?? '')} disabled readOnly />
+                  </label>
                   <CustomSelect
                     label="비용 구분"
                     options={travelCostCategoryOptions.map((category) => ({ label: category, value: category }))}
