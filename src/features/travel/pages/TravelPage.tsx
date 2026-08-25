@@ -397,13 +397,13 @@ export default function TravelPage() {
 
   if (selectedTrip) {
     return (
-      <section className="fp-travel">
+      <section className="fp-card fp-travel fp-travel-detail-panel">
         <ToastMessage message={toastMessage} onClose={() => setToastMessage('')} />
         {loading ? <div className="fp-loading-blocker">처리 중</div> : null}
         <header className="fp-travel-detail-header">
           <div>
-            <h2>여행</h2>
-            <p>{selectedTrip.startDate}{selectedTrip.endDate !== selectedTrip.startDate ? ` ~ ${selectedTrip.endDate}` : ''}</p>
+            <h2>{selectedTrip.title}</h2>
+            <p>날짜 {selectedTrip.startDate}{selectedTrip.endDate !== selectedTrip.startDate ? ` ~ ${selectedTrip.endDate}` : ''}</p>
           </div>
           <div className="fp-travel-list-actions">
             <button className="fp-button fp-button-primary" type="button" onClick={openRecordCreate}>입력</button>
@@ -411,28 +411,26 @@ export default function TravelPage() {
           </div>
         </header>
 
-        <section className="fp-travel-detail-main">
-          <div className="fp-travel-summary">
-            <article><span>총 사용금액</span><strong>{money(totalAmount)}</strong></article>
-            <article><span>기록 수</span><strong>{recordList.length}건</strong></article>
-          </div>
-          <TravelMap records={recordList} />
-          <div className="fp-travel-record-list">
-            {recordList.length ? recordList.map((record, index) => (
-              <button type="button" className="fp-travel-record-row" key={record.id} onClick={() => setSelectedRecord(record)}>
-                <span className="fp-travel-record-order">{String(record.sortOrder || index + 1).padStart(2, '0')}</span>
-                <span className="fp-travel-record-row-main">
-                  <strong className="fp-ellipsis" title={record.title}>{record.title}</strong>
-                  <span className="fp-travel-record-row-sub">{recordSubLine(record)}</span>
-                </span>
-                <span className="fp-travel-record-row-end">
-                  <b>{money(record.amount)}</b>
-                  <time>{recordShortDate(record)}</time>
-                </span>
-              </button>
-            )) : <p className="fp-empty-text">등록된 여행 기록이 없습니다.</p>}
-          </div>
-        </section>
+        <div className="fp-travel-summary">
+          <article><span>총 사용금액</span><strong>{money(totalAmount)}</strong></article>
+          <article><span>기록 수</span><strong>{recordList.length}건</strong></article>
+        </div>
+        <TravelMap records={recordList} />
+        <div className="fp-travel-record-list">
+          {recordList.length ? recordList.map((record, index) => (
+            <button type="button" className="fp-travel-record-row" key={record.id} onClick={() => setSelectedRecord(record)}>
+              <span className="fp-travel-record-order">{String(record.sortOrder || index + 1).padStart(2, '0')}</span>
+              <span className="fp-travel-record-row-main">
+                <strong className="fp-ellipsis" title={record.title}>{record.title}</strong>
+                <span className="fp-travel-record-row-sub">{recordSubLine(record)}</span>
+              </span>
+              <span className="fp-travel-record-row-end">
+                <b>{money(record.amount)}</b>
+                <time>{recordShortDate(record)}</time>
+              </span>
+            </button>
+          )) : <p className="fp-empty-text">등록된 여행 기록이 없습니다.</p>}
+        </div>
 
         {!isRecordFormOpen ? <FloatingActionButton ariaLabel="여행 기록 추가" onClick={openRecordCreate} /> : null}
 
