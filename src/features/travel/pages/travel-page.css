@@ -486,6 +486,12 @@
   color: #191f28;
 }
 
+.fp-travel-summary-date {
+  font-size: 13px !important;
+  line-height: 1.35;
+  word-break: keep-all;
+}
+
 .fp-travel-map {
   position: relative;
   min-height: 260px;

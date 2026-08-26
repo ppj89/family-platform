@@ -403,7 +403,7 @@ export default function TravelPage() {
         <header className="fp-travel-detail-header">
           <div>
             <h2>{selectedTrip.title}</h2>
-            <p>{selectedTrip.startDate}{selectedTrip.endDate !== selectedTrip.startDate ? ` ~ ${selectedTrip.endDate}` : ''}</p>
+            <p>기록 {recordList.length}건</p>
           </div>
           <div className="fp-travel-list-actions">
             <button className="fp-button fp-button-primary" type="button" onClick={openRecordCreate}>입력</button>
@@ -413,7 +413,10 @@ export default function TravelPage() {
 
         <div className="fp-travel-summary">
           <article><span>총 사용금액</span><strong>{money(totalAmount)}</strong></article>
-          <article><span>기록 수</span><strong>{recordList.length}건</strong></article>
+          <article>
+            <span>날짜</span>
+            <strong className="fp-travel-summary-date">{selectedTrip.startDate}{selectedTrip.endDate !== selectedTrip.startDate ? ` ~ ${selectedTrip.endDate}` : ''}</strong>
+          </article>
         </div>
         <TravelMap records={recordList} />
         <div className="fp-travel-record-list">
