@@ -25,6 +25,7 @@ export function CustomSelect({ className = '', label = '', ariaLabel, options, r
   const [dropDirection, setDropDirection] = useState<{ upward: boolean; maxHeight: number } | null>(null)
   const rootRef = useRef<HTMLLabelElement>(null)
   const triggerRef = useRef<HTMLButtonElement>(null)
+  const selectedOptionRef = useRef<HTMLButtonElement>(null)
   const selected = options.find((option) => option.value === value) ?? options[0]
 
   useEffect(() => {
@@ -59,6 +60,18 @@ export function CustomSelect({ className = '', label = '', ariaLabel, options, r
     setDropDirection({ upward, maxHeight: Math.max(120, Math.min(wantedHeight, upward ? spaceAbove : spaceBelow)) })
   }, [open, options.length])
 
+  useEffect(() => {
+    // Long option lists (many categories, etc.) open scrolled to the top,
+    // so the currently selected option — often well down the list — was
+    // invisible until the user scrolled the dropdown themselves. Jump
+    // straight to it instead.
+    if (!open) return
+    const frame = window.requestAnimationFrame(() => {
+      selectedOptionRef.current?.scrollIntoView({ block: 'nearest' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [open])
+
   return (
     <label className={`fp-field fp-custom-select-field custom-select-field ${open ? 'open' : ''} ${className}`} ref={rootRef}>
       {label ? <span>{label}{required ? <em className="fp-required-mark">*</em> : null}</span> : null}
@@ -83,19 +96,23 @@ export function CustomSelect({ className = '', label = '', ariaLabel, options, r
               : undefined
           }
         >
-          {options.map((option) => (
-            <button
-              className={option.value === selected?.value ? 'selected' : ''}
-              key={option.value}
-              type="button"
-              onClick={() => {
-                onChange(option.value)
-                setOpen(false)
-              }}
-            >
-              {option.label}
-            </button>
-          ))}
+          {options.map((option) => {
+            const isSelected = option.value === selected?.value
+            return (
+              <button
+                className={isSelected ? 'selected' : ''}
+                key={option.value}
+                ref={isSelected ? selectedOptionRef : undefined}
+                type="button"
+                onClick={() => {
+                  onChange(option.value)
+                  setOpen(false)
+                }}
+              >
+                {option.label}
+              </button>
+            )
+          })}
         </div>
       </div>
     </label>

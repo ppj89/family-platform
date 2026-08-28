@@ -266,6 +266,7 @@ function LedgerCustomSelect({
 }) {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLLabelElement>(null)
+  const selectedOptionRef = useRef<HTMLButtonElement>(null)
   const selected = options.find((option) => option.value === value) ?? options[0]
 
   useEffect(() => {
@@ -286,6 +287,17 @@ function LedgerCustomSelect({
     }
   }, [open])
 
+  useEffect(() => {
+    // Long option lists (many categories, etc.) opened scrolled to the
+    // top, leaving the currently selected option — often well down the
+    // list — invisible until the user scrolled it into view themselves.
+    if (!open) return
+    const frame = window.requestAnimationFrame(() => {
+      selectedOptionRef.current?.scrollIntoView({ block: 'nearest' })
+    })
+    return () => window.cancelAnimationFrame(frame)
+  }, [open])
+
   return (
     <label className={`fp-field ledger-custom-select custom-select-field ${open ? 'open' : ''}`} ref={rootRef}>
       <span>{label}</span>
@@ -297,19 +309,23 @@ function LedgerCustomSelect({
           </svg>
         </button>
         <div className="custom-select-list" hidden={!open}>
-          {options.map((option) => (
-            <button
-              className={option.value === selected?.value ? 'selected' : ''}
-              key={option.value}
-              type="button"
-              onClick={() => {
-                onChange(option.value)
-                setOpen(false)
-              }}
-            >
-              {option.label}
-            </button>
-          ))}
+          {options.map((option) => {
+            const isSelected = option.value === selected?.value
+            return (
+              <button
+                className={isSelected ? 'selected' : ''}
+                key={option.value}
+                ref={isSelected ? selectedOptionRef : undefined}
+                type="button"
+                onClick={() => {
+                  onChange(option.value)
+                  setOpen(false)
+                }}
+              >
+                {option.label}
+              </button>
+            )
+          })}
         </div>
       </div>
     </label>

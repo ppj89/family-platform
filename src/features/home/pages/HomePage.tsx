@@ -212,8 +212,11 @@ export default function HomePage({ onNavigate }: HomePageProps) {
             {recentLedgerEntries.length ? recentLedgerEntries.map((item) => (
               <button className="fp-home-list-item" key={item.id} type="button" onClick={() => navigate('가계부')}>
                 <div>
-                  <strong className="fp-ellipsis" title={item.title}>{item.title}</strong>
-                  <p>{safeDate(item.transactionDate)} · {item.category || '-'}{item.memberName ? ` · ${item.memberName}` : ''}{item.paymentMethod ? ` · ${item.paymentMethod}` : ''}</p>
+                  <div className="fp-home-list-title-row">
+                    <strong className="fp-ellipsis" title={item.title}>{item.title}</strong>
+                    {item.paymentMethod ? <span className="fp-home-list-method">{item.paymentMethod}</span> : null}
+                  </div>
+                  <p>{safeDate(item.transactionDate)} · {item.category || '-'}{item.memberName ? ` · ${item.memberName}` : ''}</p>
                 </div>
                 <b className={item.entryType === 'income' ? 'income' : 'expense'}>
                   {item.entryType === 'income' ? '+' : '-'}{money(item.amount)}
