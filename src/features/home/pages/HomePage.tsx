@@ -160,7 +160,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
     }
   }, [])
 
-  const recentLedgerEntries = state.ledgerEntries.slice(0, 3)
+  const recentLedgerEntries = state.ledgerEntries.slice(0, 5)
   const navigate = (menu: HomeMenu) => onNavigate?.(menu)
   const hasSummaryCards = homeSettings.expense || homeSettings.travel || homeSettings.baby || homeSettings.family
 
@@ -213,8 +213,7 @@ export default function HomePage({ onNavigate }: HomePageProps) {
               <button className="fp-home-list-item" key={item.id} type="button" onClick={() => navigate('가계부')}>
                 <div>
                   <strong className="fp-ellipsis" title={item.title}>{item.title}</strong>
-                  <p>{safeDate(item.transactionDate)} · {item.category || '-'}{item.memberName ? ` · ${item.memberName}` : ''}</p>
-                  {item.paymentMethod ? <p>{item.paymentMethod}</p> : null}
+                  <p>{safeDate(item.transactionDate)} · {item.category || '-'}{item.memberName ? ` · ${item.memberName}` : ''}{item.paymentMethod ? ` · ${item.paymentMethod}` : ''}</p>
                 </div>
                 <b className={item.entryType === 'income' ? 'income' : 'expense'}>
                   {item.entryType === 'income' ? '+' : '-'}{money(item.amount)}

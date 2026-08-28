@@ -375,6 +375,10 @@ export default function LedgerPage() {
   const [installmentMonthsText, setInstallmentMonthsText] = useState('0')
   const [isEntryDialogOpen, setIsEntryDialogOpen] = useState(false)
   const [isCalculatorOpen, setIsCalculatorOpen] = useState(false)
+  // Which amount field '입력' should write the calculator result into —
+  // null when the calculator was opened standalone (the quick-nav
+  // button), with no open form to apply it to.
+  const [calculatorTarget, setCalculatorTarget] = useState<'entry' | 'detail' | null>(null)
   const [isStatisticsOpen, setIsStatisticsOpen] = useState(false)
   const [calculatorDisplay, setCalculatorDisplay] = useState('0')
   const [calculatorStoredValue, setCalculatorStoredValue] = useState<number | null>(null)
@@ -609,9 +613,25 @@ export default function LedgerPage() {
     setCalculatorAwaitingOperand(false)
   }
 
-  function openCalculator() {
+  function openCalculator(target: 'entry' | 'detail' | null = null) {
     setIsQuickNavOpen(false)
+    setCalculatorTarget(target)
     setIsCalculatorOpen(true)
+  }
+
+  function closeCalculator() {
+    setIsCalculatorOpen(false)
+    setCalculatorTarget(null)
+  }
+
+  function applyCalculatorResult() {
+    const amount = Math.abs(normalizeAmount(calculatorDisplay))
+    if (calculatorTarget === 'entry') {
+      setForm((value) => ({ ...value, amount }))
+    } else if (calculatorTarget === 'detail') {
+      setDetailForm((value) => ({ ...value, amount }))
+    }
+    closeCalculator()
   }
 
   function openStatistics() {
@@ -1006,7 +1026,7 @@ export default function LedgerPage() {
                 <HiChevronDown className="fp-ledger-scroll-chevron" aria-hidden="true" />
               </button>
               <button type="button" className="fp-ledger-scroll-label" onClick={startCreateEntry}>입력</button>
-              <button type="button" className="fp-ledger-calculator-button" aria-label="계산기 열기" onClick={openCalculator}>
+              <button type="button" className="fp-ledger-calculator-button" aria-label="계산기 열기" onClick={() => openCalculator()}>
                 <HiOutlineCalculator aria-hidden="true" />
               </button>
             </div>
@@ -1043,7 +1063,7 @@ export default function LedgerPage() {
             onClick={(event) => event.stopPropagation()}
             onSubmit={requestSave}
           >
-            <button type="button" className="fp-ledger-entry-calculator-button" aria-label="계산기 열기" onClick={openCalculator}>
+            <button type="button" className="fp-ledger-entry-calculator-button" aria-label="계산기 열기" onClick={() => openCalculator('entry')}>
               <HiOutlineCalculator aria-hidden="true" />
             </button>
             <button type="button" className="dialog-close" aria-label="닫기" onClick={closeEntryDialog}>
@@ -1148,7 +1168,7 @@ export default function LedgerPage() {
       />
 
       {isCalculatorOpen ? (
-        <div className="patch-ledger-detail-backdrop fp-ledger-calculator-backdrop" role="presentation" onClick={() => setIsCalculatorOpen(false)}>
+        <div className="patch-ledger-detail-backdrop fp-ledger-calculator-backdrop" role="presentation" onClick={closeCalculator}>
           <section
             className="patch-ledger-detail-dialog fp-ledger-calculator-dialog"
             role="dialog"
@@ -1156,7 +1176,7 @@ export default function LedgerPage() {
             aria-labelledby="fp-ledger-calculator-title"
             onClick={(event) => event.stopPropagation()}
           >
-            <button type="button" className="dialog-close" aria-label="닫기" onClick={() => setIsCalculatorOpen(false)}>
+            <button type="button" className="dialog-close" aria-label="닫기" onClick={closeCalculator}>
               <HiOutlineX aria-hidden="true" />
             </button>
             <h2 id="fp-ledger-calculator-title">계산기</h2>
@@ -1177,7 +1197,11 @@ export default function LedgerPage() {
               <button type="button" className="utility fp-ledger-calculator-backspace" aria-label="마지막 숫자 지우기" onClick={deleteCalculatorDigit}>⌫</button>
               <button type="button" className="equals" onClick={resolveCalculator}>=</button>
             </div>
-            <p>계산 결과는 가계부에 저장되지 않습니다.</p>
+            {calculatorTarget ? (
+              <button type="button" className="fp-button fp-button-primary fp-ledger-calculator-apply" onClick={applyCalculatorResult}>입력</button>
+            ) : (
+              <p>계산 결과는 가계부에 저장되지 않습니다.</p>
+            )}
           </section>
         </div>
       ) : null}
@@ -1192,6 +1216,9 @@ export default function LedgerPage() {
               onClick={(event) => event.stopPropagation()}
               onSubmit={requestDetailSave}
             >
+              <button type="button" className="fp-ledger-entry-calculator-button" aria-label="계산기 열기" onClick={() => openCalculator('detail')}>
+                <HiOutlineCalculator aria-hidden="true" />
+              </button>
               <button type="button" className="dialog-close" aria-label="닫기" onClick={closeLedgerDetail}>
                 <HiOutlineX aria-hidden="true" />
               </button>

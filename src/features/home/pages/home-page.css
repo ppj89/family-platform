@@ -103,15 +103,14 @@
 
 .fp-home-list {
   display: grid;
-  gap: 10px;
+  gap: 6px;
 }
 
 .fp-home-list-item {
   display: grid;
-  align-items: center;
+  align-items: start;
   grid-template-columns: minmax(0, 1fr) auto;
   gap: 12px;
-  min-height: 76px;
   min-width: 0;
   border: 0;
   border-radius: 8px;
@@ -258,11 +257,10 @@ html[data-theme='dark'] .fp-home-summary-card.baby strong {
   }
 
   .fp-home-list {
-    gap: 8px;
+    gap: 6px;
   }
 
   .fp-home-list-item {
-    min-height: 72px;
     padding: 9px 12px;
   }
 
