@@ -265,7 +265,12 @@ function LedgerCustomSelect({
   onChange: (value: string) => void
 }) {
   const [open, setOpen] = useState(false)
+  // Same fix as the shared CustomSelect: flip the dropdown upward and cap
+  // its height to whatever room is actually available, instead of always
+  // opening downward and running under the sticky footer/off the screen.
+  const [dropDirection, setDropDirection] = useState<{ upward: boolean; maxHeight: number } | null>(null)
   const rootRef = useRef<HTMLLabelElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
   const selectedOptionRef = useRef<HTMLButtonElement>(null)
   const selected = options.find((option) => option.value === value) ?? options[0]
 
@@ -288,6 +293,20 @@ function LedgerCustomSelect({
   }, [open])
 
   useEffect(() => {
+    if (!open || !triggerRef.current) {
+      setDropDirection(null)
+      return
+    }
+    const rect = triggerRef.current.getBoundingClientRect()
+    const viewportHeight = window.innerHeight
+    const wantedHeight = Math.min(options.length * 38 + 12, 260)
+    const spaceBelow = viewportHeight - rect.bottom - 12
+    const spaceAbove = rect.top - 12
+    const upward = spaceBelow < wantedHeight && spaceAbove > spaceBelow
+    setDropDirection({ upward, maxHeight: Math.max(120, Math.min(wantedHeight, upward ? spaceAbove : spaceBelow)) })
+  }, [open, options.length])
+
+  useEffect(() => {
     // Long option lists (many categories, etc.) opened scrolled to the
     // top, leaving the currently selected option — often well down the
     // list — invisible until the user scrolled it into view themselves.
@@ -298,17 +317,39 @@ function LedgerCustomSelect({
     return () => window.cancelAnimationFrame(frame)
   }, [open])
 
+  useEffect(() => {
+    // Opening a select near the bottom of this long form left its
+    // dropdown hanging off the edge (or under the sticky footer) until
+    // the user scrolled the form down by hand. Bring the trigger toward
+    // the middle of the scrollable area on open instead.
+    if (!open || !triggerRef.current) return
+    triggerRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [open])
+
   return (
     <label className={`fp-field ledger-custom-select custom-select-field ${open ? 'open' : ''}`} ref={rootRef}>
       <span>{label}</span>
       <div className={`custom-select${open ? ' open' : ''}`}>
-        <button className={`custom-select-trigger${open ? ' open' : ''}`} type="button" onClick={() => setOpen((current) => !current)}>
+        <button ref={triggerRef} className={`custom-select-trigger${open ? ' open' : ''}`} type="button" onClick={() => setOpen((current) => !current)}>
           <span>{selected?.label || '선택'}</span>
           <svg aria-hidden="true" viewBox="0 0 24 24">
             <path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" />
           </svg>
         </button>
-        <div className="custom-select-list" hidden={!open}>
+        <div
+          className="custom-select-list"
+          hidden={!open}
+          style={
+            dropDirection
+              ? {
+                  top: dropDirection.upward ? 'auto' : 'calc(100% + 6px)',
+                  bottom: dropDirection.upward ? 'calc(100% + 6px)' : 'auto',
+                  maxHeight: dropDirection.maxHeight,
+                  overflowY: 'auto',
+                }
+              : undefined
+          }
+        >
           {options.map((option) => {
             const isSelected = option.value === selected?.value
             return (

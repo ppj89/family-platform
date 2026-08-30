@@ -61,6 +61,16 @@ export function CustomSelect({ className = '', label = '', ariaLabel, options, r
   }, [open, options.length])
 
   useEffect(() => {
+    // Opening a select near the bottom of a long, scrollable form left
+    // its dropdown hanging off the edge (or under the sticky footer)
+    // until the user scrolled the form down by hand. Bring the trigger
+    // toward the middle of the scrollable area on open so the dropdown
+    // that appears above/below it has room to actually be seen.
+    if (!open || !triggerRef.current) return
+    triggerRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [open])
+
+  useEffect(() => {
     // Long option lists (many categories, etc.) open scrolled to the top,
     // so the currently selected option — often well down the list — was
     // invisible until the user scrolled the dropdown themselves. Jump
