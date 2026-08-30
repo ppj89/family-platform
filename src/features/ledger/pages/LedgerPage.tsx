@@ -24,6 +24,8 @@ type LedgerFilter = {
   paymentMethod: string
   memberName: string
   memo: string
+  amountMin: string
+  amountMax: string
 }
 
 // v5 drops positions that were accidentally saved while the software keyboard
@@ -36,6 +38,8 @@ const emptyLedgerFilter = (): LedgerFilter => ({
   paymentMethod: '',
   memberName: '',
   memo: '',
+  amountMin: '',
+  amountMax: '',
 })
 
 function readQuickNavPosition() {
@@ -467,6 +471,8 @@ export default function LedgerPage() {
   const filteredEntries = useMemo(() => {
     const titleKeyword = ledgerFilter.title.trim().toLocaleLowerCase('ko-KR')
     const memoKeyword = ledgerFilter.memo.trim().toLocaleLowerCase('ko-KR')
+    const amountMin = ledgerFilter.amountMin ? Number(ledgerFilter.amountMin) : null
+    const amountMax = ledgerFilter.amountMax ? Number(ledgerFilter.amountMax) : null
     return entries.filter((item) => {
       if (titleKeyword && !item.title.toLocaleLowerCase('ko-KR').includes(titleKeyword)) return false
       if (ledgerFilter.entryType && item.entryType !== ledgerFilter.entryType) return false
@@ -474,6 +480,8 @@ export default function LedgerPage() {
       if (ledgerFilter.paymentMethod && item.paymentMethod !== ledgerFilter.paymentMethod) return false
       if (ledgerFilter.memberName && item.memberName !== ledgerFilter.memberName) return false
       if (memoKeyword && !(item.memo || '').toLocaleLowerCase('ko-KR').includes(memoKeyword)) return false
+      if (amountMin !== null && item.amount < amountMin) return false
+      if (amountMax !== null && item.amount > amountMax) return false
       return true
     })
   }, [entries, ledgerFilter])
@@ -1465,6 +1473,24 @@ export default function LedgerPage() {
                 value={filterDraft.memberName}
                 onChange={(value) => setFilterDraft((current) => ({ ...current, memberName: value }))}
               />
+              <label>
+                <span>최소 금액</span>
+                <input
+                  inputMode="numeric"
+                  value={filterDraft.amountMin ? Number(filterDraft.amountMin).toLocaleString('ko-KR') : ''}
+                  placeholder="0"
+                  onChange={(event) => setFilterDraft((current) => ({ ...current, amountMin: event.target.value.replace(/\D/g, '') }))}
+                />
+              </label>
+              <label>
+                <span>최대 금액</span>
+                <input
+                  inputMode="numeric"
+                  value={filterDraft.amountMax ? Number(filterDraft.amountMax).toLocaleString('ko-KR') : ''}
+                  placeholder="제한 없음"
+                  onChange={(event) => setFilterDraft((current) => ({ ...current, amountMax: event.target.value.replace(/\D/g, '') }))}
+                />
+              </label>
               <label className="span-2">
                 <span>내용</span>
                 <input

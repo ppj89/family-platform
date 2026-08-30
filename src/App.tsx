@@ -292,6 +292,21 @@ export default function App() {
   setApiDataViewMenuKey(authenticated ? analyticsMenuKeys[activeMenu] : '')
   useTodayCalendarNotifications(authenticated && nativeNotificationBootstrapEnabled)
   useEffect(() => {
+    // Every popup/dialog in the app shares the same "*-backdrop" naming
+    // convention (see the body[class$="backdrop"] safe-area rule in
+    // app.css). Watch for one being mounted anywhere and lock the page's
+    // own scroll behind it — a fixed-position overlay alone doesn't stop
+    // a touch drag on it from rubber-band-scrolling the page underneath.
+    const applyLock = () => {
+      const hasOpenDialog = Boolean(document.querySelector('[class$="backdrop"]'))
+      document.body.classList.toggle('fp-scroll-locked', hasOpenDialog)
+    }
+    applyLock()
+    const observer = new MutationObserver(applyLock)
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [])
+  useEffect(() => {
     if (!nativeNotificationBootstrapEnabled) return
     void initializePushNotifications(authenticated)
   }, [authenticated])

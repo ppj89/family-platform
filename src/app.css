@@ -25,6 +25,14 @@ body [class$="backdrop"] {
   bottom: var(--fp-safe-bottom, 0px);
 }
 
+/* Applied to <body> (see App.tsx) whenever any of the backdrops above is
+   mounted, so the page behind a popup can't be scrolled/dragged while it's
+   open — the fixed-position overlay covering it doesn't stop that on its
+   own on a touch device. */
+body.fp-scroll-locked {
+  overflow: hidden;
+}
+
 .fp-shell {
   --fp-font-caption: 14px;
   --fp-font-body: 15px;
