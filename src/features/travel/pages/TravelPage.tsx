@@ -82,6 +82,17 @@ function formatMonthLabel(value: string) {
   return `${year}년 ${Number(month)}월`
 }
 
+function formatTripRange(startDate: string, endDate: string) {
+  // The full 'YYYY-MM-DD ~ YYYY-MM-DD' range wrapped badly inside the
+  // narrow summary card. Drop the redundant year when both dates fall in
+  // the same one so it reliably fits on a single line.
+  if (startDate === endDate) return startDate
+  const [startYear, ...startRest] = startDate.split('-')
+  const [endYear] = endDate.split('-')
+  if (startYear === endYear) return `${startRest.join('.')} ~ ${endDate.slice(5).replace('-', '.')}`
+  return `${startDate} ~ ${endDate}`
+}
+
 function overlapsRange(itemStart: string, itemEnd: string, rangeStart: string, rangeEnd: string) {
   const start = itemStart || itemEnd
   const end = itemEnd || itemStart
@@ -415,7 +426,7 @@ export default function TravelPage() {
           <article><span>총 사용금액</span><strong>{money(totalAmount)}</strong></article>
           <article>
             <span>날짜</span>
-            <strong className="fp-travel-summary-date">{selectedTrip.startDate}{selectedTrip.endDate !== selectedTrip.startDate ? ` ~ ${selectedTrip.endDate}` : ''}</strong>
+            <strong className="fp-travel-summary-date">{formatTripRange(selectedTrip.startDate, selectedTrip.endDate)}</strong>
           </article>
         </div>
         <TravelMap records={recordList} />
