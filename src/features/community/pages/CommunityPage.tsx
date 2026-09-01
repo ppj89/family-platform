@@ -513,10 +513,14 @@ export default function CommunityPage() {
           <div className="fp-community-posts">
             {posts.length ? posts.map((post) => (
               <button className="fp-community-row" type="button" key={post.id} onClick={() => void openPost(post)}>
-                <strong className="fp-ellipsis" title={post.title}>{post.title}</strong>
-                <span>{formatInstant(post.createdAt)}</span>
-                {activeBoard === 'free' ? <span>좋아요 {post.likeCount}</span> : null}
-                <span>조회 {post.viewCount}</span>
+                <div className="fp-community-row-main">
+                  <strong className="fp-ellipsis" title={post.title}>{post.title}</strong>
+                  <span>{formatInstant(post.createdAt)}</span>
+                </div>
+                <div className="fp-community-row-stats">
+                  {activeBoard === 'free' ? <span>좋아요 {post.likeCount}</span> : null}
+                  <span>조회 {post.viewCount}</span>
+                </div>
               </button>
             )) : <p className="fp-empty-text">{posts.length ? '조회 조건에 맞는 게시글이 없습니다.' : '등록된 게시글이 없습니다.'}</p>}
           </div>

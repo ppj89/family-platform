@@ -690,7 +690,11 @@
   left: auto;
 }
 
-.fp-community-search .fp-date-picker-popover {
+/* Only the end-date (right-hand) field needs to open right-aligned —
+   forcing that on the start-date field too pushed its popover's right
+   edge to a trigger sitting on the left half of the row, so the ~310px
+   calendar overflowed off the left edge of the screen. */
+.fp-community-search-period .fp-community-search-date:last-child .fp-date-picker-popover {
   top: auto;
   right: 0;
   bottom: calc(100% + 8px);
@@ -720,13 +724,13 @@
 
 .fp-community-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 148px 74px;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 12px;
   min-height: 46px;
   border: 1px solid #e1e7ef;
   border-radius: 8px;
-  padding: 0 12px;
+  padding: 8px 12px;
   background: #fff;
   color: inherit;
   cursor: pointer;
@@ -734,15 +738,24 @@
   text-align: left;
 }
 
-.fp-community-row:has(span:nth-of-type(3)) {
-  grid-template-columns: minmax(0, 1fr) 132px 72px 64px;
-}
-
 .fp-community-row:hover,
 .fp-community-row:focus-visible {
   border-color: #3182f6;
   background: #f8fbff;
   outline: none;
+}
+
+.fp-community-row-main {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.fp-community-row-stats {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 3px;
+  justify-items: end;
 }
 
 .fp-community-row strong,
@@ -762,7 +775,6 @@
   color: #6b7684;
   font-size: 12px;
   font-weight: 600;
-  text-align: right;
 }
 
 .fp-community-posts > .fp-empty-text,
@@ -1389,37 +1401,10 @@ html[data-theme='dark'] .fp-community-pagination span {
   }
 
   .fp-community-row {
-    grid-template-columns: minmax(0, 1fr) 68px;
-    gap: 5px 10px;
+    gap: 8px 10px;
     min-height: 66px;
     border-radius: 14px;
     padding: 10px 12px;
-  }
-
-  .fp-community-row strong {
-    grid-column: 1;
-    grid-row: 1;
-  }
-
-  .fp-community-row span:first-of-type {
-    grid-column: 1;
-    grid-row: 2;
-    text-align: left;
-  }
-
-  .fp-community-row span:last-of-type {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-  }
-
-  .fp-community-row:has(span:nth-of-type(3)) span:nth-of-type(2) {
-    grid-column: 2;
-    grid-row: 1;
-  }
-
-  .fp-community-row:has(span:nth-of-type(3)) span:last-of-type {
-    grid-column: 2;
-    grid-row: 2;
   }
 
   .fp-community-form textarea {
