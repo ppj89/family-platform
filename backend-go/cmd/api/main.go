@@ -1836,12 +1836,17 @@ func (a *app) oauthStart(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The Android app opens Google's login in an external Custom Tab (see
+	// isNativeClient below for why), so this /start request still carries
+	// it while the eventual /callback request comes from Chrome instead —
+	// stash it against the state row now so the callback can still tell.
+	isNative := r.URL.Query().Get("client") == "native"
 	state := newSessionID()
 	nonce := newSessionID()
 	_, err := a.db.Exec(r.Context(), `
-		insert into oauth_login_states (state, provider, nonce, created_at, expires_at)
-		values ($1, $2, $3, now(), $4)
-	`, state, providerName, nonce, time.Now().Add(10*time.Minute))
+		insert into oauth_login_states (state, provider, nonce, created_at, expires_at, is_native)
+		values ($1, $2, $3, now(), $4, $5)
+	`, state, providerName, nonce, time.Now().Add(10*time.Minute), isNative)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "oauth state creation failed")
 		return
@@ -1882,19 +1887,21 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		}
 		a.log.Warn("oauth provider authorization failed", "provider", providerName, "reason", reason)
 		a.recordLoginHistory(r.Context(), nil, "", providerName, "SSO_LOGIN", "FAIL", reason)
-		writeOAuthCallbackHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, "", nil, oauthCallbackErrorMessage(providerName, errMessage))
+		isNative := a.oauthStateIsNative(r.Context(), providerName, strings.TrimSpace(r.URL.Query().Get("state")))
+		a.respondOAuthResult(w, r, isNative, http.StatusBadRequest, "", nil, oauthCallbackErrorMessage(providerName, errMessage))
 		return
 	}
 	code := strings.TrimSpace(r.URL.Query().Get("code"))
 	state := strings.TrimSpace(r.URL.Query().Get("state"))
 	if code == "" || state == "" {
 		a.recordLoginHistory(r.Context(), nil, "", providerName, "SSO_LOGIN", "FAIL", "missing oauth code or state")
-		writeOAuthCallbackHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, "", nil, "로그인 응답이 올바르지 않습니다. 처음부터 다시 시도해 주세요.")
+		a.respondOAuthResult(w, r, false, http.StatusBadRequest, "", nil, "로그인 응답이 올바르지 않습니다. 처음부터 다시 시도해 주세요.")
 		return
 	}
-	if !a.consumeOAuthState(r.Context(), providerName, state) {
+	ok, isNative := a.consumeOAuthState(r.Context(), providerName, state)
+	if !ok {
 		a.recordLoginHistory(r.Context(), nil, "", providerName, "SSO_LOGIN", "FAIL", "invalid or expired oauth state")
-		writeOAuthCallbackHTML(w, http.StatusBadRequest, a.cfg.publicBaseURL, "", nil, "로그인 시간이 만료되었거나 요청이 올바르지 않습니다. 다시 시도해 주세요.")
+		a.respondOAuthResult(w, r, false, http.StatusBadRequest, "", nil, "로그인 시간이 만료되었거나 요청이 올바르지 않습니다. 다시 시도해 주세요.")
 		return
 	}
 
@@ -1920,22 +1927,22 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	response, err := a.loginOAuthUser(r.Context(), providerName, profile, true)
 	if errors.Is(err, errActiveSessionExists) {
 		a.recordLoginHistory(r.Context(), nil, profile.Email, providerName, "SSO_LOGIN", "ACTIVE_SESSION", "active session exists")
-		writeOAuthCallbackHTML(w, http.StatusConflict, a.cfg.publicBaseURL, "", nil, "active session exists")
+		a.respondOAuthResult(w, r, isNative, http.StatusConflict, "", nil, "active session exists")
 		return
 	}
 	if errors.Is(err, errOAuthEmailRequired) {
 		a.recordLoginHistory(r.Context(), nil, profile.Email, providerName, "SSO_LOGIN", "EMAIL_REQUIRED", "email consent is required")
-		writeOAuthCallbackHTML(w, http.StatusForbidden, a.cfg.publicBaseURL, "", nil, "oauth email consent required")
+		a.respondOAuthResult(w, r, isNative, http.StatusForbidden, "", nil, "oauth email consent required")
 		return
 	}
 	if errors.Is(err, errAccountSuspended) {
-		writeOAuthCallbackHTML(w, http.StatusForbidden, a.cfg.publicBaseURL, "", nil, "account suspended")
+		a.respondOAuthResult(w, r, isNative, http.StatusForbidden, "", nil, "account suspended")
 		return
 	}
 	if err != nil {
 		a.log.Error("oauth login failed", "provider", providerName, "error", err)
 		a.recordLoginHistory(r.Context(), nil, profile.Email, providerName, "SSO_LOGIN", "FAIL", "oauth login failed")
-		writeOAuthCallbackHTML(w, http.StatusInternalServerError, a.cfg.publicBaseURL, "", nil, "oauth login failed")
+		a.respondOAuthResult(w, r, isNative, http.StatusInternalServerError, "", nil, "oauth login failed")
 		return
 	}
 	a.recordLoginHistory(r.Context(), &response.UserID, firstNonEmpty(response.LoginEmail, response.Email), providerName, "SSO_LOGIN", "SUCCESS", "")
@@ -1947,7 +1954,23 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		"platformAdmin": response.PlatformAdmin,
 		"provider":      response.Provider,
 	}
-	writeOAuthCallbackHTML(w, http.StatusOK, a.cfg.publicBaseURL, response.AccessToken, userPayload, "")
+	a.respondOAuthResult(w, r, isNative, http.StatusOK, response.AccessToken, userPayload, "")
+}
+
+// respondOAuthResult finishes an OAuth callback either the normal way (an
+// HTML page that stores the token in this WebView's own storage — Naver
+// and Kakao complete this way inline) or, for a native client that had to
+// bounce out to an external Custom Tab for Google's WebView-blocking
+// policy, by redirecting to a custom URL scheme the app's own
+// AndroidManifest intent-filter picks up, carrying the token/user back in
+// the URL instead (this callback runs in Chrome, whose storage the app's
+// own WebView can't see).
+func (a *app) respondOAuthResult(w http.ResponseWriter, r *http.Request, isNative bool, status int, accessToken string, userPayload map[string]any, errorMessage string) {
+	if isNative {
+		writeOAuthNativeRedirect(w, r, accessToken, userPayload, errorMessage)
+		return
+	}
+	writeOAuthCallbackHTML(w, status, a.cfg.publicBaseURL, accessToken, userPayload, errorMessage)
 }
 
 func oauthCallbackErrorMessage(providerName, providerError string) string {
@@ -6708,12 +6731,25 @@ func (a *app) oauthRedirectURL(provider string) string {
 	return a.cfg.publicBaseURL + "/api/auth/oauth/" + provider + "/callback"
 }
 
-func (a *app) consumeOAuthState(ctx context.Context, provider, state string) bool {
-	tag, err := a.db.Exec(ctx, `
+func (a *app) consumeOAuthState(ctx context.Context, provider, state string) (bool, bool) {
+	var isNative bool
+	err := a.db.QueryRow(ctx, `
 		delete from oauth_login_states
 		where state = $1 and provider = $2 and expires_at > now()
-	`, state, provider)
-	return err == nil && tag.RowsAffected() == 1
+		returning is_native
+	`, state, provider).Scan(&isNative)
+	return err == nil, isNative
+}
+
+// oauthStateIsNative peeks at a not-yet-consumed state row so the provider
+// error path (which returns before the code/state exchange that would
+// otherwise consume it) can still tell whether to bounce back into the app.
+func (a *app) oauthStateIsNative(ctx context.Context, provider, state string) bool {
+	var isNative bool
+	_ = a.db.QueryRow(ctx, `
+		select is_native from oauth_login_states where state = $1 and provider = $2
+	`, state, provider).Scan(&isNative)
+	return isNative
 }
 
 func (a *app) exchangeOAuthCode(ctx context.Context, providerName string, provider oauthProviderConfig, code string) (string, error) {
@@ -7245,8 +7281,10 @@ create table if not exists oauth_login_states (
   provider varchar(255) not null,
   nonce varchar(255) not null,
   created_at timestamp with time zone not null,
-  expires_at timestamp with time zone not null
+  expires_at timestamp with time zone not null,
+  is_native boolean not null default false
 );
+alter table if exists oauth_login_states add column if not exists is_native boolean not null default false;
 create index if not exists idx_oauth_login_states_expires on oauth_login_states (expires_at);
 create table if not exists holidays (
   date_key date primary key,
@@ -9993,13 +10031,16 @@ func writeOAuthCallbackHTML(w http.ResponseWriter, status int, publicBaseURL str
 </html>`, tokenJSON, userJSON, errorJSON, redirectJSON)
 }
 
-func redirectOAuthSuccess(w http.ResponseWriter, r *http.Request, publicBaseURL string, accessToken string, userPayload map[string]any) {
-	redirectURL := strings.TrimRight(publicBaseURL, "/") + "/"
-	userJSON, _ := json.Marshal(userPayload)
-	fragment := url.Values{}
-	fragment.Set("sso_token", accessToken)
-	fragment.Set("sso_user", string(userJSON))
-	http.Redirect(w, r, redirectURL+"#"+fragment.Encode(), http.StatusFound)
+func writeOAuthNativeRedirect(w http.ResponseWriter, r *http.Request, accessToken string, userPayload map[string]any, errorMessage string) {
+	values := url.Values{}
+	if errorMessage != "" {
+		values.Set("sso_error", errorMessage)
+	} else {
+		userJSON, _ := json.Marshal(userPayload)
+		values.Set("sso_token", accessToken)
+		values.Set("sso_user", string(userJSON))
+	}
+	http.Redirect(w, r, "familyplatform://oauth-callback?"+values.Encode(), http.StatusFound)
 }
 
 func normalizeEmail(email string) string {

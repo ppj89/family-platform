@@ -1,6 +1,8 @@
 import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { Capacitor } from '@capacitor/core'
 import { Style, StatusBar } from '@capacitor/status-bar'
+import { App as CapacitorApp } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import { CgChevronLeft, CgChevronRight } from 'react-icons/cg'
 import { HiChevronDown, HiChevronUp, HiOutlineX } from 'react-icons/hi'
 import { PiReceiptLight } from 'react-icons/pi'
@@ -291,6 +293,38 @@ export default function App() {
   // 자식 화면의 데이터 조회 effect보다 먼저 현재 메뉴 컨텍스트를 설정한다.
   setApiDataViewMenuKey(authenticated ? analyticsMenuKeys[activeMenu] : '')
   useTodayCalendarNotifications(authenticated && nativeNotificationBootstrapEnabled)
+  useEffect(() => {
+    // Google's OAuth login can't run inside this app's embedded WebView
+    // (Google blocks that outright), so LoginPage opens it in an
+    // external Custom Tab instead. Once that finishes, the backend
+    // redirects to this custom scheme — caught here via the app's
+    // AndroidManifest intent-filter — carrying the finished login back
+    // in the URL since the Custom Tab's own storage isn't this app's.
+    if (!Capacitor.isNativePlatform()) return
+    const listener = CapacitorApp.addListener('appUrlOpen', ({ url }) => {
+      if (!url.startsWith('familyplatform://oauth-callback')) return
+      void Browser.close().catch(() => undefined)
+      const params = new URL(url).searchParams
+      const token = params.get('sso_token')
+      const userJson = params.get('sso_user')
+      const error = params.get('sso_error')
+      if (error) {
+        window.location.href = '/'
+        return
+      }
+      if (!token || !userJson) return
+      try {
+        const user = JSON.parse(userJson) as AuthSessionResponse
+        storeAuthSession({ ...user, token }, true)
+      } catch {
+        return
+      }
+      window.location.href = '/'
+    })
+    return () => {
+      void listener.then((handle) => handle.remove())
+    }
+  }, [])
   useEffect(() => {
     // Every popup/dialog in the app shares the same "*-backdrop" naming
     // convention (see the body[class$="backdrop"] safe-area rule in

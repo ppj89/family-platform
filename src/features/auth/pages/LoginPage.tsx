@@ -2,6 +2,7 @@ import { FormEvent, useEffect, useMemo, useState } from 'react'
 import { HiOutlineX } from 'react-icons/hi'
 import { Capacitor } from '@capacitor/core'
 import { Style, StatusBar } from '@capacitor/status-bar'
+import { Browser } from '@capacitor/browser'
 import { apiRequest } from '../../../shared/api/client'
 import type { ApiError } from '../../../shared/api/client'
 import { clearAuthSession, storeAuthSession } from '../../../shared/api/auth'
@@ -541,7 +542,21 @@ export function LoginPage() {
       showToast(`${providerLabels[provider]} 설정이 필요합니다.`)
       return
     }
-    window.location.href = resolveStartUrl(provider, providerInfo)
+    const startUrl = resolveStartUrl(provider, providerInfo)
+    // Google refuses to render its login page inside an embedded WebView
+    // (it responds with disallowed_useragent) — Android would otherwise
+    // silently bounce the user out to the system browser mid-flow. Open
+    // it ourselves in a Custom Tab instead, and mark the request as
+    // native so the backend hands the finished login back to the app via
+    // the familyplatform:// deep link (see App.tsx) rather than the
+    // normal in-page HTML callback, which would land in Chrome's own
+    // storage instead of this app's.
+    if (provider === 'google' && Capacitor.isNativePlatform()) {
+      const separator = startUrl.includes('?') ? '&' : '?'
+      void Browser.open({ url: `${startUrl}${separator}client=native` })
+      return
+    }
+    window.location.href = startUrl
   }
 
   function closeSessionConfirm() {

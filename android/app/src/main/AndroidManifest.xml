@@ -21,6 +21,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Google's OAuth policy blocks its login page from loading
+                 inside an embedded WebView, so that flow opens in an
+                 external Custom Tab instead (see LoginPage.tsx). This
+                 custom-scheme intent-filter is how the backend hands the
+                 finished login back to this app once that Custom Tab is
+                 done, without needing a verified Android App Link. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="familyplatform" android:host="oauth-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider
