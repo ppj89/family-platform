@@ -683,21 +683,15 @@
   font-size: 14px;
 }
 
-.fp-community-search-dialog .fp-date-picker-popover {
-  top: auto;
-  right: 0;
-  bottom: calc(100% + 8px);
-  left: auto;
-}
-
 /* Only the end-date (right-hand) field needs to open right-aligned —
    forcing that on the start-date field too pushed its popover's right
    edge to a trigger sitting on the left half of the row, so the ~310px
-   calendar overflowed off the left edge of the screen. */
+   calendar overflowed off the left edge of the screen. (Whether it opens
+   above or below the trigger is handled dynamically in DatePickerField
+   itself via an inline style, which always wins over these rules — this
+   only needs to set the horizontal side.) */
 .fp-community-search-period .fp-community-search-date:last-child .fp-date-picker-popover {
-  top: auto;
   right: 0;
-  bottom: calc(100% + 8px);
   left: auto;
 }
 

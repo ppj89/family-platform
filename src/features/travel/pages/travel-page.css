@@ -458,14 +458,18 @@
 
 .fp-travel-summary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  /* The date card needs the full 'YYYY.MM.DD~YYYY.MM.DD' range to fit
+     without wrapping, so give it noticeably more of the row than the
+     amount card (whose value is much shorter). */
+  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
   gap: 10px;
 }
 
 .fp-travel-summary article {
   display: grid;
   gap: 4px;
-  padding: 12px 14px;
+  min-width: 0;
+  padding: 12px 10px;
   border-radius: 14px;
   background: #f7f8fa;
 }
@@ -487,9 +491,11 @@
 }
 
 .fp-travel-summary-date {
-  font-size: 13px !important;
-  line-height: 1.35;
-  word-break: keep-all;
+  overflow: hidden;
+  font-size: 12px !important;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .fp-travel-map {

@@ -399,7 +399,13 @@ export default function CommunityPage() {
         await updateCommunityComment(editingComment.id, body)
         setEditingComment(null)
       } else {
-        await createCommunityComment(selectedPost.id, body, replyToComment?.id)
+        // The UI only ever shows one level of replies under a root
+        // comment, so a "답글" on a reply itself still attaches to that
+        // reply's own root parent — it just lands in the same visible
+        // thread instead of creating an invisible, un-rendered
+        // reply-to-a-reply level.
+        const parentId = replyToComment ? replyToComment.parentCommentId ?? replyToComment.id : undefined
+        await createCommunityComment(selectedPost.id, body, parentId)
       }
       setCommentText('')
       setReplyToComment(null)
@@ -691,7 +697,6 @@ export default function CommunityPage() {
       {viewMode === 'detail' && selectedPost ? (
         <section className="fp-card fp-community-detail">
           <header>
-            <button className="fp-button fp-button-muted" type="button" onClick={goList}>목록</button>
             <div className="fp-community-detail-actions">
               {canManageSelectedPost ? (
                 <div className="fp-row-actions">
@@ -699,6 +704,7 @@ export default function CommunityPage() {
                 <button className="danger" type="button" onClick={() => requestDeletePost(selectedPost)}>삭제</button>
                 </div>
               ) : null}
+              <button className="fp-button fp-button-muted" type="button" onClick={goList}>목록</button>
             </div>
           </header>
           <article className="fp-community-detail-article">
@@ -770,14 +776,19 @@ export default function CommunityPage() {
                       <span>{formatInstant(reply.createdAt)}</span>
                     </div>
                     <p>{reply.body}</p>
-                    {!reply.isDeleted && (platformAdmin || reply.authorId === user?.id) ? (
+                    {!reply.isDeleted ? (
                       <div className="fp-row-actions">
-                        <button type="button" onClick={() => {
-                          setReplyToComment(null)
-                          setEditingComment(reply)
-                          setCommentText(reply.body)
-                        }}>수정</button>
-                        <button className="danger" type="button" onClick={() => requestDeleteComment(reply)}>삭제</button>
+                        <button type="button" onClick={() => startReply(reply)}>답글</button>
+                        {platformAdmin || reply.authorId === user?.id ? (
+                          <>
+                            <button type="button" onClick={() => {
+                              setReplyToComment(null)
+                              setEditingComment(reply)
+                              setCommentText(reply.body)
+                            }}>수정</button>
+                            <button className="danger" type="button" onClick={() => requestDeleteComment(reply)}>삭제</button>
+                          </>
+                        ) : null}
                       </div>
                     ) : null}
                   </div>

@@ -83,14 +83,13 @@ function formatMonthLabel(value: string) {
 }
 
 function formatTripRange(startDate: string, endDate: string) {
-  // The full 'YYYY-MM-DD ~ YYYY-MM-DD' range wrapped badly inside the
-  // narrow summary card. Drop the redundant year when both dates fall in
-  // the same one so it reliably fits on a single line.
-  if (startDate === endDate) return startDate
-  const [startYear, ...startRest] = startDate.split('-')
-  const [endYear] = endDate.split('-')
-  if (startYear === endYear) return `${startRest.join('.')} ~ ${endDate.slice(5).replace('-', '.')}`
-  return `${startDate} ~ ${endDate}`
+  // Dots instead of dashes and no spaces around '~' keep this as short as
+  // possible — the summary card was widened and its font shrunk to fit
+  // this (see .fp-travel-summary-date), but the full range with year
+  // still needs every bit of room it can get.
+  const start = startDate.replace(/-/g, '.')
+  if (startDate === endDate) return start
+  return `${start}~${endDate.replace(/-/g, '.')}`
 }
 
 function overlapsRange(itemStart: string, itemEnd: string, rangeStart: string, rangeEnd: string) {
