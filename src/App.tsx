@@ -300,7 +300,10 @@ export default function App() {
     // redirects to this custom scheme — caught here via the app's
     // AndroidManifest intent-filter — carrying the finished login back
     // in the URL since the Custom Tab's own storage isn't this app's.
-    if (!Capacitor.isNativePlatform()) return
+    // Guarded the same way as the Browser.open() call in LoginPage: this
+    // web build is served live and can run on an older installed native
+    // shell that predates the @capacitor/app plugin being added.
+    if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable('App')) return
     const listener = CapacitorApp.addListener('appUrlOpen', ({ url }) => {
       if (!url.startsWith('familyplatform://oauth-callback')) return
       void Browser.close().catch(() => undefined)

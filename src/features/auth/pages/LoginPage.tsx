@@ -551,7 +551,13 @@ export function LoginPage() {
     // the familyplatform:// deep link (see App.tsx) rather than the
     // normal in-page HTML callback, which would land in Chrome's own
     // storage instead of this app's.
-    if (provider === 'google' && Capacitor.isNativePlatform()) {
+    // This app loads its web build live from the server, separately from
+    // the native shell — so a currently-installed app on an older native
+    // build (before @capacitor/browser was added) can already be running
+    // this exact JS. Guard with isPluginAvailable so that mismatch falls
+    // back to the old (still-working) behavior instead of calling into a
+    // plugin the installed shell doesn't have.
+    if (provider === 'google' && Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Browser')) {
       const separator = startUrl.includes('?') ? '&' : '?'
       void Browser.open({ url: `${startUrl}${separator}client=native` })
       return
