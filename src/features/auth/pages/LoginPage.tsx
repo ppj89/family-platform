@@ -554,12 +554,15 @@ export function LoginPage() {
     // This app loads its web build live from the server, separately from
     // the native shell — so a currently-installed app on an older native
     // build (before @capacitor/browser was added) can already be running
-    // this exact JS. Guard with isPluginAvailable so that mismatch falls
-    // back to the old (still-working) behavior instead of calling into a
-    // plugin the installed shell doesn't have.
+    // this exact JS. isPluginAvailable is meant to catch that mismatch,
+    // but don't trust it alone: if Browser.open() itself still fails for
+    // any reason, fall back to the plain navigation that already worked
+    // before today, rather than leaving the button looking dead.
     if (provider === 'google' && Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Browser')) {
       const separator = startUrl.includes('?') ? '&' : '?'
-      void Browser.open({ url: `${startUrl}${separator}client=native` })
+      Browser.open({ url: `${startUrl}${separator}client=native` }).catch(() => {
+        window.location.href = startUrl
+      })
       return
     }
     window.location.href = startUrl
