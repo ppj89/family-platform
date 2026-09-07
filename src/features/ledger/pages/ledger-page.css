@@ -1539,7 +1539,7 @@
 
 .ledger-detail-edit-dialog h2 {
   margin: 0;
-  padding: 22px 62px 8px 22px;
+  padding: 14px 62px 8px 22px;
   color: #111827;
   font-size: 22px;
   font-weight: 900;
@@ -1588,7 +1588,7 @@
 
 .fp-ledger-entry-dialog > h2 {
   margin: 0;
-  padding: 22px 62px 8px 22px;
+  padding: 14px 62px 8px 22px;
   /* Matches the dialog-title convention used everywhere else in the app
      (diary/travel/baby/restaurant/family/community all use font-weight:
      900 for their add/edit dialog titles) — this one, and the sibling
