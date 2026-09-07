@@ -360,13 +360,22 @@
 }
 
 .fp-community-list h3,
-.fp-community-form h3,
 .fp-community-detail h3,
 .fp-community-comments > strong {
   margin: 0;
   color: #111827;
   font-size: 22px;
   font-weight: 900;
+  line-height: 1.2;
+}
+
+/* Popup title only: matches the canonical dialog-title style shared by
+   every add/edit popup app-wide — 22px, font-weight 800. */
+.fp-community-form h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 22px;
+  font-weight: 800;
   line-height: 1.2;
 }
 
@@ -1347,7 +1356,6 @@ html[data-theme='dark'] .fp-community-pagination span {
   }
 
   .fp-community-list h3,
-  .fp-community-form h3,
   .fp-community-detail h3 {
     font-size: 24px;
   }

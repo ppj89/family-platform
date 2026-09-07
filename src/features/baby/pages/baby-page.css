@@ -12,12 +12,21 @@
   margin-bottom: 16px;
 }
 
-.fp-baby-header h2,
-.fp-baby-form h3 {
+.fp-baby-header h2 {
   margin: 0;
   color: #191f28;
   font-size: 22px;
   font-weight: 900;
+  line-height: 1.25;
+}
+
+/* Popup title only: matches the canonical dialog-title style shared by
+   every add/edit popup app-wide — 22px, font-weight 800. */
+.fp-baby-form h3 {
+  margin: 0;
+  color: #191f28;
+  font-size: 22px;
+  font-weight: 800;
   line-height: 1.25;
 }
 

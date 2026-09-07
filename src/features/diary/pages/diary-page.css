@@ -22,12 +22,23 @@
   flex: 0 0 auto;
 }
 
-.fp-diary-header h2,
-.fp-diary-form h3 {
+.fp-diary-header h2 {
   margin: 0;
   color: #111827;
   font-size: 22px;
   font-weight: 900;
+  line-height: 1.2;
+  letter-spacing: 0;
+}
+
+/* Popup title only (not the page header above): matches the canonical
+   dialog-title style shared by every add/edit popup app-wide — 22px,
+   font-weight 800 (not 900, which reads too heavy at this size). */
+.fp-diary-form h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 22px;
+  font-weight: 800;
   line-height: 1.2;
   letter-spacing: 0;
 }

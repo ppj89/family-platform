@@ -120,8 +120,8 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 }
 
 .fp-calendar-right .fp-schedule-form h3 {
-  font-size: 19px;
-  font-weight: 900;
+  font-size: 22px;
+  font-weight: 800;
 }
 
 .fp-calendar-header p,
@@ -2052,6 +2052,18 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   padding: 12px 16px 8px;
 }
 
+/* This title had no font-size/weight of its own — it fell back to the
+   browser's default ~1.17em bold h3, visibly larger/bolder than every
+   other popup's title. Matches the canonical dialog-title style shared
+   app-wide: 22px, font-weight 800. */
+.fp-calendar-form-dialog > header h3 {
+  margin: 0;
+  color: #111827;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
 .fp-calendar-form-scroll {
   min-height: 0;
   overflow-y: auto;
@@ -2743,9 +2755,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
     padding: 6px 4px;
   }
 
-  .fp-schedule-panel h3,
-  .fp-schedule-form h3,
-  .fp-calendar-right .fp-schedule-form h3 {
+  .fp-schedule-panel h3 {
     font-size: 18px;
   }
 

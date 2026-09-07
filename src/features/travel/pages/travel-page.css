@@ -25,12 +25,21 @@
 }
 
 .fp-travel-list-header h2,
-.fp-travel-detail-header h2,
-.fp-travel-record-form-dialog h3 {
+.fp-travel-detail-header h2 {
   margin: 0;
   color: #191f28;
   font-size: 20px;
   font-weight: 900;
+  line-height: 1.25;
+}
+
+/* Popup title only: matches the canonical dialog-title style shared by
+   every add/edit popup app-wide — 22px, font-weight 800. */
+.fp-travel-record-form-dialog h3 {
+  margin: 0;
+  color: #191f28;
+  font-size: 22px;
+  font-weight: 800;
   line-height: 1.25;
 }
 
@@ -1086,9 +1095,6 @@
     border-radius: 22px;
   }
 
-  .fp-travel-record-form-dialog h3 {
-    font-size: 18px;
-  }
 
   .travel-record-grid {
     grid-template-columns: 1fr;

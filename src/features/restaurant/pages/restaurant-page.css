@@ -72,12 +72,22 @@
   outline-offset: 2px;
 }
 
-.fp-restaurant-card-header h2,
-.fp-restaurant-form h3 {
+.fp-restaurant-card-header h2 {
   margin: 0;
   color: #0f172a;
   font-size: 22px;
   font-weight: 900;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+/* Popup title only: matches the canonical dialog-title style shared by
+   every add/edit popup app-wide — 22px, font-weight 800. */
+.fp-restaurant-form h3 {
+  margin: 0;
+  color: #0f172a;
+  font-size: 22px;
+  font-weight: 800;
   line-height: 1.25;
   letter-spacing: 0;
 }
