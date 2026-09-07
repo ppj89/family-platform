@@ -317,7 +317,7 @@
 .fp-diary-detail-dialog {
   display: grid;
   width: min(460px, calc(100vw - 36px));
-  max-height: min(680px, calc(100dvh - 36px));
+  max-height: min(680px, calc(100dvh - 36px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px)));
   gap: 14px;
   overflow: auto;
   border-radius: 16px;
@@ -417,7 +417,12 @@
 
 .fp-diary-form-dialog {
   width: min(420px, calc(100vw - 36px));
-  max-height: min(720px, calc(100dvh - 28px));
+  /* The backdrop itself is now trimmed top/bottom by the safe-area insets
+     (see body [class$="backdrop"] in app.css), so the dialog's own
+     max-height needs to shrink by the same amount — otherwise a long
+     form (this one has ~9 fields) still grows tall enough to poke back
+     out past those trimmed edges, under the status bar / nav bar. */
+  max-height: min(720px, calc(100dvh - 28px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px)));
   grid-template-rows: auto minmax(0, 1fr) auto;
   gap: 0;
   overflow: hidden;
@@ -842,6 +847,6 @@
 
   .fp-diary-form-dialog {
     width: min(420px, calc(100vw - 28px));
-    max-height: calc(100dvh - 28px);
+    max-height: calc(100dvh - 28px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px));
   }
 }

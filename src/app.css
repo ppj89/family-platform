@@ -16,12 +16,16 @@
    pattern. On Android's edge-to-edge WebView that means their content
    (bottom-sheet dialogs, or any footer pinned near the bottom of a tall
    centered dialog, e.g. pagination controls) can render underneath the
-   system's bottom nav bar. Trim the fixed overlay's own bottom edge by the
-   safe-area inset so dialog content stops above it instead.
+   system's bottom nav bar — and, symmetrically, a dialog tall enough to
+   nearly fill the viewport (long forms with many fields) can render its
+   header underneath the top status bar instead of below it. Trim the
+   fixed overlay's own top/bottom edges by the safe-area insets so dialog
+   content stays clear of both system bars instead.
    `body [class$="backdrop"]` is deliberately more specific ((0,1,1) vs each
    individual ".foo-backdrop" rule's (0,1,0)) so this wins regardless of
    which CSS file loads last. */
 body [class$="backdrop"] {
+  top: var(--fp-safe-top, 0px);
   bottom: var(--fp-safe-bottom, 0px);
 }
 
