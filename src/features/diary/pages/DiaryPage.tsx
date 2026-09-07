@@ -305,20 +305,6 @@ export default function DiaryPage() {
                 <small>{[item.weather, item.mood, tempText(item)].filter(Boolean).join(' · ') || '날씨·기분·온도 정보 없음'}</small>
                 <p title={item.body || ''}>{previewText(item.body)}</p>
               </div>
-              <div className="fp-row-actions">
-                <button type="button" onClick={(event) => { event.stopPropagation(); startEdit(item) }}>수정</button>
-                <button
-                  type="button"
-                  className="danger"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    setPendingDelete(item)
-                    setConfirmKind('delete')
-                  }}
-                >
-                  삭제
-                </button>
-              </div>
             </article>
           )) : <p className="fp-empty-text">{queryMode === 'month' ? '해당 월의 일기가 없습니다.' : '해당 기간의 일기가 없습니다.'}</p>}
         </section>
