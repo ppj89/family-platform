@@ -1537,15 +1537,6 @@
   padding: 0;
 }
 
-.ledger-detail-edit-dialog h2 {
-  margin: 0;
-  padding: 14px 62px 8px 22px;
-  color: #111827;
-  font-size: 22px;
-  font-weight: 900;
-  line-height: 1.2;
-}
-
 .ledger-detail-form-grid {
   min-height: 0;
   overflow-y: auto;
@@ -1586,31 +1577,44 @@
   overscroll-behavior: contain;
 }
 
-.fp-ledger-entry-dialog > h2 {
+/* This dialog used to lay its title and its close/calculator buttons
+   out with position: absolute over a padded h2, instead of the plain
+   flex <header> (title + button row) every other feature's dialog
+   uses (diary, travel, baby, restaurant, family, community). That's
+   why its close button sat in a different spot and at a different
+   size — it wasn't a CSS values mismatch, it was a different layout
+   model. Rebuilt to match the shared header pattern exactly. */
+.fp-ledger-entry-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 58px;
+  padding: 12px 16px 8px;
+}
+
+.fp-ledger-entry-header h2 {
   margin: 0;
-  padding: 14px 62px 8px 22px;
-  /* Matches the dialog-title convention used everywhere else in the app
-     (diary/travel/baby/restaurant/family/community all use font-weight:
-     900 for their add/edit dialog titles) — this one, and the sibling
-     .patch-ledger-detail-dialog/.ledger-detail-edit-dialog titles below,
-     were the only ones left at a lighter weight. */
   color: #111827;
   font-size: 22px;
   font-weight: 900;
   line-height: 1.2;
 }
 
+.fp-ledger-entry-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+}
+
 .fp-ledger-entry-calculator-button {
-  position: absolute;
-  z-index: 1;
-  top: 12px;
-  right: 54px;
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   place-items: center;
   border: 0;
-  border-radius: 12px;
+  border-radius: 14px;
   background: #edf4ff;
   color: #1b64da;
   cursor: pointer;
@@ -1619,6 +1623,20 @@
 .fp-ledger-entry-calculator-button svg {
   width: 18px;
   height: 18px;
+}
+
+/* Match the close button every other dialog uses (diary's
+   .fp-diary-close-button, baby's .modal-close, etc): 38px, 14px
+   radius, neutral gray — instead of .dialog-close's own smaller,
+   absolutely-positioned default (still used as-is by ledger's other,
+   unrestructured dialogs). */
+.fp-ledger-entry-header-actions .dialog-close {
+  position: static;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+  background: #f4f6f8;
+  color: #4e5968;
 }
 
 .fp-ledger-entry-dialog .ledger-form-grid {
@@ -1988,8 +2006,7 @@ html[data-theme='dark'] .ledger-row strong,
 html[data-theme='dark'] .ledger-row-main strong,
 html[data-theme='dark'] .patch-ledger-detail-dialog h2,
 html[data-theme='dark'] .fp-ledger-autofill-dialog h2,
-html[data-theme='dark'] .fp-ledger-entry-dialog > h2,
-html[data-theme='dark'] .ledger-detail-edit-dialog h2,
+html[data-theme='dark'] .fp-ledger-entry-header h2,
 html[data-theme='dark'] .ledger-form .custom-select-trigger span,
 html[data-theme='dark'] .fp-ledger .fp-date-picker-trigger strong {
   color: #f8fafc;
@@ -2208,6 +2225,11 @@ html[data-theme='dark'] .fp-ledger-input-jump {
 html[data-theme='dark'] .fp-ledger-entry-calculator-button {
   background: #1e3a5f;
   color: #bfdbfe;
+}
+
+html[data-theme='dark'] .fp-ledger-entry-header-actions .dialog-close {
+  background: #3b424c;
+  color: #f3f5f7;
 }
 
 html[data-theme='dark'] .patch-ledger-detail-dialog .secondary-button,

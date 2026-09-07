@@ -1128,13 +1128,17 @@ export default function LedgerPage() {
             onClick={(event) => event.stopPropagation()}
             onSubmit={requestSave}
           >
-            <button type="button" className="fp-ledger-entry-calculator-button" aria-label="계산기 열기" onClick={() => openCalculator('entry')}>
-              <HiOutlineCalculator aria-hidden="true" />
-            </button>
-            <button type="button" className="dialog-close" aria-label="닫기" onClick={closeEntryDialog}>
-              <HiOutlineX aria-hidden="true" />
-            </button>
-            <h2 id="fp-ledger-entry-title">{editingId ? '가계부 수정' : '가계부 입력'}</h2>
+            <header className="fp-ledger-entry-header">
+              <h2 id="fp-ledger-entry-title">{editingId ? '가계부 수정' : '가계부 입력'}</h2>
+              <div className="fp-ledger-entry-header-actions">
+                <button type="button" className="fp-ledger-entry-calculator-button" aria-label="계산기 열기" onClick={() => openCalculator('entry')}>
+                  <HiOutlineCalculator aria-hidden="true" />
+                </button>
+                <button type="button" className="dialog-close" aria-label="닫기" onClick={closeEntryDialog}>
+                  <HiOutlineX aria-hidden="true" />
+                </button>
+              </div>
+            </header>
 
             <div className="ledger-form-grid">
               <label className="span-2">
@@ -1281,13 +1285,17 @@ export default function LedgerPage() {
               onClick={(event) => event.stopPropagation()}
               onSubmit={requestDetailSave}
             >
-              <button type="button" className="fp-ledger-entry-calculator-button" aria-label="계산기 열기" onClick={() => openCalculator('detail')}>
-                <HiOutlineCalculator aria-hidden="true" />
-              </button>
-              <button type="button" className="dialog-close" aria-label="닫기" onClick={closeLedgerDetail}>
-                <HiOutlineX aria-hidden="true" />
-              </button>
-              <h2>가계부 수정</h2>
+              <header className="fp-ledger-entry-header">
+                <h2>가계부 수정</h2>
+                <div className="fp-ledger-entry-header-actions">
+                  <button type="button" className="fp-ledger-entry-calculator-button" aria-label="계산기 열기" onClick={() => openCalculator('detail')}>
+                    <HiOutlineCalculator aria-hidden="true" />
+                  </button>
+                  <button type="button" className="dialog-close" aria-label="닫기" onClick={closeLedgerDetail}>
+                    <HiOutlineX aria-hidden="true" />
+                  </button>
+                </div>
+              </header>
               <div className="ledger-form-grid ledger-detail-form-grid">
                 <label className="span-2">
                   <span>내용 <em className="fp-required-mark">*</em></span>
