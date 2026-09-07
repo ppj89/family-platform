@@ -601,19 +601,6 @@ export default function BabyPage() {
                   <span>{[baby.gender || '', baby.birthDate].filter(Boolean).join(' · ')}</span>
                   {baby.memo ? <p>{baby.memo}</p> : null}
                 </button>
-                <span className="baby-card-actions">
-                  <button className="baby-card-edit-button edit-button" type="button" onClick={() => startBabyEdit(baby)}>수정</button>
-                  <button
-                    type="button"
-                    className="danger-button baby-card-delete-button"
-                    onClick={() => {
-                      setPendingBabyDelete(baby)
-                      setConfirmKind('baby-delete')
-                    }}
-                  >
-                    삭제
-                  </button>
-                </span>
               </article>
             )) : <p className="fp-empty-text api-empty-row">등록된 아이가 없습니다.</p>}
           </section>
@@ -629,11 +616,26 @@ export default function BabyPage() {
                   </button>
                 ) : <span className="baby-avatar large">아이</span>}
                 <div>
-                  <strong className="fp-ellipsis" title={selectedBaby.name}>{selectedBaby.name}</strong>
+                  <span className="baby-card-title-row">
+                    <strong className="fp-ellipsis" title={selectedBaby.name}>{selectedBaby.name}</strong>
+                    <small>{growthText(selectedBaby)}</small>
+                  </span>
                   <span>{[selectedBaby.gender || '', selectedBaby.birthDate].filter(Boolean).join(' · ')}</span>
                   {selectedBaby.memo ? <p>{selectedBaby.memo}</p> : null}
-                  <small>{growthText(selectedBaby)}</small>
                 </div>
+                <span className="baby-card-actions fp-baby-profile-actions">
+                  <button className="edit-button" type="button" onClick={() => startBabyEdit(selectedBaby)}>수정</button>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() => {
+                      setPendingBabyDelete(selectedBaby)
+                      setConfirmKind('baby-delete')
+                    }}
+                  >
+                    삭제
+                  </button>
+                </span>
               </article>
               <div className="baby-detail-tabs" role="tablist" aria-label="육아 기록 분류">
                 <button type="button" className={detailTab === 'growth' ? 'active' : ''} aria-pressed={detailTab === 'growth'} onClick={() => setDetailTab('growth')}>성장기록</button>

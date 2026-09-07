@@ -493,6 +493,23 @@
   display: grid;
   gap: 6px;
   min-width: 0;
+  flex: 1 1 auto;
+}
+
+.fp-baby-profile-actions {
+  flex: 0 0 auto;
+  align-self: flex-start;
+}
+
+.baby-profile-band .baby-card-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.baby-profile-band .baby-card-title-row small {
+  flex: 0 0 auto;
 }
 
 .baby-profile-band strong {
