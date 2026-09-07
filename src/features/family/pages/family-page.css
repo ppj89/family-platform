@@ -211,7 +211,7 @@
   display: grid;
   gap: 18px;
   width: min(520px, 100%);
-  max-height: min(760px, calc(100dvh - 40px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px)));
+  max-height: min(760px, calc(100dvh - 80px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px)));
   overflow: auto;
   padding: 24px;
   border-radius: 18px;

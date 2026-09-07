@@ -27,6 +27,13 @@
 body [class$="backdrop"] {
   top: var(--fp-safe-top, 0px);
   bottom: var(--fp-safe-bottom, 0px);
+  /* Individual *-backdrop rules used to set their own paddings (14 / 18 /
+     20 / 22 px …), so a tall dialog inside one backdrop sat visibly
+     closer to the viewport edge than the same-size dialog inside a
+     different backdrop. Enforce a single value app-wide (backdrop's
+     0,1,1 specificity beats each individual 0,1,0 rule) so every dialog
+     gets identical top / bottom breathing room from the safe-area edge. */
+  padding-block: 40px;
 }
 
 /* Applied to <body> (see App.tsx) whenever any of the backdrops above is
