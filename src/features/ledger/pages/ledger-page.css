@@ -1559,13 +1559,14 @@
   bottom: 0;
   align-self: end;
   margin-top: 0;
-  padding: 10px 22px 12px !important;
   /* The dialog's own backdrop already reserves the device's bottom safe
-     area (see body[class$="backdrop"] in app.css), so adding
-     env(safe-area-inset-bottom) here too just doubled up as extra dead
-     white space below the buttons. A plain, modest 12px is enough.
-     Dropped the border/shadow divider as well so this reads as the same
-     surface as the form above it instead of a visually separate strip. */
+     area (see body[class$="backdrop"] in app.css), so this doesn't need
+     env(safe-area-inset-bottom) on top of that — but it still needs its
+     own visible breathing room below the buttons, or they read as flush
+     against the dialog's rounded bottom edge. Dropped the border/shadow
+     divider as well so this reads as the same surface as the form above
+     it instead of a visually separate strip. */
+  padding: 10px 22px 20px !important;
   background: #ffffff;
   z-index: 3;
 }
@@ -1636,8 +1637,9 @@
   /* See .ledger-detail-edit-dialog .ledger-detail-actions: no extra
      env(safe-area-inset-bottom) padding (the backdrop already reserves
      it) and no border/shadow divider, so this matches the form's
-     background instead of reading as a separate strip. */
-  padding: 10px 22px 12px !important;
+     background instead of reading as a separate strip — but still needs
+     its own bottom breathing room below the buttons. */
+  padding: 10px 22px 20px !important;
   background: #ffffff;
   z-index: 3;
 }
@@ -1802,10 +1804,6 @@
   }
 
   .fp-ledger-section-header {
-    position: sticky;
-    z-index: 20;
-    top: 8px;
-    margin: -4px -4px 0;
     border-radius: 14px;
     padding: 4px;
     background: #fff;
