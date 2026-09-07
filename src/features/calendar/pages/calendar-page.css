@@ -2038,7 +2038,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   width: min(560px, calc(100vw - 40px));
   /* max-height (not a forced height) lets the dialog shrink to fit its
      content instead of always stretching to fill the viewport. */
-  max-height: min(720px, calc(100dvh - 28px));
+  max-height: min(720px, calc(100dvh - 28px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px)));
   min-height: 0;
   gap: 0 !important;
   overflow: hidden;
@@ -2147,7 +2147,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
 
 .fp-calendar-search-popup {
   width: min(620px, calc(100vw - 32px));
-  max-height: min(760px, calc(100dvh - 32px));
+  max-height: min(760px, calc(100dvh - 32px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px)));
   gap: 14px;
   padding: 20px;
 }
@@ -2345,7 +2345,7 @@ body:has(.family-calendar-panel) .fp-topbar .fp-eyebrow {
   }
 
   .fp-year-month-popup {
-    max-height: min(560px, calc(100dvh - 88px));
+    max-height: min(560px, calc(100dvh - 88px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px)));
     padding: 14px;
   }
 

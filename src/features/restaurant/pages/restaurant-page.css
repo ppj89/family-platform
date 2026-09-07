@@ -569,7 +569,7 @@
   max-width: 680px;
   /* max-height (not a forced height) lets the dialog shrink to fit its
      content instead of always stretching to fill the viewport. */
-  max-height: min(720px, calc(100dvh - 28px));
+  max-height: min(720px, calc(100dvh - 28px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px)));
   min-height: 0;
   overflow: hidden;
   border-radius: 18px;
@@ -715,7 +715,7 @@
 @media (max-width: 640px) {
   .fp-restaurant-form.fp-restaurant-form-dialog {
     width: 100%;
-    max-height: calc(100dvh - 28px);
+    max-height: calc(100dvh - 28px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px));
     border-radius: 16px;
   }
 }

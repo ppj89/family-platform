@@ -377,7 +377,7 @@ export default function DiaryPage() {
         >
           <form className="fp-diary-form fp-diary-form-dialog fp-card" ref={formRef} onSubmit={requestSave}>
           <header>
-            <h3>{editing ? '일기 수정' : '일기 추가'}</h3>
+            <h3>{editing ? '일기 수정' : '일기 입력'}</h3>
             <button className="fp-diary-close-button" type="button" aria-label="닫기" onClick={resetForm}>
               <HiOutlineX aria-hidden="true" />
             </button>
