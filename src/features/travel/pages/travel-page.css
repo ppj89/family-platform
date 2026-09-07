@@ -725,6 +725,7 @@
   font-weight: 600;
   line-height: 1.6;
   word-break: break-word;
+  white-space: pre-wrap;
 }
 
 .fp-travel-record-detail-actions {

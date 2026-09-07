@@ -369,6 +369,7 @@ export default function TravelPage() {
     try {
       const payload = {
         ...recordForm,
+        sortOrder: recordForm.sortOrder || nextOrder(records),
         title: recordForm.title.trim(),
         category: recordForm.category || travelCostCategoryOptions[0] || TRAVEL_COST_CATEGORIES[0],
         note: recordForm.note?.trim() || null,
@@ -510,7 +511,15 @@ export default function TravelPage() {
                 <div className="fp-form-grid travel-record-grid">
                   <label className="fp-field">
                     <span>순서</span>
-                    <input value={String(recordForm.sortOrder ?? '')} disabled readOnly />
+                    <input
+                      inputMode="numeric"
+                      placeholder={String(nextOrder(records))}
+                      value={recordForm.sortOrder ? String(recordForm.sortOrder) : ''}
+                      onChange={(event) => {
+                        const digits = event.target.value.replace(/\D/g, '')
+                        setRecordForm((value) => ({ ...value, sortOrder: digits ? Number(digits) : 0 }))
+                      }}
+                    />
                   </label>
                   <CustomSelect
                     label="비용 구분"

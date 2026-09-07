@@ -510,6 +510,10 @@
   font-size: 13px;
 }
 
+.baby-profile-band p {
+  white-space: pre-wrap;
+}
+
 .baby-profile-band small {
   color: #1b64da;
   font-weight: 900;
@@ -778,6 +782,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.baby-record-row p {
+  overflow: visible;
+  text-overflow: clip;
+  white-space: pre-wrap;
 }
 
 .baby-pattern-api-summary .pattern-grid {
