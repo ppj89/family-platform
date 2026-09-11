@@ -73,7 +73,7 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
   // the Android nav bar or simply unreachable. Flip it upward, and cap its
   // height to whatever space is actually available, when there isn't
   // enough room below.
-  const [dropDirection, setDropDirection] = useState<{ upward: boolean; maxHeight: number } | null>(null)
+  const [dropDirection, setDropDirection] = useState<{ centered: boolean; upward: boolean; maxHeight: number } | null>(null)
   const cells = useMemo(() => monthDays(viewDate), [viewDate])
   const selectedViewDate = useMemo(() => initialViewDate(value, mode), [mode, value])
   const currentToday = todayKey()
@@ -112,8 +112,22 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
     const wantedHeight = 420
     const spaceBelow = viewportHeight - rect.bottom - 12
     const spaceAbove = rect.top - 12
+    // On a small screen (a Flip's narrow cover-ratio panel, say) neither
+    // side of the trigger has room for a whole month, and the popover is
+    // an absolutely-positioned child of the form's own scroll box, so it
+    // gets clipped mid-calendar no matter which way it opens. There, drop
+    // the anchoring entirely and center it over the viewport instead (see
+    // .fp-date-picker-popover-centered) so the full month always fits.
+    if (Math.max(spaceBelow, spaceAbove) < wantedHeight) {
+      setDropDirection({ centered: true, upward: false, maxHeight: 0 })
+      return
+    }
     const upward = spaceBelow < wantedHeight && spaceAbove > spaceBelow
-    setDropDirection({ upward, maxHeight: Math.max(240, Math.min(wantedHeight, upward ? spaceAbove : spaceBelow)) })
+    setDropDirection({
+      centered: false,
+      upward,
+      maxHeight: Math.max(240, Math.min(wantedHeight, upward ? spaceAbove : spaceBelow)),
+    })
   }, [open, level])
 
   function selectDate(dateKey: string) {
@@ -203,9 +217,9 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
       </button>
       {open ? (
         <div
-          className={`fp-date-picker-popover fp-date-picker-popover-${mode} fp-date-picker-level-${level}`}
+          className={`fp-date-picker-popover fp-date-picker-popover-${mode} fp-date-picker-level-${level}${dropDirection?.centered ? ' fp-date-picker-popover-centered' : ''}`}
           style={
-            dropDirection
+            dropDirection && !dropDirection.centered
               ? {
                   top: dropDirection.upward ? 'auto' : 'calc(100% + 8px)',
                   bottom: dropDirection.upward ? 'calc(100% + 8px)' : 'auto',

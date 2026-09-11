@@ -378,6 +378,7 @@ func (a *app) routes() http.Handler {
 	mux.HandleFunc("GET /api/auth/oauth/providers", a.oauthProviders)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/start", a.oauthStart)
 	mux.HandleFunc("GET /api/auth/oauth/{provider}/callback", a.oauthCallback)
+	mux.HandleFunc("GET /api/auth/oauth-handoff/{id}", a.oauthHandoffClaim)
 	mux.HandleFunc("GET /api/holidays", a.requireAuth(a.listHolidays))
 	mux.HandleFunc("POST /api/admin/holidays/sync", a.requireAuth(a.syncHolidaysNow))
 	mux.HandleFunc("GET /api/admin/batches", a.requireAuth(a.listAdminBatches))
@@ -1841,12 +1842,19 @@ func (a *app) oauthStart(w http.ResponseWriter, r *http.Request) {
 	// it while the eventual /callback request comes from Chrome instead —
 	// stash it against the state row now so the callback can still tell.
 	isNative := r.URL.Query().Get("client") == "native"
+	// The app also sends an id it generated before opening the Custom Tab,
+	// so the finished login can be parked against it and claimed by the app
+	// itself on its next foreground — see oauth_handoffs.
+	handoffID := strings.TrimSpace(r.URL.Query().Get("handoff"))
+	if len(handoffID) > 255 {
+		handoffID = handoffID[:255]
+	}
 	state := newSessionID()
 	nonce := newSessionID()
 	_, err := a.db.Exec(r.Context(), `
-		insert into oauth_login_states (state, provider, nonce, created_at, expires_at, is_native)
-		values ($1, $2, $3, now(), $4, $5)
-	`, state, providerName, nonce, time.Now().Add(10*time.Minute), isNative)
+		insert into oauth_login_states (state, provider, nonce, created_at, expires_at, is_native, handoff_id)
+		values ($1, $2, $3, now(), $4, $5, nullif($6, ''))
+	`, state, providerName, nonce, time.Now().Add(10*time.Minute), isNative, handoffID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "oauth state creation failed")
 		return
@@ -1887,21 +1895,22 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		}
 		a.log.Warn("oauth provider authorization failed", "provider", providerName, "reason", reason)
 		a.recordLoginHistory(r.Context(), nil, "", providerName, "SSO_LOGIN", "FAIL", reason)
-		isNative := a.oauthStateIsNative(r.Context(), providerName, strings.TrimSpace(r.URL.Query().Get("state")))
-		a.respondOAuthResult(w, r, isNative, http.StatusBadRequest, "", nil, oauthCallbackErrorMessage(providerName, errMessage))
+		isNative, handoffID := a.oauthStateIsNative(r.Context(), providerName, strings.TrimSpace(r.URL.Query().Get("state")))
+		message := oauthCallbackErrorMessage(providerName, errMessage)
+		a.respondOAuthResult(w, r, isNative, handoffID, http.StatusBadRequest, "", nil, message)
 		return
 	}
 	code := strings.TrimSpace(r.URL.Query().Get("code"))
 	state := strings.TrimSpace(r.URL.Query().Get("state"))
 	if code == "" || state == "" {
 		a.recordLoginHistory(r.Context(), nil, "", providerName, "SSO_LOGIN", "FAIL", "missing oauth code or state")
-		a.respondOAuthResult(w, r, false, http.StatusBadRequest, "", nil, "로그인 응답이 올바르지 않습니다. 처음부터 다시 시도해 주세요.")
+		a.respondOAuthResult(w, r, false, "", http.StatusBadRequest, "", nil, "로그인 응답이 올바르지 않습니다. 처음부터 다시 시도해 주세요.")
 		return
 	}
-	ok, isNative := a.consumeOAuthState(r.Context(), providerName, state)
+	ok, isNative, handoffID := a.consumeOAuthState(r.Context(), providerName, state)
 	if !ok {
 		a.recordLoginHistory(r.Context(), nil, "", providerName, "SSO_LOGIN", "FAIL", "invalid or expired oauth state")
-		a.respondOAuthResult(w, r, false, http.StatusBadRequest, "", nil, "로그인 시간이 만료되었거나 요청이 올바르지 않습니다. 다시 시도해 주세요.")
+		a.respondOAuthResult(w, r, false, "", http.StatusBadRequest, "", nil, "로그인 시간이 만료되었거나 요청이 올바르지 않습니다. 다시 시도해 주세요.")
 		return
 	}
 
@@ -1927,22 +1936,22 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 	response, err := a.loginOAuthUser(r.Context(), providerName, profile, true)
 	if errors.Is(err, errActiveSessionExists) {
 		a.recordLoginHistory(r.Context(), nil, profile.Email, providerName, "SSO_LOGIN", "ACTIVE_SESSION", "active session exists")
-		a.respondOAuthResult(w, r, isNative, http.StatusConflict, "", nil, "active session exists")
+		a.respondOAuthResult(w, r, isNative, handoffID, http.StatusConflict, "", nil, "active session exists")
 		return
 	}
 	if errors.Is(err, errOAuthEmailRequired) {
 		a.recordLoginHistory(r.Context(), nil, profile.Email, providerName, "SSO_LOGIN", "EMAIL_REQUIRED", "email consent is required")
-		a.respondOAuthResult(w, r, isNative, http.StatusForbidden, "", nil, "oauth email consent required")
+		a.respondOAuthResult(w, r, isNative, handoffID, http.StatusForbidden, "", nil, "oauth email consent required")
 		return
 	}
 	if errors.Is(err, errAccountSuspended) {
-		a.respondOAuthResult(w, r, isNative, http.StatusForbidden, "", nil, "account suspended")
+		a.respondOAuthResult(w, r, isNative, handoffID, http.StatusForbidden, "", nil, "account suspended")
 		return
 	}
 	if err != nil {
 		a.log.Error("oauth login failed", "provider", providerName, "error", err)
 		a.recordLoginHistory(r.Context(), nil, profile.Email, providerName, "SSO_LOGIN", "FAIL", "oauth login failed")
-		a.respondOAuthResult(w, r, isNative, http.StatusInternalServerError, "", nil, "oauth login failed")
+		a.respondOAuthResult(w, r, isNative, handoffID, http.StatusInternalServerError, "", nil, "oauth login failed")
 		return
 	}
 	a.recordLoginHistory(r.Context(), &response.UserID, firstNonEmpty(response.LoginEmail, response.Email), providerName, "SSO_LOGIN", "SUCCESS", "")
@@ -1954,7 +1963,7 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 		"platformAdmin": response.PlatformAdmin,
 		"provider":      response.Provider,
 	}
-	a.respondOAuthResult(w, r, isNative, http.StatusOK, response.AccessToken, userPayload, "")
+	a.respondOAuthResult(w, r, isNative, handoffID, http.StatusOK, response.AccessToken, userPayload, "")
 }
 
 // respondOAuthResult finishes an OAuth callback either the normal way (an
@@ -1965,8 +1974,11 @@ func (a *app) oauthCallback(w http.ResponseWriter, r *http.Request) {
 // AndroidManifest intent-filter picks up, carrying the token/user back in
 // the URL instead (this callback runs in Chrome, whose storage the app's
 // own WebView can't see).
-func (a *app) respondOAuthResult(w http.ResponseWriter, r *http.Request, isNative bool, status int, accessToken string, userPayload map[string]any, errorMessage string) {
+func (a *app) respondOAuthResult(w http.ResponseWriter, r *http.Request, isNative bool, handoffID string, status int, accessToken string, userPayload map[string]any, errorMessage string) {
 	if isNative {
+		// Park it first: the deep link below is the nice path, but it is
+		// the app claiming this that actually has to be reliable.
+		a.storeOAuthHandoff(r.Context(), handoffID, accessToken, userPayload, errorMessage)
 		writeOAuthNativeRedirect(w, r, accessToken, userPayload, errorMessage)
 		return
 	}
@@ -6731,25 +6743,87 @@ func (a *app) oauthRedirectURL(provider string) string {
 	return a.cfg.publicBaseURL + "/api/auth/oauth/" + provider + "/callback"
 }
 
-func (a *app) consumeOAuthState(ctx context.Context, provider, state string) (bool, bool) {
+func (a *app) consumeOAuthState(ctx context.Context, provider, state string) (bool, bool, string) {
 	var isNative bool
+	var handoffID sql.NullString
 	err := a.db.QueryRow(ctx, `
 		delete from oauth_login_states
 		where state = $1 and provider = $2 and expires_at > now()
-		returning is_native
-	`, state, provider).Scan(&isNative)
-	return err == nil, isNative
+		returning is_native, handoff_id
+	`, state, provider).Scan(&isNative, &handoffID)
+	return err == nil, isNative, handoffID.String
 }
 
 // oauthStateIsNative peeks at a not-yet-consumed state row so the provider
 // error path (which returns before the code/state exchange that would
-// otherwise consume it) can still tell whether to bounce back into the app.
-func (a *app) oauthStateIsNative(ctx context.Context, provider, state string) bool {
+// otherwise consume it) can still tell whether to bounce back into the app,
+// and under which handoff id to park the result.
+func (a *app) oauthStateIsNative(ctx context.Context, provider, state string) (bool, string) {
 	var isNative bool
+	var handoffID sql.NullString
 	_ = a.db.QueryRow(ctx, `
-		select is_native from oauth_login_states where state = $1 and provider = $2
-	`, state, provider).Scan(&isNative)
-	return isNative
+		select is_native, handoff_id from oauth_login_states where state = $1 and provider = $2
+	`, state, provider).Scan(&isNative, &handoffID)
+	return isNative, handoffID.String
+}
+
+// storeOAuthHandoff parks a finished native login so the app can claim it
+// on its own next time it is foregrounded, without needing Chrome to
+// successfully launch the familyplatform:// deep link.
+func (a *app) storeOAuthHandoff(ctx context.Context, handoffID, accessToken string, userPayload map[string]any, errorMessage string) {
+	if strings.TrimSpace(handoffID) == "" {
+		return
+	}
+	var payload any
+	if userPayload != nil {
+		encoded, err := json.Marshal(userPayload)
+		if err == nil {
+			payload = string(encoded)
+		}
+	}
+	_, err := a.db.Exec(ctx, `
+		insert into oauth_handoffs (id, access_token, user_payload, error_message, expires_at)
+		values ($1, $2, $3, $4, now() + interval '10 minutes')
+		on conflict (id) do update set
+			access_token = excluded.access_token,
+			user_payload = excluded.user_payload,
+			error_message = excluded.error_message,
+			expires_at = excluded.expires_at
+	`, handoffID, accessToken, payload, errorMessage)
+	if err != nil {
+		a.log.Error("oauth handoff store failed", "error", err)
+	}
+}
+
+// oauthHandoffClaim hands a parked native login result to the app exactly
+// once. Anything not claimed within its short window simply expires.
+func (a *app) oauthHandoffClaim(w http.ResponseWriter, r *http.Request) {
+	handoffID := strings.TrimSpace(r.PathValue("id"))
+	if handoffID == "" {
+		writeError(w, http.StatusBadRequest, "handoff id is required")
+		return
+	}
+	_, _ = a.db.Exec(r.Context(), `delete from oauth_handoffs where expires_at <= now()`)
+	var accessToken string
+	var userPayload []byte
+	var errorMessage string
+	err := a.db.QueryRow(r.Context(), `
+		delete from oauth_handoffs where id = $1 and expires_at > now()
+		returning access_token, user_payload, error_message
+	`, handoffID).Scan(&accessToken, &userPayload, &errorMessage)
+	if err != nil {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "pending"})
+		return
+	}
+	if strings.TrimSpace(errorMessage) != "" {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "error", "message": errorMessage})
+		return
+	}
+	var user map[string]any
+	if len(userPayload) > 0 {
+		_ = json.Unmarshal(userPayload, &user)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"status": "ready", "token": accessToken, "user": user})
 }
 
 func (a *app) exchangeOAuthCode(ctx context.Context, providerName string, provider oauthProviderConfig, code string) (string, error) {
@@ -7285,7 +7359,25 @@ create table if not exists oauth_login_states (
   is_native boolean not null default false
 );
 alter table if exists oauth_login_states add column if not exists is_native boolean not null default false;
+alter table if exists oauth_login_states add column if not exists handoff_id varchar(255);
 create index if not exists idx_oauth_login_states_expires on oauth_login_states (expires_at);
+-- Chrome will not always let the finished Google login bounce back into
+-- the app via the familyplatform:// deep link (it blocks launching an
+-- external app from a navigation it does not consider user-initiated, and
+-- the trip through Google's own consent pages loses that gesture). So the
+-- finished login is also parked here under an id the app generated before
+-- it opened the Custom Tab; whenever the app comes back to the foreground
+-- — deep link, back button, or the user just swiping back — it claims the
+-- result from here instead of depending on Chrome at all.
+create table if not exists oauth_handoffs (
+  id varchar(255) primary key,
+  access_token text not null default '',
+  user_payload jsonb,
+  error_message text not null default '',
+  created_at timestamp with time zone not null default now(),
+  expires_at timestamp with time zone not null
+);
+create index if not exists idx_oauth_handoffs_expires on oauth_handoffs (expires_at);
 create table if not exists holidays (
   date_key date primary key,
   name varchar(255) not null,

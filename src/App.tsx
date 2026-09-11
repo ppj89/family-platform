@@ -23,6 +23,7 @@ import { initializePushNotifications } from './features/calendar/notifications/p
 import { NotificationBell } from './shared/components/NotificationBell'
 import { ConfirmDialog, ToastMessage } from './shared/components'
 import { clearAuthSession, getStoredUser, hasAuthToken, normalizeAuthUser, storeAuthSession, type AuthSessionResponse, type StoredUser } from './shared/api/auth'
+import { claimOauthHandoff, clearOauthHandoffId, pendingOauthHandoffId } from './shared/api/oauthHandoff'
 import { apiActionMessage, apiRequest, markApiDataViewQuery, setApiDataViewMenuKey } from './shared/api/client'
 import { listReadableFamilies, selectReadableFamily } from './shared/api/family'
 import './app.css'
@@ -304,15 +305,24 @@ export default function App() {
     // web build is served live and can run on an older installed native
     // shell that predates the @capacitor/app plugin being added.
     if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable('App')) return
+    let finished = false
+
+    const finish = () => {
+      clearOauthHandoffId()
+      void Browser.close().catch(() => undefined)
+      window.location.href = '/'
+    }
+
     const listener = CapacitorApp.addListener('appUrlOpen', ({ url }) => {
       if (!url.startsWith('familyplatform://oauth-callback')) return
-      void Browser.close().catch(() => undefined)
+      if (finished) return
       const params = new URL(url).searchParams
       const token = params.get('sso_token')
       const userJson = params.get('sso_user')
       const error = params.get('sso_error')
       if (error) {
-        window.location.href = '/'
+        finished = true
+        finish()
         return
       }
       if (!token || !userJson) return
@@ -322,10 +332,52 @@ export default function App() {
       } catch {
         return
       }
-      window.location.href = '/'
+      finished = true
+      finish()
     })
+
+    // The deep link above is the nice path, not a dependable one — Chrome
+    // often refuses to launch an external app from the redirect that ends
+    // the Google login, because by then it no longer counts the original
+    // button tap as a live user gesture. So whenever this app comes back to
+    // the foreground at all — deep link, back button, task switcher — claim
+    // the finished login straight from the backend instead. The backend
+    // hands each one out exactly once, so this is safe to retry.
+    const claimPendingLogin = async () => {
+      if (finished) return
+      const handoffId = pendingOauthHandoffId()
+      if (!handoffId) return
+      let result: Awaited<ReturnType<typeof claimOauthHandoff>>
+      try {
+        result = await claimOauthHandoff(handoffId)
+      } catch {
+        return
+      }
+      if (finished || result.status === 'pending') return
+      if (result.status === 'error') {
+        finished = true
+        finish()
+        return
+      }
+      try {
+        storeAuthSession({ ...(result.user as unknown as AuthSessionResponse), token: result.token }, true)
+      } catch {
+        return
+      }
+      finished = true
+      finish()
+    }
+
+    const stateListener = CapacitorApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) void claimPendingLogin()
+    })
+    // Also cover the case where the app was killed and cold-started while
+    // the login was in flight, so no resume event ever fires.
+    void claimPendingLogin()
+
     return () => {
       void listener.then((handle) => handle.remove())
+      void stateListener.then((handle) => handle.remove())
     }
   }, [])
   useEffect(() => {

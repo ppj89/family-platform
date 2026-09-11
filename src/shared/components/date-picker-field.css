@@ -78,6 +78,36 @@
   left: auto;
 }
 
+/* Short screens (a Flip's tall-narrow panel, a small phone with the
+   keyboard up) have no room for a whole month either above or below the
+   trigger — and since the popover is an absolutely-positioned child of the
+   form's own scroll box, it just gets clipped mid-calendar. DatePickerField
+   detects that case and switches to this: fixed to the viewport, so no
+   ancestor's overflow can crop it, centered, and tightened up just enough
+   that the entire month is visible at once without inner scrolling. */
+.fp-date-picker-popover.fp-date-picker-popover-centered {
+  position: fixed;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  left: 50%;
+  z-index: 100050;
+  width: min(330px, calc(100vw - 32px));
+  max-height: calc(100dvh - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px) - 24px);
+  overflow-y: auto;
+  transform: translate(-50%, -50%);
+}
+
+.fp-date-picker-popover-centered .fp-date-picker-today-row {
+  margin: 8px 0;
+}
+
+.fp-date-picker-popover-centered .fp-date-picker-days button,
+.fp-date-picker-popover-centered .fp-date-picker-months button,
+.fp-date-picker-popover-centered .fp-date-picker-years button {
+  height: 32px;
+}
+
 .fp-date-picker-popover header {
   display: flex;
   align-items: center;

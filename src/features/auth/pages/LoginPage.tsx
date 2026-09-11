@@ -7,6 +7,7 @@ import { apiRequest } from '../../../shared/api/client'
 import type { ApiError } from '../../../shared/api/client'
 import { clearAuthSession, storeAuthSession } from '../../../shared/api/auth'
 import type { AuthSessionResponse } from '../../../shared/api/auth'
+import { createOauthHandoffId } from '../../../shared/api/oauthHandoff'
 import { ToastMessage } from '../../../shared/components/ToastMessage'
 import { LoginFields, RegisterFields } from '../components/AuthModeFields'
 import {
@@ -560,7 +561,15 @@ export function LoginPage() {
     // before today, rather than leaving the button looking dead.
     if (provider === 'google' && Capacitor.isNativePlatform() && Capacitor.isPluginAvailable('Browser')) {
       const separator = startUrl.includes('?') ? '&' : '?'
-      Browser.open({ url: `${startUrl}${separator}client=native` }).catch(() => {
+      // Chrome does not reliably let the finished login bounce back in
+      // through the familyplatform:// deep link — it blocks launching an
+      // external app from a navigation it doesn't consider user-initiated,
+      // and the detour through Google's own consent pages loses that
+      // gesture. So hand the backend an id to park the result under; App.tsx
+      // claims it whenever the app is foregrounded again, however the user
+      // gets back here (deep link, back button, or task switcher).
+      const handoff = createOauthHandoffId()
+      Browser.open({ url: `${startUrl}${separator}client=native&handoff=${encodeURIComponent(handoff)}` }).catch(() => {
         window.location.href = startUrl
       })
       return
