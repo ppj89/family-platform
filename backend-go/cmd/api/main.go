@@ -10040,7 +10040,47 @@ func writeOAuthNativeRedirect(w http.ResponseWriter, r *http.Request, accessToke
 		values.Set("sso_token", accessToken)
 		values.Set("sso_user", string(userJSON))
 	}
-	http.Redirect(w, r, "familyplatform://oauth-callback?"+values.Encode(), http.StatusFound)
+	deepLink := "familyplatform://oauth-callback?" + values.Encode()
+
+	// This used to be a bare HTTP redirect (302 Location: familyplatform://...).
+	// That worked in earlier Chrome versions, but Chrome has gotten stricter
+	// about launching an external app from a server-issued redirect with no
+	// direct user gesture behind it — after the multi-page detour through
+	// Google's own login/consent screens, the Custom Tab no longer counts the
+	// original button tap as "fresh" enough, so the redirect can silently do
+	// nothing and leave the user stranded on this Chrome tab.
+	// A same-page, script-triggered navigation (still automatic, no tap
+	// needed in the common case) is treated much more leniently, and the
+	// visible button below is a guaranteed-to-work fallback for whenever a
+	// given Chrome build still won't allow the automatic one.
+	deepLinkJSON, _ := json.Marshal(deepLink)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	_, _ = fmt.Fprintf(w, `<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SSO 로그인</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f3f6fb; color: #191f28; }
+    main { width: min(420px, calc(100vw - 40px)); padding: 28px; border-radius: 24px; background: #fff; box-shadow: 0 18px 50px rgba(25, 31, 40, .12); text-align: center; }
+    h1 { margin: 0 0 10px; font-size: 22px; }
+    p { margin: 0 0 20px; color: #6b7684; line-height: 1.55; }
+    a { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; padding: 0 22px; border-radius: 14px; background: #3182f6; color: #fff; font-weight: 800; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>로그인 완료</h1>
+    <p>앱으로 돌아가는 중입니다. 자동으로 이동하지 않으면 아래 버튼을 눌러 주세요.</p>
+    <a id="return-link" href="%s">앱으로 돌아가기</a>
+  </main>
+  <script>
+    window.location.replace(%s);
+  </script>
+</body>
+</html>`, htmlEscape(deepLink), deepLinkJSON)
 }
 
 func normalizeEmail(email string) string {
