@@ -7,6 +7,15 @@ import { useCommonCodeOptions, useCommonCodeSelectOptions } from '../../../share
 import { monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
 import { formatNumberInput, normalizeAmount } from '../../../shared/utils/number'
 import { createLedgerEntry, deleteLedgerEntry, getLedgerSummary, listLedgerEntries, updateLedgerEntry } from '../api/ledger'
+import {
+  isNotificationCaptureEnabled,
+  isNotificationCaptureSupported,
+  loadCaptureQueue,
+  openNotificationCaptureSettings,
+  saveCaptureQueue,
+  syncCaptureQueue,
+  type CapturedNotification,
+} from '../../../shared/native/notificationCapture'
 import { LedgerStatisticsDialog } from '../components/LedgerStatisticsDialog'
 import type { LedgerEntry, LedgerPayload, LedgerSummary } from '../types'
 import './ledger-page.css'
@@ -428,6 +437,12 @@ export default function LedgerPage() {
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
   const [smsText, setSmsText] = useState('')
   const [smsMessage, setSmsMessage] = useState('')
+  // Card/payment notifications picked up automatically on Android, held for
+  // review rather than written straight into the ledger — a misread would
+  // otherwise be indistinguishable from a real entry.
+  const [capturedItems, setCapturedItems] = useState<CapturedNotification[]>([])
+  const [isCaptureDialogOpen, setIsCaptureDialogOpen] = useState(false)
+  const [captureEnabled, setCaptureEnabled] = useState(true)
   const [ledgerFilter, setLedgerFilter] = useState<LedgerFilter>(() => emptyLedgerFilter())
   const [filterDraft, setFilterDraft] = useState<LedgerFilter>(() => emptyLedgerFilter())
   const [entries, setEntries] = useState<LedgerEntry[]>([])
@@ -610,6 +625,26 @@ export default function LedgerPage() {
     })
     return () => window.cancelAnimationFrame(frame)
   }, [isQuickNavOpen])
+
+  useEffect(() => {
+    if (!isNotificationCaptureSupported()) return
+    // Load whatever is already waiting first, so the badge is right on the
+    // very first paint, then drain anything the listener caught while the
+    // app was closed.
+    setCapturedItems(loadCaptureQueue())
+    const drain = () => {
+      void syncCaptureQueue().then(setCapturedItems)
+      void isNotificationCaptureEnabled().then(setCaptureEnabled)
+    }
+    drain()
+    // The listener keeps running with the app backgrounded, so re-drain
+    // every time the user comes back rather than only on mount.
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') drain()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
 
   async function reloadLedger() {
     setLoading(true)
@@ -970,6 +1005,62 @@ export default function LedgerPage() {
     setIsSmsParserOpen(true)
   }
 
+  function parsedCapture(item: CapturedNotification) {
+    // Same parser the manual paste dialog uses, fed the notification's
+    // title and body together — card apps split "승인" and the amount
+    // across the two often enough that either alone loses information.
+    return parseSmsText(`${item.title}\n${item.text}`)
+  }
+
+  function dropCapture(id: string) {
+    setCapturedItems((current) => {
+      const next = current.filter((item) => item.id !== id)
+      saveCaptureQueue(next)
+      return next
+    })
+  }
+
+  async function approveCapture(item: CapturedNotification) {
+    const parsed = parsedCapture(item)
+    if (!parsed.amount) {
+      setMessage('금액을 읽지 못해 저장할 수 없습니다. 수정을 눌러 직접 입력해 주세요.')
+      return
+    }
+    setLoading(true)
+    try {
+      await createLedgerEntry({
+        title: parsed.title || '자동 입력',
+        amount: parsed.amount,
+        entryType: parsed.entryType,
+        category: parsed.category && ledgerCategoryOptions.includes(parsed.category) ? parsed.category : null,
+        paymentMethod:
+          parsed.paymentMethod && ledgerPaymentMethodOptions.includes(parsed.paymentMethod)
+            ? parsed.paymentMethod
+            : ledgerPaymentMethodOptions[0] || '카드',
+        transactionDate: parsed.transactionDate || todayKey(),
+        memberName: null,
+        memo: null,
+        installmentMonths: 0,
+      })
+      dropCapture(item.id)
+      await reloadLedger()
+      setMessage('자동 입력 내역을 저장했습니다.')
+    } catch (error) {
+      setMessage(apiActionMessage(error, '저장에 실패했습니다.'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /** Hands the captured message to the normal entry form for editing. */
+  function editCapture(item: CapturedNotification) {
+    setSmsText(`${item.title}\n${item.text}`)
+    dropCapture(item.id)
+    setIsCaptureDialogOpen(false)
+    setSmsMessage('')
+    setIsSmsParserOpen(true)
+  }
+
   function openFilterDialog() {
     setFilterDraft(ledgerFilter)
     setIsFilterDialogOpen(true)
@@ -1028,6 +1119,15 @@ export default function LedgerPage() {
           </section>
 
           <div className="fp-ledger-utility-actions">
+            {isNotificationCaptureSupported() ? (
+              <button
+                type="button"
+                className={`fp-ledger-capture-button${capturedItems.length ? ' has-pending' : ''}`}
+                onClick={() => setIsCaptureDialogOpen(true)}
+              >
+                자동 입력{capturedItems.length ? ` ${capturedItems.length}건` : ''}
+              </button>
+            ) : null}
             <button type="button" className="fp-ledger-paste-button" onClick={openSmsParser}>카드 붙여넣기</button>
             <button type="button" className="fp-ledger-condition-button" onClick={openFilterDialog}>
               조건 조회{hasLedgerFilter ? ' 적용됨' : ''}
@@ -1409,6 +1509,78 @@ export default function LedgerPage() {
           }}
           onConfirm={confirmDelete}
         />
+      ) : null}
+      {isCaptureDialogOpen ? (
+        <div className="fp-ledger-autofill-backdrop" role="presentation" onClick={() => setIsCaptureDialogOpen(false)}>
+          <section
+            className="fp-ledger-autofill-dialog fp-ledger-capture-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="fp-ledger-capture-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <h2 id="fp-ledger-capture-title">자동 입력</h2>
+              <button type="button" aria-label="닫기" onClick={() => setIsCaptureDialogOpen(false)}>
+                <HiOutlineX aria-hidden="true" />
+              </button>
+            </header>
+            {!captureEnabled ? (
+              <div className="fp-ledger-capture-setup">
+                <p>
+                  카드 결제 알림을 자동으로 읽으려면 <strong>알림 접근 권한</strong>이 필요합니다.
+                  설정에서 이 앱을 켜 주세요.
+                </p>
+                <button
+                  className="fp-button fp-button-primary"
+                  type="button"
+                  onClick={() => void openNotificationCaptureSettings()}
+                >
+                  설정 열기
+                </button>
+              </div>
+            ) : null}
+            {capturedItems.length === 0 ? (
+              <p className="fp-ledger-autofill-help">
+                {captureEnabled
+                  ? '아직 읽어온 결제 알림이 없습니다. 카드 결제 알림이 오면 여기에 쌓입니다.'
+                  : '권한을 켜면 카드 결제 알림이 여기에 쌓입니다.'}
+              </p>
+            ) : (
+              <ul className="fp-ledger-capture-list">
+                {[...capturedItems].reverse().map((item) => {
+                  const parsed = parsedCapture(item)
+                  return (
+                    <li key={item.id} className="fp-ledger-capture-row">
+                      <div className="fp-ledger-capture-row-main">
+                        <strong>{parsed.title || item.title || '가맹점 미상'}</strong>
+                        <b className={parsed.entryType === 'income' ? 'income' : 'expense'}>
+                          {parsed.entryType === 'income' ? '+' : '-'}
+                          {money(parsed.amount || 0)}
+                        </b>
+                      </div>
+                      <span className="fp-ledger-capture-row-meta">
+                        {[parsed.transactionDate, parsed.category, parsed.paymentMethod].filter(Boolean).join(' · ')}
+                      </span>
+                      <p className="fp-ledger-capture-row-source">{item.text || item.title}</p>
+                      <div className="fp-ledger-capture-row-actions">
+                        <button type="button" className="fp-button fp-button-primary" onClick={() => void approveCapture(item)}>
+                          저장
+                        </button>
+                        <button type="button" className="fp-button fp-button-muted" onClick={() => editCapture(item)}>
+                          수정
+                        </button>
+                        <button type="button" className="fp-button fp-button-muted danger" onClick={() => dropCapture(item.id)}>
+                          삭제
+                        </button>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ul>
+            )}
+          </section>
+        </div>
       ) : null}
       {isSmsParserOpen ? (
         <div className="fp-ledger-autofill-backdrop" role="presentation" onClick={() => setIsSmsParserOpen(false)}>

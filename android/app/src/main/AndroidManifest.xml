@@ -36,6 +36,22 @@
 
         </activity>
 
+        <!-- Reads card/payment notifications so the ledger can offer them
+             for one-tap entry (see PaymentNotificationListener). Bound by
+             the system only: BIND_NOTIFICATION_LISTENER_SERVICE is a
+             signature-level permission held by the OS, so exported="true"
+             here does not make it reachable by other apps. Off until the
+             user grants notification access in system settings. -->
+        <service
+            android:name=".PaymentNotificationListener"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

@@ -11,6 +11,12 @@ import com.getcapacitor.BridgeActivity;
 public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
+        // Plugins that live in this app module (rather than in a node_modules
+        // package) are not picked up by capacitor.plugins.json, so they have
+        // to be registered by hand — and before super.onCreate(), which is
+        // where the bridge is built.
+        registerPlugin(NotificationCapturePlugin.class);
+
         // The launch theme owns a temporary splash window.  Installing it
         // before BridgeActivity is created applies postSplashScreenTheme
         // immediately and prevents the empty system action-bar strip from

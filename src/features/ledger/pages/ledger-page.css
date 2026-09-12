@@ -895,6 +895,139 @@
   color: #fff;
 }
 
+.fp-ledger-capture-button {
+  background: #eef3f8;
+  color: #4e5968;
+}
+
+/* Only calls for attention when something is actually waiting. */
+.fp-ledger-capture-button.has-pending {
+  background: #fff1f3;
+  color: #e5485d;
+  font-weight: 900;
+}
+
+.fp-ledger-capture-dialog {
+  width: min(520px, calc(100vw - 40px));
+}
+
+.fp-ledger-capture-setup {
+  display: grid;
+  gap: 10px;
+  justify-items: start;
+  border-radius: 14px;
+  padding: 14px;
+  background: #fff8e6;
+  color: #7a5b00;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.fp-ledger-capture-setup p {
+  margin: 0;
+}
+
+.fp-ledger-capture-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fp-ledger-capture-row {
+  display: grid;
+  gap: 6px;
+  border-radius: 14px;
+  padding: 14px;
+  background: #f7f9fb;
+  box-shadow: inset 0 0 0 1px #e5e8eb;
+}
+
+.fp-ledger-capture-row-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-width: 0;
+}
+
+.fp-ledger-capture-row-main strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #191f28;
+  font-size: 15px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fp-ledger-capture-row-main b {
+  flex: 0 0 auto;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.fp-ledger-capture-row-main b.expense {
+  color: #e5485d;
+}
+
+.fp-ledger-capture-row-main b.income {
+  color: #0f9d7a;
+}
+
+.fp-ledger-capture-row-meta {
+  color: #6b7684;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* The original notification, so a misparse is obvious before saving. */
+.fp-ledger-capture-row-source {
+  margin: 0;
+  overflow: hidden;
+  color: #8b95a1;
+  font-size: 12px;
+  line-height: 1.45;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.fp-ledger-capture-row-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.fp-ledger-capture-row-actions button {
+  min-height: 38px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.fp-ledger-capture-row-actions .danger {
+  background: #fff1f3;
+  color: #e5485d;
+}
+
+html[data-theme='dark'] .fp-ledger-capture-row {
+  background: #172033;
+  box-shadow: inset 0 0 0 1px #334155;
+}
+
+html[data-theme='dark'] .fp-ledger-capture-row-main strong {
+  color: #f8fafc;
+}
+
+html[data-theme='dark'] .fp-ledger-capture-setup {
+  background: #2d2410;
+  color: #fcd34d;
+}
+
 .fp-ledger-filter-dialog {
   width: min(520px, calc(100vw - 40px));
 }
