@@ -33,10 +33,22 @@ public class PaymentNotificationListener extends NotificationListenerService {
     static final String KEY_ITEMS = "items";
     private static final int MAX_ITEMS = 200;
 
-    /** "12,345원" / "12345 원" — three digits minimum, so OTP codes don't match. */
-    private static final Pattern AMOUNT = Pattern.compile("[0-9][0-9,]{2,}\\s*원");
+    // A money-shaped number. Card apps write the amount several ways and
+    // the old filter only accepted a literal "원", so notifications using
+    // "₩12,345", "KRW 12,345" or a bare comma-grouped "12,345" (KB and
+    // several pay apps do this) were silently dropped — the "안 잡힘"
+    // complaint. Accept any of: a currency-marked number, a number with a
+    // "원"/KRW/￦ suffix, or a thousands-comma-grouped number (which OTPs,
+    // phone numbers and dates never are, so it stays specific).
+    private static final Pattern MONEY = Pattern.compile(
+        "(?:₩|￦|KRW)\\s*[0-9][0-9,]{1,}"
+            + "|[0-9][0-9,]{2,}\\s*(?:원|KRW|￦)"
+            + "|[0-9]{1,3}(?:,[0-9]{3})+"
+    );
     /** Without one of these a notification is not a transaction. */
-    private static final Pattern KEYWORD = Pattern.compile("승인|결제|사용|출금|입금|이체|취소|환불");
+    private static final Pattern KEYWORD = Pattern.compile(
+        "승인|결제|사용|출금|입금|이체|취소|환불|지출|충전|납부|자동이체|체크카드|일시불|할부"
+    );
 
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
@@ -70,8 +82,8 @@ public class PaymentNotificationListener extends NotificationListenerService {
         if (combined.isEmpty()) {
             return false;
         }
-        Matcher amount = AMOUNT.matcher(combined);
-        if (!amount.find()) {
+        Matcher money = MONEY.matcher(combined);
+        if (!money.find()) {
             return false;
         }
         return KEYWORD.matcher(combined).find();
