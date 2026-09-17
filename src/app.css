@@ -1799,14 +1799,17 @@ html[data-theme='dark'] .fp-dialog-action-footer > :is(.fp-button-primary, .subm
      inside the diary popup appeared to do nothing. Needs to clear every
      dialog's z-index, not just the higher end of the ~100000 tier. */
   z-index: 200000;
-  display: grid;
-  /* Anchored toward the top rather than dead-centered, per request —
-     also leaves more headroom for a tall portrait photo before it needs
-     to shrink to fit. */
-  align-items: start;
-  justify-content: center;
-  padding: 20px;
-  padding-top: max(20px, calc(var(--fp-safe-top, 0px) + 20px));
+  /* Flex column, top-anchored, tight top padding: pulls the dialog right
+     up under the status bar per request instead of leaving a big gap. */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  /* Plain small padding only. The shared body [class$="backdrop"] rule
+     already pushes this backdrop's top edge down by var(--fp-safe-top),
+     so adding safe-top again here would double-count it and drop the
+     header well below the status bar. */
+  padding: 8px 12px;
   overflow: hidden;
   overscroll-behavior: contain;
   touch-action: none;
@@ -1814,28 +1817,33 @@ html[data-theme='dark'] .fp-dialog-action-footer > :is(.fp-button-primary, .subm
 }
 
 .fp-media-preview-dialog {
-  display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  /* Sized off the backdrop (max-height: 100% of its content box), NOT off
+     a 100dvh calc. --fp-dialog-viewport-height is a flat 100dvh, which on
+     an edge-to-edge Android WebView overreports (it includes the area
+     behind the nav bar), so any dvh-based height let the image run off
+     the bottom. The backdrop is position:fixed;inset:0 and already gets
+     its top/bottom trimmed to the real visible area by the shared
+     body [class$="backdrop"] rule, so 100% of it can never overflow. */
+  display: flex;
+  flex-direction: column;
   width: min(100%, 760px);
-  /* Subtracts the same safe-area insets the backdrop above is now
-     actually trimmed by, so this can no longer size itself taller than
-     what's really left to show it in. */
-  height: min(calc(var(--fp-dialog-viewport-height) - 72px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px)), 760px);
-  max-height: calc(var(--fp-dialog-viewport-height) - 72px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px));
+  max-height: 100%;
+  min-height: 0;
   overflow: hidden;
   border: 0;
-  border-radius: 22px;
+  border-radius: 20px;
   background: #fff;
   box-shadow: 0 24px 64px rgb(15 23 42 / 42%);
 }
 
 .fp-media-preview-dialog > header {
   display: flex;
+  flex: 0 0 auto;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  min-height: 56px;
-  padding: 8px 16px;
+  gap: 10px;
+  min-height: 42px;
+  padding: 4px 6px 4px 14px;
   border-bottom: 1px solid #edf0f4;
 }
 
@@ -1845,31 +1853,33 @@ html[data-theme='dark'] .fp-dialog-action-footer > :is(.fp-button-primary, .subm
   overflow: hidden;
   margin: 0;
   color: #191f28;
-  font-size: 17px;
-  font-weight: 900;
+  font-size: 15px;
+  font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .fp-media-preview-dialog > header button {
   display: grid;
-  width: 36px;
-  height: 36px;
+  width: 32px;
+  height: 32px;
   flex: 0 0 auto;
   place-items: center;
   border: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: #f3f6fa;
   color: #4e5968;
-  font-size: 24px;
+  font-size: 20px;
   cursor: pointer;
 }
 
 .fp-media-preview-content {
-  display: grid;
+  display: flex;
+  flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
-  place-items: center;
+  align-items: center;
+  justify-content: center;
   padding: 0;
   overflow: hidden;
   background: transparent;

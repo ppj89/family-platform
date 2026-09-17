@@ -310,8 +310,16 @@
   z-index: 100020;
   inset: 0;
   display: grid;
-  place-items: center;
+  /* Top-anchored with a tight top padding rather than dead-centered, so
+     the popup rides up over the app's own workspace header ("함께 쓰는
+     워크스페이스") instead of leaving it visible above the popup. Plain
+     10px top padding only — the shared body [class$="backdrop"] rule
+     already offsets this backdrop's top by var(--fp-safe-top), so adding
+     it again here would double-count. */
+  align-items: start;
+  justify-items: center;
   padding: 18px;
+  padding-top: 10px;
   background: rgba(15, 23, 42, 0.42);
 }
 
