@@ -1785,7 +1785,13 @@ html[data-theme='dark'] .fp-dialog-action-footer > :is(.fp-button-primary, .subm
 .fp-media-preview-backdrop {
   position: fixed;
   inset: 0 auto auto 0;
-  z-index: 2000;
+  /* This can be opened from inside any other dialog (diary/baby/travel
+     detail popups, admin panels, etc.), whose own backdrops already sit
+     at z-index ~100020-100050. At 2000 this rendered behind whichever
+     dialog it was opened from instead of on top of it — the photo tap
+     inside the diary popup appeared to do nothing. Needs to clear every
+     dialog's z-index, not just the higher end of the ~100000 tier. */
+  z-index: 200000;
   display: grid;
   place-items: center;
   width: 100vw;
