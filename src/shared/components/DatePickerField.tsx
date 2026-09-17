@@ -110,6 +110,15 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
     const rect = triggerRef.current.getBoundingClientRect()
     const viewportHeight = window.innerHeight
     const wantedHeight = 420
+    // How little room below counts as "not really usable" and worth
+    // flipping upward for. Deliberately much smaller than wantedHeight:
+    // wantedHeight is how tall the popover would like to be given free
+    // rein, not the least it can work with — the panel already scrolls
+    // internally (see maxHeight below), and flipping upward whenever
+    // spaceBelow merely fell short of the ideal used to send a trigger
+    // sitting mid-page (plenty of room below, just less than 420) upward
+    // over the page's own fixed header instead of just scrolling in place.
+    const minUsableHeight = 200
     const spaceBelow = viewportHeight - rect.bottom - 12
     const spaceAbove = rect.top - 12
     // On a small screen (a Flip's narrow cover-ratio panel, say) neither
@@ -118,15 +127,15 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
     // gets clipped mid-calendar no matter which way it opens. There, drop
     // the anchoring entirely and center it over the viewport instead (see
     // .fp-date-picker-popover-centered) so the full month always fits.
-    if (Math.max(spaceBelow, spaceAbove) < wantedHeight) {
+    if (Math.max(spaceBelow, spaceAbove) < minUsableHeight) {
       setDropDirection({ centered: true, upward: false, maxHeight: 0 })
       return
     }
-    const upward = spaceBelow < wantedHeight && spaceAbove > spaceBelow
+    const upward = spaceBelow < minUsableHeight && spaceAbove > spaceBelow
     setDropDirection({
       centered: false,
       upward,
-      maxHeight: Math.max(240, Math.min(wantedHeight, upward ? spaceAbove : spaceBelow)),
+      maxHeight: Math.max(minUsableHeight, Math.min(wantedHeight, upward ? spaceAbove : spaceBelow)),
     })
   }, [open, level])
 

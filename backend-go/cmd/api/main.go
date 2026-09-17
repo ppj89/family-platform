@@ -4813,6 +4813,7 @@ type diaryItem struct {
 	MaxTemperature *int     `json:"maxTemperature,omitempty"`
 	MediaURLs      []string `json:"mediaUrls"`
 	CreatedAt      string   `json:"createdAt"`
+	AuthorName     string   `json:"authorName,omitempty"`
 }
 
 func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -4822,8 +4823,10 @@ func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser)
 	}
 	canShare := familyID > 0 && a.hasFamilyPermissionForMenu(r.Context(), user, familyID, "read", "diary")
 	rows, err := a.db.Query(r.Context(), `
-		select id, family_id, title, body, diary_date, diary_time::text, weather, mood, min_temperature, max_temperature, created_at
-		from family_diaries
+		select d.id, d.family_id, d.title, d.body, d.diary_date, d.diary_time::text, d.weather, d.mood, d.min_temperature, d.max_temperature, d.created_at,
+		  coalesce(author.nickname, '')
+		from family_diaries d
+		left join app_users author on author.id = d.created_by_user_id
 		where diary_date between $2 and $3 and deleted_at is null
 		  and (
 		    created_by_user_id = $4
@@ -11838,7 +11841,26 @@ func (a *app) saveDiary(w http.ResponseWriter, r *http.Request, id int64, family
 	item.MaxTemperature = nullInt(maxTemp)
 	item.MediaURLs = mediaURLs
 	item.CreatedAt = formatTime(createdAt)
+	if id == 0 {
+		item.AuthorName = a.userNickname(r.Context(), userID)
+	} else {
+		_ = a.db.QueryRow(r.Context(), `
+			select coalesce(author.nickname, '')
+			from family_diaries d
+			left join app_users author on author.id = d.created_by_user_id
+			where d.id = $1
+		`, item.ID).Scan(&item.AuthorName)
+	}
 	return item, true
+}
+
+// userNickname is a best-effort lookup for surfacing "who wrote this" next
+// to a shared record (diary rows, etc.) — an empty string just means the
+// author column doesn't render, not an error.
+func (a *app) userNickname(ctx context.Context, userID int64) string {
+	var nickname string
+	_ = a.db.QueryRow(ctx, "select coalesce(nickname, '') from app_users where id = $1", userID).Scan(&nickname)
+	return nickname
 }
 
 func (a *app) scanDiaries(w http.ResponseWriter, ctx context.Context, rows pgx.Rows) ([]diaryItem, bool) {
@@ -11848,7 +11870,7 @@ func (a *app) scanDiaries(w http.ResponseWriter, ctx context.Context, rows pgx.R
 		var diaryTime, weather, mood sql.NullString
 		var minTemp, maxTemp sql.NullInt32
 		var diaryDate, createdAt time.Time
-		if err := rows.Scan(&item.ID, &item.FamilyID, &item.Title, &item.Body, &diaryDate, &diaryTime, &weather, &mood, &minTemp, &maxTemp, &createdAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.FamilyID, &item.Title, &item.Body, &diaryDate, &diaryTime, &weather, &mood, &minTemp, &maxTemp, &createdAt, &item.AuthorName); err != nil {
 			writeError(w, http.StatusInternalServerError, "database scan failed")
 			return nil, false
 		}

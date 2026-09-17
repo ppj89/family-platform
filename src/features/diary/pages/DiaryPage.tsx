@@ -302,7 +302,9 @@ export default function DiaryPage() {
                   <strong className="fp-ellipsis" title={item.title}>{item.title}</strong>
                   <time>{registeredDateText(item.createdAt)}</time>
                 </div>
-                <small>{[item.weather, item.mood, tempText(item)].filter(Boolean).join(' · ') || '날씨·기분·온도 정보 없음'}</small>
+                <small>
+                  {[item.authorName, item.weather, item.mood, tempText(item)].filter(Boolean).join(' · ') || '날씨·기분·온도 정보 없음'}
+                </small>
                 <p title={item.body || ''}>{previewText(item.body)}</p>
               </div>
             </article>
@@ -326,7 +328,9 @@ export default function DiaryPage() {
                 <HiOutlineX aria-hidden="true" />
               </button>
             </header>
-            <p className="fp-diary-detail-meta">{[selectedDetail.weather, selectedDetail.mood, tempText(selectedDetail)].filter(Boolean).join(' · ') || '날씨·기분·온도 정보 없음'}</p>
+            <p className="fp-diary-detail-meta">
+              {[selectedDetail.authorName, selectedDetail.weather, selectedDetail.mood, tempText(selectedDetail)].filter(Boolean).join(' · ') || '날씨·기분·온도 정보 없음'}
+            </p>
             <p className="fp-diary-detail-body">{selectedDetail.body || '내용 없음'}</p>
             {selectedDetail.mediaUrls?.length ? (
               <div className="fp-diary-detail-media" aria-label="첨부 미디어">

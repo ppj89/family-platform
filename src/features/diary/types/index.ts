@@ -11,6 +11,7 @@ export interface DiaryItem {
   maxTemperature?: number | null
   mediaUrls: string[]
   createdAt: string
+  authorName?: string
 }
 
 export interface DiaryPayload {
