@@ -387,14 +387,23 @@
   gap: 10px;
 }
 
+/* A lone attachment gets the full width instead of sitting cramped in one
+   half of the 2-col grid — a portrait screenshot in a ~170px half-cell was
+   basically unreadable. */
+.fp-diary-detail-media > .fp-diary-media-preview:only-child {
+  grid-column: 1 / -1;
+}
+
 .fp-diary-detail-media img,
 .fp-diary-detail-media video {
   display: block;
   width: 100%;
-  max-height: 260px;
+  max-height: 420px;
   border-radius: 12px;
   background: #111827;
-  object-fit: cover;
+  /* contain, not cover: show the whole photo (letterboxed on the dark
+     background) rather than cropping a tall screenshot down to a sliver. */
+  object-fit: contain;
 }
 
 .fp-diary-media-preview {

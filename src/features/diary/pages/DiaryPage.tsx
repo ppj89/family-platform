@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from 'react'
 import { HiOutlinePhotograph, HiOutlineVideoCamera, HiOutlineX } from 'react-icons/hi'
 import { apiActionMessage } from '../../../shared/api/client'
-import { mediaThumbnailUrl, uploadMedia } from '../../../shared/api/media'
+import { mediaDisplayUrl, uploadMedia } from '../../../shared/api/media'
 import { ConfirmDialog, CustomSelect, DatePickerField, FloatingActionButton, MediaPreviewDialog, ToastMessage } from '../../../shared/components'
 import { COMMON_CODE_GROUPS, DIARY_MOODS, DIARY_WEATHER_OPTIONS, SELECT_PLACEHOLDER_OPTION } from '../../../shared/constants/commonCodes'
 import { useCommonCodeSelectOptions } from '../../../shared/hooks/useCommonCodeOptions'
@@ -341,7 +341,7 @@ export default function DiaryPage() {
                       initialIndex: index,
                       items: selectedDetail.mediaUrls.map((item, itemIndex) => ({ url: item, title: `일기 첨부 ${itemIndex + 1}` })),
                     })}>
-                      {isVideoMedia(url) ? <video controls preload="metadata" src={url}>영상을 재생할 수 없습니다.</video> : <img alt="일기 첨부 사진" loading="lazy" decoding="async" src={mediaThumbnailUrl(url)} />}
+                      {isVideoMedia(url) ? <video controls preload="metadata" src={url}>영상을 재생할 수 없습니다.</video> : <img alt="일기 첨부 사진" loading="lazy" decoding="async" src={mediaDisplayUrl(url)} />}
                     </button>
                   ))}
                 </div>
