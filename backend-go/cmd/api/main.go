@@ -4827,15 +4827,15 @@ func (a *app) listDiaries(w http.ResponseWriter, r *http.Request, user authUser)
 		  coalesce(author.nickname, '')
 		from family_diaries d
 		left join app_users author on author.id = d.created_by_user_id
-		where diary_date between $2 and $3 and deleted_at is null
+		where d.diary_date between $2 and $3 and d.deleted_at is null
 		  and (
-		    created_by_user_id = $4
+		    d.created_by_user_id = $4
 		    or ($1 > 0 and $5 = true and exists (
 		      select 1 from family_members owner
-		      where owner.family_id = $1 and owner.user_id = created_by_user_id and $6 = any(owner.shared_menu_keys)
+		      where owner.family_id = $1 and owner.user_id = d.created_by_user_id and $6 = any(owner.shared_menu_keys)
 		    ))
 		  )
-		order by diary_date desc, diary_time desc nulls last, created_at desc
+		order by d.diary_date desc, d.diary_time desc nulls last, d.created_at desc
 	`, familyID, start, end, user.ID, canShare, "diary")
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "database read failed")
