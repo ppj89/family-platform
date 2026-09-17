@@ -328,30 +328,32 @@ export default function DiaryPage() {
                 <HiOutlineX aria-hidden="true" />
               </button>
             </header>
-            <p className="fp-diary-detail-meta">
-              {[selectedDetail.authorName, selectedDetail.weather, selectedDetail.mood, tempText(selectedDetail)].filter(Boolean).join(' · ') || '날씨·기분·온도 정보 없음'}
-            </p>
-            <p className="fp-diary-detail-body">{selectedDetail.body || '내용 없음'}</p>
-            {selectedDetail.mediaUrls?.length ? (
-              <div className="fp-diary-detail-media" aria-label="첨부 미디어">
-                {selectedDetail.mediaUrls.map((url, index) => (
-                  <button className="fp-diary-media-preview" type="button" key={url} onClick={() => setMediaPreview({
-                    title: `일기 첨부 ${index + 1}`,
-                    initialIndex: index,
-                    items: selectedDetail.mediaUrls.map((item, itemIndex) => ({ url: item, title: `일기 첨부 ${itemIndex + 1}` })),
-                  })}>
-                    {isVideoMedia(url) ? <video controls preload="metadata" src={url}>영상을 재생할 수 없습니다.</video> : <img alt="일기 첨부 사진" loading="lazy" decoding="async" src={mediaThumbnailUrl(url)} />}
-                  </button>
-                ))}
+            <div className="fp-diary-detail-scroll">
+              <p className="fp-diary-detail-meta">
+                {[selectedDetail.authorName, selectedDetail.weather, selectedDetail.mood, tempText(selectedDetail)].filter(Boolean).join(' · ') || '날씨·기분·온도 정보 없음'}
+              </p>
+              <p className="fp-diary-detail-body">{selectedDetail.body || '내용 없음'}</p>
+              {selectedDetail.mediaUrls?.length ? (
+                <div className="fp-diary-detail-media" aria-label="첨부 미디어">
+                  {selectedDetail.mediaUrls.map((url, index) => (
+                    <button className="fp-diary-media-preview" type="button" key={url} onClick={() => setMediaPreview({
+                      title: `일기 첨부 ${index + 1}`,
+                      initialIndex: index,
+                      items: selectedDetail.mediaUrls.map((item, itemIndex) => ({ url: item, title: `일기 첨부 ${itemIndex + 1}` })),
+                    })}>
+                      {isVideoMedia(url) ? <video controls preload="metadata" src={url}>영상을 재생할 수 없습니다.</video> : <img alt="일기 첨부 사진" loading="lazy" decoding="async" src={mediaThumbnailUrl(url)} />}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <div className="fp-diary-detail-actions">
+                <button type="button" onClick={() => startEdit(selectedDetail)}>수정</button>
+                <button type="button" className="danger" onClick={() => {
+                  setPendingDelete(selectedDetail)
+                  setConfirmKind('delete')
+                  setSelectedDetail(null)
+                }}>삭제</button>
               </div>
-            ) : null}
-            <div className="fp-diary-detail-actions">
-              <button type="button" onClick={() => startEdit(selectedDetail)}>수정</button>
-              <button type="button" className="danger" onClick={() => {
-                setPendingDelete(selectedDetail)
-                setConfirmKind('delete')
-                setSelectedDetail(null)
-              }}>삭제</button>
             </div>
           </section>
         </div>

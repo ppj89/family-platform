@@ -1827,8 +1827,16 @@ html[data-theme='dark'] .fp-dialog-action-footer > :is(.fp-button-primary, .subm
   display: flex;
   flex-direction: column;
   width: min(100%, 760px);
-  max-height: 100%;
+  /* flex: 1 fills the full available height of the backdrop (not shrink-
+     wrapped to the image). Before, the card wrapped tightly to a portrait
+     image, so it was full-height but narrower than the screen — dark
+     backdrop showed on the sides but not top/bottom, which read as
+     lopsided. Now the white card fills both dimensions and the image is
+     centered inside it, so whatever letterbox remains is symmetric white
+     framing rather than one-sided dark gaps. */
+  flex: 1 1 auto;
   min-height: 0;
+  max-height: 100%;
   overflow: hidden;
   border: 0;
   border-radius: 20px;

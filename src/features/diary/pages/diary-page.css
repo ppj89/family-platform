@@ -324,11 +324,14 @@
 }
 
 .fp-diary-detail-dialog {
-  display: grid;
+  /* Flex column with the header pinned and only the body scrolling — the
+     whole section used to be one overflow:auto box, so the title and
+     close button scrolled away with the content. */
+  display: flex;
+  flex-direction: column;
   width: min(460px, calc(100vw - 36px));
   max-height: min(680px, calc(100dvh - 80px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px)));
-  gap: 14px;
-  overflow: auto;
+  overflow: hidden;
   border-radius: 16px;
   padding: 20px;
   background: #fff;
@@ -337,9 +340,20 @@
 
 .fp-diary-detail-dialog header {
   display: flex;
+  flex: 0 0 auto;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  padding-bottom: 14px;
+}
+
+.fp-diary-detail-scroll {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .fp-diary-detail-dialog h3,
