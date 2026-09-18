@@ -1888,7 +1888,11 @@ html[data-theme='dark'] .fp-dialog-action-footer > :is(.fp-button-primary, .subm
   min-height: 0;
   align-items: center;
   justify-content: center;
-  padding: 0;
+  /* Real breathing room on all sides — this used to be 0, so a tall
+     portrait image's bottom edge sat flush against the dialog's own
+     bottom edge with no gap at all. max-height below accounts for this
+     padding so the image still never overflows the card. */
+  padding: 14px;
   overflow: hidden;
   background: transparent;
 }
