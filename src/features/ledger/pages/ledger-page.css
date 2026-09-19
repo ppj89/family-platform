@@ -1069,6 +1069,33 @@ html[data-theme='dark'] .fp-ledger-capture-setup {
   gap: 12px;
 }
 
+/* The capture-review variant can grow a long list, unlike the plain SMS
+   paste dialog (just a title + textarea). Pin the header and let only
+   the body scroll — this used to be one overflow:auto box, so a long
+   list pushed the header (title + close button) up and off screen
+   while scrolling, reading as "there's no close button". */
+.fp-ledger-capture-dialog {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fp-ledger-capture-dialog > header {
+  flex: 0 0 auto;
+}
+
+.fp-ledger-capture-dialog > *:not(header) {
+  flex: 0 0 auto;
+}
+
+.fp-ledger-capture-dialog > .fp-ledger-capture-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .fp-ledger-autofill-dialog h2 {
   margin: 0;
   color: #111827;

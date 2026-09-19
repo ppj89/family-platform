@@ -266,6 +266,22 @@ function parseSmsText(text: string): ParsedLedgerSms {
   }
 }
 
+// The native listener queues anything with a money-shaped number and a
+// transaction keyword, which still lets promotional/informational
+// notifications through (a balance-check alert quoting an account
+// balance, a "결제 관련 공지" notice, etc.) — same keyword vocabulary,
+// but nothing a real amount can be extracted from. Drop those silently
+// here rather than showing "가맹점 미상 -0원" review rows for them.
+function hasDetectedAmount(item: CapturedNotification) {
+  return parseSmsText(`${item.title}\n${item.text}`).amount > 0
+}
+
+function pruneToMoneyCaptures(items: CapturedNotification[]) {
+  const kept = items.filter(hasDetectedAmount)
+  if (kept.length !== items.length) saveCaptureQueue(kept)
+  return kept
+}
+
 function LedgerCustomSelect({
   label,
   options,
@@ -631,9 +647,9 @@ export default function LedgerPage() {
     // Load whatever is already waiting first, so the badge is right on the
     // very first paint, then drain anything the listener caught while the
     // app was closed.
-    setCapturedItems(loadCaptureQueue())
+    setCapturedItems(pruneToMoneyCaptures(loadCaptureQueue()))
     const drain = () => {
-      void syncCaptureQueue().then(setCapturedItems)
+      void syncCaptureQueue().then((items) => setCapturedItems(pruneToMoneyCaptures(items)))
       void isNotificationCaptureEnabled().then(setCaptureEnabled)
     }
     drain()
