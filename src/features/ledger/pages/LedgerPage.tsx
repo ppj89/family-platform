@@ -270,14 +270,58 @@ function parseSmsText(text: string): ParsedLedgerSms {
 // transaction keyword, which still lets promotional/informational
 // notifications through (a balance-check alert quoting an account
 // balance, a "결제 관련 공지" notice, etc.) — same keyword vocabulary,
-// but nothing a real amount can be extracted from. Drop those silently
-// here rather than showing "가맹점 미상 -0원" review rows for them.
-function hasDetectedAmount(item: CapturedNotification) {
-  return parseSmsText(`${item.title}\n${item.text}`).amount > 0
+// but nothing a real amount can be extracted from. Filtered out below
+// rather than showing "가맹점 미상 -0원" review rows for them.
+
+// A single 온누리상품권/간편결제 purchase routinely fires 2-3 separate
+// notifications for the exact same charge — the card company's own
+// approval text, a "OO상품권 안내" text, and an app-specific "결제되었습니다"
+// push — each from a different source app/package, so the native
+// per-notification content dedup (exact text match) never catches them.
+// Collapse anything with the same amount posted within this window into
+// one entry; real back-to-back separate purchases of an identical amount
+// essentially never land inside the same couple of minutes.
+const DUPLICATE_WINDOW_MS = 3 * 60 * 1000
+
+// Prefers a title that reads like an actual merchant name over the
+// low-quality fallbacks extractSmsTitle falls back to when a message has
+// no clearly-labeled merchant line: a masked customer name ("박*준님" ->
+// "명 박 준님"), or a bare phone/service number ("센터 1670-1600").
+function titleQuality(title: string) {
+  if (!title) return 0
+  if (/님$/.test(title)) return 1
+  if (/^[가-힣\s]*\d[\d\s-]*$/.test(title)) return 1
+  return 2
 }
 
 function pruneToMoneyCaptures(items: CapturedNotification[]) {
-  const kept = items.filter(hasDetectedAmount)
+  const parsed = items
+    .map((item) => ({ item, parsed: parseSmsText(`${item.title}\n${item.text}`) }))
+    .filter((entry) => entry.parsed.amount > 0)
+    .sort((a, b) => a.item.postedAt - b.item.postedAt)
+
+  const kept: CapturedNotification[] = []
+  for (const entry of parsed) {
+    const duplicateIndex = kept.findIndex((survivor) => {
+      const survivorParsed = parseSmsText(`${survivor.title}\n${survivor.text}`)
+      return (
+        survivorParsed.amount === entry.parsed.amount &&
+        survivorParsed.entryType === entry.parsed.entryType &&
+        Math.abs(survivor.postedAt - entry.item.postedAt) <= DUPLICATE_WINDOW_MS
+      )
+    })
+    if (duplicateIndex === -1) {
+      kept.push(entry.item)
+      continue
+    }
+    // Keep whichever of the two reads like a real merchant name.
+    const survivor = kept[duplicateIndex]
+    const survivorParsed = parseSmsText(`${survivor.title}\n${survivor.text}`)
+    if (titleQuality(entry.parsed.title) > titleQuality(survivorParsed.title)) {
+      kept[duplicateIndex] = entry.item
+    }
+  }
+
   if (kept.length !== items.length) saveCaptureQueue(kept)
   return kept
 }
