@@ -78,6 +78,15 @@ const smsCardWords =
   /국민|KB|신한|삼성|현대|롯데|우리|하나|BC|비씨|NH|농협|카카오뱅크|토스|체크카드|카드|승인|이용|사용|일시불|취소|결제|알림|ARS|고객|누적|잔액|한도|포인트|원|KRW|출금|입금|오전|오후|온라인|모바일/gi
 const smsNoiseLine =
   /잔액|누적|한도|포인트|승인번호|카드번호|문의|고객센터|할부|월\s*\d+회|URL|http|www/i
+// "고객명 박*준님" — every KB국민카드-style approval text carries one of
+// these masked-name lines, and until now nothing kept extractSmsTitle's
+// line-position fallback from picking it over the actual merchant name
+// line right above it: neither line matched any of the labeled-merchant
+// patterns, so both fell through to the same "line index" scoring, and
+// the masked-name line (later in the message) always won. Confirmed
+// directly against a real KB카드 승인 text: title came out "명 박 준님"
+// instead of "다이소철원동송점".
+const smsCustomerNameLine = /고객명|본인\s*명의|[가-힣]\*[가-힣]/
 
 const emptyPayload = (): LedgerPayload => ({
   title: '',
@@ -222,7 +231,11 @@ function extractSmsTitle(text: string) {
 
     // 위 형식이 아닌 카드사 알림도 마지막 가맹점 줄을 우선하되, 승인·카드번호 줄은 감점한다.
     const controlLine = /승인|취소|카드|일시불|할부|잔액|한도|누적|회원|본인/.test(line)
-    addCandidate(line, (controlLine ? -20 : 0) + index, index)
+    // 마스킹된 고객명 줄("고객명 박*준님")은 더 낮게 감점해서, 승인/카드 같은
+    // 통제 문구 줄보다도 확실히 밀리게 한다 — 실제 가맹점 줄과 같은 처리를
+    // 받으면 메시지 내 위치(index)만으로 순위가 갈려 이 줄이 이겨버린다.
+    const customerNameLine = smsCustomerNameLine.test(line)
+    addCandidate(line, (customerNameLine ? -40 : controlLine ? -20 : 0) + index, index)
   })
 
   candidates.sort((a, b) => b.score - a.score || b.index - a.index)
@@ -378,6 +391,16 @@ function LedgerCustomSelect({
     const upward = spaceBelow < wantedHeight && spaceAbove > spaceBelow
     setDropDirection({ upward, maxHeight: Math.max(120, Math.min(wantedHeight, upward ? spaceAbove : spaceBelow)) })
   }, [open, options.length])
+
+  useEffect(() => {
+    // Same fix as the shared CustomSelect (see its comment) but missing
+    // here: opening a select near the bottom of the entry form's own
+    // scrollable body left the dropdown hanging off the edge until the
+    // user scrolled the form down by hand. Bring the trigger toward the
+    // middle of the scrollable area on open so the dropdown has room.
+    if (!open || !triggerRef.current) return
+    triggerRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' })
+  }, [open])
 
   useEffect(() => {
     // Long option lists (many categories, etc.) opened scrolled to the
