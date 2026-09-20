@@ -56,6 +56,25 @@ Family Platform의 모든 화면은 공통 디자인 기준을 우선한다. 화
 - 목록 진입만 확인하고 작업 완료로 판단하지 않는다. 상세 화면의 입력폼, 지도, 목록 버튼, row 정렬, 가로 스크롤까지 확인한다.
 - 운영 반영 전후로 같은 사용자 흐름을 다시 확인하고, 확인하지 않은 단계는 완료된 것으로 말하지 않는다.
 
+## 팝업/다이얼로그 헤더 기준
+
+모든 팝업(모달, 상세 팝업, 자동입력 팝업 등)은 제목 + 닫기 버튼이 있는 헤더가 **항상 화면에 고정**되어야 하고, 내용이 길어지면 헤더가 아니라 본문만 스크롤되어야 한다. 이 세션에서만 일기 상세, 사진 미리보기, 가계부 자동입력 팝업에서 각각 따로 "닫기 버튼이 사라짐/스크롤에 밀려남" 버그가 반복됐다 — 팝업을 새로 만들거나 수정할 때마다 아래 구조를 기본값으로 쓴다.
+
+**구조:**
+```
+<backdrop>                      position:fixed; inset:0; (공용 *-backdrop 규칙 적용됨)
+  <dialog>                      display:flex; flex-direction:column; overflow:hidden; max-height: ...
+    <header>                    flex: 0 0 auto  ← 제목 + 닫기 버튼, 항상 고정
+    <스크롤 영역 (본문/목록)>    flex: 1 1 auto; min-height:0; overflow-y:auto  ← 이 영역만 스크롤
+  </dialog>
+</backdrop>
+```
+
+- 헤더(제목+닫기버튼)와 본문을 **하나의 `overflow:auto` 박스**에 같이 넣지 않는다. 본문이 길어지면 헤더까지 같이 스크롤되어 닫기 버튼이 화면 밖으로 사라진다.
+- `<dialog>`는 `display:flex; flex-direction:column;`, 헤더는 `flex:0 0 auto`, 본문(스크롤 영역)은 `flex:1 1 auto; min-height:0; overflow-y:auto`로 분리한다.
+- 팝업 높이(`max-height`)를 계산할 때는 **실제로 적용되는 backdrop의 padding**을 기준으로 뺄셈해야 한다. `app.css`의 공용 규칙 `body [class$="backdrop"] { top/bottom: var(--fp-safe-top/bottom); padding-block: 40px; }`이 모든 `*-backdrop` 요소의 상하 padding을 **40px로 강제**하므로(개별 화면 CSS가 `padding: 16px`나 `24px`를 따로 선언해도 이 규칙이 이김), `max-height`는 최소 `calc(100dvh - 80px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px))` 형태로 80px(=40px×2) + safe-area를 빼야 한다. 이 계산이 실제 padding과 안 맞으면, 가운데 정렬(`align-items:center`)인 팝업은 위아래가 고르게 잘리고, 하단 고정형(`align-items:end`, 바텀시트)인 팝업은 초과분이 전부 위로 밀려서 **헤더가 화면 밖으로 사라진다.**
+- 팝업을 고치거나 새로 만들 때는 반드시 실제 화면 폭(모바일 기준 ~390px)에서, 내용이 여러 줄/여러 행으로 넘칠 만큼 채운 상태로 렌더링해서 헤더가 스크롤에 안 밀리는지 확인한다. 짧은 내용 1~2개로만 확인하고 끝내지 않는다 — 이 세션의 버그들은 전부 항목이 몇 개 안 될 때는 안 보이다가 목록이 길어지면 재현됐다.
+
 ## 소스 구조 기준
 
 - 메뉴별 화면과 동작은 가능한 한 메뉴별 파일 또는 컴포넌트 단위로 분리한다.

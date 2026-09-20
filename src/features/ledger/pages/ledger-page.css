@@ -1054,7 +1054,16 @@ html[data-theme='dark'] .fp-ledger-capture-setup {
   display: grid;
   gap: 16px;
   width: min(560px, 100%);
-  max-height: min(720px, calc(100vh - 48px));
+  /* The 24px padding declared just above on .fp-ledger-autofill-backdrop
+     is dead for top/bottom: the shared body [class$="backdrop"] rule
+     (0,1,1 specificity, beats this class's 0,1,0) forces padding-block:
+     40px on every backdrop app-wide, so the real vertical padding here
+     is 40px+40px=80px, not 48. This calc predates that shared rule and
+     was never updated — harmless while center-aligned (the excess just
+     clipped evenly top and bottom), but the mobile bottom-sheet variant
+     below is align-items: end, where the same mismatch pushed the
+     dialog's top (and its header) off-screen entirely. */
+  max-height: min(720px, calc(100dvh - 80px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px)));
   overflow: auto;
   border-radius: 22px;
   padding: 24px;
@@ -2099,8 +2108,18 @@ html[data-theme='dark'] .fp-ledger-capture-setup {
     padding: 16px;
   }
 
+  /* This backdrop is bottom-anchored (align-items: end) and padded 16px
+     top+bottom, but the dialog's own max-height only subtracted 32px
+     total — nothing for that top+bottom padding. A dialog whose content
+     (e.g. a long capture-review list) actually reached that max-height
+     was then taller than the backdrop's own padded content box, and
+     since it's bottom-anchored, the excess spilled upward past the
+     backdrop's top edge and off the real screen — taking the header
+     (title + close button) with it. Subtracting the padding too, plus
+     the safe-area insets every other dialog's max-height already
+     accounts for, keeps the whole dialog inside the visible backdrop. */
   .fp-ledger-autofill-dialog {
-    max-height: calc(100vh - 32px);
+    max-height: calc(100dvh - 80px - var(--fp-safe-top, 0px) - var(--fp-safe-bottom, 0px));
     border-radius: 22px;
     padding: 22px 18px;
   }
