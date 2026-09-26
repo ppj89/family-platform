@@ -69,8 +69,8 @@ function nextOrder(records: TravelRecord[]) {
 }
 
 function recordShortDate(record: TravelRecord) {
-  const [, month, day] = record.recordDate.split('-')
-  return month && day ? `${month}.${day}` : record.recordDate
+  const [year, month, day] = record.recordDate.split('-')
+  return year && month && day ? `${year}-${month}-${day}` : record.recordDate
 }
 
 function recordSubLine(record: TravelRecord) {
