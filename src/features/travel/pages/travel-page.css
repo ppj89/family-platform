@@ -468,9 +468,14 @@
 .fp-travel-summary {
   display: grid;
   /* The date card needs the full 'YYYY.MM.DD~YYYY.MM.DD' range to fit
-     without wrapping, so give it noticeably more of the row than the
-     amount card (whose value is much shorter). */
-  grid-template-columns: minmax(0, 0.72fr) minmax(0, 1.28fr);
+     without wrapping, so it still gets more of the row than the amount
+     card — but 0.72/1.28 (from when the date used a smaller 12px font)
+     made the amount card look cramped next to a date card with a lot of
+     spare room once the date font grew to 13.5px. Verified this ratio
+     in-browser at 360px: both the full date range and the amount stay
+     on one line each; only an unusually narrow ~320px screen wraps the
+     amount, which the previous ratio already did too at that width. */
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
   gap: 10px;
 }
 
