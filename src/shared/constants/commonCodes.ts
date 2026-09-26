@@ -5,7 +5,7 @@ export interface CommonCodeOption {
 
 export const SELECT_PLACEHOLDER_OPTION = { label: '선택', value: '' } as const
 
-export const TRAVEL_COST_CATEGORIES = ['교통', '숙박', '식비', '입장료', '쇼핑', '기타'] as const
+export const TRAVEL_COST_CATEGORIES = ['간식', '교통', '숙박', '식비', '입장료', '쇼핑', '기타'] as const
 
 export type TravelCostCategory = typeof TRAVEL_COST_CATEGORIES[number]
 
