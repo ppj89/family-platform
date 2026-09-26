@@ -367,13 +367,37 @@ export default function TravelPage() {
     setLoading(true)
     setToastMessage('')
     try {
+      const location = recordForm.location.trim()
+      let latitude = recordForm.latitude
+      let longitude = recordForm.longitude
+      // Coordinates only ever get set by picking a suggestion from the
+      // place search dropdown. Typing a location and saving without
+      // picking one (or the dropdown finding nothing at the time) left
+      // lat/lng at 0 — the record still showed its location as text, but
+      // the map had nothing to place a marker at and fell back to a
+      // default view of the whole country. Best-effort geocode the typed
+      // text on save so this doesn't require the user to notice and redo
+      // the search themselves.
+      if (location && (!latitude || !longitude)) {
+        try {
+          const [best] = await searchPlaces(location, 1)
+          if (best) {
+            latitude = best.latitude
+            longitude = best.longitude
+          }
+        } catch {
+          // No network / no match: keep saving with whatever we have.
+        }
+      }
       const payload = {
         ...recordForm,
         sortOrder: recordForm.sortOrder || nextOrder(records),
         title: recordForm.title.trim(),
         category: recordForm.category || travelCostCategoryOptions[0] || TRAVEL_COST_CATEGORIES[0],
         note: recordForm.note?.trim() || null,
-        location: recordForm.location.trim(),
+        location,
+        latitude,
+        longitude,
         recordTime: recordForm.recordTime?.slice(0, 5) || currentTimeText(),
       }
       if (editingRecord) await updateTravelRecord(editingRecord.id, payload)
