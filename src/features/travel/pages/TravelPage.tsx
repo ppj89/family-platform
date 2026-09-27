@@ -485,40 +485,44 @@ export default function TravelPage() {
         {selectedRecord ? (
           <div className="fp-travel-record-detail-backdrop" role="presentation" onClick={() => setSelectedRecord(null)}>
             <section className="fp-travel-record-detail-dialog" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-              <button type="button" className="dialog-close" aria-label="닫기" onClick={() => setSelectedRecord(null)}>
-                <HiOutlineX aria-hidden="true" />
-              </button>
-              <span className="fp-travel-record-detail-chip">{selectedRecord.category || '기타'}</span>
-              <h2>{selectedRecord.title}</h2>
-              <strong className="fp-travel-record-detail-amount">{money(selectedRecord.amount)}</strong>
-              <dl>
-                <div><dt>날짜</dt><dd>{selectedRecord.recordDate}</dd></div>
-                <div><dt>시간</dt><dd>{selectedRecord.recordTime?.slice(0, 5) || '-'}</dd></div>
-                <div><dt>카테고리</dt><dd>{selectedRecord.category || '기타'}</dd></div>
-                <div><dt>재방문의사</dt><dd>{selectedRecord.revisitIntent || '-'}</dd></div>
-                <div><dt>위치</dt><dd>{selectedRecord.location || '-'}</dd></div>
-              </dl>
-              <TravelMap
-                point={selectedRecord.latitude && selectedRecord.longitude ? { latitude: selectedRecord.latitude, longitude: selectedRecord.longitude, label: selectedRecord.location } : null}
-                className="preview"
-              />
-              <div className="fp-travel-record-detail-note">
-                <span>메모</span>
-                <p>{selectedRecord.note || '메모가 없습니다.'}</p>
-              </div>
-              <div className="fp-travel-record-detail-actions">
-                <button type="button" className="edit-button" onClick={() => { setSelectedRecord(null); startRecordEdit(selectedRecord) }}>수정</button>
-                <button
-                  type="button"
-                  className="danger-button"
-                  onClick={() => {
-                    setSelectedRecord(null)
-                    setPendingRecordDelete(selectedRecord)
-                    setConfirmKind('record-delete')
-                  }}
-                >
-                  삭제
+              <header>
+                <span className="fp-travel-record-detail-chip">{selectedRecord.category || '기타'}</span>
+                <h2>{selectedRecord.title}</h2>
+                <strong className="fp-travel-record-detail-amount">{money(selectedRecord.amount)}</strong>
+                <button type="button" className="dialog-close" aria-label="닫기" onClick={() => setSelectedRecord(null)}>
+                  <HiOutlineX aria-hidden="true" />
                 </button>
+              </header>
+              <div className="fp-travel-record-detail-scroll">
+                <dl>
+                  <div><dt>날짜</dt><dd>{selectedRecord.recordDate}</dd></div>
+                  <div><dt>시간</dt><dd>{selectedRecord.recordTime?.slice(0, 5) || '-'}</dd></div>
+                  <div><dt>카테고리</dt><dd>{selectedRecord.category || '기타'}</dd></div>
+                  <div><dt>재방문의사</dt><dd>{selectedRecord.revisitIntent || '-'}</dd></div>
+                  <div><dt>위치</dt><dd>{selectedRecord.location || '-'}</dd></div>
+                </dl>
+                <TravelMap
+                  point={selectedRecord.latitude && selectedRecord.longitude ? { latitude: selectedRecord.latitude, longitude: selectedRecord.longitude, label: selectedRecord.location } : null}
+                  className="preview"
+                />
+                <div className="fp-travel-record-detail-note">
+                  <span>메모</span>
+                  <p>{selectedRecord.note || '메모가 없습니다.'}</p>
+                </div>
+                <div className="fp-travel-record-detail-actions">
+                  <button type="button" className="edit-button" onClick={() => { setSelectedRecord(null); startRecordEdit(selectedRecord) }}>수정</button>
+                  <button
+                    type="button"
+                    className="danger-button"
+                    onClick={() => {
+                      setSelectedRecord(null)
+                      setPendingRecordDelete(selectedRecord)
+                      setConfirmKind('record-delete')
+                    }}
+                  >
+                    삭제
+                  </button>
+                </div>
               </div>
             </section>
           </div>

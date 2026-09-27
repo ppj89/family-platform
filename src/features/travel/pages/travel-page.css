@@ -648,16 +648,34 @@
 
 .fp-travel-record-detail-dialog {
   position: relative;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   width: min(420px, 100%);
   max-height: min(680px, calc(var(--fp-dialog-viewport-height) - 40px));
-  gap: 14px;
-  overflow-y: auto;
+  overflow: hidden;
   border-radius: 22px;
   padding: 22px;
   background: #fff;
   color: #191f28;
   box-shadow: 0 26px 70px rgba(25, 31, 40, 0.24);
+}
+
+.fp-travel-record-detail-dialog > header {
+  position: relative;
+  display: grid;
+  flex: 0 0 auto;
+  gap: 8px;
+  padding-right: 40px;
+  padding-bottom: 14px;
+}
+
+.fp-travel-record-detail-scroll {
+  display: grid;
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 14px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .fp-travel-record-detail-chip {
@@ -768,8 +786,8 @@
 
 .fp-travel-record-detail-dialog .dialog-close {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  top: 0;
+  right: 0;
   display: grid;
   width: 34px;
   height: 34px;
