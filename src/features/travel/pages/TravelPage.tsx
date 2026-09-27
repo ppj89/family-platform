@@ -573,16 +573,18 @@ export default function TravelPage() {
                     value={recordForm.recordDate}
                     onChange={(value) => setRecordForm((current) => ({ ...current, recordDate: value }))}
                   />
-                  <label className="fp-field">
-                    <span>시간 <em className="fp-required-mark">*</em></span>
-                    <input inputMode="numeric" maxLength={5} value={recordForm.recordTime || ''} onChange={(event) => setRecordForm((value) => ({ ...value, recordTime: sanitizeTime(event.target.value) }))} />
-                  </label>
-                  <CustomSelect
-                    label="재방문의사"
-                    options={REVISIT_INTENT_OPTIONS}
-                    value={recordForm.revisitIntent || ''}
-                    onChange={(value) => setRecordForm((current) => ({ ...current, revisitIntent: value }))}
-                  />
+                  <div className="span-2 fp-travel-time-revisit-row">
+                    <label className="fp-field">
+                      <span>시간 <em className="fp-required-mark">*</em></span>
+                      <input inputMode="numeric" maxLength={5} value={recordForm.recordTime || ''} onChange={(event) => setRecordForm((value) => ({ ...value, recordTime: sanitizeTime(event.target.value) }))} />
+                    </label>
+                    <CustomSelect
+                      label="재방문의사"
+                      options={REVISIT_INTENT_OPTIONS}
+                      value={recordForm.revisitIntent || ''}
+                      onChange={(value) => setRecordForm((current) => ({ ...current, revisitIntent: value }))}
+                    />
+                  </div>
                   <label className="fp-field">
                     <span>사용금액</span>
                     <input inputMode="numeric" value={formatNumberInput(recordForm.amount)} onChange={(event) => setRecordForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))} />
