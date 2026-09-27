@@ -28,6 +28,7 @@ export interface TravelRecord {
   longitude: number
   recordDate: string
   recordTime?: string | null
+  revisitIntent?: string | null
   mediaUrls: string[]
   createdAt: string
 }
@@ -43,6 +44,7 @@ export interface TravelRecordPayload {
   longitude: number
   recordDate: string
   recordTime?: string | null
+  revisitIntent?: string | null
   mediaUrls: string[]
 }
 

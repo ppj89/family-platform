@@ -42,8 +42,17 @@ const emptyRecord = (order = 1): TravelRecordPayload => ({
   longitude: 0,
   recordDate: todayKey(),
   recordTime: currentTimeText(),
+  revisitIntent: '',
   mediaUrls: [],
 })
+
+// The select's placeholder ("선택") state — no revisit decision made yet —
+// is simply an empty value, matching every other optional field's convention.
+const REVISIT_INTENT_OPTIONS = [
+  { label: '선택', value: '' },
+  { label: '있음', value: '있음' },
+  { label: '없음', value: '없음' },
+]
 
 function money(value: number) {
   return `${Math.round(value || 0).toLocaleString('ko-KR')}원`
@@ -326,6 +335,7 @@ export default function TravelPage() {
       longitude: record.longitude || 0,
       recordDate: record.recordDate,
       recordTime: record.recordTime?.slice(0, 5) || currentTimeText(),
+      revisitIntent: record.revisitIntent || '',
       mediaUrls: record.mediaUrls || [],
     })
     setIsRecordFormOpen(true)
@@ -485,6 +495,7 @@ export default function TravelPage() {
                 <div><dt>날짜</dt><dd>{selectedRecord.recordDate}</dd></div>
                 <div><dt>시간</dt><dd>{selectedRecord.recordTime?.slice(0, 5) || '-'}</dd></div>
                 <div><dt>카테고리</dt><dd>{selectedRecord.category || '기타'}</dd></div>
+                <div><dt>재방문의사</dt><dd>{selectedRecord.revisitIntent || '-'}</dd></div>
                 <div><dt>위치</dt><dd>{selectedRecord.location || '-'}</dd></div>
               </dl>
               <TravelMap
@@ -558,6 +569,7 @@ export default function TravelPage() {
                   <DatePickerField
                     label="날짜"
                     required
+                    className="span-2"
                     value={recordForm.recordDate}
                     onChange={(value) => setRecordForm((current) => ({ ...current, recordDate: value }))}
                   />
@@ -565,6 +577,12 @@ export default function TravelPage() {
                     <span>시간 <em className="fp-required-mark">*</em></span>
                     <input inputMode="numeric" maxLength={5} value={recordForm.recordTime || ''} onChange={(event) => setRecordForm((value) => ({ ...value, recordTime: sanitizeTime(event.target.value) }))} />
                   </label>
+                  <CustomSelect
+                    label="재방문의사"
+                    options={REVISIT_INTENT_OPTIONS}
+                    value={recordForm.revisitIntent || ''}
+                    onChange={(value) => setRecordForm((current) => ({ ...current, revisitIntent: value }))}
+                  />
                   <label className="fp-field">
                     <span>사용금액</span>
                     <input inputMode="numeric" value={formatNumberInput(recordForm.amount)} onChange={(event) => setRecordForm((value) => ({ ...value, amount: normalizeAmount(event.target.value) }))} />

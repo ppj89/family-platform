@@ -4234,20 +4234,21 @@ type tripItem struct {
 }
 
 type travelRecordItem struct {
-	ID         int64    `json:"id"`
-	TripID     int64    `json:"tripId"`
-	SortOrder  *int     `json:"sortOrder,omitempty"`
-	Title      string   `json:"title"`
-	Category   *string  `json:"category,omitempty"`
-	Amount     float64  `json:"amount"`
-	Note       *string  `json:"note,omitempty"`
-	Location   string   `json:"location"`
-	Latitude   float64  `json:"latitude"`
-	Longitude  float64  `json:"longitude"`
-	RecordDate string   `json:"recordDate"`
-	RecordTime *string  `json:"recordTime,omitempty"`
-	MediaURLs  []string `json:"mediaUrls"`
-	CreatedAt  string   `json:"createdAt"`
+	ID            int64    `json:"id"`
+	TripID        int64    `json:"tripId"`
+	SortOrder     *int     `json:"sortOrder,omitempty"`
+	Title         string   `json:"title"`
+	Category      *string  `json:"category,omitempty"`
+	Amount        float64  `json:"amount"`
+	Note          *string  `json:"note,omitempty"`
+	Location      string   `json:"location"`
+	Latitude      float64  `json:"latitude"`
+	Longitude     float64  `json:"longitude"`
+	RecordDate    string   `json:"recordDate"`
+	RecordTime    *string  `json:"recordTime,omitempty"`
+	RevisitIntent *string  `json:"revisitIntent,omitempty"`
+	MediaURLs     []string `json:"mediaUrls"`
+	CreatedAt     string   `json:"createdAt"`
 }
 
 func (a *app) listTrips(w http.ResponseWriter, r *http.Request, user authUser) {
@@ -7533,6 +7534,7 @@ create table if not exists travel_records (
 alter table if exists travel_records add column if not exists updated_at timestamp with time zone;
 alter table if exists travel_records add column if not exists deleted_at timestamp with time zone;
 alter table if exists travel_records add column if not exists created_by_user_id bigint;
+alter table if exists travel_records add column if not exists revisit_intent varchar(16);
 create table if not exists travel_record_media_urls (
   travel_record_id bigint not null,
   media_urls varchar(2048)
@@ -11074,18 +11076,24 @@ func scanTrips(w http.ResponseWriter, rows pgx.Rows) ([]tripItem, bool) {
 }
 
 type travelRecordPayload struct {
-	SortOrder  *int     `json:"sortOrder"`
-	Title      string   `json:"title"`
-	Category   *string  `json:"category"`
-	Amount     float64  `json:"amount"`
-	Note       *string  `json:"note"`
-	Location   string   `json:"location"`
-	Latitude   float64  `json:"latitude"`
-	Longitude  float64  `json:"longitude"`
-	RecordDate string   `json:"recordDate"`
-	RecordTime *string  `json:"recordTime"`
-	MediaURLs  []string `json:"mediaUrls"`
+	SortOrder     *int     `json:"sortOrder"`
+	Title         string   `json:"title"`
+	Category      *string  `json:"category"`
+	Amount        float64  `json:"amount"`
+	Note          *string  `json:"note"`
+	Location      string   `json:"location"`
+	Latitude      float64  `json:"latitude"`
+	Longitude     float64  `json:"longitude"`
+	RecordDate    string   `json:"recordDate"`
+	RecordTime    *string  `json:"recordTime"`
+	RevisitIntent *string  `json:"revisitIntent"`
+	MediaURLs     []string `json:"mediaUrls"`
 }
+
+// travelRevisitIntents are the only values this field accepts — a plain
+// varchar rather than an enum column so a future value doesn't need a
+// migration, but validated here to the exact three the select offers.
+var travelRevisitIntents = map[string]bool{"있음": true, "없음": true}
 
 func readTravelRecordPayload(w http.ResponseWriter, r *http.Request) (travelRecordPayload, bool) {
 	var req travelRecordPayload
@@ -11101,6 +11109,17 @@ func readTravelRecordPayload(w http.ResponseWriter, r *http.Request) (travelReco
 	if req.RecordTime != nil && !validTimeText(strings.TrimSpace(*req.RecordTime)) {
 		writeError(w, http.StatusBadRequest, "recordTime is invalid")
 		return req, false
+	}
+	if req.RevisitIntent != nil {
+		trimmed := strings.TrimSpace(*req.RevisitIntent)
+		if trimmed == "" {
+			req.RevisitIntent = nil
+		} else if !travelRevisitIntents[trimmed] {
+			writeError(w, http.StatusBadRequest, "revisitIntent is invalid")
+			return req, false
+		} else {
+			req.RevisitIntent = &trimmed
+		}
 	}
 	return req, true
 }
@@ -11118,22 +11137,22 @@ func (a *app) saveTravelRecord(w http.ResponseWriter, r *http.Request, id int64,
 	defer tx.Rollback(r.Context())
 	var item travelRecordItem
 	var sortOrder sql.NullInt32
-	var category, note, recordTime sql.NullString
+	var category, note, recordTime, revisitIntent sql.NullString
 	var recordDate, createdAt time.Time
 	if id == 0 {
 		err = tx.QueryRow(r.Context(), `
-			insert into travel_records (trip_id, sort_order, title, category, amount, note, location, latitude, longitude, record_date, record_time, created_at, updated_at, created_by_user_id)
-			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now(),now(),$12)
-			returning id, trip_id, sort_order, title, category, coalesce(amount, 0), note, location, latitude, longitude, record_date, record_time::text, created_at
-		`, tripID, req.SortOrder, req.Title, req.Category, req.Amount, req.Note, req.Location, req.Latitude, req.Longitude, req.RecordDate, req.RecordTime, userID).
-			Scan(&item.ID, &item.TripID, &sortOrder, &item.Title, &category, &item.Amount, &note, &item.Location, &item.Latitude, &item.Longitude, &recordDate, &recordTime, &createdAt)
+			insert into travel_records (trip_id, sort_order, title, category, amount, note, location, latitude, longitude, record_date, record_time, revisit_intent, created_at, updated_at, created_by_user_id)
+			values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now(),now(),$13)
+			returning id, trip_id, sort_order, title, category, coalesce(amount, 0), note, location, latitude, longitude, record_date, record_time::text, revisit_intent, created_at
+		`, tripID, req.SortOrder, req.Title, req.Category, req.Amount, req.Note, req.Location, req.Latitude, req.Longitude, req.RecordDate, req.RecordTime, req.RevisitIntent, userID).
+			Scan(&item.ID, &item.TripID, &sortOrder, &item.Title, &category, &item.Amount, &note, &item.Location, &item.Latitude, &item.Longitude, &recordDate, &recordTime, &revisitIntent, &createdAt)
 	} else {
 		err = tx.QueryRow(r.Context(), `
-			update travel_records set sort_order=$1, title=$2, category=$3, amount=$4, note=$5, location=$6, latitude=$7, longitude=$8, record_date=$9, record_time=$10, updated_at=now()
-			where id=$11 and trip_id=$12 and deleted_at is null
-			returning id, trip_id, sort_order, title, category, coalesce(amount, 0), note, location, latitude, longitude, record_date, record_time::text, created_at
-		`, req.SortOrder, req.Title, req.Category, req.Amount, req.Note, req.Location, req.Latitude, req.Longitude, req.RecordDate, req.RecordTime, id, tripID).
-			Scan(&item.ID, &item.TripID, &sortOrder, &item.Title, &category, &item.Amount, &note, &item.Location, &item.Latitude, &item.Longitude, &recordDate, &recordTime, &createdAt)
+			update travel_records set sort_order=$1, title=$2, category=$3, amount=$4, note=$5, location=$6, latitude=$7, longitude=$8, record_date=$9, record_time=$10, revisit_intent=$11, updated_at=now()
+			where id=$12 and trip_id=$13 and deleted_at is null
+			returning id, trip_id, sort_order, title, category, coalesce(amount, 0), note, location, latitude, longitude, record_date, record_time::text, revisit_intent, created_at
+		`, req.SortOrder, req.Title, req.Category, req.Amount, req.Note, req.Location, req.Latitude, req.Longitude, req.RecordDate, req.RecordTime, req.RevisitIntent, id, tripID).
+			Scan(&item.ID, &item.TripID, &sortOrder, &item.Title, &category, &item.Amount, &note, &item.Location, &item.Latitude, &item.Longitude, &recordDate, &recordTime, &revisitIntent, &createdAt)
 	}
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "travel record save failed")
@@ -11159,6 +11178,7 @@ func (a *app) saveTravelRecord(w http.ResponseWriter, r *http.Request, id int64,
 	item.Note = nullString(note)
 	item.RecordDate = formatDate(recordDate)
 	item.RecordTime = nullString(recordTime)
+	item.RevisitIntent = nullString(revisitIntent)
 	item.MediaURLs = req.MediaURLs
 	item.CreatedAt = formatTime(createdAt)
 	return item, true
@@ -11166,7 +11186,7 @@ func (a *app) saveTravelRecord(w http.ResponseWriter, r *http.Request, id int64,
 
 func (a *app) travelRecordsByTrip(w http.ResponseWriter, ctx context.Context, tripID int64) ([]travelRecordItem, bool) {
 	rows, err := a.db.Query(ctx, `
-		select id, trip_id, sort_order, title, category, coalesce(amount, 0), note, location, latitude, longitude, record_date, record_time::text, created_at
+		select id, trip_id, sort_order, title, category, coalesce(amount, 0), note, location, latitude, longitude, record_date, record_time::text, revisit_intent, created_at
 		from travel_records where trip_id = $1 and deleted_at is null order by sort_order asc nulls last, created_at desc
 	`, tripID)
 	if err != nil {
@@ -11178,9 +11198,9 @@ func (a *app) travelRecordsByTrip(w http.ResponseWriter, ctx context.Context, tr
 	for rows.Next() {
 		var item travelRecordItem
 		var sortOrder sql.NullInt32
-		var category, note, recordTime sql.NullString
+		var category, note, recordTime, revisitIntent sql.NullString
 		var recordDate, createdAt time.Time
-		if err := rows.Scan(&item.ID, &item.TripID, &sortOrder, &item.Title, &category, &item.Amount, &note, &item.Location, &item.Latitude, &item.Longitude, &recordDate, &recordTime, &createdAt); err != nil {
+		if err := rows.Scan(&item.ID, &item.TripID, &sortOrder, &item.Title, &category, &item.Amount, &note, &item.Location, &item.Latitude, &item.Longitude, &recordDate, &recordTime, &revisitIntent, &createdAt); err != nil {
 			writeError(w, http.StatusInternalServerError, "database scan failed")
 			return nil, false
 		}
@@ -11189,6 +11209,7 @@ func (a *app) travelRecordsByTrip(w http.ResponseWriter, ctx context.Context, tr
 		item.Note = nullString(note)
 		item.RecordDate = formatDate(recordDate)
 		item.RecordTime = nullString(recordTime)
+		item.RevisitIntent = nullString(revisitIntent)
 		item.CreatedAt = formatTime(createdAt)
 		item.MediaURLs = a.mediaURLs(ctx, "travel_record_media_urls", "travel_record_id", item.ID)
 		items = append(items, item)
