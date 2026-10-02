@@ -14,6 +14,7 @@ import {
 } from '../../../shared/api/commonCodes'
 import { getReadableFamily } from '../../../shared/api/family'
 import { ConfirmDialog, CustomSelect, ToastMessage } from '../../../shared/components'
+import { useDragReorder } from '../../../shared/hooks'
 import {
   BABY_GENDER_OPTIONS,
   BABY_RECORD_TYPES,
@@ -234,16 +235,6 @@ function canManageFamilySettings(role?: string) {
   return role === 'FAMILY_ADMIN'
 }
 
-function moveCodeRowToTarget(rows: CommonCodeBatchRow[], sourceId: number, targetId: number) {
-  const sourceIndex = rows.findIndex((item) => item.id === sourceId)
-  const targetIndex = rows.findIndex((item) => item.id === targetId)
-  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return rows
-  const next = [...rows]
-  const [item] = next.splice(sourceIndex, 1)
-  next.splice(targetIndex, 0, item)
-  return next
-}
-
 export default function AdminPage({ onUnauthorized }: { onUnauthorized?: () => void }) {
   const [profile, setProfile] = useState<CurrentUserProfile | null>(null)
   const [currentFamilyRole, setCurrentFamilyRole] = useState('')
@@ -276,16 +267,17 @@ export default function AdminPage({ onUnauthorized }: { onUnauthorized?: () => v
   const [replyMessage, setReplyMessage] = useState('')
   const [draggingMenuKey, setDraggingMenuKey] = useState<string | null>(null)
   const [dragOverMenuKey, setDragOverMenuKey] = useState<string | null>(null)
-  const [draggingCodeId, setDraggingCodeId] = useState<number | null>(null)
-  const [dragOverCodeId, setDragOverCodeId] = useState<number | null>(null)
   const pointerDraggingMenuKey = useRef<string | null>(null)
   const pointerPendingMenuDrag = useRef<{ key: string; x: number; y: number } | null>(null)
   const menuAutoScrollTimer = useRef<number | null>(null)
   const menuAutoScrollStep = useRef(0)
-  const pointerDraggingCodeId = useRef<number | null>(null)
-  const pointerPendingCodeDrag = useRef<{ id: number; x: number; y: number } | null>(null)
-  const codeAutoScrollTimer = useRef<number | null>(null)
-  const codeAutoScrollStep = useRef(0)
+  const codeDragReorder = useDragReorder({
+    items: codeBatchRows,
+    getKey: (row) => String(row.id),
+    onReorder: setCodeBatchRows,
+    enabled: isCodeBatchEditing && !commonCodeBusy,
+    getScrollContainer: () => document.querySelector<HTMLElement>('.fp-admin-code-dialog-body'),
+  })
 
   useEffect(() => {
     let alive = true
@@ -789,118 +781,6 @@ export default function AdminPage({ onUnauthorized }: { onUnauthorized?: () => v
     }
   }
 
-  function reorderCommonCodeByTarget(sourceId: number, targetId: number) {
-    if (sourceId === targetId || commonCodeBusy) return
-    setCodeBatchRows((rows) => moveCodeRowToTarget(rows, sourceId, targetId))
-  }
-
-  function handleCommonCodeDragEnd() {
-    stopCommonCodeAutoScroll()
-    pointerPendingCodeDrag.current = null
-    pointerDraggingCodeId.current = null
-    setDraggingCodeId(null)
-    setDragOverCodeId(null)
-  }
-
-  function codeIdFromPoint(x: number, y: number) {
-    const target = document.elementFromPoint(x, y)?.closest<HTMLElement>('[data-common-code-id]')
-    const id = Number(target?.dataset.commonCodeId)
-    return Number.isFinite(id) ? id : null
-  }
-
-  function scrollCommonCodeBy(top: number) {
-    const scrollTarget = document.querySelector<HTMLElement>('.fp-admin-code-dialog-body')
-    if (scrollTarget && scrollTarget.scrollHeight > scrollTarget.clientHeight) {
-      scrollTarget.scrollBy({ top, behavior: 'auto' })
-      return
-    }
-    window.scrollBy({ top, behavior: 'auto' })
-  }
-
-  function stopCommonCodeAutoScroll() {
-    if (codeAutoScrollTimer.current !== null) {
-      window.clearInterval(codeAutoScrollTimer.current)
-      codeAutoScrollTimer.current = null
-    }
-    codeAutoScrollStep.current = 0
-  }
-
-  function startCommonCodeAutoScroll(step: number) {
-    codeAutoScrollStep.current = step
-    scrollCommonCodeBy(step)
-    if (codeAutoScrollTimer.current !== null) return
-    codeAutoScrollTimer.current = window.setInterval(() => {
-      if (codeAutoScrollStep.current) scrollCommonCodeBy(codeAutoScrollStep.current)
-    }, 45)
-  }
-
-  function scrollCommonCodeDragViewport(clientY: number) {
-    const edgeSize = 110
-    const maxStep = 26
-    const scrollTarget = document.querySelector<HTMLElement>('.fp-admin-code-dialog-body')
-    if (scrollTarget && scrollTarget.scrollHeight > scrollTarget.clientHeight) {
-      const rect = scrollTarget.getBoundingClientRect()
-      if (clientY < rect.top + edgeSize) {
-        startCommonCodeAutoScroll(-Math.max(10, maxStep * (1 - (clientY - rect.top) / edgeSize)))
-        return
-      }
-      if (clientY > rect.bottom - edgeSize) {
-        startCommonCodeAutoScroll(Math.max(10, maxStep * (1 - (rect.bottom - clientY) / edgeSize)))
-        return
-      }
-    }
-    if (clientY < edgeSize) {
-      startCommonCodeAutoScroll(-Math.max(10, maxStep * (1 - clientY / edgeSize)))
-      return
-    }
-    if (clientY > window.innerHeight - edgeSize) {
-      const distance = window.innerHeight - clientY
-      startCommonCodeAutoScroll(Math.max(10, maxStep * (1 - distance / edgeSize)))
-      return
-    }
-    stopCommonCodeAutoScroll()
-  }
-
-  function handleCommonCodePointerDown(event: ReactPointerEvent<HTMLElement>, code: CommonCodeBatchRow) {
-    if (!isCodeBatchEditing || commonCodeBusy) return
-    const target = event.target
-    if (target instanceof HTMLElement && target.closest('button, label, input, select, textarea')) return
-    pointerPendingCodeDrag.current = { id: code.id, x: event.clientX, y: event.clientY }
-    event.currentTarget.setPointerCapture(event.pointerId)
-  }
-
-  function handleCommonCodeDragHandlePointerDown(event: ReactPointerEvent<HTMLButtonElement>, code: CommonCodeBatchRow) {
-    if (!isCodeBatchEditing || commonCodeBusy) return
-    event.preventDefault()
-    event.stopPropagation()
-    pointerPendingCodeDrag.current = { id: code.id, x: event.clientX, y: event.clientY }
-    event.currentTarget.closest<HTMLElement>('[data-common-code-id]')?.setPointerCapture(event.pointerId)
-  }
-
-  function handleCommonCodePointerMove(event: ReactPointerEvent<HTMLElement>) {
-    let sourceId = pointerDraggingCodeId.current
-    const pending = pointerPendingCodeDrag.current
-    if (!sourceId && pending) {
-      const distance = Math.hypot(event.clientX - pending.x, event.clientY - pending.y)
-      if (distance < 8) return
-      sourceId = pending.id
-      pointerDraggingCodeId.current = pending.id
-      setDraggingCodeId(pending.id)
-    }
-    if (!sourceId) return
-    event.preventDefault()
-    scrollCommonCodeDragViewport(event.clientY)
-    const targetId = codeIdFromPoint(event.clientX, event.clientY)
-    if (targetId && targetId !== sourceId) {
-      setDragOverCodeId(targetId)
-      reorderCommonCodeByTarget(sourceId, targetId)
-    }
-  }
-
-  function handleCommonCodePointerUp() {
-    handleCommonCodeDragEnd()
-  }
-
   function updateHomeSetting(key: HomeWidgetKey, checked: boolean) {
     setHomeSettings((current) => ({ ...current, [key]: checked }))
   }
@@ -1264,13 +1144,9 @@ export default function AdminPage({ onUnauthorized }: { onUnauthorized?: () => v
                       const checkedForDelete = codeDeleteIds.includes(code.id)
                       return (
                         <article
-                          className={`${isCodeBatchEditing ? 'batch-editing ' : ''}${!code.active ? 'muted' : ''}${checkedForDelete ? ' delete-selected' : ''}${draggingCodeId === code.id ? ' dragging' : ''}${dragOverCodeId === code.id ? ' drag-over' : ''}`}
-                          data-common-code-id={code.id}
+                          className={`${isCodeBatchEditing ? 'batch-editing ' : ''}${!code.active ? 'muted' : ''}${checkedForDelete ? ' delete-selected' : ''}${codeDragReorder.draggingKey === String(code.id) ? ' dragging' : ''}${codeDragReorder.dragOverKey === String(code.id) ? ' drag-over' : ''}`}
                           key={code.id}
-                          onPointerDown={(event) => handleCommonCodePointerDown(event, code)}
-                          onPointerMove={handleCommonCodePointerMove}
-                          onPointerUp={handleCommonCodePointerUp}
-                          onPointerCancel={handleCommonCodeDragEnd}
+                          {...codeDragReorder.getRowProps(String(code.id))}
                         >
                           {isCodeBatchEditing ? (
                             <label className="fp-admin-code-select-check" aria-label={`${code.name} 삭제 선택`}>
@@ -1294,7 +1170,7 @@ export default function AdminPage({ onUnauthorized }: { onUnauthorized?: () => v
                                   className="fp-admin-code-drag-handle"
                                   type="button"
                                   aria-label={`${code.name} 순서 변경`}
-                                  onPointerDown={(event) => handleCommonCodeDragHandlePointerDown(event, code)}
+                                  {...codeDragReorder.getHandleProps(String(code.id))}
                                 >
                                   ⋮⋮
                                 </button>

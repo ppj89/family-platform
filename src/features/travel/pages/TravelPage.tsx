@@ -3,7 +3,7 @@ import { HiOutlineX } from 'react-icons/hi'
 import { apiActionMessage } from '../../../shared/api/client'
 import { ConfirmDialog, CustomSelect, DatePickerField, FloatingActionButton, ToastMessage } from '../../../shared/components'
 import { COMMON_CODE_GROUPS, TRAVEL_COST_CATEGORIES } from '../../../shared/constants/commonCodes'
-import { useCommonCodeOptions } from '../../../shared/hooks'
+import { useCommonCodeOptions, useDragReorder } from '../../../shared/hooks'
 import { currentTimeText, monthRange, parseDateKey, todayKey } from '../../../shared/utils/date'
 import { formatNumberInput, normalizeAmount } from '../../../shared/utils/number'
 import {
@@ -86,6 +86,23 @@ function recordSubLine(record: TravelRecord) {
   return [record.category || '기타', record.location].filter(Boolean).join(' · ')
 }
 
+function recordToPayload(record: TravelRecord): TravelRecordPayload {
+  return {
+    sortOrder: record.sortOrder,
+    title: record.title,
+    category: record.category,
+    amount: record.amount,
+    note: record.note,
+    location: record.location,
+    latitude: record.latitude,
+    longitude: record.longitude,
+    recordDate: record.recordDate,
+    recordTime: record.recordTime,
+    revisitIntent: record.revisitIntent,
+    mediaUrls: record.mediaUrls,
+  }
+}
+
 function formatMonthLabel(value: string) {
   const [year, month] = value.split('-')
   return `${year}년 ${Number(month)}월`
@@ -154,6 +171,30 @@ export default function TravelPage() {
   }, [sortedTripList, tripQueryRange])
   const recordList = useMemo(() => sortedRecords(records), [records])
   const totalAmount = useMemo(() => recordList.reduce((sum, item) => sum + (item.amount || 0), 0), [recordList])
+
+  async function reorderRecords(nextList: TravelRecord[]) {
+    const previousRecords = records
+    const reordered = nextList.map((record, index) => ({ ...record, sortOrder: index + 1 }))
+    setRecords(reordered)
+    const changed = reordered.filter((record) => {
+      const before = previousRecords.find((item) => item.id === record.id)
+      return before?.sortOrder !== record.sortOrder
+    })
+    if (!changed.length) return
+    try {
+      await Promise.all(changed.map((record) => updateTravelRecord(record.id, recordToPayload(record))))
+    } catch (error) {
+      setRecords(previousRecords)
+      setToastMessage(apiActionMessage(error, '순서를 저장하지 못했습니다.'))
+    }
+  }
+
+  const recordDragReorder = useDragReorder({
+    items: recordList,
+    getKey: (record) => String(record.id),
+    onReorder: (next) => { void reorderRecords(next) },
+    enabled: !isRecordFormOpen,
+  })
 
   async function reloadTrips() {
     setLoading(true)
@@ -465,19 +506,42 @@ export default function TravelPage() {
         </div>
         <TravelMap records={recordList} />
         <div className="fp-travel-record-list">
-          {recordList.length ? recordList.map((record, index) => (
-            <button type="button" className="fp-travel-record-row" key={record.id} onClick={() => setSelectedRecord(record)}>
-              <span className="fp-travel-record-order">{String(record.sortOrder || index + 1).padStart(2, '0')}</span>
-              <span className="fp-travel-record-row-main">
-                <strong className="fp-ellipsis" title={record.title}>{record.title}</strong>
-                <span className="fp-travel-record-row-sub">{recordSubLine(record)}</span>
-              </span>
-              <span className="fp-travel-record-row-end">
-                <b>{money(record.amount)}</b>
-                <time>{recordShortDate(record)}</time>
-              </span>
-            </button>
-          )) : <p className="fp-empty-text">등록된 여행 기록이 없습니다.</p>}
+          {recordList.length ? recordList.map((record, index) => {
+            const recordKey = String(record.id)
+            return (
+              <div
+                className={`fp-travel-record-row${recordDragReorder.draggingKey === recordKey ? ' dragging' : ''}${recordDragReorder.dragOverKey === recordKey ? ' drag-over' : ''}`}
+                key={record.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelectedRecord(record)}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return
+                  event.preventDefault()
+                  setSelectedRecord(record)
+                }}
+                {...recordDragReorder.getRowProps(recordKey)}
+              >
+                <button
+                  type="button"
+                  className="fp-travel-record-order"
+                  aria-label={`${record.title} 순서 변경`}
+                  onClick={(event) => event.stopPropagation()}
+                  {...recordDragReorder.getHandleProps(recordKey)}
+                >
+                  {String(record.sortOrder || index + 1).padStart(2, '0')}
+                </button>
+                <span className="fp-travel-record-row-main">
+                  <strong className="fp-ellipsis" title={record.title}>{record.title}</strong>
+                  <span className="fp-travel-record-row-sub">{recordSubLine(record)}</span>
+                </span>
+                <span className="fp-travel-record-row-end">
+                  <b>{money(record.amount)}</b>
+                  <time>{recordShortDate(record)}</time>
+                </span>
+              </div>
+            )
+          }) : <p className="fp-empty-text">등록된 여행 기록이 없습니다.</p>}
         </div>
 
         {!isRecordFormOpen ? <FloatingActionButton ariaLabel="여행 기록 추가" onClick={openRecordCreate} /> : null}
