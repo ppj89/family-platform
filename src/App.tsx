@@ -310,7 +310,7 @@ export default function App() {
     const finish = () => {
       clearOauthHandoffId()
       void Browser.close().catch(() => undefined)
-      window.location.href = '/'
+      window.location.replace('/')
     }
 
     const listener = CapacitorApp.addListener('appUrlOpen', ({ url }) => {
@@ -378,6 +378,29 @@ export default function App() {
     return () => {
       void listener.then((handle) => handle.remove())
       void stateListener.then((handle) => handle.remove())
+    }
+  }, [])
+  useEffect(() => {
+    // The app is a single-page WebView with no in-app history, but login
+    // redirects and OAuth round-trips can leave stray history entries, and
+    // Capacitor's default back handling then walks those instead of exiting
+    // — so back "stops closing the app". Handle it explicitly: close the
+    // open popup if there is one, otherwise exit.
+    if (!Capacitor.isNativePlatform() || !Capacitor.isPluginAvailable('App')) return
+    const listener = CapacitorApp.addListener('backButton', () => {
+      const backdrops = document.querySelectorAll<HTMLElement>('[class$="backdrop"]')
+      const topBackdrop = backdrops[backdrops.length - 1]
+      if (topBackdrop) {
+        const close = topBackdrop.querySelector<HTMLElement>('[aria-label="닫기"], .dialog-close, .cancel-action, .cancel-button')
+        if (close) {
+          close.click()
+          return
+        }
+      }
+      void CapacitorApp.exitApp()
+    })
+    return () => {
+      void listener.then((handle) => handle.remove())
     }
   }, [])
   useEffect(() => {
@@ -602,7 +625,7 @@ export default function App() {
     } finally {
       clearAuthSession()
       window.localStorage.removeItem('family-platform-react-migration')
-      window.location.href = '/'
+      window.location.replace('/')
     }
   }
 
@@ -612,7 +635,7 @@ export default function App() {
       await apiRequest<null>('/auth/me', { method: 'DELETE' })
       clearAuthSession()
       window.localStorage.removeItem('family-platform-react-migration')
-      window.location.href = '/'
+      window.location.replace('/')
     } catch (error) {
       setToastMessage(apiActionMessage(error, '회원탈퇴를 처리하지 못했습니다.'))
       setIsWithdrawConfirmOpen(false)

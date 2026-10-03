@@ -36,6 +36,15 @@ body [class$="backdrop"] {
   padding-block: 40px;
 }
 
+/* Popups are top-anchored app-wide (same as the diary detail popup): a short
+   popup used to float mid-screen or sit on the bottom edge with a strip of the
+   dimmed page showing beneath it, and each backdrop picked its own anchor
+   (center / end). Only the confirm dialog and auth prompts stay centered. */
+body [class$="backdrop"]:not(.fp-confirm-backdrop):not(.auth-session-backdrop):not(.auth-recovery-backdrop) {
+  align-items: start;
+  padding-top: 12px;
+}
+
 /* Applied to <body> (see App.tsx) whenever any of the backdrops above is
    mounted, so the page behind a popup can't be scrolled/dragged while it's
    open — the fixed-position overlay covering it doesn't stop that on its
