@@ -1115,13 +1115,13 @@ export default function LedgerPage() {
         title: parsed.title || '자동 입력',
         amount: parsed.amount,
         entryType: parsed.entryType,
-        category: parsed.category && ledgerCategoryOptions.includes(parsed.category) ? parsed.category : null,
+        category: parsed.category && ledgerCategoryOptions.includes(parsed.category) ? parsed.category : ledgerCategoryOptions[0] || '기타',
         paymentMethod:
           parsed.paymentMethod && ledgerPaymentMethodOptions.includes(parsed.paymentMethod)
             ? parsed.paymentMethod
             : ledgerPaymentMethodOptions[0] || '카드',
         transactionDate: parsed.transactionDate || todayKey(),
-        memberName: null,
+        memberName: familyMemberOptions[0] || '아빠',
         memo: null,
         installmentMonths: 0,
       })
