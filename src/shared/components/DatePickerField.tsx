@@ -108,7 +108,12 @@ export function DatePickerField({ className = '', displayValue, label, mode = 'd
       return
     }
     const rect = triggerRef.current.getBoundingClientRect()
-    const viewportHeight = window.innerHeight
+    // window.innerHeight can stay at the value it had while the soft
+    // keyboard was up (Android WebView after typing in a field), which
+    // capped the popover at ~2 week rows. A popup's own fixed backdrop
+    // always spans the real visible area, so trust it when present.
+    const backdropBottom = triggerRef.current.closest('[class$="backdrop"]')?.getBoundingClientRect().bottom ?? 0
+    const viewportHeight = Math.max(window.innerHeight, backdropBottom - 24)
     const wantedHeight = 420
     // How little room below counts as "not really usable" and worth
     // flipping upward for. Deliberately much smaller than wantedHeight:

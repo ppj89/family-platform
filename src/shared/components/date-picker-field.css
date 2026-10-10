@@ -310,4 +310,16 @@ html[data-theme='dark'] .fp-date-picker-years button.selected {
   .fp-date-picker-popover {
     width: min(310px, calc(100vw - 56px));
   }
+
+  /* Inside the single-column mobile form dialogs the field is full width;
+     size the calendar to it instead of floating a narrower card on the right. */
+  .fp-ledger-entry-panel .date-picker-field.fp-date-picker-field .fp-date-picker-popover,
+  .fp-travel-record-form .date-picker-field.fp-date-picker-field .fp-date-picker-popover,
+  .fp-baby-form .date-picker-field.fp-date-picker-field .fp-date-picker-popover,
+  .fp-diary-form .date-picker-field.fp-date-picker-field .fp-date-picker-popover,
+  .fp-restaurant-form .date-picker-field.fp-date-picker-field .fp-date-picker-popover {
+    right: 0;
+    left: 0;
+    width: auto;
+  }
 }
