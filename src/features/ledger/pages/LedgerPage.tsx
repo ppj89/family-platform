@@ -813,6 +813,15 @@ export default function LedgerPage() {
       setForm((value) => ({ ...value, amount }))
     } else if (calculatorTarget === 'detail') {
       setDetailForm((value) => ({ ...value, amount }))
+    } else {
+      // Opened standalone from the quick nav: hand the result to a new
+      // entry, same as pressing the calculator button inside the entry popup.
+      const base = editingId ? emptyPayload() : form
+      setEditingId(null)
+      setForm({ ...base, amount })
+      setInstallmentMonthsText(String(base.installmentMonths ?? 0))
+      setIsEntryDialogOpen(true)
+      focusForm()
     }
     closeCalculator()
   }
@@ -1432,28 +1441,29 @@ export default function LedgerPage() {
               <HiOutlineX aria-hidden="true" />
             </button>
             <h2 id="fp-ledger-calculator-title">계산기</h2>
-            <output className="fp-ledger-calculator-display" aria-live="polite">{formatCalculatorDisplay(calculatorDisplay)}</output>
+            <output className="fp-ledger-calculator-display" aria-live="polite">
+              {calculatorOperator && calculatorStoredValue !== null ? (
+                <span className="fp-ledger-calculator-expression">{formatCalculatorDisplay(formatCalculatorValue(calculatorStoredValue))} {calculatorOperator}</span>
+              ) : null}
+              <span>{formatCalculatorDisplay(calculatorDisplay)}</span>
+            </output>
             <div className="fp-ledger-calculator-keypad" aria-label="계산기 버튼">
               <button type="button" className="utility" onClick={resetCalculator}>C</button>
               <button type="button" className="utility" onClick={toggleCalculatorSign}>±</button>
               <button type="button" className="utility" onClick={applyCalculatorPercent}>%</button>
-              <button type="button" className="operator" onClick={() => inputCalculatorOperator('÷')}>÷</button>
+              <button type="button" className={`operator${calculatorOperator === '÷' ? ' active' : ''}`} aria-pressed={calculatorOperator === '÷'} onClick={() => inputCalculatorOperator('÷')}>÷</button>
               {['7', '8', '9'].map((digit) => <button key={digit} type="button" onClick={() => inputCalculatorDigit(digit)}>{digit}</button>)}
-              <button type="button" className="operator" onClick={() => inputCalculatorOperator('×')}>×</button>
+              <button type="button" className={`operator${calculatorOperator === '×' ? ' active' : ''}`} aria-pressed={calculatorOperator === '×'} onClick={() => inputCalculatorOperator('×')}>×</button>
               {['4', '5', '6'].map((digit) => <button key={digit} type="button" onClick={() => inputCalculatorDigit(digit)}>{digit}</button>)}
-              <button type="button" className="operator" onClick={() => inputCalculatorOperator('-')}>−</button>
+              <button type="button" className={`operator${calculatorOperator === '-' ? ' active' : ''}`} aria-pressed={calculatorOperator === '-'} onClick={() => inputCalculatorOperator('-')}>−</button>
               {['1', '2', '3'].map((digit) => <button key={digit} type="button" onClick={() => inputCalculatorDigit(digit)}>{digit}</button>)}
-              <button type="button" className="operator" onClick={() => inputCalculatorOperator('+')}>+</button>
+              <button type="button" className={`operator${calculatorOperator === '+' ? ' active' : ''}`} aria-pressed={calculatorOperator === '+'} onClick={() => inputCalculatorOperator('+')}>+</button>
               <button type="button" onClick={() => inputCalculatorDigit('0')}>0</button>
               <button type="button" onClick={inputCalculatorDecimal}>.</button>
               <button type="button" className="utility fp-ledger-calculator-backspace" aria-label="마지막 숫자 지우기" onClick={deleteCalculatorDigit}>⌫</button>
               <button type="button" className="equals" onClick={resolveCalculator}>=</button>
             </div>
-            {calculatorTarget ? (
-              <button type="button" className="fp-button fp-button-primary fp-ledger-calculator-apply" onClick={applyCalculatorResult}>입력</button>
-            ) : (
-              <p>계산 결과는 가계부에 저장되지 않습니다.</p>
-            )}
+            <button type="button" className="fp-button fp-button-primary fp-ledger-calculator-apply" onClick={applyCalculatorResult}>입력</button>
           </section>
         </div>
       ) : null}
