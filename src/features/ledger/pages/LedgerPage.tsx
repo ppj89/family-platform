@@ -798,6 +798,7 @@ export default function LedgerPage() {
 
   function openCalculator(target: 'entry' | 'detail' | null = null) {
     setIsQuickNavOpen(false)
+    resetCalculator()
     setCalculatorTarget(target)
     setIsCalculatorOpen(true)
   }
@@ -849,12 +850,21 @@ export default function LedgerPage() {
   }
 
   function deleteCalculatorDigit() {
+    // Right after an operator the display still shows the first operand,
+    // so there is nothing typed to delete — undo the operator instead.
+    // Right after "=" the result is editable like a typed number.
+    if (calculatorAwaitingOperand && calculatorOperator) {
+      setCalculatorOperator(null)
+      setCalculatorStoredValue(null)
+      setCalculatorAwaitingOperand(false)
+      return
+    }
     setCalculatorDisplay((current) => {
       if (current === '오류') return '0'
-      if (calculatorAwaitingOperand) return current
       const next = current.slice(0, -1)
       return !next || next === '-' ? '0' : next
     })
+    setCalculatorAwaitingOperand(false)
   }
 
   function inputCalculatorOperator(nextOperator: CalculatorOperator) {
