@@ -9,7 +9,7 @@ interface ToastMessageProps {
 export function ToastMessage({ message, onClose }: ToastMessageProps) {
   useEffect(() => {
     if (!message) return
-    const timer = window.setTimeout(onClose, 2400)
+    const timer = window.setTimeout(onClose, 1800)
     return () => window.clearTimeout(timer)
   }, [message, onClose])
 
