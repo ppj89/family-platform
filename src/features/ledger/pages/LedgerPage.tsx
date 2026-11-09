@@ -261,7 +261,11 @@ function guessLedgerCategory(text: string) {
   if (/여행|숙박|호텔|항공|기차|ktx|펜션|리조트/.test(value)) return '여행'
   if (/교통|택시|버스|지하철|주차|주유|기름|하이패스|차량/.test(value)) return '교통'
   if (/마트|편의점|다이소|쿠팡|생활|슈퍼|올리브영/.test(value)) return '생활'
-  if (/식비|식당|카페|커피|치킨|피자|버거|롯데리아|맥도날드|스타벅스|빽다방|이디야|빵|분식|김밥|밥|저녁|점심|아침|분유/.test(value)) {
+  if (
+    /식비|식당|카페|커피|치킨|닭강정|통닭|찜닭|닭갈비|피자|버거|롯데리아|맥도날드|스타벅스|빽다방|이디야|빵|제과|베이커리|디저트|아이스크림|분식|떡볶이|김밥|순대|튀김|도시락|국밥|해장|탕|찌개|국수|냉면|칼국수|짬뽕|짜장|반점|중식|일식|초밥|스시|횟집|활어|족발|보쌈|곱창|막창|삼겹|갈비|고기|샤브|마라|한식|주점|호프|술집|포차|푸드|밥|저녁|점심|아침|분유/.test(
+      value,
+    )
+  ) {
     return '식비'
   }
   return ''
@@ -305,6 +309,17 @@ function titleQuality(title: string) {
   if (/님$/.test(title)) return 1
   if (/^[가-힣\s]*\d[\d\s-]*$/.test(title)) return 1
   return 2
+}
+
+// The review row already shows the extracted merchant name as its heading,
+// so the raw-text line underneath only earns its place when it carries
+// something else (the amount line, the card/approval wording). Repeating
+// the merchant there was just noise.
+function captureSourceText(item: CapturedNotification, merchant: string) {
+  const parts = [item.title, item.text]
+    .map((part) => (part || '').trim())
+    .filter((part, index, all) => part && part !== merchant && all.indexOf(part) === index)
+  return parts.join(' · ')
 }
 
 function pruneToMoneyCaptures(items: CapturedNotification[]) {
@@ -1134,7 +1149,7 @@ export default function LedgerPage() {
         title: parsed.title || '자동 입력',
         amount: parsed.amount,
         entryType: parsed.entryType,
-        category: parsed.category && ledgerCategoryOptions.includes(parsed.category) ? parsed.category : ledgerCategoryOptions[0] || '기타',
+        category: parsed.category && ledgerCategoryOptions.includes(parsed.category) ? parsed.category : ledgerCategoryOptions.includes('기타') ? '기타' : ledgerCategoryOptions[0] || '기타',
         paymentMethod:
           parsed.paymentMethod && ledgerPaymentMethodOptions.includes(parsed.paymentMethod)
             ? parsed.paymentMethod
@@ -1665,7 +1680,9 @@ export default function LedgerPage() {
                       <span className="fp-ledger-capture-row-meta">
                         {[parsed.transactionDate, parsed.category, parsed.paymentMethod].filter(Boolean).join(' · ')}
                       </span>
-                      <p className="fp-ledger-capture-row-source">{item.text || item.title}</p>
+                      {captureSourceText(item, parsed.title) ? (
+                        <p className="fp-ledger-capture-row-source">{captureSourceText(item, parsed.title)}</p>
+                      ) : null}
                       <div className="fp-ledger-capture-row-actions">
                         <button type="button" className="fp-button fp-button-primary" onClick={() => void approveCapture(item)}>
                           저장
