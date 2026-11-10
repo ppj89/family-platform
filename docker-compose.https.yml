@@ -3,7 +3,7 @@ services:
     ports: !reset []
 
   caddy:
-    image: caddy:2.10-alpine
+    image: caddy:2.11-alpine
     container_name: ${CADDY_CONTAINER_NAME:-family-platform-caddy}
     restart: unless-stopped
     depends_on:
