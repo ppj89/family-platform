@@ -124,7 +124,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error('요청 시간이 초과되었습니다. 다시 시도해주세요.')
+      throw new Error('요청 시간이 초과되었습니다. 다시 시도해주세요.', { cause: error })
     }
     throw error
   } finally {
@@ -163,7 +163,7 @@ export async function apiFormRequest<T>(path: string, formData: FormData, option
     })
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error('요청 시간이 초과되었습니다. 다시 시도해주세요.')
+      throw new Error('요청 시간이 초과되었습니다. 다시 시도해주세요.', { cause: error })
     }
     throw error
   } finally {
