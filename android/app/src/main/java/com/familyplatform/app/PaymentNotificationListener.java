@@ -1,6 +1,7 @@
 package com.familyplatform.app;
 
 import android.app.Notification;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
@@ -50,8 +51,52 @@ public class PaymentNotificationListener extends NotificationListenerService {
         "승인|결제|사용|출금|입금|이체|취소|환불|지출|충전|납부|자동이체|체크카드|일시불|할부"
     );
 
+    /**
+     * Asks the system to (re)bind the listener. After an app update many
+     * devices (Samsung in particular) leave the service unbound even though
+     * notification access is still granted, so nothing gets captured until
+     * the user toggles access or reboots. Harmless when already bound.
+     */
+    static void requestRebind(Context context) {
+        try {
+            NotificationListenerService.requestRebind(
+                new ComponentName(context, PaymentNotificationListener.class)
+            );
+        } catch (Exception ignored) {
+            // Not permitted when access is off; nothing else to do.
+        }
+    }
+
+    @Override
+    public void onListenerConnected() {
+        super.onListenerConnected();
+        // Pick up payment notifications that arrived while the listener was
+        // unbound and are still in the shade. store() dedupes by content,
+        // so re-reading ones already queued adds nothing.
+        try {
+            StatusBarNotification[] active = getActiveNotifications();
+            if (active != null) {
+                for (StatusBarNotification sbn : active) {
+                    capture(sbn);
+                }
+            }
+        } catch (Exception ignored) {
+            // getActiveNotifications can throw while the binding settles.
+        }
+    }
+
+    @Override
+    public void onListenerDisconnected() {
+        super.onListenerDisconnected();
+        requestRebind(this);
+    }
+
     @Override
     public void onNotificationPosted(StatusBarNotification sbn) {
+        capture(sbn);
+    }
+
+    private void capture(StatusBarNotification sbn) {
         if (sbn == null || sbn.getNotification() == null) {
             return;
         }

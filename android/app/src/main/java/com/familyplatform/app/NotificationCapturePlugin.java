@@ -22,6 +22,18 @@ import org.json.JSONObject;
 @CapacitorPlugin(name = "NotificationCapture")
 public class NotificationCapturePlugin extends Plugin {
 
+    @Override
+    public void load() {
+        ensureListenerBound();
+    }
+
+    /** Re-binds the listener if access is granted but the service dropped. */
+    private void ensureListenerBound() {
+        if (hasNotificationAccess()) {
+            PaymentNotificationListener.requestRebind(getContext());
+        }
+    }
+
     /**
      * Notification access is granted in a system settings screen, not via a
      * runtime permission dialog, so it can only be read back — never
@@ -53,6 +65,9 @@ public class NotificationCapturePlugin extends Plugin {
      */
     @PluginMethod
     public void takePending(PluginCall call) {
+        // Runs on every app open/resume, so a listener the system dropped
+        // gets bound again without the user touching settings.
+        ensureListenerBound();
         SharedPreferences prefs = getContext()
             .getSharedPreferences(PaymentNotificationListener.PREFS, Context.MODE_PRIVATE);
         JSONArray stored = PaymentNotificationListener.readItems(prefs);
