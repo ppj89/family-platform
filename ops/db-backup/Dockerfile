@@ -1,4 +1,4 @@
-FROM postgres:18.4-alpine
+FROM postgres:19.0-alpine
 
 RUN apk add --no-cache python3 py3-pip \
   && python3 -m pip install --no-cache-dir --break-system-packages boto3
