@@ -23,6 +23,9 @@ services:
       context: ./backend-go
     container_name: ${API_CONTAINER_NAME:-family-platform-api}
     restart: unless-stopped
+    # Run a tiny init as PID 1 so orphaned child processes (wget helpers,
+    # healthcheck leftovers) are reaped instead of piling up as zombies.
+    init: true
     depends_on:
       db:
         condition: service_healthy

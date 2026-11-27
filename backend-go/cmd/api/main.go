@@ -5271,6 +5271,13 @@ func fetchCommunityHotDealListingWithWget(ctx context.Context, listingURL string
 	// ships in the API image. This is a fallback for a failed public request;
 	// listingURL is always an application-owned source configuration value.
 	command := exec.CommandContext(ctx, "wget", "-qO-", "--timeout=10", listingURL)
+	// BusyBox wget forks an ssl_client helper for https. Killing only wget on
+	// a context timeout orphaned that helper, and with the API as the
+	// container's PID 1 nothing reaped it — thousands of zombies piled up
+	// until the container could not start new processes (healthcheck failed
+	// with "Resource temporarily unavailable"). Kill the whole group instead.
+	killProcessGroupOnCancel(command)
+	command.WaitDelay = 5 * time.Second
 	body, err := command.Output()
 	return body, err == nil && len(body) > 0
 }
