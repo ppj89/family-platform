@@ -61,7 +61,20 @@ check_sso_providers() {
   fi
 }
 
+# The URL checks only prove requests are answered right now. A container can
+# still be degrading (e.g. the API once filled up with zombie processes and
+# failed its own healthcheck for weeks while /api/health kept returning 200),
+# so also alert on any container Docker itself reports as unhealthy.
+check_container_health() {
+  unhealthy="$(docker ps --filter health=unhealthy --format '{{.Names}}' 2>/dev/null | tr '\n' ' ')"
+  if [ -n "${unhealthy// /}" ]; then
+    send_alert "Family Platform monitor failed: unhealthy container(s): $unhealthy"
+    return 1
+  fi
+}
+
 failed=0
+check_container_health || failed=1
 check_url "web" "$BASE_URL/health" || failed=1
 check_url "api" "$BASE_URL/api/health" || failed=1
 check_auth_gate || failed=1
