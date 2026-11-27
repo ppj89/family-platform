@@ -178,6 +178,40 @@ jobs:
       - name: Run production stack smoke test
         run: scripts/test-prod-stack.sh
 
+  deploy-server:
+    name: Deploy server
+    runs-on: ubuntu-latest
+    needs: [frontend, backend, security, terraform, api-integration, docker, production-smoke]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Deploys queue up in order; a running deploy is never cancelled halfway.
+    concurrency:
+      group: production-server-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Configure deploy key
+        env:
+          PROD_SSH_KEY: ${{ secrets.PROD_SSH_KEY }}
+          PROD_SSH_KNOWN_HOSTS: ${{ secrets.PROD_SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$PROD_SSH_KEY" > ~/.ssh/deploy_key
+          printf '%s\n' "$PROD_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/deploy_key ~/.ssh/known_hosts
+
+      - name: Deploy (server backs up, deploys, health-checks, rolls back on failure)
+        env:
+          PROD_SSH_HOST: ${{ secrets.PROD_SSH_HOST }}
+        run: |
+          # The key is pinned server-side to scripts/ci-deploy.sh; this
+          # string is only the request it validates.
+          ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes -o ServerAliveInterval=30 \
+            "root@$PROD_SSH_HOST" "deploy $GITHUB_SHA"
+
+      - name: Verify from outside
+        run: |
+          curl -fsS --max-time 10 https://familyhistory.dedyn.io/health >/dev/null
+          curl -fsS --max-time 10 https://familyhistory.dedyn.io/api/health
+
   android:
     name: Android debug build
     runs-on: ubuntu-latest
