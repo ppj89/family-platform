@@ -5,6 +5,7 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Parcelable;
 import android.service.notification.NotificationListenerService;
 import android.service.notification.StatusBarNotification;
 
@@ -110,7 +111,55 @@ public class PaymentNotificationListener extends NotificationListenerService {
         if (extras == null) {
             return;
         }
+        String packageName = sbn.getPackageName();
         String title = charSequence(extras.getCharSequence(Notification.EXTRA_TITLE));
+
+        // SMS arrives through the messaging app (Samsung Messages, Google
+        // Messages), which posts MessagingStyle notifications: one
+        // notification per sender, with the actual texts in EXTRA_MESSAGES.
+        // Once a card company has sent two texts, EXTRA_TEXT becomes a
+        // summary ("메시지 2개") or only the newest one, so reading
+        // EXTRA_TEXT alone missed SMS payments. Read every message instead.
+        boolean storedMessage = false;
+        Parcelable[] messages = extras.getParcelableArray(Notification.EXTRA_MESSAGES);
+        if (messages != null) {
+            String conversation = charSequence(extras.getCharSequence(Notification.EXTRA_CONVERSATION_TITLE));
+            for (Parcelable parcelable : messages) {
+                if (!(parcelable instanceof Bundle)) {
+                    continue;
+                }
+                Bundle message = (Bundle) parcelable;
+                String messageText = charSequence(message.getCharSequence("text"));
+                String sender = charSequence(message.getCharSequence("sender"));
+                String messageTitle = !conversation.isEmpty() ? conversation
+                    : !sender.isEmpty() ? sender : title;
+                long time = message.getLong("time", sbn.getPostTime());
+                if (looksLikeTransaction(messageTitle + "\n" + messageText)) {
+                    store(packageName, messageTitle, messageText, time > 0 ? time : sbn.getPostTime());
+                    storedMessage = true;
+                }
+            }
+        }
+        if (storedMessage) {
+            return;
+        }
+
+        // InboxStyle (some messaging apps and grouped summaries): one line
+        // per message, each of which may be its own payment.
+        CharSequence[] lines = extras.getCharSequenceArray(Notification.EXTRA_TEXT_LINES);
+        if (lines != null) {
+            for (CharSequence line : lines) {
+                String lineText = charSequence(line);
+                if (looksLikeTransaction(title + "\n" + lineText)) {
+                    store(packageName, title, lineText, sbn.getPostTime());
+                    storedMessage = true;
+                }
+            }
+        }
+        if (storedMessage) {
+            return;
+        }
+
         String text = charSequence(extras.getCharSequence(Notification.EXTRA_TEXT));
         String bigText = charSequence(extras.getCharSequence(Notification.EXTRA_BIG_TEXT));
         // Card apps often put the useful line only in the expanded text.
@@ -120,7 +169,7 @@ public class PaymentNotificationListener extends NotificationListenerService {
         if (!looksLikeTransaction(combined)) {
             return;
         }
-        store(sbn.getPackageName(), title, body, sbn.getPostTime());
+        store(packageName, title, body, sbn.getPostTime());
     }
 
     private boolean looksLikeTransaction(String combined) {
