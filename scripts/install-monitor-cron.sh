@@ -28,7 +28,8 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 $MONITOR_TIME root cd "$APP_DIR" && mkdir -p logs && BASE_URL="$BASE_URL" DISK_WARN_PERCENT="$DISK_WARN_PERCENT" ALERT_WEBHOOK_URL="$ALERT_WEBHOOK_URL" EXPECT_SSO_CONFIGURED="$EXPECT_SSO_CONFIGURED" scripts/monitor-prod.sh >> logs/monitor.log 2>&1
 EOF
 
-chmod 0644 "$CRON_FILE"
+# 0600: the line carries ALERT_WEBHOOK_URL, which is a secret.
+chmod 0600 "$CRON_FILE"
 
 echo "Monitor cron installed at $CRON_FILE"
 echo "Schedule: $MONITOR_TIME"

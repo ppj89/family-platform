@@ -212,6 +212,17 @@ jobs:
           curl -fsS --max-time 10 https://familyhistory.dedyn.io/health >/dev/null
           curl -fsS --max-time 10 https://familyhistory.dedyn.io/api/health
 
+      - name: Alert Slack on deploy failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -n "$SLACK_WEBHOOK_URL" ] || exit 0
+          text="🚨 [자동 배포 실패] ${GITHUB_SHA::7} 배포가 실패했습니다. 서버는 이전 버전으로 롤백을 시도합니다. 로그: $RUN_URL"
+          jq -n --arg text "$text" '{text: $text}' |
+            curl -fsS -H 'Content-Type: application/json' -d @- "$SLACK_WEBHOOK_URL" >/dev/null
+
   android:
     name: Android debug build
     runs-on: ubuntu-latest

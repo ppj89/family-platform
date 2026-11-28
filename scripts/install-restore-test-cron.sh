@@ -21,5 +21,6 @@ PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin
 $RESTORE_TEST_TIME root cd "$APP_DIR" && ALERT_WEBHOOK_URL="$ALERT_WEBHOOK_URL" scripts/verify-backup-restore.sh >> logs/restore-test.log 2>&1
 EOF
 
-chmod 0644 "$CRON_FILE"
+# 0600: the line carries ALERT_WEBHOOK_URL, which is a secret.
+chmod 0600 "$CRON_FILE"
 echo "Restore test cron installed at $CRON_FILE ($RESTORE_TEST_TIME)"
