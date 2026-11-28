@@ -1,0 +1,55 @@
+name: Uptime
+
+# Off-server check: the cron monitor on the VPS cannot report anything when
+# the VPS itself is down, so GitHub checks the public URLs every 5 minutes
+# and posts to Slack. GitHub may start scheduled runs a few minutes late.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: uptime
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  check:
+    name: Public health check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check site and API
+        id: check
+        run: |
+          failed=""
+          for path in /health /api/health; do
+            ok=""
+            # Three tries 20s apart so a single blip or a deploy restart
+            # does not page anyone.
+            for attempt in 1 2 3; do
+              code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 15 "https://familyhistory.dedyn.io$path" || echo 000)"
+              if [ "$code" = "200" ]; then ok=1; break; fi
+              [ "$attempt" -lt 3 ] && sleep 20
+            done
+            [ -n "$ok" ] || failed="$failed $path=$code"
+          done
+          if [ -n "$failed" ]; then
+            echo "failed=$failed" >> "$GITHUB_OUTPUT"
+            echo "::error::Health check failed:$failed"
+            exit 1
+          fi
+          echo "All health checks passed"
+
+      - name: Alert Slack
+        if: failure()
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          FAILED: ${{ steps.check.outputs.failed }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -n "$SLACK_WEBHOOK_URL" ] || exit 0
+          text="🚨 [외부 감시] familyhistory.dedyn.io 응답 없음:${FAILED:- (check step error)} — $RUN_URL"
+          jq -n --arg text "$text" '{text: $text}' |
+            curl -fsS -H 'Content-Type: application/json' -d @- "$SLACK_WEBHOOK_URL" >/dev/null
